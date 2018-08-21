@@ -75,8 +75,7 @@ unsigned int lane_id()
     #ifdef ROCPRIM_HC_API
         return hc::__lane_id();
     #else // HIP
-        // TODO: Find HIP function for that
-        return hc::__lane_id();
+        return __lane_id();
     #endif
 }
 
@@ -262,19 +261,19 @@ namespace detail
     ROCPRIM_DEVICE inline
     void memory_fence_system(void)
     {
-        ::__threadfence_system();
+        __threadfence_system();
     }
 
     ROCPRIM_DEVICE inline
     void memory_fence_block(void)
     {
-        ::__threadfence_block();
+        __threadfence_block();
     }
 
     ROCPRIM_DEVICE inline
     void memory_fence_device(void)
     {
-        ::__threadfence();
+        __threadfence();
     }
     #else
     // __threadfence_system()

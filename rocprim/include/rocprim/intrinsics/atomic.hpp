@@ -33,7 +33,7 @@ namespace detail
         #ifdef ROCPRIM_HC_API
             return hc::atomic_fetch_add(address, value);
         #else
-            return ::atomicAdd(address, value);
+            return atomicAdd(address, value);
         #endif
     }
 
@@ -43,7 +43,7 @@ namespace detail
         #ifdef ROCPRIM_HC_API
             return hc::atomic_fetch_add(address, value);
         #else
-            return ::atomicAdd(address, value);
+            return atomicAdd(address, value);
         #endif
     }
 
@@ -53,7 +53,7 @@ namespace detail
         #ifdef ROCPRIM_HC_API
             return hc::atomic_fetch_add(address, value);
         #else
-            return ::atomicAdd(address, value);
+            return atomicAdd(address, value);
         #endif
     }
 
@@ -63,7 +63,7 @@ namespace detail
         #ifdef ROCPRIM_HC_API
             return hc::atomic_fetch_add(reinterpret_cast<uint64_t*>(address), static_cast<uint64_t>(value));
         #else
-            return ::atomicAdd(address, value);
+            return atomicAdd(address, value);
         #endif
     }
 
@@ -73,7 +73,7 @@ namespace detail
         #ifdef ROCPRIM_HC_API
             return hc::__atomic_wrapinc(address, value);
         #else
-            return ::atomicInc(address, value);
+            return atomicInc(address, value);
         #endif
     }
 }

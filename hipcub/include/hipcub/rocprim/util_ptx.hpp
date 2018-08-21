@@ -183,7 +183,7 @@ auto unsigned_bit_extract(UnsignedBits source,
     -> typename std::enable_if<sizeof(UnsignedBits) == 8, unsigned int>::type
 {
     #ifdef __HIP_PLATFORM_HCC__
-        return ::hc::__bitextract_u64(source, bit_start, num_bits);
+        return __bitextract_u64(source, bit_start, num_bits);
     #else
         return (source << (64 - bit_start - num_bits)) >> (64 - num_bits);
     #endif // __HIP_PLATFORM_HCC__
@@ -197,7 +197,7 @@ auto unsigned_bit_extract(UnsignedBits source,
     -> typename std::enable_if<sizeof(UnsignedBits) < 8, unsigned int>::type
 {
     #ifdef __HIP_PLATFORM_HCC__
-        return ::hc::__bitextract_u32(source, bit_start, num_bits);
+        return __bitextract_u32(source, bit_start, num_bits);
     #else
         return (static_cast<unsigned int>(source) << (32 - bit_start - num_bits)) >> (32 - num_bits);
     #endif // __HIP_PLATFORM_HCC__
@@ -228,7 +228,7 @@ void BFI(unsigned int &ret,
          unsigned int num_bits)
 {
     #ifdef __HIP_PLATFORM_HCC__
-        ret = ::hc::__bitinsert_u32(x, y, bit_start, num_bits);
+        ret = __bitinsert_u32(x, y, bit_start, num_bits);
     #else
         x <<= bit_start;
         unsigned int MASK_X = ((1 << num_bits) - 1) << bit_start;
