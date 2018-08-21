@@ -53,7 +53,7 @@ unsigned int last_in_warp_segment(Flag flag)
     // Make sure last item in logical warp is marked as a tail
     warp_flags |= ballot_type(1) << (WarpSize - 1U);
     // Calculate logical lane id of the last valid value in the segment
-    return hc::__lastbit_u32_u64(warp_flags);
+    return __lastbit_u32_u64(warp_flags);
 }
 
 } // end namespace detail
