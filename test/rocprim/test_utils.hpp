@@ -249,9 +249,6 @@ struct custom_test_type
     }
 
     ROCPRIM_HOST_DEVICE inline
-    custom_test_type(const custom_test_type& other) : x(other.x), y(other.y) {}
-
-    ROCPRIM_HOST_DEVICE inline
     ~custom_test_type() {}
 
     ROCPRIM_HOST_DEVICE inline
@@ -277,13 +274,13 @@ struct custom_test_type
     ROCPRIM_HOST_DEVICE inline
     bool operator<(const custom_test_type& other) const
     {
-        return (x < other.x && y < other.y);
+        return (x < other.x || (x == other.x && y < other.y));
     }
 
     ROCPRIM_HOST_DEVICE inline
     bool operator>(const custom_test_type& other) const
     {
-        return (x > other.x && y > other.y);
+        return (x > other.x || (x == other.x && y > other.y));
     }
 
     ROCPRIM_HOST_DEVICE inline
@@ -347,7 +344,7 @@ inline auto get_random_data(size_t size, typename T::value_type min, typename T:
     std::default_random_engine gen(rd());
     std::uniform_int_distribution<typename T::value_type> distribution(min, max);
     std::vector<T> data(size);
-    std::generate(data.begin(), data.end(), [&]() { return distribution(gen); });
+    std::generate(data.begin(), data.end(), [&]() { return T(distribution(gen), distribution(gen)); });
     return data;
 }
 
@@ -362,7 +359,7 @@ inline auto get_random_data(size_t size, typename T::value_type min, typename T:
     std::default_random_engine gen(rd());
     std::uniform_real_distribution<typename T::value_type> distribution(min, max);
     std::vector<T> data(size);
-    std::generate(data.begin(), data.end(), [&]() { return T(distribution(gen)); });
+    std::generate(data.begin(), data.end(), [&]() { return T(distribution(gen), distribution(gen)); });
     return data;
 }
 
