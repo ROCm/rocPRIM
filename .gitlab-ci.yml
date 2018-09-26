@@ -81,20 +81,7 @@ build:rocm:
     - cd build
     - $SUDO_CMD ctest --output-on-failure --repeat-until-fail 2
 
-test:rocm241:
-  extends: .unittest
-  tags:
-    - tag241
-
-test:rocm243:
-  extends: .unittest
-  tags:
-    - tag243
-
-test:rocm244:
-  extends: .unittest
-  tags:
-    - tag244
+include: '.gitlab-ci-gputest.yml'
 
 test:rocm_package:
   stage: test
