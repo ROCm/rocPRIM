@@ -71,7 +71,7 @@ build:rocm:
     - build/rocprim*.zip
     expire_in: 2 weeks
 
-.unittest
+.unittest:
   stage: test
   variables:
     SUDO_CMD: "sudo -E"
