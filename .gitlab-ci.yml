@@ -71,41 +71,30 @@ build:rocm:
     - build/rocprim*.zip
     expire_in: 2 weeks
 
+.unittest
+  stage: test
+  variables:
+    SUDO_CMD: "sudo -E"
+  dependencies:
+    - build:rocm
+  script:
+    - cd build
+    - $SUDO_CMD ctest --output-on-failure --repeat-until-fail 2
+
 test:rocm241:
+  extends: .unittest
   tags:
     - tag241
-  stage: test
-  variables:
-    SUDO_CMD: "sudo -E"
-  dependencies:
-    - build:rocm
-  script:
-    - cd build
-    - $SUDO_CMD ctest --output-on-failure --repeat-until-fail 2
 
 test:rocm243:
+  extends: .unittest
   tags:
     - tag243
-  stage: test
-  variables:
-    SUDO_CMD: "sudo -E"
-  dependencies:
-    - build:rocm
-  script:
-    - cd build
-    - $SUDO_CMD ctest --output-on-failure --repeat-until-fail 2
 
 test:rocm244:
+  extends: .unittest
   tags:
     - tag244
-  stage: test
-  variables:
-    SUDO_CMD: "sudo -E"
-  dependencies:
-    - build:rocm
-  script:
-    - cd build
-    - $SUDO_CMD ctest --output-on-failure --repeat-until-fail 2
 
 test:rocm_package:
   stage: test
