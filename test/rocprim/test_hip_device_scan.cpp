@@ -71,31 +71,32 @@ public:
 };
 
 typedef ::testing::Types<
-    // Small
-    DeviceScanParams<char>,
-    DeviceScanParams<unsigned short>,
-    DeviceScanParams<short, int>,
-    DeviceScanParams<int>,
-    DeviceScanParams<float, float, rp::maximum<float> >,
-    DeviceScanParams<rp::half, rp::half, test_utils::half_maximum>,
-    DeviceScanParams<rp::half, float>,
-    // Large
-    DeviceScanParams<int, double, rp::plus<int> >,
-    DeviceScanParams<int, double, rp::plus<double> >,
-    DeviceScanParams<int, long long, rp::plus<long long> >,
-    DeviceScanParams<unsigned int, unsigned long long, rp::plus<unsigned long long> >,
-    DeviceScanParams<long long, long long, rp::maximum<long long> >,
-    DeviceScanParams<double, double, rp::plus<double>, true>,
-    DeviceScanParams<signed char, long, rp::plus<long> >,
-    DeviceScanParams<float, double, rp::minimum<double> >,
-    DeviceScanParams<test_utils::custom_test_type<int> >,
-    DeviceScanParams<
-        test_utils::custom_test_type<double>, test_utils::custom_test_type<double>,
-        rp::plus<test_utils::custom_test_type<double> >, true
-    >,
-    DeviceScanParams<test_utils::custom_test_type<int> >,
-    DeviceScanParams<test_utils::custom_test_array_type<long long, 5> >,
-    DeviceScanParams<test_utils::custom_test_array_type<int, 10> >
+    DeviceScanParams<int>
+    // // Small
+    // DeviceScanParams<char>,
+    // DeviceScanParams<unsigned short>,
+    // DeviceScanParams<short, int>,
+    // DeviceScanParams<int>,
+    // DeviceScanParams<float, float, rp::maximum<float> >,
+    // DeviceScanParams<rp::half, rp::half, test_utils::half_maximum>,
+    // DeviceScanParams<rp::half, float>,
+    // // Large
+    // DeviceScanParams<int, double, rp::plus<int> >,
+    // DeviceScanParams<int, double, rp::plus<double> >,
+    // DeviceScanParams<int, long long, rp::plus<long long> >,
+    // DeviceScanParams<unsigned int, unsigned long long, rp::plus<unsigned long long> >,
+    // DeviceScanParams<long long, long long, rp::maximum<long long> >,
+    // DeviceScanParams<double, double, rp::plus<double>, true>,
+    // DeviceScanParams<signed char, long, rp::plus<long> >,
+    // DeviceScanParams<float, double, rp::minimum<double> >,
+    // DeviceScanParams<test_utils::custom_test_type<int> >,
+    // DeviceScanParams<
+    //     test_utils::custom_test_type<double>, test_utils::custom_test_type<double>,
+    //     rp::plus<test_utils::custom_test_type<double> >, true
+    // >,
+    // DeviceScanParams<test_utils::custom_test_type<int> >,
+    // DeviceScanParams<test_utils::custom_test_array_type<long long, 5> >,
+    // DeviceScanParams<test_utils::custom_test_array_type<int, 10> >
 > RocprimDeviceScanTestsParams;
 
 std::vector<size_t> get_sizes()
@@ -113,7 +114,7 @@ std::vector<size_t> get_sizes()
 }
 
 TYPED_TEST_CASE(RocprimDeviceScanTests, RocprimDeviceScanTestsParams);
-
+/*
 TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
 {
     using T = typename TestFixture::input_type;
@@ -166,7 +167,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
     hipFree(d_output);
     hipFree(d_temp_storage);
 }
-
+*/
 TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 {
     using T = typename TestFixture::input_type;
@@ -259,7 +260,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
         hipFree(d_temp_storage);
     }
 }
-
+/*
 TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 {
     using T = typename TestFixture::input_type;
@@ -588,3 +589,4 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
         hipFree(d_temp_storage);
     }
 }
+*/
