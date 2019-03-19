@@ -29,7 +29,7 @@ rocprimCI:
 
     def rocprim = new rocProject('rocprim')
 
-    def nodes = new dockerNodes(['gfx900', 'gfx906'], rocprim.paths)
+    def nodes = new dockerNodes(['gfx900', 'gfx906'], rocprim)
 
     boolean formatCheck = true
      
