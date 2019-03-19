@@ -1,5 +1,5 @@
 #!/usr/bin/env groovy
-@Library('rocJENKINS.develop') _
+@Library('rocJenkins') _
 import com.amd.project.*
 import com.amd.docker.*
 
@@ -31,6 +31,8 @@ rocprimCI:
 
     def nodes = new dockerNodes(['gfx900', 'gfx906'], rocprim.paths)
 
+    boolean formatCheck = true
+     
     def compileCommand =
     {
         platform, project->
@@ -71,7 +73,7 @@ rocprimCI:
         platform.runCommand(this, command)
     }
 
-    buildProject(rocprim, nodes.dockerArray, compileCommand, testCommand, packageCommand)
+    buildProject(rocprim, formatCheck, nodes.dockerArray, compileCommand, testCommand, packageCommand)
 
 }
 
