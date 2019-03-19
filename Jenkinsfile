@@ -31,7 +31,7 @@ rocprimCI:
 
     def nodes = new dockerNodes(['gfx900', 'gfx906'], rocprim)
 
-    boolean formatCheck = true
+    boolean formatCheck = false
      
     def compileCommand =
     {
