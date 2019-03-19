@@ -1,10 +1,4 @@
-# Checkout config tool: https://zed0.co.uk/clang-format-configurator/
-# Or http://cf.monofraps.net/
-# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
-# https://github.com/01org/parameter-framework/blob/master/.clang-format
-
-# Tested on: clang-format version 6.0.1
-
+# Style file for MLSE Libraries based on the modified rocBLAS style
 
 # Common settings
 BasedOnStyle:  WebKit
