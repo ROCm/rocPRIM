@@ -83,7 +83,6 @@ else ()
 endif ()
 rocm_setup_version( VERSION ${BUILD_VERSION} NO_GIT_TAG_VERSION )
 
-
 # Print configuration summary
 include(cmake/Summary.cmake)
 print_configuration_summary()
