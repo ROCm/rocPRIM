@@ -22,43 +22,43 @@
 #define ROCPRIM_CONFIG_HPP_
 
 #define BEGIN_ROCPRIM_NAMESPACE \
-    namespace rocprim {
+    namespace rocprim           \
+    {
 
-#define END_ROCPRIM_NAMESPACE \
-    } /* rocprim */
+#define END_ROCPRIM_NAMESPACE } /* rocprim */
 
-#include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
+#include <hip/hip_runtime.h>
 
 #ifndef ROCPRIM_DEVICE
-    #define ROCPRIM_DEVICE __device__
-    #define ROCPRIM_HOST __host__
-    #define ROCPRIM_HOST_DEVICE __host__ __device__
-    #define ROCPRIM_SHARED_MEMORY __shared__
+#define ROCPRIM_DEVICE __device__
+#define ROCPRIM_HOST __host__
+#define ROCPRIM_HOST_DEVICE __host__ __device__
+#define ROCPRIM_SHARED_MEMORY __shared__
 #endif
 
 // TODO remove when the issue https://github.com/RadeonOpenCompute/hcc/issues/715 is fixed
 #ifndef ROCPRIM_DISABLE_DPP
-    #define ROCPRIM_DISABLE_DPP
+#define ROCPRIM_DISABLE_DPP
 #endif
 
 #ifdef ROCPRIM_DISABLE_DPP
-    #define ROCPRIM_DETAIL_USE_DPP false
+#define ROCPRIM_DETAIL_USE_DPP false
 #else
-    #define ROCPRIM_DETAIL_USE_DPP true
+#define ROCPRIM_DETAIL_USE_DPP true
 #endif
 
 #ifdef ROCPRIM_DISABLE_LOOKBACK_SCAN
-    #define ROCPRIM_DETAIL_USE_LOOKBACK_SCAN false
+#define ROCPRIM_DETAIL_USE_LOOKBACK_SCAN false
 #else
-    #define ROCPRIM_DETAIL_USE_LOOKBACK_SCAN true
+#define ROCPRIM_DETAIL_USE_LOOKBACK_SCAN true
 #endif
 
 // Defines targeted AMD architecture. Supported values:
 // * 803 (gfx803)
 // * 900 (gfx900)
 #ifndef ROCPRIM_TARGET_ARCH
-    #define ROCPRIM_TARGET_ARCH 0
+#define ROCPRIM_TARGET_ARCH 0
 #endif
 
 #endif // ROCPRIM_CONFIG_HPP_

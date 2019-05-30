@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iostream>
 #include <type_traits>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -34,9 +34,9 @@
 
 #include "test_utils.hpp"
 
-#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error),hipSuccess)
+#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error), hipSuccess)
 
-template<class T>
+template <class T>
 struct times_two
 {
     ROCPRIM_HOST_DEVICE
@@ -46,7 +46,7 @@ struct times_two
     }
 };
 
-template<class T>
+template <class T>
 struct plus_ten
 {
     ROCPRIM_HOST_DEVICE
@@ -57,45 +57,39 @@ struct plus_ten
 };
 
 // Params for tests
-template<
-    class InputType,
-    class UnaryFunction = times_two<InputType>,
-    class ValueType = InputType
->
+template <class InputType, class UnaryFunction = times_two<InputType>, class ValueType = InputType>
 struct RocprimTransformIteratorParams
 {
-    using input_type = InputType;
-    using value_type = ValueType;
+    using input_type     = InputType;
+    using value_type     = ValueType;
     using unary_function = UnaryFunction;
 };
 
-template<class Params>
+template <class Params>
 class RocprimTransformIteratorTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
-    using value_type = typename Params::value_type;
-    using unary_function = typename Params::unary_function;
+    using input_type             = typename Params::input_type;
+    using value_type             = typename Params::value_type;
+    using unary_function         = typename Params::unary_function;
     const bool debug_synchronous = false;
 };
 
-typedef ::testing::Types<
-    RocprimTransformIteratorParams<int, plus_ten<long>>,
-    RocprimTransformIteratorParams<unsigned int>,
-    RocprimTransformIteratorParams<unsigned long>,
-    RocprimTransformIteratorParams<float, plus_ten<double>, double>
-> RocprimTransformIteratorTestsParams;
+typedef ::testing::Types<RocprimTransformIteratorParams<int, plus_ten<long>>,
+                         RocprimTransformIteratorParams<unsigned int>,
+                         RocprimTransformIteratorParams<unsigned long>,
+                         RocprimTransformIteratorParams<float, plus_ten<double>, double>>
+    RocprimTransformIteratorTestsParams;
 
 TYPED_TEST_CASE(RocprimTransformIteratorTests, RocprimTransformIteratorTestsParams);
 
 TYPED_TEST(RocprimTransformIteratorTests, TransformReduce)
 {
-    using input_type = typename TestFixture::input_type;
-    using value_type = typename TestFixture::value_type;
+    using input_type     = typename TestFixture::input_type;
+    using value_type     = typename TestFixture::value_type;
     using unary_function = typename TestFixture::unary_function;
-    using iterator_type = typename rocprim::transform_iterator<
-        input_type*, unary_function, value_type
-    >;
+    using iterator_type =
+        typename rocprim::transform_iterator<input_type*, unary_function, value_type>;
 
     hipStream_t stream = 0; // default
 
@@ -104,75 +98,57 @@ TYPED_TEST(RocprimTransformIteratorTests, TransformReduce)
     std::vector<input_type> input = test_utils::get_random_data<input_type>(size, 1, 200);
     std::vector<value_type> output(1);
 
-    input_type * d_input;
-    value_type * d_output;
+    input_type* d_input;
+    value_type* d_output;
     HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(input_type)));
     HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(value_type)));
     HIP_CHECK(
-        hipMemcpy(
-            d_input, input.data(),
-            input.size() * sizeof(input_type),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMemcpy(d_input, input.data(), input.size() * sizeof(input_type), hipMemcpyHostToDevice));
     HIP_CHECK(hipDeviceSynchronize());
 
-    auto reduce_op = rocprim::plus<value_type>();
+    auto           reduce_op = rocprim::plus<value_type>();
     unary_function transform;
 
     // Calculate expected results on host
     iterator_type x(input.data(), transform);
-    value_type expected = std::accumulate(x, x + size, value_type(0), reduce_op);
+    value_type    expected = std::accumulate(x, x + size, value_type(0), reduce_op);
 
     auto d_iter = iterator_type(d_input, transform);
     // temp storage
     size_t temp_storage_size_bytes;
     // Get size of d_temp_storage
-    HIP_CHECK(
-        rocprim::reduce(
-            nullptr,
-            temp_storage_size_bytes,
-            d_iter,
-            d_output,
-            value_type(0),
-            input.size(),
-            reduce_op,
-            stream
-        )
-    );
+    HIP_CHECK(rocprim::reduce(nullptr,
+                              temp_storage_size_bytes,
+                              d_iter,
+                              d_output,
+                              value_type(0),
+                              input.size(),
+                              reduce_op,
+                              stream));
 
     // temp_storage_size_bytes must be >0
     ASSERT_GT(temp_storage_size_bytes, 0);
 
     // allocate temporary storage
-    void * d_temp_storage = nullptr;
+    void* d_temp_storage = nullptr;
     HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Run
-    HIP_CHECK(
-        rocprim::reduce(
-            d_temp_storage,
-            temp_storage_size_bytes,
-            d_iter,
-            d_output,
-            value_type(0),
-            input.size(),
-            reduce_op,
-            stream,
-            TestFixture::debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::reduce(d_temp_storage,
+                              temp_storage_size_bytes,
+                              d_iter,
+                              d_output,
+                              value_type(0),
+                              input.size(),
+                              reduce_op,
+                              stream,
+                              TestFixture::debug_synchronous));
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
-    HIP_CHECK(
-        hipMemcpy(
-            output.data(), d_output,
-            output.size() * sizeof(value_type),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(
+        output.data(), d_output, output.size() * sizeof(value_type), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Check if output values are as expected

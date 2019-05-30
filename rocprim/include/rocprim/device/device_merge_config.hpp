@@ -34,68 +34,63 @@
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Configuration of device-level merge primitives.
-template<unsigned int BlockSize, unsigned int ItemsPerThread>
+template <unsigned int BlockSize, unsigned int ItemsPerThread>
 using merge_config = kernel_config<BlockSize, ItemsPerThread>;
 
 namespace detail
 {
 
-template<class Key, class Value>
-struct merge_config_803
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(::rocprim::max(sizeof(Key), sizeof(Value)), sizeof(int));
+    template <class Key, class Value>
+    struct merge_config_803
+    {
+        static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
+            ::rocprim::max(sizeof(Key), sizeof(Value)), sizeof(int));
 
-    // TODO Tune when merge-by-key is ready
-    using type = merge_config<256, ::rocprim::max(1u, 10u / item_scale)>;
-};
+        // TODO Tune when merge-by-key is ready
+        using type = merge_config<256, ::rocprim::max(1u, 10u / item_scale)>;
+    };
 
-template<class Key>
-struct merge_config_803<Key, empty_type>
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key), sizeof(int));
+    template <class Key>
+    struct merge_config_803<Key, empty_type>
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key), sizeof(int));
 
-    using type = select_type<
-        select_type_case<sizeof(Key) <= 2, merge_config<256, 11> >,
-        select_type_case<sizeof(Key) <= 4, merge_config<256, 10> >,
-        select_type_case<sizeof(Key) <= 8, merge_config<256, 7> >,
-        merge_config<256, ::rocprim::max(1u, 10u / item_scale)>
-    >;
-};
+        using type = select_type<select_type_case<sizeof(Key) <= 2, merge_config<256, 11>>,
+                                 select_type_case<sizeof(Key) <= 4, merge_config<256, 10>>,
+                                 select_type_case<sizeof(Key) <= 8, merge_config<256, 7>>,
+                                 merge_config<256, ::rocprim::max(1u, 10u / item_scale)>>;
+    };
 
-template<class Key, class Value>
-struct merge_config_900
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(::rocprim::max(sizeof(Key), sizeof(Value)), sizeof(int));
+    template <class Key, class Value>
+    struct merge_config_900
+    {
+        static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
+            ::rocprim::max(sizeof(Key), sizeof(Value)), sizeof(int));
 
-    // TODO Tune when merge-by-key is ready
-    using type = merge_config<256, ::rocprim::max(1u, 10u / item_scale)>;
-};
+        // TODO Tune when merge-by-key is ready
+        using type = merge_config<256, ::rocprim::max(1u, 10u / item_scale)>;
+    };
 
-template<class Key>
-struct merge_config_900<Key, empty_type>
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key), sizeof(int));
+    template <class Key>
+    struct merge_config_900<Key, empty_type>
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key), sizeof(int));
 
-    using type = select_type<
-        select_type_case<sizeof(Key) <= 2, merge_config<256, 11> >,
-        select_type_case<sizeof(Key) <= 4, merge_config<256, 10> >,
-        select_type_case<sizeof(Key) <= 8, merge_config<256, 7> >,
-        merge_config<256, ::rocprim::max(1u, 10u / item_scale)>
-    >;
-};
+        using type = select_type<select_type_case<sizeof(Key) <= 2, merge_config<256, 11>>,
+                                 select_type_case<sizeof(Key) <= 4, merge_config<256, 10>>,
+                                 select_type_case<sizeof(Key) <= 8, merge_config<256, 7>>,
+                                 merge_config<256, ::rocprim::max(1u, 10u / item_scale)>>;
+    };
 
-template<unsigned int TargetArch, class Key, class Value>
-struct default_merge_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, merge_config_803<Key, Value>>,
-        select_arch_case<900, merge_config_900<Key, Value>>,
-        merge_config_900<Key, Value>
-    > { };
+    template <unsigned int TargetArch, class Key, class Value>
+    struct default_merge_config : select_arch<TargetArch,
+                                              select_arch_case<803, merge_config_803<Key, Value>>,
+                                              select_arch_case<900, merge_config_900<Key, Value>>,
+                                              merge_config_900<Key, Value>>
+    {
+    };
 
 } // end namespace detail
 

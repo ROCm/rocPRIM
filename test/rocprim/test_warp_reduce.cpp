@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <vector>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -32,26 +32,23 @@
 
 #include "test_utils.hpp"
 
-#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error),hipSuccess)
+#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error), hipSuccess)
 
 namespace rp = rocprim;
 
-template<
-    class T,
-    unsigned int WarpSize
->
+template <class T, unsigned int WarpSize>
 struct params
 {
-    using type = T;
+    using type                              = T;
     static constexpr unsigned int warp_size = WarpSize;
 };
 
-template<class Params>
-class RocprimWarpReduceTests : public ::testing::Test {
+template <class Params>
+class RocprimWarpReduceTests : public ::testing::Test
+{
 public:
     using params = Params;
 };
-
 
 typedef ::testing::Types<
     // shuffle based reduce
@@ -77,22 +74,17 @@ typedef ::testing::Types<
     params<float, 7U>,
     params<float, 15U>,
     params<float, 37U>,
-    params<float, 61U>
-> Params;
+    params<float, 61U>>
+    Params;
 
 TYPED_TEST_CASE(RocprimWarpReduceTests, Params);
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-void warp_reduce_sum_kernel(T* device_input, T* device_output)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ void warp_reduce_sum_kernel(T* device_input, T* device_output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rp::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rp::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T value = device_input[index];
 
@@ -100,21 +92,20 @@ void warp_reduce_sum_kernel(T* device_input, T* device_output)
     __shared__ typename wreduce_t::storage_type storage[warps_no];
     wreduce_t().reduce(value, value, storage[warp_id]);
 
-    if(hipThreadIdx_x%LogicalWarpSize == 0)
+    if(hipThreadIdx_x % LogicalWarpSize == 0)
     {
-        device_output[index/LogicalWarpSize] = value;
+        device_output[index / LogicalWarpSize] = value;
     }
 }
 
 TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::params::type;
+    using T                            = typename TestFixture::params::type;
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rp::detail::is_power_of_two(logical_warp_size)
-            ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
-            : (rp::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size        = rp::detail::is_power_of_two(logical_warp_size)
+                                      ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
+                                      : (rp::warp_size() / logical_warp_size) * logical_warp_size;
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -141,40 +132,34 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
     }
 
     T* device_input;
-    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
     T* device_output;
-    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
 
     HIP_CHECK(
-        hipMemcpy(
-            device_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
     // Launching kernel
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
-        dim3(size/block_size), dim3(block_size), 0, 0,
-        device_input, device_output
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
+                       dim3(size / block_size),
+                       dim3(block_size),
+                       0,
+                       0,
+                       device_input,
+                       device_output);
 
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
     HIP_CHECK(
-        hipMemcpy(
-            output.data(), device_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+        hipMemcpy(output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
     for(size_t i = 0; i < output.size(); i++)
     {
-        if (std::is_integral<T>::value)
+        if(std::is_integral<T>::value)
         {
             ASSERT_EQ(output[i], expected[i]);
         }
@@ -189,17 +174,12 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-void warp_allreduce_sum_kernel(T* device_input, T* device_output)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ void warp_allreduce_sum_kernel(T* device_input, T* device_output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rp::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rp::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T value = device_input[index];
 
@@ -213,12 +193,11 @@ void warp_allreduce_sum_kernel(T* device_input, T* device_output)
 TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::params::type;
+    using T                            = typename TestFixture::params::type;
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rp::detail::is_power_of_two(logical_warp_size)
-            ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
-            : (rp::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size        = rp::detail::is_power_of_two(logical_warp_size)
+                                      ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
+                                      : (rp::warp_size() / logical_warp_size) * logical_warp_size;
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -241,48 +220,42 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
             auto idx = i * logical_warp_size + j;
             value += input[idx];
         }
-        for (size_t j = 0; j < logical_warp_size; j++)
+        for(size_t j = 0; j < logical_warp_size; j++)
         {
-            auto idx = i * logical_warp_size + j;
+            auto idx      = i * logical_warp_size + j;
             expected[idx] = value;
         }
     }
 
     T* device_input;
-    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
     T* device_output;
-    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
 
     HIP_CHECK(
-        hipMemcpy(
-            device_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
     // Launching kernel
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
-        dim3(size/block_size), dim3(block_size), 0, 0,
-        device_input, device_output
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
+                       dim3(size / block_size),
+                       dim3(block_size),
+                       0,
+                       0,
+                       device_input,
+                       device_output);
 
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
     HIP_CHECK(
-        hipMemcpy(
-            output.data(), device_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+        hipMemcpy(output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
     for(size_t i = 0; i < output.size(); i++)
     {
-        if (std::is_integral<T>::value)
+        if(std::is_integral<T>::value)
         {
             ASSERT_EQ(output[i], expected[i]);
         }
@@ -297,17 +270,12 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-void warp_reduce_sum_kernel(T* device_input, T* device_output, size_t valid)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ void warp_reduce_sum_kernel(T* device_input, T* device_output, size_t valid)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rp::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rp::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T value = device_input[index];
 
@@ -315,22 +283,21 @@ void warp_reduce_sum_kernel(T* device_input, T* device_output, size_t valid)
     __shared__ typename wreduce_t::storage_type storage[warps_no];
     wreduce_t().reduce(value, value, valid, storage[warp_id]);
 
-    if(hipThreadIdx_x%LogicalWarpSize == 0)
+    if(hipThreadIdx_x % LogicalWarpSize == 0)
     {
-        device_output[index/LogicalWarpSize] = value;
+        device_output[index / LogicalWarpSize] = value;
     }
 }
 
 TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::params::type;
+    using T                            = typename TestFixture::params::type;
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rp::detail::is_power_of_two(logical_warp_size)
-            ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
-            : (rp::warp_size()/logical_warp_size) * logical_warp_size;
-    const size_t size = block_size * 4;
+    constexpr size_t block_size        = rp::detail::is_power_of_two(logical_warp_size)
+                                      ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
+                                      : (rp::warp_size() / logical_warp_size) * logical_warp_size;
+    const size_t size  = block_size * 4;
     const size_t valid = logical_warp_size - 1;
 
     // Given warp size not supported
@@ -357,40 +324,35 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
     }
 
     T* device_input;
-    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
     T* device_output;
-    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
 
     HIP_CHECK(
-        hipMemcpy(
-            device_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
     // Launching kernel
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
-        dim3(size/block_size), dim3(block_size), 0, 0,
-        device_input, device_output, valid
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
+                       dim3(size / block_size),
+                       dim3(block_size),
+                       0,
+                       0,
+                       device_input,
+                       device_output,
+                       valid);
 
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
     HIP_CHECK(
-        hipMemcpy(
-            output.data(), device_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+        hipMemcpy(output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
     for(size_t i = 0; i < output.size(); i++)
     {
-        if (std::is_integral<T>::value)
+        if(std::is_integral<T>::value)
         {
             ASSERT_EQ(output[i], expected[i]);
         }
@@ -405,17 +367,12 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-void warp_allreduce_sum_kernel(T* device_input, T* device_output, size_t valid)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ void warp_allreduce_sum_kernel(T* device_input, T* device_output, size_t valid)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rp::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rp::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T value = device_input[index];
 
@@ -429,13 +386,12 @@ void warp_allreduce_sum_kernel(T* device_input, T* device_output, size_t valid)
 TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::params::type;
+    using T                            = typename TestFixture::params::type;
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rp::detail::is_power_of_two(logical_warp_size)
-            ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
-            : (rp::warp_size()/logical_warp_size) * logical_warp_size;
-    const size_t size = block_size * 4;
+    constexpr size_t block_size        = rp::detail::is_power_of_two(logical_warp_size)
+                                      ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
+                                      : (rp::warp_size() / logical_warp_size) * logical_warp_size;
+    const size_t size  = block_size * 4;
     const size_t valid = logical_warp_size - 1;
 
     // Given warp size not supported
@@ -458,48 +414,43 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
             auto idx = i * logical_warp_size + j;
             value += input[idx];
         }
-        for (size_t j = 0; j < logical_warp_size; j++)
+        for(size_t j = 0; j < logical_warp_size; j++)
         {
-            auto idx = i * logical_warp_size + j;
+            auto idx      = i * logical_warp_size + j;
             expected[idx] = value;
         }
     }
 
     T* device_input;
-    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
     T* device_output;
-    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
 
     HIP_CHECK(
-        hipMemcpy(
-            device_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
     // Launching kernel
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
-        dim3(size/block_size), dim3(block_size), 0, 0,
-        device_input, device_output, valid
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
+                       dim3(size / block_size),
+                       dim3(block_size),
+                       0,
+                       0,
+                       device_input,
+                       device_output,
+                       valid);
 
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
     HIP_CHECK(
-        hipMemcpy(
-            output.data(), device_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+        hipMemcpy(output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
     for(size_t i = 0; i < output.size(); i++)
     {
-        if (std::is_integral<T>::value)
+        if(std::is_integral<T>::value)
         {
             ASSERT_EQ(output[i], expected[i]);
         }
@@ -517,14 +468,13 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
 TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
 {
     using base_type = typename TestFixture::params::type;
-    using T = test_utils::custom_test_type<base_type>;
+    using T         = test_utils::custom_test_type<base_type>;
 
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rp::detail::is_power_of_two(logical_warp_size)
-            ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
-            : (rp::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size        = rp::detail::is_power_of_two(logical_warp_size)
+                                      ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
+                                      : (rp::warp_size() / logical_warp_size) * logical_warp_size;
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -536,8 +486,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
     // Generate data
     std::vector<T> input(size);
     {
-        auto random_values =
-            test_utils::get_random_data<base_type>(2 * input.size(), 0, 100);
+        auto random_values = test_utils::get_random_data<base_type>(2 * input.size(), 0, 100);
         for(size_t i = 0; i < input.size(); i++)
         {
             input[i].x = random_values[i];
@@ -554,51 +503,47 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
         for(size_t j = 0; j < logical_warp_size; j++)
         {
             auto idx = i * logical_warp_size + j;
-            value = value + input[idx];
+            value    = value + input[idx];
         }
         expected[i] = value;
     }
 
     T* device_input;
-    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
     T* device_output;
-    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
 
     HIP_CHECK(
-        hipMemcpy(
-            device_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
     // Launching kernel
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
-        dim3(size/block_size), dim3(block_size), 0, 0,
-        device_input, device_output
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
+                       dim3(size / block_size),
+                       dim3(block_size),
+                       0,
+                       0,
+                       device_input,
+                       device_output);
 
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
     HIP_CHECK(
-        hipMemcpy(
-            output.data(), device_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+        hipMemcpy(output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
     for(size_t i = 0; i < output.size(); i++)
     {
         auto diffx = std::max<base_type>(std::abs(0.1f * expected[i].x), base_type(0.01f));
-        if(std::is_integral<base_type>::value) diffx = 0;
+        if(std::is_integral<base_type>::value)
+            diffx = 0;
         ASSERT_NEAR(output[i].x, expected[i].x, diffx);
 
         auto diffy = std::max<base_type>(std::abs(0.1f * expected[i].y), base_type(0.01f));
-        if(std::is_integral<base_type>::value) diffy = 0;
+        if(std::is_integral<base_type>::value)
+            diffy = 0;
         ASSERT_NEAR(output[i].y, expected[i].y, diffy);
     }
 
@@ -606,21 +551,15 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class Flag,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-void head_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
+template <class T, class Flag, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ void head_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rp::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rp::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
-    T value = input[index];
-    auto flag = flags[index];
+    T    value = input[index];
+    auto flag  = flags[index];
 
     using wreduce_t = rp::warp_reduce<T, LogicalWarpSize, true>;
     __shared__ typename wreduce_t::storage_type storage[warps_no];
@@ -632,13 +571,12 @@ void head_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
 TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::params::type;
-    using flag_type = unsigned char;
+    using T                            = typename TestFixture::params::type;
+    using flag_type                    = unsigned char;
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rp::detail::is_power_of_two(logical_warp_size)
-            ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
-            : (rp::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size        = rp::detail::is_power_of_two(logical_warp_size)
+                                      ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
+                                      : (rp::warp_size() / logical_warp_size) * logical_warp_size;
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -648,47 +586,40 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
     }
 
     // Generate data
-    std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10); // used for input
+    std::vector<T>         input = test_utils::get_random_data<T>(size, 1, 10); // used for input
     std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f);
-    for(size_t i = 0; i < flags.size(); i+= logical_warp_size)
+    for(size_t i = 0; i < flags.size(); i += logical_warp_size)
     {
         flags[i] = 1;
     }
     std::vector<T> output(input.size());
 
-    T* device_input;
+    T*         device_input;
     flag_type* device_flags;
-    T* device_output;
-    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-    HIP_CHECK(hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
+    T*         device_output;
     HIP_CHECK(
-        hipMemcpy(
-            device_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
     HIP_CHECK(
-        hipMemcpy(
-            device_flags, flags.data(),
-            flags.size() * sizeof(flag_type),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
+    HIP_CHECK(
+        hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(
+        device_flags, flags.data(), flags.size() * sizeof(flag_type), hipMemcpyHostToDevice));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Calculate expected results on host
     std::vector<T> expected(output.size());
-    size_t segment_head_index = 0;
-    T reduction = input[0];
+    size_t         segment_head_index = 0;
+    T              reduction          = input[0];
     for(size_t i = 0; i < output.size(); i++)
     {
-        if(i%logical_warp_size == 0 || flags[i])
+        if(i % logical_warp_size == 0 || flags[i])
         {
             expected[segment_head_index] = reduction;
-            segment_head_index = i;
-            reduction = input[i];
+            segment_head_index           = i;
+            reduction                    = input[i];
         }
         else
         {
@@ -699,23 +630,21 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
 
     // Launching kernel
     hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(head_segmented_warp_reduce_kernel<
-            T, flag_type, block_size, logical_warp_size
-        >),
-        dim3(size/block_size), dim3(block_size), 0, 0,
-        device_input, device_flags, device_output
-    );
+        HIP_KERNEL_NAME(
+            head_segmented_warp_reduce_kernel<T, flag_type, block_size, logical_warp_size>),
+        dim3(size / block_size),
+        dim3(block_size),
+        0,
+        0,
+        device_input,
+        device_flags,
+        device_output);
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
     HIP_CHECK(
-        hipMemcpy(
-            output.data(), device_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+        hipMemcpy(output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
 
     for(size_t i = 0; i < output.size(); i++)
@@ -723,7 +652,8 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
         if(flags[i])
         {
             auto diff = std::max<T>(std::abs(0.1f * expected[i]), T(0.01f));
-            if(std::is_integral<T>::value) diff = 0;
+            if(std::is_integral<T>::value)
+                diff = 0;
             ASSERT_NEAR(output[i], expected[i], diff) << " with index: " << index;
         }
     }
@@ -733,21 +663,15 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class Flag,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-void tail_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
+template <class T, class Flag, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ void tail_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rp::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rp::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
-    T value = input[index];
-    auto flag = flags[index];
+    T    value = input[index];
+    auto flag  = flags[index];
 
     using wreduce_t = rp::warp_reduce<T, LogicalWarpSize, true>;
     __shared__ typename wreduce_t::storage_type storage[warps_no];
@@ -759,13 +683,12 @@ void tail_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
 TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::params::type;
-    using flag_type = unsigned char;
+    using T                            = typename TestFixture::params::type;
+    using flag_type                    = unsigned char;
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rp::detail::is_power_of_two(logical_warp_size)
-            ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
-            : (rp::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size        = rp::detail::is_power_of_two(logical_warp_size)
+                                      ? rp::max<size_t>(rp::warp_size(), logical_warp_size * 4)
+                                      : (rp::warp_size() / logical_warp_size) * logical_warp_size;
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -775,41 +698,34 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
     }
 
     // Generate data
-    std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10); // used for input
+    std::vector<T>         input = test_utils::get_random_data<T>(size, 1, 10); // used for input
     std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f);
-    for(size_t i = logical_warp_size - 1; i < flags.size(); i+= logical_warp_size)
+    for(size_t i = logical_warp_size - 1; i < flags.size(); i += logical_warp_size)
     {
         flags[i] = 1;
     }
     std::vector<T> output(input.size());
 
-    T* device_input;
+    T*         device_input;
     flag_type* device_flags;
-    T* device_output;
-    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-    HIP_CHECK(hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
+    T*         device_output;
     HIP_CHECK(
-        hipMemcpy(
-            device_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
     HIP_CHECK(
-        hipMemcpy(
-            device_flags, flags.data(),
-            flags.size() * sizeof(flag_type),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(
+        hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
+    HIP_CHECK(
+        hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(
+        device_flags, flags.data(), flags.size() * sizeof(flag_type), hipMemcpyHostToDevice));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Calculate expected results on host
-    std::vector<T> expected(output.size());
+    std::vector<T>      expected(output.size());
     std::vector<size_t> segment_indexes;
-    size_t segment_index = 0;
-    T reduction;
+    size_t              segment_index = 0;
+    T                   reduction;
     for(size_t i = 0; i < output.size(); i++)
     {
         // single value segments
@@ -821,8 +737,8 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
         else
         {
             segment_index = i;
-            reduction = input[i];
-            auto next = i + 1;
+            reduction     = input[i];
+            auto next     = i + 1;
             while(next < output.size() && !flags[next])
             {
                 reduction = reduction + input[next];
@@ -837,30 +753,29 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
 
     // Launching kernel
     hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(tail_segmented_warp_reduce_kernel<
-            T, flag_type, block_size, logical_warp_size
-        >),
-        dim3(size/block_size), dim3(block_size), 0, 0,
-        device_input, device_flags, device_output
-    );
+        HIP_KERNEL_NAME(
+            tail_segmented_warp_reduce_kernel<T, flag_type, block_size, logical_warp_size>),
+        dim3(size / block_size),
+        dim3(block_size),
+        0,
+        0,
+        device_input,
+        device_flags,
+        device_output);
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
     HIP_CHECK(
-        hipMemcpy(
-            output.data(), device_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+        hipMemcpy(output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
 
     for(size_t i = 0; i < segment_indexes.size(); i++)
     {
         auto index = segment_indexes[i];
-        auto diff = std::max<T>(std::abs(0.1f * expected[i]), T(0.01f));
-        if(std::is_integral<T>::value) diff = 0;
+        auto diff  = std::max<T>(std::abs(0.1f * expected[i]), T(0.01f));
+        if(std::is_integral<T>::value)
+            diff = 0;
         ASSERT_NEAR(output[index], expected[index], diff) << " with index: " << index;
     }
 

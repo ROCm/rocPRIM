@@ -39,10 +39,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// Must be \p reduce_by_key_config or \p default_config.
 /// \tparam SelectConfig - configuration of device-level select operation.
 /// Must be \p select_config or \p default_config.
-template<
-    class ReduceByKeyConfig,
-    class SelectConfig = default_config
->
+template <class ReduceByKeyConfig, class SelectConfig = default_config>
 struct run_length_encode_config
 {
     /// \brief Configuration of device-level reduce-by-key operation.
@@ -54,7 +51,8 @@ struct run_length_encode_config
 namespace detail
 {
 
-using default_run_length_encode_config = run_length_encode_config<default_config, default_config>;
+    using default_run_length_encode_config
+        = run_length_encode_config<default_config, default_config>;
 
 } // end namespace detail
 

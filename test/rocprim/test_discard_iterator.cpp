@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iostream>
 #include <type_traits>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -34,7 +34,7 @@
 
 #include "test_utils.hpp"
 
-#define HIP_CHECK(error) ASSERT_EQ(error,hipSuccess)
+#define HIP_CHECK(error) ASSERT_EQ(error, hipSuccess)
 
 TEST(RocprimDiscardIteratorTests, Equal)
 {
@@ -78,81 +78,68 @@ TEST(RocprimDiscardIteratorTests, ReduceByKey)
     hipStream_t stream = 0; // default
 
     // host input
-    std::vector<int> keys_input = {
-        0, 0, 0, 1, 1, 2, 2, 0, 0, 0, 0
-    };
+    std::vector<int> keys_input = {0, 0, 0, 1, 1, 2, 2, 0, 0, 0, 0};
     std::vector<int> values_input(keys_input.size(), 1);
 
     // expected output
-    std::vector<int> aggregates_expected = { 3, 2, 2, 4 };
+    std::vector<int> aggregates_expected = {3, 2, 2, 4};
 
     // device input/output
-    int * d_keys_input;
-    int * d_values_input;
+    int* d_keys_input;
+    int* d_values_input;
     HIP_CHECK(hipMalloc(&d_keys_input, keys_input.size() * sizeof(int)));
     HIP_CHECK(hipMalloc(&d_values_input, values_input.size() * sizeof(int)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_keys_input, keys_input.data(),
-            keys_input.size() * sizeof(int),
-            hipMemcpyHostToDevice
-        )
-    );
-    HIP_CHECK(
-        hipMemcpy(
-            d_values_input, values_input.data(),
-            values_input.size() * sizeof(int),
-            hipMemcpyHostToDevice
-        )
-    );
-    int * d_aggregates_output;
+    HIP_CHECK(hipMemcpy(
+        d_keys_input, keys_input.data(), keys_input.size() * sizeof(int), hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(d_values_input,
+                        values_input.data(),
+                        values_input.size() * sizeof(int),
+                        hipMemcpyHostToDevice));
+    int* d_aggregates_output;
     HIP_CHECK(hipMalloc(&d_aggregates_output, aggregates_expected.size() * sizeof(int)));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Get temporary storage size
     size_t temporary_storage_bytes;
-    HIP_CHECK(
-        rocprim::reduce_by_key(
-            nullptr, temporary_storage_bytes,
-            d_keys_input,
-            d_values_input, values_input.size(),
-            rocprim::make_discard_iterator(),
-            d_aggregates_output,
-            rocprim::make_discard_iterator(),
-            rocprim::plus<int>(), rocprim::equal_to<int>(),
-            stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::reduce_by_key(nullptr,
+                                     temporary_storage_bytes,
+                                     d_keys_input,
+                                     d_values_input,
+                                     values_input.size(),
+                                     rocprim::make_discard_iterator(),
+                                     d_aggregates_output,
+                                     rocprim::make_discard_iterator(),
+                                     rocprim::plus<int>(),
+                                     rocprim::equal_to<int>(),
+                                     stream,
+                                     debug_synchronous));
     HIP_CHECK(hipDeviceSynchronize());
 
     ASSERT_GT(temporary_storage_bytes, 0);
 
-    void * d_temporary_storage;
+    void* d_temporary_storage;
     HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
 
-    HIP_CHECK(
-        rocprim::reduce_by_key(
-            d_temporary_storage, temporary_storage_bytes,
-            d_keys_input,
-            d_values_input, values_input.size(),
-            rocprim::make_discard_iterator(),
-            d_aggregates_output,
-            rocprim::make_discard_iterator(),
-            rocprim::plus<int>(), rocprim::equal_to<int>(),
-            stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::reduce_by_key(d_temporary_storage,
+                                     temporary_storage_bytes,
+                                     d_keys_input,
+                                     d_values_input,
+                                     values_input.size(),
+                                     rocprim::make_discard_iterator(),
+                                     d_aggregates_output,
+                                     rocprim::make_discard_iterator(),
+                                     rocprim::plus<int>(),
+                                     rocprim::equal_to<int>(),
+                                     stream,
+                                     debug_synchronous));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Check if output values are as expected
     std::vector<int> aggregates_output(aggregates_expected.size());
-    HIP_CHECK(
-        hipMemcpy(
-            aggregates_output.data(), d_aggregates_output,
-            aggregates_expected.size() * sizeof(int),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(aggregates_output.data(),
+                        d_aggregates_output,
+                        aggregates_expected.size() * sizeof(int),
+                        hipMemcpyDeviceToHost));
     for(size_t i = 0; i < aggregates_output.size(); i++)
     {
         ASSERT_EQ(aggregates_output[i], aggregates_expected[i]);

@@ -26,8 +26,8 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "../intrinsics.hpp"
 #include "../functional.hpp"
+#include "../intrinsics.hpp"
 
 #include "detail/block_sort_bitonic.hpp"
 
@@ -48,17 +48,17 @@ enum class block_sort_algorithm
 namespace detail
 {
 
-// Selector for block_sort algorithm which gives block sort implementation
-// type based on passed block_sort_algorithm enum
-template<block_sort_algorithm Algorithm>
-struct select_block_sort_impl;
+    // Selector for block_sort algorithm which gives block sort implementation
+    // type based on passed block_sort_algorithm enum
+    template <block_sort_algorithm Algorithm>
+    struct select_block_sort_impl;
 
-template<>
-struct select_block_sort_impl<block_sort_algorithm::bitonic_sort>
-{
-    template<class Key, unsigned int BlockSize, class Value>
-    using type = block_sort_bitonic<Key, BlockSize, Value>;
-};
+    template <>
+    struct select_block_sort_impl<block_sort_algorithm::bitonic_sort>
+    {
+        template <class Key, unsigned int BlockSize, class Value>
+        using type = block_sort_bitonic<Key, BlockSize, Value>;
+    };
 
 } // end namespace detail
 
@@ -103,18 +103,18 @@ struct select_block_sort_impl<block_sort_algorithm::bitonic_sort>
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class Key,
-    unsigned int BlockSize,
-    class Value = empty_type,
-    block_sort_algorithm Algorithm = block_sort_algorithm::default_algorithm
->
+template <class Key,
+          unsigned int BlockSize,
+          class Value                    = empty_type,
+          block_sort_algorithm Algorithm = block_sort_algorithm::default_algorithm>
 class block_sort
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     : private detail::select_block_sort_impl<Algorithm>::template type<Key, BlockSize, Value>
 #endif
 {
-    using base_type = typename detail::select_block_sort_impl<Algorithm>::template type<Key, BlockSize, Value>;
+    using base_type =
+        typename detail::select_block_sort_impl<Algorithm>::template type<Key, BlockSize, Value>;
+
 public:
     /// \brief Struct used to allocate a temporary memory that is required for thread
     /// communication during operations provided by related parallel primitive.
@@ -137,10 +137,9 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, compare_function);
     }
@@ -186,11 +185,10 @@ public:
     /// }
     /// \endcode
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              storage_type& storage,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    storage_type&  storage,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, storage, compare_function);
     }
@@ -207,11 +205,10 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              Value& thread_value,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    Value&         thread_value,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, thread_value, compare_function);
     }
@@ -258,12 +255,11 @@ public:
     /// }
     /// \endcode
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              Value& thread_value,
-              storage_type& storage,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    Value&         thread_value,
+                                    storage_type&  storage,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, thread_value, storage, compare_function);
     }
@@ -282,12 +278,11 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              storage_type& storage,
-              const unsigned int size,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&               thread_key,
+                                    storage_type&      storage,
+                                    const unsigned int size,
+                                    BinaryFunction     compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, storage, size, compare_function);
     }
@@ -307,13 +302,12 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              Value& thread_value,
-              storage_type& storage,
-              const unsigned int size,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&               thread_key,
+                                    Value&             thread_value,
+                                    storage_type&      storage,
+                                    const unsigned int size,
+                                    BinaryFunction     compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, thread_value, storage, size, compare_function);
     }

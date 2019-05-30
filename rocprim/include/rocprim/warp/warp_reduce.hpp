@@ -26,8 +26,8 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "../intrinsics.hpp"
 #include "../functional.hpp"
+#include "../intrinsics.hpp"
 #include "../types.hpp"
 
 #include "detail/warp_reduce_crosslane.hpp"
@@ -41,17 +41,17 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-// Select warp_reduce implementation based WarpSize
-template<class T, unsigned int WarpSize, bool UseAllReduce>
-struct select_warp_reduce_impl
-{
-    typedef typename std::conditional<
-        // can we use crosslane (DPP or shuffle-based) implementation?
-        detail::is_warpsize_shuffleable<WarpSize>::value,
-        detail::warp_reduce_crosslane<T, WarpSize, UseAllReduce>, // yes
-        detail::warp_reduce_shared_mem<T, WarpSize, UseAllReduce> // no
-    >::type type;
-};
+    // Select warp_reduce implementation based WarpSize
+    template <class T, unsigned int WarpSize, bool UseAllReduce>
+    struct select_warp_reduce_impl
+    {
+        typedef typename std::conditional<
+            // can we use crosslane (DPP or shuffle-based) implementation?
+            detail::is_warpsize_shuffleable<WarpSize>::value,
+            detail::warp_reduce_crosslane<T, WarpSize, UseAllReduce>, // yes
+            detail::warp_reduce_shared_mem<T, WarpSize, UseAllReduce> // no
+            >::type type;
+    };
 
 } // end namespace detail
 
@@ -106,11 +106,7 @@ struct select_warp_reduce_impl
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int WarpSize = warp_size(),
-    bool UseAllReduce = false
->
+template <class T, unsigned int WarpSize = warp_size(), bool UseAllReduce = false>
 class warp_reduce
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     : private detail::select_warp_reduce_impl<T, WarpSize, UseAllReduce>::type
@@ -176,12 +172,11 @@ public:
     /// }
     /// \endcode
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void reduce(T input,
-                T& output,
-                storage_type& storage,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void reduce(T              input,
+                                      T&             output,
+                                      storage_type&  storage,
+                                      BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, storage, reduce_op);
     }
@@ -232,13 +227,12 @@ public:
     /// }
     /// \endcode
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void reduce(T input,
-                T& output,
-                int valid_items,
-                storage_type& storage,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void reduce(T              input,
+                                      T&             output,
+                                      int            valid_items,
+                                      storage_type&  storage,
+                                      BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, valid_items, storage, reduce_op);
     }
@@ -261,13 +255,12 @@ public:
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
-    template<class Flag, class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void head_segmented_reduce(T input,
-                               T& output,
-                               Flag flag,
-                               storage_type& storage,
-                               BinaryFunction reduce_op = BinaryFunction())
+    template <class Flag, class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void head_segmented_reduce(T              input,
+                                                     T&             output,
+                                                     Flag           flag,
+                                                     storage_type&  storage,
+                                                     BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::head_segmented_reduce(input, output, flag, storage, reduce_op);
     }
@@ -290,13 +283,12 @@ public:
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
-    template<class Flag, class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void tail_segmented_reduce(T input,
-                               T& output,
-                               Flag flag,
-                               storage_type& storage,
-                               BinaryFunction reduce_op = BinaryFunction())
+    template <class Flag, class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void tail_segmented_reduce(T              input,
+                                                     T&             output,
+                                                     Flag           flag,
+                                                     storage_type&  storage,
+                                                     BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::tail_segmented_reduce(input, output, flag, storage, reduce_op);
     }

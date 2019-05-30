@@ -21,15 +21,15 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_SORT_HPP_
 #define ROCPRIM_DEVICE_DEVICE_SORT_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
 #include "detail/device_merge_sort.hpp"
-#include "device_transform.hpp"
 #include "device_merge_sort_config.hpp"
+#include "device_transform.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -39,198 +39,217 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    unsigned int BlockSize,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class BinaryFunction
->
-__global__
-void block_sort_kernel(KeysInputIterator keys_input,
-                       KeysOutputIterator keys_output,
-                       ValuesInputIterator values_input,
-                       ValuesOutputIterator values_output,
-                       const size_t size,
-                       BinaryFunction compare_function)
-{
-    block_sort_kernel_impl<BlockSize>(
-        keys_input, keys_output, values_input, values_output,
-        size, compare_function
-    );
-}
-
-template<
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class BinaryFunction
->
-__global__
-void block_merge_kernel(KeysInputIterator keys_input,
-                        KeysOutputIterator keys_output,
-                        ValuesInputIterator values_input,
-                        ValuesOutputIterator values_output,
-                        const size_t size,
-                        unsigned int block_size,
-                        BinaryFunction compare_function)
-{
-    block_merge_kernel_impl(
-        keys_input, keys_output, values_input, values_output,
-        size, block_size, compare_function
-    );
-}
-
-#define ROCPRIM_DETAIL_HIP_SYNC(name, size, start) \
-    if(debug_synchronous) \
-    { \
-        std::cout << name << "(" << size << ")"; \
-        auto error = hipStreamSynchronize(stream); \
-        if(error != hipSuccess) return error; \
-        auto end = std::chrono::high_resolution_clock::now(); \
-        auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-        std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-    }
-
-#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start) \
-    { \
-        auto error = hipPeekAtLastError(); \
-        if(error != hipSuccess) return error; \
-        if(debug_synchronous) \
-        { \
-            std::cout << name << "(" << size << ")"; \
-            auto error = hipStreamSynchronize(stream); \
-            if(error != hipSuccess) return error; \
-            auto end = std::chrono::high_resolution_clock::now(); \
-            auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-            std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-        } \
-    }
-
-template<
-    class Config,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class BinaryFunction
->
-inline
-hipError_t merge_sort_impl(void * temporary_storage,
-                           size_t& storage_size,
-                           KeysInputIterator keys_input,
-                           KeysOutputIterator keys_output,
-                           ValuesInputIterator values_input,
-                           ValuesOutputIterator values_output,
-                           const size_t size,
-                           BinaryFunction compare_function,
-                           const hipStream_t stream,
-                           bool debug_synchronous)
-{
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
-    constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
-
-    // Get default config if Config is default_config
-    using config = default_or_custom_config<
-        Config,
-        default_merge_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
-    >;
-
-    // Block size
-    constexpr unsigned int block_size = config::block_size;
-
-    const size_t keys_bytes = ::rocprim::detail::align_size(size * sizeof(key_type));
-    const size_t values_bytes =
-        with_values ? ::rocprim::detail::align_size(size * sizeof(value_type)) : 0;
-    if(temporary_storage == nullptr)
+    template <unsigned int BlockSize,
+              class KeysInputIterator,
+              class KeysOutputIterator,
+              class ValuesInputIterator,
+              class ValuesOutputIterator,
+              class BinaryFunction>
+    __global__ void block_sort_kernel(KeysInputIterator    keys_input,
+                                      KeysOutputIterator   keys_output,
+                                      ValuesInputIterator  values_input,
+                                      ValuesOutputIterator values_output,
+                                      const size_t         size,
+                                      BinaryFunction       compare_function)
     {
-        storage_size = keys_bytes;
-        if(with_values)
+        block_sort_kernel_impl<BlockSize>(
+            keys_input, keys_output, values_input, values_output, size, compare_function);
+    }
+
+    template <class KeysInputIterator,
+              class KeysOutputIterator,
+              class ValuesInputIterator,
+              class ValuesOutputIterator,
+              class BinaryFunction>
+    __global__ void block_merge_kernel(KeysInputIterator    keys_input,
+                                       KeysOutputIterator   keys_output,
+                                       ValuesInputIterator  values_input,
+                                       ValuesOutputIterator values_output,
+                                       const size_t         size,
+                                       unsigned int         block_size,
+                                       BinaryFunction       compare_function)
+    {
+        block_merge_kernel_impl(keys_input,
+                                keys_output,
+                                values_input,
+                                values_output,
+                                size,
+                                block_size,
+                                compare_function);
+    }
+
+#define ROCPRIM_DETAIL_HIP_SYNC(name, size, start)                                         \
+    if(debug_synchronous)                                                                  \
+    {                                                                                      \
+        std::cout << name << "(" << size << ")";                                           \
+        auto error = hipStreamSynchronize(stream);                                         \
+        if(error != hipSuccess)                                                            \
+            return error;                                                                  \
+        auto end = std::chrono::high_resolution_clock::now();                              \
+        auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+        std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+    }
+
+#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                         \
+    {                                                                                          \
+        auto error = hipPeekAtLastError();                                                     \
+        if(error != hipSuccess)                                                                \
+            return error;                                                                      \
+        if(debug_synchronous)                                                                  \
+        {                                                                                      \
+            std::cout << name << "(" << size << ")";                                           \
+            auto error = hipStreamSynchronize(stream);                                         \
+            if(error != hipSuccess)                                                            \
+                return error;                                                                  \
+            auto end = std::chrono::high_resolution_clock::now();                              \
+            auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+            std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+        }                                                                                      \
+    }
+
+    template <class Config,
+              class KeysInputIterator,
+              class KeysOutputIterator,
+              class ValuesInputIterator,
+              class ValuesOutputIterator,
+              class BinaryFunction>
+    inline hipError_t merge_sort_impl(void*                temporary_storage,
+                                      size_t&              storage_size,
+                                      KeysInputIterator    keys_input,
+                                      KeysOutputIterator   keys_output,
+                                      ValuesInputIterator  values_input,
+                                      ValuesOutputIterator values_output,
+                                      const size_t         size,
+                                      BinaryFunction       compare_function,
+                                      const hipStream_t    stream,
+                                      bool                 debug_synchronous)
+    {
+        using key_type             = typename std::iterator_traits<KeysInputIterator>::value_type;
+        using value_type           = typename std::iterator_traits<ValuesInputIterator>::value_type;
+        constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
+
+        // Get default config if Config is default_config
+        using config = default_or_custom_config<
+            Config,
+            default_merge_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>>;
+
+        // Block size
+        constexpr unsigned int block_size = config::block_size;
+
+        const size_t keys_bytes = ::rocprim::detail::align_size(size * sizeof(key_type));
+        const size_t values_bytes
+            = with_values ? ::rocprim::detail::align_size(size * sizeof(value_type)) : 0;
+        if(temporary_storage == nullptr)
         {
-            storage_size += values_bytes;
+            storage_size = keys_bytes;
+            if(with_values)
+            {
+                storage_size += values_bytes;
+            }
+            // Make sure user won't try to allocate 0 bytes memory
+            storage_size = storage_size == 0 ? 4 : storage_size;
+            return hipSuccess;
         }
-        // Make sure user won't try to allocate 0 bytes memory
-        storage_size = storage_size == 0 ? 4 : storage_size;
-        return hipSuccess;
-    }
 
-    auto number_of_blocks = (size + block_size - 1)/block_size;
-    if(debug_synchronous)
-    {
-        std::cout << "block_size " << block_size << '\n';
-        std::cout << "number of blocks " << number_of_blocks << '\n';
-    }
+        auto number_of_blocks = (size + block_size - 1) / block_size;
+        if(debug_synchronous)
+        {
+            std::cout << "block_size " << block_size << '\n';
+            std::cout << "number of blocks " << number_of_blocks << '\n';
+        }
 
-    char* ptr = reinterpret_cast<char*>(temporary_storage);
-    key_type * keys_buffer = reinterpret_cast<key_type*>(ptr);
-    ptr += keys_bytes;
-    value_type * values_buffer =
-        with_values ? reinterpret_cast<value_type*>(ptr) : nullptr;
+        char*     ptr         = reinterpret_cast<char*>(temporary_storage);
+        key_type* keys_buffer = reinterpret_cast<key_type*>(ptr);
+        ptr += keys_bytes;
+        value_type* values_buffer = with_values ? reinterpret_cast<value_type*>(ptr) : nullptr;
 
-    // Start point for time measurements
-    std::chrono::high_resolution_clock::time_point start;
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+        // Start point for time measurements
+        std::chrono::high_resolution_clock::time_point start;
+        if(debug_synchronous)
+            start = std::chrono::high_resolution_clock::now();
 
-    const unsigned int grid_size = number_of_blocks;
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(block_sort_kernel<block_size>),
-        dim3(grid_size), dim3(block_size), 0, stream,
-        keys_input, keys_output, values_input, values_output,
-        size, compare_function
-    );
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_sort_kernel", size, start);
+        const unsigned int grid_size = number_of_blocks;
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(block_sort_kernel<block_size>),
+                           dim3(grid_size),
+                           dim3(block_size),
+                           0,
+                           stream,
+                           keys_input,
+                           keys_output,
+                           values_input,
+                           values_output,
+                           size,
+                           compare_function);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_sort_kernel", size, start);
 
-    bool temporary_store = false;
-    for(unsigned int block = block_size; block < size; block *= 2)
-    {
-        temporary_store = !temporary_store;
+        bool temporary_store = false;
+        for(unsigned int block = block_size; block < size; block *= 2)
+        {
+            temporary_store = !temporary_store;
+            if(temporary_store)
+            {
+                if(debug_synchronous)
+                    start = std::chrono::high_resolution_clock::now();
+                hipLaunchKernelGGL(HIP_KERNEL_NAME(block_merge_kernel),
+                                   dim3(grid_size),
+                                   dim3(block_size),
+                                   0,
+                                   stream,
+                                   keys_output,
+                                   keys_buffer,
+                                   values_output,
+                                   values_buffer,
+                                   size,
+                                   block,
+                                   compare_function);
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_merge_kernel", size, start);
+            }
+            else
+            {
+                if(debug_synchronous)
+                    start = std::chrono::high_resolution_clock::now();
+                hipLaunchKernelGGL(HIP_KERNEL_NAME(block_merge_kernel),
+                                   dim3(grid_size),
+                                   dim3(block_size),
+                                   0,
+                                   stream,
+                                   keys_buffer,
+                                   keys_output,
+                                   values_buffer,
+                                   values_output,
+                                   size,
+                                   block,
+                                   compare_function);
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_merge_kernel", size, start);
+            }
+        }
+
         if(temporary_store)
         {
-            if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(block_merge_kernel),
-                dim3(grid_size), dim3(block_size), 0, stream,
-                keys_output, keys_buffer, values_output, values_buffer,
-                size, block, compare_function
-            );
-            ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_merge_kernel", size, start);
+            hipError_t error = ::rocprim::transform(keys_buffer,
+                                                    keys_output,
+                                                    size,
+                                                    ::rocprim::identity<key_type>(),
+                                                    stream,
+                                                    debug_synchronous);
+            if(error != hipSuccess)
+                return error;
+
+            if(with_values)
+            {
+                hipError_t error = ::rocprim::transform(values_buffer,
+                                                        values_output,
+                                                        size,
+                                                        ::rocprim::identity<value_type>(),
+                                                        stream,
+                                                        debug_synchronous);
+                if(error != hipSuccess)
+                    return error;
+            }
         }
-        else
-        {
-            if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(block_merge_kernel),
-                dim3(grid_size), dim3(block_size), 0, stream,
-                keys_buffer, keys_output, values_buffer, values_output,
-                size, block, compare_function
-            );
-            ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_merge_kernel", size, start);
-        }
+
+        return hipSuccess;
     }
-
-    if(temporary_store)
-    {
-        hipError_t error = ::rocprim::transform(
-            keys_buffer, keys_output, size,
-            ::rocprim::identity<key_type>(), stream, debug_synchronous
-        );
-        if(error != hipSuccess) return error;
-
-        if(with_values)
-        {
-            hipError_t error = ::rocprim::transform(
-                values_buffer, values_output, size,
-                ::rocprim::identity<value_type>(), stream, debug_synchronous
-            );
-            if(error != hipSuccess) return error;
-        }
-    }
-
-    return hipSuccess;
-}
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
 #undef ROCPRIM_DETAIL_HIP_SYNC
@@ -304,28 +323,31 @@ hipError_t merge_sort_impl(void * temporary_storage,
 /// // keys_output: [0.08, 0.2, 0.3, 0.4, 0.6, 0.65, 0.7, 1]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class BinaryFunction = ::rocprim::less<typename std::iterator_traits<KeysInputIterator>::value_type>
->
-inline
-hipError_t merge_sort(void * temporary_storage,
-                      size_t& storage_size,
-                      KeysInputIterator keys_input,
-                      KeysOutputIterator keys_output,
-                      const size_t size,
-                      BinaryFunction compare_function = BinaryFunction(),
-                      const hipStream_t stream = 0,
-                      bool debug_synchronous = false)
+template <class Config = default_config,
+          class KeysInputIterator,
+          class KeysOutputIterator,
+          class BinaryFunction
+          = ::rocprim::less<typename std::iterator_traits<KeysInputIterator>::value_type>>
+inline hipError_t merge_sort(void*              temporary_storage,
+                             size_t&            storage_size,
+                             KeysInputIterator  keys_input,
+                             KeysOutputIterator keys_output,
+                             const size_t       size,
+                             BinaryFunction     compare_function  = BinaryFunction(),
+                             const hipStream_t  stream            = 0,
+                             bool               debug_synchronous = false)
 {
-    empty_type * values = nullptr;
-    return detail::merge_sort_impl<Config>(
-        temporary_storage, storage_size,
-        keys_input, keys_output, values, values, size,
-        compare_function, stream, debug_synchronous
-    );
+    empty_type* values = nullptr;
+    return detail::merge_sort_impl<Config>(temporary_storage,
+                                           storage_size,
+                                           keys_input,
+                                           keys_output,
+                                           values,
+                                           values,
+                                           size,
+                                           compare_function,
+                                           stream,
+                                           debug_synchronous);
 }
 
 /// \brief Parallel ascending merge sort-by-key primitive for device level.
@@ -406,31 +428,34 @@ hipError_t merge_sort(void * temporary_storage,
 /// // values_output: [-1, -2, 2, 3, -4, -5, 7, -8]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class BinaryFunction = ::rocprim::less<typename std::iterator_traits<KeysInputIterator>::value_type>
->
-inline
-hipError_t merge_sort(void * temporary_storage,
-                      size_t& storage_size,
-                      KeysInputIterator keys_input,
-                      KeysOutputIterator keys_output,
-                      ValuesInputIterator values_input,
-                      ValuesOutputIterator values_output,
-                      const size_t size,
-                      BinaryFunction compare_function = BinaryFunction(),
-                      const hipStream_t stream = 0,
-                      bool debug_synchronous = false)
+template <class Config = default_config,
+          class KeysInputIterator,
+          class KeysOutputIterator,
+          class ValuesInputIterator,
+          class ValuesOutputIterator,
+          class BinaryFunction
+          = ::rocprim::less<typename std::iterator_traits<KeysInputIterator>::value_type>>
+inline hipError_t merge_sort(void*                temporary_storage,
+                             size_t&              storage_size,
+                             KeysInputIterator    keys_input,
+                             KeysOutputIterator   keys_output,
+                             ValuesInputIterator  values_input,
+                             ValuesOutputIterator values_output,
+                             const size_t         size,
+                             BinaryFunction       compare_function  = BinaryFunction(),
+                             const hipStream_t    stream            = 0,
+                             bool                 debug_synchronous = false)
 {
-    return detail::merge_sort_impl<Config>(
-        temporary_storage, storage_size,
-        keys_input, keys_output, values_input, values_output, size,
-        compare_function, stream, debug_synchronous
-    );
+    return detail::merge_sort_impl<Config>(temporary_storage,
+                                           storage_size,
+                                           keys_input,
+                                           keys_output,
+                                           values_input,
+                                           values_output,
+                                           size,
+                                           compare_function,
+                                           stream,
+                                           debug_synchronous);
 }
 
 /// @}

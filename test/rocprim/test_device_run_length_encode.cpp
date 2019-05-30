@@ -25,8 +25,8 @@
 #include <iostream>
 #include <random>
 #include <type_traits>
-#include <vector>
 #include <utility>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -39,59 +39,65 @@
 
 #define HIP_CHECK(error) ASSERT_EQ(error, hipSuccess)
 
-template<
-    class Key,
-    class Count,
-    unsigned int MinSegmentLength,
-    unsigned int MaxSegmentLength,
-    // Tests output iterator with void value_type (OutputIterator concept)
-    bool UseIdentityIterator = false
->
+template <class Key,
+          class Count,
+          unsigned int MinSegmentLength,
+          unsigned int MaxSegmentLength,
+          // Tests output iterator with void value_type (OutputIterator concept)
+          bool UseIdentityIterator = false>
 struct params
 {
-    using key_type = Key;
-    using count_type = Count;
-    static constexpr unsigned int min_segment_length = MinSegmentLength;
-    static constexpr unsigned int max_segment_length = MaxSegmentLength;
-    static constexpr bool use_identity_iterator = UseIdentityIterator;
+    using key_type                                      = Key;
+    using count_type                                    = Count;
+    static constexpr unsigned int min_segment_length    = MinSegmentLength;
+    static constexpr unsigned int max_segment_length    = MaxSegmentLength;
+    static constexpr bool         use_identity_iterator = UseIdentityIterator;
 };
 
-template<class Params>
-class RocprimDeviceRunLengthEncode : public ::testing::Test {
+template <class Params>
+class RocprimDeviceRunLengthEncode : public ::testing::Test
+{
 public:
     using params = Params;
 };
 
-using custom_int2 = test_utils::custom_test_type<int>;
+using custom_int2    = test_utils::custom_test_type<int>;
 using custom_double2 = test_utils::custom_test_type<double>;
 
-typedef ::testing::Types<
-    params<int, int, 1, 1, true>,
-    params<double, int, 3, 5>,
-    params<float, int, 1, 10>,
-    params<unsigned long long, size_t, 1, 30>,
-    params<custom_int2, unsigned int, 20, 100>,
-    params<float, unsigned long long, 100, 400>,
-    params<unsigned int, unsigned int, 200, 600>,
-    params<double, int, 100, 2000>,
-    params<custom_double2, custom_int2, 10, 30000, true>,
-    params<int, unsigned int, 1000, 5000>,
-    params<unsigned int, size_t, 2048, 2048>,
-    params<unsigned int, unsigned int, 1000, 50000>,
-    params<unsigned long long, custom_double2, 100000, 100000>
-> Params;
+typedef ::testing::Types<params<int, int, 1, 1, true>,
+                         params<double, int, 3, 5>,
+                         params<float, int, 1, 10>,
+                         params<unsigned long long, size_t, 1, 30>,
+                         params<custom_int2, unsigned int, 20, 100>,
+                         params<float, unsigned long long, 100, 400>,
+                         params<unsigned int, unsigned int, 200, 600>,
+                         params<double, int, 100, 2000>,
+                         params<custom_double2, custom_int2, 10, 30000, true>,
+                         params<int, unsigned int, 1000, 5000>,
+                         params<unsigned int, size_t, 2048, 2048>,
+                         params<unsigned int, unsigned int, 1000, 50000>,
+                         params<unsigned long long, custom_double2, 100000, 100000>>
+    Params;
 
 TYPED_TEST_CASE(RocprimDeviceRunLengthEncode, Params);
 
 std::vector<size_t> get_sizes()
 {
-    std::vector<size_t> sizes = {
-        1024, 2048, 4096, 1792,
-        1, 10, 53, 211, 500,
-        2345, 11001, 34567,
-        100000,
-        (1 << 16) - 1220, (1 << 21) - 76543
-    };
+    std::vector<size_t>       sizes        = {1024,
+                                 2048,
+                                 4096,
+                                 1792,
+                                 1,
+                                 10,
+                                 53,
+                                 211,
+                                 500,
+                                 2345,
+                                 11001,
+                                 34567,
+                                 100000,
+                                 (1 << 16) - 1220,
+                                 (1 << 21) - 76543};
     const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(5, 1, 100000);
     sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
     return sizes;
@@ -99,19 +105,18 @@ std::vector<size_t> get_sizes()
 
 TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
 {
-    using key_type = typename TestFixture::params::key_type;
-    using count_type = typename TestFixture::params::count_type;
+    using key_type       = typename TestFixture::params::key_type;
+    using count_type     = typename TestFixture::params::count_type;
     using key_inner_type = typename test_utils::inner_type<key_type>::type;
-    using key_distribution_type = typename std::conditional<
-        std::is_floating_point<key_inner_type>::value,
-        std::uniform_real_distribution<key_inner_type>,
-        std::uniform_int_distribution<key_inner_type>
-    >::type;
+    using key_distribution_type =
+        typename std::conditional<std::is_floating_point<key_inner_type>::value,
+                                  std::uniform_real_distribution<key_inner_type>,
+                                  std::uniform_int_distribution<key_inner_type>>::type;
 
     constexpr bool use_identity_iterator = TestFixture::params::use_identity_iterator;
-    const bool debug_synchronous = false;
+    const bool     debug_synchronous     = false;
 
-    const unsigned int seed = 123;
+    const unsigned int         seed = 123;
     std::default_random_engine gen(seed);
 
     for(size_t size : get_sizes())
@@ -121,27 +126,26 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
         hipStream_t stream = 0; // default
 
         // Generate data and calculate expected results
-        std::vector<key_type> unique_expected;
+        std::vector<key_type>   unique_expected;
         std::vector<count_type> counts_expected;
-        size_t runs_count_expected = 0;
+        size_t                  runs_count_expected = 0;
 
-        std::vector<key_type> input(size);
-        key_distribution_type key_delta_dis(1, 5);
+        std::vector<key_type>                 input(size);
+        key_distribution_type                 key_delta_dis(1, 5);
         std::uniform_int_distribution<size_t> key_count_dis(
-            TestFixture::params::min_segment_length,
-            TestFixture::params::max_segment_length
-        );
-        std::vector<count_type> values_input = test_utils::get_random_data<count_type>(size, 0, 100);
+            TestFixture::params::min_segment_length, TestFixture::params::max_segment_length);
+        std::vector<count_type> values_input
+            = test_utils::get_random_data<count_type>(size, 0, 100);
 
-        size_t offset = 0;
+        size_t   offset      = 0;
         key_type current_key = key_distribution_type(0, 100)(gen);
         while(offset < size)
         {
             size_t key_count = key_count_dis(gen);
-            current_key = current_key + key_delta_dis(gen);
+            current_key      = current_key + key_delta_dis(gen);
 
             const size_t end = std::min(size, offset + key_count);
-            key_count = end - offset;
+            key_count        = end - offset;
             for(size_t i = offset; i < end; i++)
             {
                 input[i] = current_key;
@@ -154,78 +158,63 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
             offset += key_count;
         }
 
-        key_type * d_input;
+        key_type* d_input;
         HIP_CHECK(hipMalloc(&d_input, size * sizeof(key_type)));
-        HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                size * sizeof(key_type),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(d_input, input.data(), size * sizeof(key_type), hipMemcpyHostToDevice));
 
-        key_type * d_unique_output;
-        count_type * d_counts_output;
-        count_type * d_runs_count_output;
+        key_type*   d_unique_output;
+        count_type* d_counts_output;
+        count_type* d_runs_count_output;
         HIP_CHECK(hipMalloc(&d_unique_output, runs_count_expected * sizeof(key_type)));
         HIP_CHECK(hipMalloc(&d_counts_output, runs_count_expected * sizeof(count_type)));
         HIP_CHECK(hipMalloc(&d_runs_count_output, sizeof(count_type)));
 
         size_t temporary_storage_bytes = 0;
 
-        HIP_CHECK(
-            rocprim::run_length_encode(
-                nullptr, temporary_storage_bytes,
-                d_input, size,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unique_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
-                stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::run_length_encode(
+            nullptr,
+            temporary_storage_bytes,
+            d_input,
+            size,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unique_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
+            stream,
+            debug_synchronous));
 
         ASSERT_GT(temporary_storage_bytes, 0U);
 
-        void * d_temporary_storage;
+        void* d_temporary_storage;
         HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
 
-        HIP_CHECK(
-            rocprim::run_length_encode(
-                d_temporary_storage, temporary_storage_bytes,
-                d_input, size,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unique_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
-                stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::run_length_encode(
+            d_temporary_storage,
+            temporary_storage_bytes,
+            d_input,
+            size,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unique_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
+            stream,
+            debug_synchronous));
 
         HIP_CHECK(hipFree(d_temporary_storage));
 
-        std::vector<key_type> unique_output(runs_count_expected);
+        std::vector<key_type>   unique_output(runs_count_expected);
         std::vector<count_type> counts_output(runs_count_expected);
         std::vector<count_type> runs_count_output(1);
-        HIP_CHECK(
-            hipMemcpy(
-                unique_output.data(), d_unique_output,
-                runs_count_expected * sizeof(key_type),
-                hipMemcpyDeviceToHost
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                counts_output.data(), d_counts_output,
-                runs_count_expected * sizeof(count_type),
-                hipMemcpyDeviceToHost
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                runs_count_output.data(), d_runs_count_output,
-                sizeof(count_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(unique_output.data(),
+                            d_unique_output,
+                            runs_count_expected * sizeof(key_type),
+                            hipMemcpyDeviceToHost));
+        HIP_CHECK(hipMemcpy(counts_output.data(),
+                            d_counts_output,
+                            runs_count_expected * sizeof(count_type),
+                            hipMemcpyDeviceToHost));
+        HIP_CHECK(hipMemcpy(runs_count_output.data(),
+                            d_runs_count_output,
+                            sizeof(count_type),
+                            hipMemcpyDeviceToHost));
 
         HIP_CHECK(hipFree(d_input));
         HIP_CHECK(hipFree(d_unique_output));
@@ -246,20 +235,19 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
 
 TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
 {
-    using key_type = typename TestFixture::params::key_type;
-    using count_type = typename TestFixture::params::count_type;
-    using offset_type = typename TestFixture::params::count_type;
+    using key_type       = typename TestFixture::params::key_type;
+    using count_type     = typename TestFixture::params::count_type;
+    using offset_type    = typename TestFixture::params::count_type;
     using key_inner_type = typename test_utils::inner_type<key_type>::type;
-    using key_distribution_type = typename std::conditional<
-        std::is_floating_point<key_inner_type>::value,
-        std::uniform_real_distribution<key_inner_type>,
-        std::uniform_int_distribution<key_inner_type>
-    >::type;
+    using key_distribution_type =
+        typename std::conditional<std::is_floating_point<key_inner_type>::value,
+                                  std::uniform_real_distribution<key_inner_type>,
+                                  std::uniform_int_distribution<key_inner_type>>::type;
 
     constexpr bool use_identity_iterator = TestFixture::params::use_identity_iterator;
-    const bool debug_synchronous = false;
+    const bool     debug_synchronous     = false;
 
-    const unsigned int seed = 123;
+    const unsigned int         seed = 123;
     std::default_random_engine gen(seed);
 
     for(size_t size : get_sizes())
@@ -270,19 +258,18 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
 
         // Generate data and calculate expected results
         std::vector<offset_type> offsets_expected;
-        std::vector<count_type> counts_expected;
-        size_t runs_count_expected = 0;
+        std::vector<count_type>  counts_expected;
+        size_t                   runs_count_expected = 0;
 
-        std::vector<key_type> input(size);
-        key_distribution_type key_delta_dis(1, 5);
+        std::vector<key_type>                 input(size);
+        key_distribution_type                 key_delta_dis(1, 5);
         std::uniform_int_distribution<size_t> key_count_dis(
-            TestFixture::params::min_segment_length,
-            TestFixture::params::max_segment_length
-        );
+            TestFixture::params::min_segment_length, TestFixture::params::max_segment_length);
         std::bernoulli_distribution is_trivial_dis(0.1);
-        std::vector<count_type> values_input = test_utils::get_random_data<count_type>(size, 0, 100);
+        std::vector<count_type>     values_input
+            = test_utils::get_random_data<count_type>(size, 0, 100);
 
-        size_t offset = 0;
+        size_t   offset      = 0;
         key_type current_key = key_distribution_type(0, 100)(gen);
         while(offset < size)
         {
@@ -299,7 +286,7 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
             current_key = current_key + key_delta_dis(gen);
 
             const size_t end = std::min(size, offset + key_count);
-            key_count = end - offset;
+            key_count        = end - offset;
             for(size_t i = offset; i < end; i++)
             {
                 input[i] = current_key;
@@ -315,81 +302,68 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
             offset += key_count;
         }
 
-        key_type * d_input;
+        key_type* d_input;
         HIP_CHECK(hipMalloc(&d_input, size * sizeof(key_type)));
-        HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                size * sizeof(key_type),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(d_input, input.data(), size * sizeof(key_type), hipMemcpyHostToDevice));
 
-        offset_type * d_offsets_output;
-        count_type * d_counts_output;
-        count_type * d_runs_count_output;
-        HIP_CHECK(hipMalloc(&d_offsets_output, std::max<size_t>(1, runs_count_expected) * sizeof(offset_type)));
-        HIP_CHECK(hipMalloc(&d_counts_output, std::max<size_t>(1, runs_count_expected) * sizeof(count_type)));
+        offset_type* d_offsets_output;
+        count_type*  d_counts_output;
+        count_type*  d_runs_count_output;
+        HIP_CHECK(hipMalloc(&d_offsets_output,
+                            std::max<size_t>(1, runs_count_expected) * sizeof(offset_type)));
+        HIP_CHECK(hipMalloc(&d_counts_output,
+                            std::max<size_t>(1, runs_count_expected) * sizeof(count_type)));
         HIP_CHECK(hipMalloc(&d_runs_count_output, sizeof(count_type)));
 
         size_t temporary_storage_bytes = 0;
 
-        HIP_CHECK(
-            rocprim::run_length_encode_non_trivial_runs(
-                nullptr, temporary_storage_bytes,
-                d_input, size,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_offsets_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
-                stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::run_length_encode_non_trivial_runs(
+            nullptr,
+            temporary_storage_bytes,
+            d_input,
+            size,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_offsets_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
+            stream,
+            debug_synchronous));
 
         ASSERT_GT(temporary_storage_bytes, 0U);
 
-        void * d_temporary_storage;
+        void* d_temporary_storage;
         HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
 
-        HIP_CHECK(
-            rocprim::run_length_encode_non_trivial_runs(
-                d_temporary_storage, temporary_storage_bytes,
-                d_input, size,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_offsets_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
-                stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::run_length_encode_non_trivial_runs(
+            d_temporary_storage,
+            temporary_storage_bytes,
+            d_input,
+            size,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_offsets_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_counts_output),
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_runs_count_output),
+            stream,
+            debug_synchronous));
 
         HIP_CHECK(hipFree(d_temporary_storage));
 
         std::vector<offset_type> offsets_output(runs_count_expected);
-        std::vector<count_type> counts_output(runs_count_expected);
-        std::vector<count_type> runs_count_output(1);
+        std::vector<count_type>  counts_output(runs_count_expected);
+        std::vector<count_type>  runs_count_output(1);
         if(runs_count_expected > 0)
         {
-            HIP_CHECK(
-                hipMemcpy(
-                    offsets_output.data(), d_offsets_output,
-                    runs_count_expected * sizeof(offset_type),
-                    hipMemcpyDeviceToHost
-                )
-            );
-            HIP_CHECK(
-                hipMemcpy(
-                    counts_output.data(), d_counts_output,
-                    runs_count_expected * sizeof(count_type),
-                    hipMemcpyDeviceToHost
-                )
-            );
+            HIP_CHECK(hipMemcpy(offsets_output.data(),
+                                d_offsets_output,
+                                runs_count_expected * sizeof(offset_type),
+                                hipMemcpyDeviceToHost));
+            HIP_CHECK(hipMemcpy(counts_output.data(),
+                                d_counts_output,
+                                runs_count_expected * sizeof(count_type),
+                                hipMemcpyDeviceToHost));
         }
-        HIP_CHECK(
-            hipMemcpy(
-                runs_count_output.data(), d_runs_count_output,
-                sizeof(count_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(runs_count_output.data(),
+                            d_runs_count_output,
+                            sizeof(count_type),
+                            hipMemcpyDeviceToHost));
 
         HIP_CHECK(hipFree(d_input));
         HIP_CHECK(hipFree(d_offsets_output));

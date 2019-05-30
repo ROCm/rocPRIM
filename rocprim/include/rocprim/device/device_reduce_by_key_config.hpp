@@ -37,10 +37,7 @@ BEGIN_ROCPRIM_NAMESPACE
 ///
 /// \tparam ScanConfig - configuration of carry-outs scan kernel. Must be \p kernel_config.
 /// \tparam ReduceConfig - configuration of the main reduce-by-key kernel. Must be \p kernel_config.
-template<
-    class ScanConfig,
-    class ReduceConfig
->
+template <class ScanConfig, class ReduceConfig>
 struct reduce_by_key_config
 {
     /// \brief Configuration of carry-outs scan kernel.
@@ -52,48 +49,42 @@ struct reduce_by_key_config
 namespace detail
 {
 
-template<class Key, class Value>
-struct reduce_by_key_config_803
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key) + sizeof(Value), 2 * sizeof(int));
+    template <class Key, class Value>
+    struct reduce_by_key_config_803
+    {
+        static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
+            sizeof(Key) + sizeof(Value), 2 * sizeof(int));
 
-    using scan = kernel_config<256, 4>;
+        using scan = kernel_config<256, 4>;
 
-    using type = select_type<
-        select_type_case<
-            (sizeof(Key) <= 8 && sizeof(Value) <= 8),
-            reduce_by_key_config<scan, kernel_config<256, 7> >
-        >,
-        reduce_by_key_config<scan, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
-    >;
-};
+        using type = select_type<
+            select_type_case<(sizeof(Key) <= 8 && sizeof(Value) <= 8),
+                             reduce_by_key_config<scan, kernel_config<256, 7>>>,
+            reduce_by_key_config<scan, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)>>>;
+    };
 
-template<class Key, class Value>
-struct reduce_by_key_config_900
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key) + sizeof(Value), 2 * sizeof(int));
+    template <class Key, class Value>
+    struct reduce_by_key_config_900
+    {
+        static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
+            sizeof(Key) + sizeof(Value), 2 * sizeof(int));
 
-    using scan = kernel_config<256, 2>;
+        using scan = kernel_config<256, 2>;
 
-    using type = select_type<
-        select_type_case<
-            (sizeof(Key) <= 8 && sizeof(Value) <= 8),
-            reduce_by_key_config<scan, kernel_config<256, 10> >
-        >,
-        reduce_by_key_config<scan, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
-    >;
-};
+        using type = select_type<
+            select_type_case<(sizeof(Key) <= 8 && sizeof(Value) <= 8),
+                             reduce_by_key_config<scan, kernel_config<256, 10>>>,
+            reduce_by_key_config<scan, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)>>>;
+    };
 
-template<unsigned int TargetArch, class Key, class Value>
-struct default_reduce_by_key_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, reduce_by_key_config_803<Key, Value> >,
-        select_arch_case<900, reduce_by_key_config_900<Key, Value> >,
-        reduce_by_key_config_900<Key, Value>
-    > { };
+    template <unsigned int TargetArch, class Key, class Value>
+    struct default_reduce_by_key_config
+        : select_arch<TargetArch,
+                      select_arch_case<803, reduce_by_key_config_803<Key, Value>>,
+                      select_arch_case<900, reduce_by_key_config_900<Key, Value>>,
+                      reduce_by_key_config_900<Key, Value>>
+    {
+    };
 
 } // end namespace detail
 

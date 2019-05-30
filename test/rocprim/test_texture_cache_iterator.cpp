@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iostream>
 #include <type_traits>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -34,41 +34,38 @@
 
 #include "test_utils.hpp"
 
-#define HIP_CHECK(error)         \
-    ASSERT_EQ(static_cast<hipError_t>(error),hipSuccess)
+#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error), hipSuccess)
 
 // Params for tests
-template<class InputType>
+template <class InputType>
 struct RocprimTextureCacheIteratorParams
 {
     using input_type = InputType;
 };
 
-template<class Params>
+template <class Params>
 class RocprimTextureCacheIteratorTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
+    using input_type             = typename Params::input_type;
     const bool debug_synchronous = false;
 };
 
-typedef ::testing::Types<
-    RocprimTextureCacheIteratorParams<int>,
-    RocprimTextureCacheIteratorParams<unsigned int>,
-    RocprimTextureCacheIteratorParams<unsigned char>,
-    RocprimTextureCacheIteratorParams<float>,
-    RocprimTextureCacheIteratorParams<unsigned long long>,
-    RocprimTextureCacheIteratorParams<test_utils::custom_test_type<int>>,
-    RocprimTextureCacheIteratorParams<test_utils::custom_test_type<float>>
-> RocprimTextureCacheIteratorTestsParams;
+typedef ::testing::Types<RocprimTextureCacheIteratorParams<int>,
+                         RocprimTextureCacheIteratorParams<unsigned int>,
+                         RocprimTextureCacheIteratorParams<unsigned char>,
+                         RocprimTextureCacheIteratorParams<float>,
+                         RocprimTextureCacheIteratorParams<unsigned long long>,
+                         RocprimTextureCacheIteratorParams<test_utils::custom_test_type<int>>,
+                         RocprimTextureCacheIteratorParams<test_utils::custom_test_type<float>>>
+    RocprimTextureCacheIteratorTestsParams;
 
 TYPED_TEST_CASE(RocprimTextureCacheIteratorTests, RocprimTextureCacheIteratorTestsParams);
 
-template<class T>
+template <class T>
 struct transform
 {
-    __device__ __host__
-    constexpr T operator()(const T& a) const
+    __device__ __host__ constexpr T operator()(const T& a) const
     {
         return a + 5;
     }
@@ -76,8 +73,8 @@ struct transform
 
 TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
 {
-    using T = typename TestFixture::input_type;
-    using Iterator = typename rocprim::texture_cache_iterator<T>;
+    using T                      = typename TestFixture::input_type;
+    using Iterator               = typename rocprim::texture_cache_iterator<T>;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     const size_t size = 1024;
@@ -92,17 +89,11 @@ TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
     }
 
     std::vector<T> output(size);
-    T * d_input;
-    T * d_output;
+    T*             d_input;
+    T*             d_output;
     HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
     HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(T)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
     HIP_CHECK(hipDeviceSynchronize());
 
     Iterator x;
@@ -110,31 +101,15 @@ TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
 
     // Calculate expected results on host
     std::vector<T> expected(size);
-    std::transform(
-        input.begin(),
-        input.end(),
-        expected.begin(),
-        transform<T>()
-    );
+    std::transform(input.begin(), input.end(), expected.begin(), transform<T>());
 
     // Run
-    HIP_CHECK(
-        rocprim::transform(
-            x, d_output, size,
-            transform<T>(), stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::transform(x, d_output, size, transform<T>(), stream, debug_synchronous));
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Copy output to host
-    HIP_CHECK(
-        hipMemcpy(
-            output.data(), d_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(output.data(), d_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Validating results

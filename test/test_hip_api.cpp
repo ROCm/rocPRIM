@@ -30,15 +30,14 @@
 #include <hip/hip_runtime.h>
 #define HIP_CHECK(x) ASSERT_EQ(x, hipSuccess)
 
-template<class T>
+template <class T>
 T ax(const T a, const T x) __device__
 {
     return x * a;
 }
 
 template <class T>
-__global__
-void saxpy_kernel(const T * x, T * y, const T a, const size_t size)
+__global__ void saxpy_kernel(const T* x, T* y, const T a, const size_t size)
 {
     const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
     if(i < size)
@@ -51,44 +50,30 @@ TEST(HIPTests, Saxpy)
 {
     const size_t N = 100;
 
-    const float a = 100.0f;
+    const float        a = 100.0f;
     std::vector<float> x(N, 2.0f);
     std::vector<float> y(N, 1.0f);
 
-    float * d_x;
-    float * d_y;
+    float* d_x;
+    float* d_y;
     HIP_CHECK(hipMalloc(&d_x, N * sizeof(float)));
     HIP_CHECK(hipMalloc(&d_y, N * sizeof(float)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_x, x.data(),
-            N * sizeof(float),
-            hipMemcpyHostToDevice
-        )
-    );
-    HIP_CHECK(
-        hipMemcpy(
-            d_y, y.data(),
-            N * sizeof(float),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(d_x, x.data(), N * sizeof(float), hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(d_y, y.data(), N * sizeof(float), hipMemcpyHostToDevice));
     HIP_CHECK(hipDeviceSynchronize());
 
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(saxpy_kernel<float>),
-        dim3((N + 255)/256), dim3(256), 0, 0,
-        d_x, d_y, a, N
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(saxpy_kernel<float>),
+                       dim3((N + 255) / 256),
+                       dim3(256),
+                       0,
+                       0,
+                       d_x,
+                       d_y,
+                       a,
+                       N);
     HIP_CHECK(hipPeekAtLastError());
 
-    HIP_CHECK(
-        hipMemcpy(
-            y.data(), d_y,
-            N * sizeof(float),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(y.data(), d_y, N * sizeof(float), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
     HIP_CHECK(hipFree(d_x));
     HIP_CHECK(hipFree(d_y));

@@ -21,8 +21,8 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_ORDERED_BLOCK_ID_HPP_
 #define ROCPRIM_DEVICE_DETAIL_ORDERED_BLOCK_ID_HPP_
 
-#include <type_traits>
 #include <limits>
+#include <type_traits>
 
 #include "../../detail/various.hpp"
 #include "../../intrinsics.hpp"
@@ -33,52 +33,48 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-// Helper struct for generating ordered unique ids for blocks in a grid.
-template<class T /* id type */ = unsigned int>
-struct ordered_block_id
-{
-    static_assert(std::is_integral<T>::value, "T must be integer");
-    using id_type = T;
-
-    // shared memory temporary storage type
-    struct storage_type
+    // Helper struct for generating ordered unique ids for blocks in a grid.
+    template <class T /* id type */ = unsigned int>
+    struct ordered_block_id
     {
-        id_type id;
-    };
+        static_assert(std::is_integral<T>::value, "T must be integer");
+        using id_type = T;
 
-    ROCPRIM_HOST static inline
-    ordered_block_id create(id_type * id)
-    {
-        ordered_block_id ordered_id;
-        ordered_id.id = id;
-        return ordered_id;
-    }
-
-    ROCPRIM_HOST static inline
-    size_t get_storage_size()
-    {
-        return sizeof(id_type);
-    }
-
-    ROCPRIM_DEVICE inline
-    void reset()
-    {
-        *id = static_cast<id_type>(0);
-    }
-
-    ROCPRIM_DEVICE inline
-    id_type get(unsigned int tid, storage_type& storage)
-    {
-        if(tid == 0)
+        // shared memory temporary storage type
+        struct storage_type
         {
-            storage.id = ::rocprim::detail::atomic_add(this->id, 1);
-        }
-        ::rocprim::syncthreads();
-        return storage.id;
-    }
+            id_type id;
+        };
 
-    id_type* id;
-};
+        ROCPRIM_HOST static inline ordered_block_id create(id_type* id)
+        {
+            ordered_block_id ordered_id;
+            ordered_id.id = id;
+            return ordered_id;
+        }
+
+        ROCPRIM_HOST static inline size_t get_storage_size()
+        {
+            return sizeof(id_type);
+        }
+
+        ROCPRIM_DEVICE inline void reset()
+        {
+            *id = static_cast<id_type>(0);
+        }
+
+        ROCPRIM_DEVICE inline id_type get(unsigned int tid, storage_type& storage)
+        {
+            if(tid == 0)
+            {
+                storage.id = ::rocprim::detail::atomic_add(this->id, 1);
+            }
+            ::rocprim::syncthreads();
+            return storage.id;
+        }
+
+        id_type* id;
+    };
 
 } // end of detail namespace
 

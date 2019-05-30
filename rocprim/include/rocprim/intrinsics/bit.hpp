@@ -29,8 +29,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// @{
 
 /// \brief Returns a single bit at 'i' from 'x'
-ROCPRIM_DEVICE inline
-int get_bit(int x, int i)
+ROCPRIM_DEVICE inline int get_bit(int x, int i)
 {
     return (x >> i) & 1;
 }
@@ -38,8 +37,7 @@ int get_bit(int x, int i)
 /// \brief Bit count
 ///
 /// Returns the number of bit of \p x set.
-ROCPRIM_DEVICE inline
-unsigned int bit_count(unsigned int x)
+ROCPRIM_DEVICE inline unsigned int bit_count(unsigned int x)
 {
     return __popc(x);
 }
@@ -47,8 +45,7 @@ unsigned int bit_count(unsigned int x)
 /// \brief Bit count
 ///
 /// Returns the number of bit of \p x set.
-ROCPRIM_DEVICE inline
-unsigned int bit_count(unsigned long long x)
+ROCPRIM_DEVICE inline unsigned int bit_count(unsigned long long x)
 {
     return __popcll(x);
 }

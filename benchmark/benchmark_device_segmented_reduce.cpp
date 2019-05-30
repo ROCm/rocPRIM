@@ -20,18 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
 #include <chrono>
-#include <vector>
+#include <iostream>
+#include <limits>
 #include <locale>
 #include <string>
-#include <limits>
+#include <vector>
 
 // Google Benchmark
 #include "benchmark/benchmark.h"
 // CmdParser
-#include "cmdparser.hpp"
 #include "benchmark_utils.hpp"
+#include "cmdparser.hpp"
 
 // HIP API
 #include <hip/hip_runtime.h>
@@ -39,14 +39,15 @@
 // rocPRIM
 #include <rocprim/rocprim.hpp>
 
-#define HIP_CHECK(condition)         \
-  {                                   \
-    hipError_t error = condition;    \
-    if(error != hipSuccess){         \
-        std::cout << "HIP error: " << error << " line: " << __LINE__ << std::endl; \
-        exit(error); \
-    } \
-  }
+#define HIP_CHECK(condition)                                                           \
+    {                                                                                  \
+        hipError_t error = condition;                                                  \
+        if(error != hipSuccess)                                                        \
+        {                                                                              \
+            std::cout << "HIP error: " << error << " line: " << __LINE__ << std::endl; \
+            exit(error);                                                               \
+        }                                                                              \
+    }
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 32;
@@ -54,25 +55,28 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
 
 namespace rp = rocprim;
 
-const unsigned int batch_size = 10;
+const unsigned int batch_size  = 10;
 const unsigned int warmup_size = 5;
 
-template<class T>
-void run_benchmark(benchmark::State& state, size_t desired_segments, hipStream_t stream, size_t size)
+template <class T>
+void run_benchmark(benchmark::State& state,
+                   size_t            desired_segments,
+                   hipStream_t       stream,
+                   size_t            size)
 {
     using offset_type = int;
-    using value_type = T;
+    using value_type  = T;
 
     // Generate data
-    const unsigned int seed = 123;
+    const unsigned int         seed = 123;
     std::default_random_engine gen(seed);
 
     const double avg_segment_length = static_cast<double>(size) / desired_segments;
     std::uniform_real_distribution<double> segment_length_dis(0, avg_segment_length * 2);
 
     std::vector<offset_type> offsets;
-    unsigned int segments_count = 0;
-    size_t offset = 0;
+    unsigned int             segments_count = 0;
+    size_t                   offset         = 0;
     while(offset < size)
     {
         const size_t segment_length = std::round(segment_length_dis(gen));
@@ -85,45 +89,37 @@ void run_benchmark(benchmark::State& state, size_t desired_segments, hipStream_t
     std::vector<value_type> values_input(size);
     std::iota(values_input.begin(), values_input.end(), 0);
 
-    offset_type * d_offsets;
+    offset_type* d_offsets;
     HIP_CHECK(hipMalloc(&d_offsets, (segments_count + 1) * sizeof(offset_type)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_offsets, offsets.data(),
-            (segments_count + 1) * sizeof(offset_type),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(d_offsets,
+                        offsets.data(),
+                        (segments_count + 1) * sizeof(offset_type),
+                        hipMemcpyHostToDevice));
 
-    value_type * d_values_input;
+    value_type* d_values_input;
     HIP_CHECK(hipMalloc(&d_values_input, size * sizeof(value_type)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_values_input, values_input.data(),
-            size * sizeof(value_type),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(
+        d_values_input, values_input.data(), size * sizeof(value_type), hipMemcpyHostToDevice));
 
-    value_type * d_aggregates_output;
+    value_type* d_aggregates_output;
     HIP_CHECK(hipMalloc(&d_aggregates_output, segments_count * sizeof(value_type)));
 
     rocprim::plus<value_type> reduce_op;
-    value_type init(0);
+    value_type                init(0);
 
-    void * d_temporary_storage = nullptr;
+    void*  d_temporary_storage     = nullptr;
     size_t temporary_storage_bytes = 0;
 
-    HIP_CHECK(
-        rp::segmented_reduce(
-            d_temporary_storage, temporary_storage_bytes,
-            d_values_input, d_aggregates_output,
-            segments_count,
-            d_offsets, d_offsets + 1,
-            reduce_op, init,
-            stream
-        )
-    );
+    HIP_CHECK(rp::segmented_reduce(d_temporary_storage,
+                                   temporary_storage_bytes,
+                                   d_values_input,
+                                   d_aggregates_output,
+                                   segments_count,
+                                   d_offsets,
+                                   d_offsets + 1,
+                                   reduce_op,
+                                   init,
+                                   stream));
 
     HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
     HIP_CHECK(hipDeviceSynchronize());
@@ -131,41 +127,41 @@ void run_benchmark(benchmark::State& state, size_t desired_segments, hipStream_t
     // Warm-up
     for(size_t i = 0; i < warmup_size; i++)
     {
-        HIP_CHECK(
-            rp::segmented_reduce(
-                d_temporary_storage, temporary_storage_bytes,
-                d_values_input, d_aggregates_output,
-                segments_count,
-                d_offsets, d_offsets + 1,
-                reduce_op, init,
-                stream
-            )
-        );
+        HIP_CHECK(rp::segmented_reduce(d_temporary_storage,
+                                       temporary_storage_bytes,
+                                       d_values_input,
+                                       d_aggregates_output,
+                                       segments_count,
+                                       d_offsets,
+                                       d_offsets + 1,
+                                       reduce_op,
+                                       init,
+                                       stream));
     }
     HIP_CHECK(hipDeviceSynchronize());
 
-    for (auto _ : state)
+    for(auto _ : state)
     {
         auto start = std::chrono::high_resolution_clock::now();
 
         for(size_t i = 0; i < batch_size; i++)
         {
-            HIP_CHECK(
-                rp::segmented_reduce(
-                    d_temporary_storage, temporary_storage_bytes,
-                    d_values_input, d_aggregates_output,
-                    segments_count,
-                    d_offsets, d_offsets + 1,
-                    reduce_op, init,
-                    stream
-                )
-            );
+            HIP_CHECK(rp::segmented_reduce(d_temporary_storage,
+                                           temporary_storage_bytes,
+                                           d_values_input,
+                                           d_aggregates_output,
+                                           segments_count,
+                                           d_offsets,
+                                           d_offsets + 1,
+                                           reduce_op,
+                                           init,
+                                           stream));
         }
         HIP_CHECK(hipStreamSynchronize(stream));
 
         auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+        auto elapsed_seconds
+            = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
         state.SetIterationTime(elapsed_seconds.count());
     }
     state.SetBytesProcessed(state.iterations() * batch_size * size * sizeof(value_type));
@@ -177,24 +173,23 @@ void run_benchmark(benchmark::State& state, size_t desired_segments, hipStream_t
     HIP_CHECK(hipFree(d_aggregates_output));
 }
 
-#define CREATE_BENCHMARK(T, SEGMENTS) \
-benchmark::RegisterBenchmark( \
-    (std::string("segmented_reduce") + "<" #T ">" + \
-        "(~" + std::to_string(SEGMENTS) + " segments)" \
-    ).c_str(), \
-    run_benchmark<T>, \
-    SEGMENTS, stream, size \
-)
+#define CREATE_BENCHMARK(T, SEGMENTS)                                                 \
+    benchmark::RegisterBenchmark((std::string("segmented_reduce") + "<" #T ">" + "(~" \
+                                  + std::to_string(SEGMENTS) + " segments)")          \
+                                     .c_str(),                                        \
+                                 run_benchmark<T>,                                    \
+                                 SEGMENTS,                                            \
+                                 stream,                                              \
+                                 size)
 
 void add_benchmarks(std::vector<benchmark::internal::Benchmark*>& benchmarks,
-                    hipStream_t stream,
-                    size_t size)
+                    hipStream_t                                   stream,
+                    size_t                                        size)
 {
-    using custom_float2 = custom_type<float, float>;
+    using custom_float2  = custom_type<float, float>;
     using custom_double2 = custom_type<double, double>;
 
-    std::vector<benchmark::internal::Benchmark*> bs =
-    {
+    std::vector<benchmark::internal::Benchmark*> bs = {
         CREATE_BENCHMARK(float, 1),
         CREATE_BENCHMARK(float, 10),
         CREATE_BENCHMARK(float, 100),
@@ -227,7 +222,7 @@ void add_benchmarks(std::vector<benchmark::internal::Benchmark*>& benchmarks,
     benchmarks.insert(benchmarks.end(), bs.begin(), bs.end());
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     cli::Parser parser(argc, argv);
     parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
@@ -236,13 +231,13 @@ int main(int argc, char *argv[])
 
     // Parse argv
     benchmark::Initialize(&argc, argv);
-    const size_t size = parser.get<size_t>("size");
-    const int trials = parser.get<int>("trials");
+    const size_t size   = parser.get<size_t>("size");
+    const int    trials = parser.get<int>("trials");
 
     // HIP
-    hipStream_t stream = 0; // default
+    hipStream_t     stream = 0; // default
     hipDeviceProp_t devProp;
-    int device_id = 0;
+    int             device_id = 0;
     HIP_CHECK(hipGetDevice(&device_id));
     HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
     std::cout << "[HIP] Device name: " << devProp.name << std::endl;

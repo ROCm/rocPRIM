@@ -29,22 +29,21 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+    // all_of
+    template <bool... values>
+    struct all_true : std::true_type
+    {
+    };
 
-// all_of
-template<bool... values>
-struct all_true : std::true_type
-{
-};
+    template <bool... values>
+    struct all_true<true, values...> : all_true<values...>
+    {
+    };
 
-template<bool... values>
-struct all_true<true, values...> : all_true<values...>
-{
-};
-
-template<bool... values>
-struct all_true<false, values...> : std::false_type
-{
-};
+    template <bool... values>
+    struct all_true<false, values...> : std::false_type
+    {
+    };
 
 } // end namespace detail
 END_ROCPRIM_NAMESPACE

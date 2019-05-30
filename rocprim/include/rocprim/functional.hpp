@@ -31,155 +31,139 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \addtogroup utilsmodule_functional
 /// @{
 
-template<class T>
-ROCPRIM_HOST_DEVICE inline
-constexpr T max(const T& a, const T& b)
+template <class T>
+ROCPRIM_HOST_DEVICE inline constexpr T max(const T& a, const T& b)
 {
     return a < b ? b : a;
 }
 
-template<class T>
-ROCPRIM_HOST_DEVICE inline
-constexpr T min(const T& a, const T& b)
+template <class T>
+ROCPRIM_HOST_DEVICE inline constexpr T min(const T& a, const T& b)
 {
     return a < b ? a : b;
 }
 
-template<class T>
-ROCPRIM_HOST_DEVICE inline
-void swap(T& a, T& b)
+template <class T>
+ROCPRIM_HOST_DEVICE inline void swap(T& a, T& b)
 {
     T c = a;
-    a = b;
-    b = c;
+    a   = b;
+    b   = c;
 }
 
-template<class T = void>
+template <class T = void>
 struct less
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr bool operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr bool operator()(const T& a, const T& b) const
     {
         return a < b;
     }
 };
 
-template<>
+template <>
 struct less<void>
 {
-    template<class T, class U>
-    ROCPRIM_HOST_DEVICE inline
-    constexpr bool operator()(const T& a, const U& b) const
+    template <class T, class U>
+    ROCPRIM_HOST_DEVICE inline constexpr bool operator()(const T& a, const U& b) const
     {
         return a < b;
     }
 };
 
-template<class T>
+template <class T>
 struct less_equal
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr bool operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr bool operator()(const T& a, const T& b) const
     {
         return a <= b;
     }
 };
 
-template<class T>
+template <class T>
 struct greater
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr bool operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr bool operator()(const T& a, const T& b) const
     {
         return a > b;
     }
 };
 
-template<class T>
+template <class T>
 struct greater_equal
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr bool operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr bool operator()(const T& a, const T& b) const
     {
         return a >= b;
     }
 };
 
-template<class T>
+template <class T>
 struct equal_to
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr bool operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr bool operator()(const T& a, const T& b) const
     {
         return a == b;
     }
 };
 
-template<class T>
+template <class T>
 struct not_equal_to
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr bool operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr bool operator()(const T& a, const T& b) const
     {
         return a != b;
     }
 };
 
-template<class T>
+template <class T>
 struct plus
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr T operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr T operator()(const T& a, const T& b) const
     {
         return a + b;
     }
 };
 
-template<class T>
+template <class T>
 struct minus
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr T operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr T operator()(const T& a, const T& b) const
     {
         return a - b;
     }
 };
 
-template<class T>
+template <class T>
 struct multiplies
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr T operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr T operator()(const T& a, const T& b) const
     {
         return a * b;
     }
 };
 
-template<class T>
+template <class T>
 struct maximum
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr T operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr T operator()(const T& a, const T& b) const
     {
         return a < b ? b : a;
     }
 };
 
-template<class T>
+template <class T>
 struct minimum
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr T operator()(const T& a, const T& b) const
+    ROCPRIM_HOST_DEVICE inline constexpr T operator()(const T& a, const T& b) const
     {
         return a < b ? a : b;
     }
 };
 
-template<class T>
+template <class T>
 struct identity
 {
-    ROCPRIM_HOST_DEVICE inline
-    constexpr T operator()(const T& a) const
+    ROCPRIM_HOST_DEVICE inline constexpr T operator()(const T& a) const
     {
         return a;
     }

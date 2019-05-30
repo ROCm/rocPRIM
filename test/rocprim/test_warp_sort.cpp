@@ -33,25 +33,26 @@
 
 #include "test_utils.hpp"
 
-#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error),hipSuccess)
+#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error), hipSuccess)
 
 namespace rp = rocprim;
 
-template<class T, unsigned int WarpSize>
+template <class T, unsigned int WarpSize>
 struct params
 {
-    using type = T;
+    using type                              = T;
     static constexpr unsigned int warp_size = WarpSize;
 };
 
-template<typename Params>
-class RocprimWarpSortShuffleBasedTests : public ::testing::Test {
+template <typename Params>
+class RocprimWarpSortShuffleBasedTests : public ::testing::Test
+{
 public:
-    using type = typename Params::type;
+    using type                              = typename Params::type;
     static constexpr unsigned int warp_size = Params::warp_size;
 };
 
-template<class T>
+template <class T>
 bool test(const T& a, const T& b)
 {
     return a < b;
@@ -73,19 +74,16 @@ typedef ::testing::Types<
     params<test_utils::custom_test_type<int>, 32U>,
     params<test_utils::custom_test_type<int>, 64U>
 
-> WarpSizes;
+    >
+    WarpSizes;
 
 TYPED_TEST_CASE(RocprimWarpSortShuffleBasedTests, WarpSizes);
 
-template<
-    class T,
-    unsigned int LogicalWarpSize 
->
-__global__ 
-void test_hip_warp_sort(T* d_output)
+template <class T, unsigned int LogicalWarpSize>
+__global__ void test_hip_warp_sort(T* d_output)
 {
-    unsigned int i = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
-    T value = d_output[i];
+    unsigned int                      i     = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    T                                 value = d_output[i];
     rp::warp_sort<T, LogicalWarpSize> wsort;
     wsort.sort(value);
     d_output[i] = value;
@@ -94,11 +92,11 @@ void test_hip_warp_sort(T* d_output)
 TYPED_TEST(RocprimWarpSortShuffleBasedTests, Sort)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::type;
+    using T                            = typename TestFixture::type;
     constexpr size_t logical_warp_size = TestFixture::warp_size;
-    const size_t block_size = std::max<size_t>(rp::warp_size(), 4 * logical_warp_size);
-    constexpr size_t grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t     block_size        = std::max<size_t>(rp::warp_size(), 4 * logical_warp_size);
+    constexpr size_t grid_size         = 4;
+    const size_t     size              = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rp::warp_size() || !rp::detail::is_power_of_two(logical_warp_size))
@@ -114,41 +112,35 @@ TYPED_TEST(RocprimWarpSortShuffleBasedTests, Sort)
 
     for(size_t i = 0; i < output.size() / logical_warp_size; i++)
     {
-        std::sort(expected.begin() + (i * logical_warp_size), expected.begin() + ((i + 1) * logical_warp_size));
+        std::sort(expected.begin() + (i * logical_warp_size),
+                  expected.begin() + ((i + 1) * logical_warp_size));
     }
 
     // Writing to device memory
     T* d_output;
-    HIP_CHECK(
-        hipMalloc(&d_output, output.size() * sizeof(typename decltype(output)::value_type))
-    );
+    HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(typename decltype(output)::value_type)));
 
-    HIP_CHECK(
-        hipMemcpy(
-            d_output, output.data(),
-            output.size() * sizeof(typename decltype(output)::value_type),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(d_output,
+                        output.data(),
+                        output.size() * sizeof(typename decltype(output)::value_type),
+                        hipMemcpyHostToDevice));
 
     // Launching kernel
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(test_hip_warp_sort<T, logical_warp_size>),
-        dim3(grid_size), dim3(block_size), 0, 0,
-        d_output 
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(test_hip_warp_sort<T, logical_warp_size>),
+                       dim3(grid_size),
+                       dim3(block_size),
+                       0,
+                       0,
+                       d_output);
 
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Read from device memory
-    HIP_CHECK(
-        hipMemcpy(
-            output.data(), d_output,
-            output.size() * sizeof(typename decltype(output)::value_type),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(output.data(),
+                        d_output,
+                        output.size() * sizeof(typename decltype(output)::value_type),
+                        hipMemcpyDeviceToHost));
 
     for(size_t i = 0; i < output.size(); i++)
     {
@@ -156,31 +148,26 @@ TYPED_TEST(RocprimWarpSortShuffleBasedTests, Sort)
     }
 }
 
-template<
-    class KeyType,
-    class ValueType,
-    unsigned int LogicalWarpSize 
->
-__global__ 
-void test_hip_sort_key_value_kernel(KeyType* d_output_key, ValueType* d_output_value)
+template <class KeyType, class ValueType, unsigned int LogicalWarpSize>
+__global__ void test_hip_sort_key_value_kernel(KeyType* d_output_key, ValueType* d_output_value)
 {
-    unsigned int i = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
-    KeyType key = d_output_key[i];
-    ValueType value = d_output_value[i];
+    unsigned int i     = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    KeyType      key   = d_output_key[i];
+    ValueType    value = d_output_value[i];
     rp::warp_sort<KeyType, LogicalWarpSize, ValueType> wsort;
     wsort.sort(key, value);
-    d_output_key[i] = key;
+    d_output_key[i]   = key;
     d_output_value[i] = value;
 }
 
 TYPED_TEST(RocprimWarpSortShuffleBasedTests, SortKeyInt)
 {
     // logical warp side for warp primitive, execution warp size is always rp::warp_size()
-    using T = typename TestFixture::type;
+    using T                            = typename TestFixture::type;
     constexpr size_t logical_warp_size = TestFixture::warp_size;
-    const size_t block_size = std::max<size_t>(rp::warp_size(), 4 * logical_warp_size);
-    constexpr size_t grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t     block_size        = std::max<size_t>(rp::warp_size(), 4 * logical_warp_size);
+    constexpr size_t grid_size         = 4;
+    const size_t     size              = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rp::warp_size() || !rp::detail::is_power_of_two(logical_warp_size))
@@ -191,12 +178,12 @@ TYPED_TEST(RocprimWarpSortShuffleBasedTests, SortKeyInt)
     // Generate data
     std::vector<T> output_key(size);
     std::iota(output_key.begin(), output_key.end(), 0);
-    std::shuffle(output_key.begin(), output_key.end(), std::mt19937{std::random_device{}()});
+    std::shuffle(output_key.begin(), output_key.end(), std::mt19937 {std::random_device {}()});
     std::vector<T> output_value = test_utils::get_random_data<T>(size, -100, 100);
 
     // Combine vectors to form pairs with key and value
     std::vector<std::pair<T, T>> target(size);
-    for (unsigned i = 0; i < target.size(); i++)
+    for(unsigned i = 0; i < target.size(); i++)
         target[i] = std::make_pair(output_key[i], output_value[i]);
 
     // Calculate expected results on host
@@ -204,62 +191,51 @@ TYPED_TEST(RocprimWarpSortShuffleBasedTests, SortKeyInt)
 
     for(size_t i = 0; i < expected.size() / logical_warp_size; i++)
     {
-        std::sort(expected.begin() + (i * logical_warp_size), expected.begin() + ((i + 1) * logical_warp_size));
+        std::sort(expected.begin() + (i * logical_warp_size),
+                  expected.begin() + ((i + 1) * logical_warp_size));
     }
 
     // Writing to device memory
     T* d_output_key;
     T* d_output_value;
-    HIP_CHECK(
-        hipMalloc(&d_output_key, output_key.size() * sizeof(typename decltype(output_key)::value_type))
-    );
-    HIP_CHECK(
-        hipMalloc(&d_output_value, output_value.size() * sizeof(typename decltype(output_value)::value_type))
-    );
-    
-    HIP_CHECK(
-        hipMemcpy(
-            d_output_key, output_key.data(),
-            output_key.size() * sizeof(typename decltype(output_key)::value_type),
-            hipMemcpyHostToDevice
-        )
-    );
-    
-    HIP_CHECK(
-        hipMemcpy(
-            d_output_value, output_value.data(),
-            output_value.size() * sizeof(typename decltype(output_value)::value_type),
-            hipMemcpyHostToDevice
-        )
-    );
-    
+    HIP_CHECK(hipMalloc(&d_output_key,
+                        output_key.size() * sizeof(typename decltype(output_key)::value_type)));
+    HIP_CHECK(hipMalloc(&d_output_value,
+                        output_value.size() * sizeof(typename decltype(output_value)::value_type)));
+
+    HIP_CHECK(hipMemcpy(d_output_key,
+                        output_key.data(),
+                        output_key.size() * sizeof(typename decltype(output_key)::value_type),
+                        hipMemcpyHostToDevice));
+
+    HIP_CHECK(hipMemcpy(d_output_value,
+                        output_value.data(),
+                        output_value.size() * sizeof(typename decltype(output_value)::value_type),
+                        hipMemcpyHostToDevice));
+
     // Launching kernel
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(test_hip_sort_key_value_kernel<T, T, logical_warp_size>),
-        dim3(grid_size), dim3(block_size), 0, 0,
-        d_output_key, d_output_value 
-    );
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(test_hip_sort_key_value_kernel<T, T, logical_warp_size>),
+                       dim3(grid_size),
+                       dim3(block_size),
+                       0,
+                       0,
+                       d_output_key,
+                       d_output_value);
 
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
-    
-    // Read from device memory
-    HIP_CHECK(
-        hipMemcpy(
-            output_key.data(), d_output_key,
-            output_key.size() * sizeof(typename decltype(output_key)::value_type),
-            hipMemcpyDeviceToHost 
-        )
-    );
 
-    HIP_CHECK(
-        hipMemcpy(
-            output_value.data(), d_output_value,
-            output_value.size() * sizeof(typename decltype(output_value)::value_type),
-            hipMemcpyDeviceToHost 
-        )
-    );
-    
+    // Read from device memory
+    HIP_CHECK(hipMemcpy(output_key.data(),
+                        d_output_key,
+                        output_key.size() * sizeof(typename decltype(output_key)::value_type),
+                        hipMemcpyDeviceToHost));
+
+    HIP_CHECK(hipMemcpy(output_value.data(),
+                        d_output_value,
+                        output_value.size() * sizeof(typename decltype(output_value)::value_type),
+                        hipMemcpyDeviceToHost));
+
     for(size_t i = 0; i < expected.size(); i++)
     {
         ASSERT_EQ(output_key[i], expected[i].first);

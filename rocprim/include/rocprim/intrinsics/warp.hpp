@@ -33,8 +33,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// for the <tt>i</tt>-th thread of the warp and the <tt>i</tt>-th thread is active.
 ///
 /// \param predicate - input to be evaluated for all active lanes
-ROCPRIM_DEVICE inline
-unsigned long long ballot(int predicate)
+ROCPRIM_DEVICE inline unsigned long long ballot(int predicate)
 {
     return ::__ballot(predicate);
 }
@@ -43,8 +42,7 @@ unsigned long long ballot(int predicate)
 ///
 /// For each thread, this function returns the number of active threads which
 /// have <tt>i</tt>-th bit of \p x set and come before the current thread.
-ROCPRIM_DEVICE inline
-unsigned int masked_bit_count(unsigned long long x, unsigned int add = 0)
+ROCPRIM_DEVICE inline unsigned int masked_bit_count(unsigned long long x, unsigned int add = 0)
 {
     int c;
     c = ::__mbcnt_lo(static_cast<int>(x), add);
@@ -55,17 +53,15 @@ unsigned int masked_bit_count(unsigned long long x, unsigned int add = 0)
 namespace detail
 {
 
-ROCPRIM_DEVICE inline
-int warp_any(int predicate)
-{
-    return ::__any(predicate);
-}
+    ROCPRIM_DEVICE inline int warp_any(int predicate)
+    {
+        return ::__any(predicate);
+    }
 
-ROCPRIM_DEVICE inline
-int warp_all(int predicate)
-{
-    return ::__all(predicate);
-}
+    ROCPRIM_DEVICE inline int warp_all(int predicate)
+    {
+        return ::__all(predicate);
+    }
 
 } // end detail namespace
 

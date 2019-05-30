@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <vector>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -39,19 +39,17 @@ namespace rp = rocprim;
 #define HIP_CHECK(error) ASSERT_EQ(error, hipSuccess)
 
 // Params for tests
-template<
-    class InputType,
-    class OutputType = InputType,
-    class ScanOp = ::rocprim::plus<OutputType>,
-    // Tests output iterator with void value_type (OutputIterator concept)
-    // scan-by-key primitives don't support output iterator with void value_type
-    bool UseIdentityIteratorIfSupported = false
->
+template <class InputType,
+          class OutputType = InputType,
+          class ScanOp     = ::rocprim::plus<OutputType>,
+          // Tests output iterator with void value_type (OutputIterator concept)
+          // scan-by-key primitives don't support output iterator with void value_type
+          bool UseIdentityIteratorIfSupported = false>
 struct DeviceScanParams
 {
-    using input_type = InputType;
-    using output_type = OutputType;
-    using scan_op_type = ScanOp;
+    using input_type                            = InputType;
+    using output_type                           = OutputType;
+    using scan_op_type                          = ScanOp;
     static constexpr bool use_identity_iterator = UseIdentityIteratorIfSupported;
 };
 
@@ -59,14 +57,14 @@ struct DeviceScanParams
 // Test for scan ops taking single input value
 // ---------------------------------------------------------
 
-template<class Params>
+template <class Params>
 class RocprimDeviceScanTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
-    using output_type = typename Params::output_type;
-    using scan_op_type = typename Params::scan_op_type;
-    const bool debug_synchronous = false;
+    using input_type                            = typename Params::input_type;
+    using output_type                           = typename Params::output_type;
+    using scan_op_type                          = typename Params::scan_op_type;
+    const bool            debug_synchronous     = false;
     static constexpr bool use_identity_iterator = Params::use_identity_iterator;
 };
 
@@ -76,7 +74,7 @@ typedef ::testing::Types<
     DeviceScanParams<unsigned short>,
     DeviceScanParams<short, int>,
     DeviceScanParams<int>,
-    DeviceScanParams<float, float, rp::maximum<float> >,
+    DeviceScanParams<float, float, rp::maximum<float>>,
 #ifndef __HIP__
     // hip-clang does provide host comparison operators
     DeviceScanParams<rp::half, rp::half, test_utils::half_maximum>,
@@ -84,32 +82,28 @@ typedef ::testing::Types<
     DeviceScanParams<rp::half, float>,
 #endif
     // Large
-    DeviceScanParams<int, double, rp::plus<int> >,
-    DeviceScanParams<int, double, rp::plus<double> >,
-    DeviceScanParams<int, long long, rp::plus<long long> >,
-    DeviceScanParams<unsigned int, unsigned long long, rp::plus<unsigned long long> >,
-    DeviceScanParams<long long, long long, rp::maximum<long long> >,
+    DeviceScanParams<int, double, rp::plus<int>>,
+    DeviceScanParams<int, double, rp::plus<double>>,
+    DeviceScanParams<int, long long, rp::plus<long long>>,
+    DeviceScanParams<unsigned int, unsigned long long, rp::plus<unsigned long long>>,
+    DeviceScanParams<long long, long long, rp::maximum<long long>>,
     DeviceScanParams<double, double, rp::plus<double>, true>,
-    DeviceScanParams<signed char, long, rp::plus<long> >,
-    DeviceScanParams<float, double, rp::minimum<double> >,
-    DeviceScanParams<test_utils::custom_test_type<int> >,
-    DeviceScanParams<
-        test_utils::custom_test_type<double>, test_utils::custom_test_type<double>,
-        rp::plus<test_utils::custom_test_type<double> >, true
-    >,
-    DeviceScanParams<test_utils::custom_test_type<int> >,
-    DeviceScanParams<test_utils::custom_test_array_type<long long, 5> >,
-    DeviceScanParams<test_utils::custom_test_array_type<int, 10> >
-> RocprimDeviceScanTestsParams;
+    DeviceScanParams<signed char, long, rp::plus<long>>,
+    DeviceScanParams<float, double, rp::minimum<double>>,
+    DeviceScanParams<test_utils::custom_test_type<int>>,
+    DeviceScanParams<test_utils::custom_test_type<double>,
+                     test_utils::custom_test_type<double>,
+                     rp::plus<test_utils::custom_test_type<double>>,
+                     true>,
+    DeviceScanParams<test_utils::custom_test_type<int>>,
+    DeviceScanParams<test_utils::custom_test_array_type<long long, 5>>,
+    DeviceScanParams<test_utils::custom_test_array_type<int, 10>>>
+    RocprimDeviceScanTestsParams;
 
 std::vector<size_t> get_sizes()
 {
-    std::vector<size_t> sizes = {
-        1, 10, 53, 211,
-        1024, 2048, 5096,
-        34567, (1 << 18),
-        (1 << 20) - 12345
-    };
+    std::vector<size_t> sizes
+        = {1, 10, 53, 211, 1024, 2048, 5096, 34567, (1 << 18), (1 << 20) - 12345};
     const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(3, 1, 100000);
     sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
     std::sort(sizes.begin(), sizes.end());
@@ -120,48 +114,45 @@ TYPED_TEST_CASE(RocprimDeviceScanTests, RocprimDeviceScanTestsParams);
 
 TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
 {
-    using T = typename TestFixture::input_type;
-    using U = typename TestFixture::output_type;
-    using scan_op_type = typename TestFixture::scan_op_type;
+    using T                      = typename TestFixture::input_type;
+    using U                      = typename TestFixture::output_type;
+    using scan_op_type           = typename TestFixture::scan_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     hipStream_t stream = 0; // default
 
-    U * d_output;
+    U* d_output;
     HIP_CHECK(hipMalloc(&d_output, sizeof(U)));
 
-    test_utils::out_of_bounds_flag out_of_bounds;
+    test_utils::out_of_bounds_flag          out_of_bounds;
     test_utils::bounds_checking_iterator<U> d_checking_output(
-        d_output,
-        out_of_bounds.device_pointer(),
-        0
-    );
+        d_output, out_of_bounds.device_pointer(), 0);
 
     // temp storage
     size_t temp_storage_size_bytes;
-    void * d_temp_storage = nullptr;
+    void*  d_temp_storage = nullptr;
     // Get size of d_temp_storage
-    HIP_CHECK(
-        rocprim::inclusive_scan(
-            d_temp_storage, temp_storage_size_bytes,
-            rocprim::make_constant_iterator<T>(T(345)),
-            d_checking_output,
-            0, scan_op_type(), stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::inclusive_scan(d_temp_storage,
+                                      temp_storage_size_bytes,
+                                      rocprim::make_constant_iterator<T>(T(345)),
+                                      d_checking_output,
+                                      0,
+                                      scan_op_type(),
+                                      stream,
+                                      debug_synchronous));
 
     // allocate temporary storage
     HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
 
     // Run
-    HIP_CHECK(
-        rocprim::inclusive_scan(
-            d_temp_storage, temp_storage_size_bytes,
-            rocprim::make_constant_iterator<T>(T(345)),
-            d_checking_output,
-            0, scan_op_type(), stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::inclusive_scan(d_temp_storage,
+                                      temp_storage_size_bytes,
+                                      rocprim::make_constant_iterator<T>(T(345)),
+                                      d_checking_output,
+                                      0,
+                                      scan_op_type(),
+                                      stream,
+                                      debug_synchronous));
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -173,10 +164,10 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
 
 TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 {
-    using T = typename TestFixture::input_type;
-    using U = typename TestFixture::output_type;
-    using scan_op_type = typename TestFixture::scan_op_type;
-    const bool debug_synchronous = TestFixture::debug_synchronous;
+    using T                                     = typename TestFixture::input_type;
+    using U                                     = typename TestFixture::output_type;
+    using scan_op_type                          = typename TestFixture::scan_op_type;
+    const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
 
     const std::vector<size_t> sizes = get_sizes();
@@ -190,17 +181,12 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
         std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10);
         std::vector<U> output(input.size(), 0);
 
-        T * d_input;
-        U * d_output;
+        T* d_input;
+        U* d_output;
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(U)));
         HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
         HIP_CHECK(hipDeviceSynchronize());
 
         // scan function
@@ -208,23 +194,21 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 
         // Calculate expected results on host
         std::vector<U> expected(input.size());
-        test_utils::host_inclusive_scan(
-            input.begin(), input.end(),
-            expected.begin(), scan_op
-        );
+        test_utils::host_inclusive_scan(input.begin(), input.end(), expected.begin(), scan_op);
 
         // temp storage
         size_t temp_storage_size_bytes;
-        void * d_temp_storage = nullptr;
+        void*  d_temp_storage = nullptr;
         // Get size of d_temp_storage
-        HIP_CHECK(
-            rocprim::inclusive_scan(
-                d_temp_storage, temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                input.size(), scan_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::inclusive_scan(
+            d_temp_storage,
+            temp_storage_size_bytes,
+            d_input,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
+            input.size(),
+            scan_op,
+            stream,
+            debug_synchronous));
 
         // temp_storage_size_bytes must be >0
         ASSERT_GT(temp_storage_size_bytes, 0);
@@ -234,25 +218,21 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
         HIP_CHECK(hipDeviceSynchronize());
 
         // Run
-        HIP_CHECK(
-            rocprim::inclusive_scan(
-                d_temp_storage, temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                input.size(), scan_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::inclusive_scan(
+            d_temp_storage,
+            temp_storage_size_bytes,
+            d_input,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
+            input.size(),
+            scan_op,
+            stream,
+            debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Copy output to host
         HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(U),
-                hipMemcpyDeviceToHost
-            )
-        );
+            hipMemcpy(output.data(), d_output, output.size() * sizeof(U), hipMemcpyDeviceToHost));
         HIP_CHECK(hipDeviceSynchronize());
 
         // Check if output values are as expected
@@ -266,10 +246,10 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 
 TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 {
-    using T = typename TestFixture::input_type;
-    using U = typename TestFixture::output_type;
-    using scan_op_type = typename TestFixture::scan_op_type;
-    const bool debug_synchronous = TestFixture::debug_synchronous;
+    using T                                     = typename TestFixture::input_type;
+    using U                                     = typename TestFixture::output_type;
+    using scan_op_type                          = typename TestFixture::scan_op_type;
+    const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
 
     const std::vector<size_t> sizes = get_sizes();
@@ -283,17 +263,12 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
         std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10);
         std::vector<U> output(input.size());
 
-        T * d_input;
-        U * d_output;
+        T* d_input;
+        U* d_output;
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(U)));
         HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
         HIP_CHECK(hipDeviceSynchronize());
 
         // scan function
@@ -301,25 +276,24 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 
         // Calculate expected results on host
         std::vector<U> expected(input.size());
-        T initial_value = test_utils::get_random_value<T>(1, 10);
+        T              initial_value = test_utils::get_random_value<T>(1, 10);
         test_utils::host_exclusive_scan(
-            input.begin(), input.end(),
-            initial_value, expected.begin(),
-            scan_op
-        );
+            input.begin(), input.end(), initial_value, expected.begin(), scan_op);
 
         // temp storage
         size_t temp_storage_size_bytes;
-        void * d_temp_storage = nullptr;
+        void*  d_temp_storage = nullptr;
         // Get size of d_temp_storage
-        HIP_CHECK(
-            rocprim::exclusive_scan(
-                d_temp_storage, temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                initial_value, input.size(), scan_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::exclusive_scan(
+            d_temp_storage,
+            temp_storage_size_bytes,
+            d_input,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
+            initial_value,
+            input.size(),
+            scan_op,
+            stream,
+            debug_synchronous));
 
         // temp_storage_size_bytes must be >0
         ASSERT_GT(temp_storage_size_bytes, 0);
@@ -329,25 +303,22 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
         HIP_CHECK(hipDeviceSynchronize());
 
         // Run
-        HIP_CHECK(
-            rocprim::exclusive_scan(
-                d_temp_storage, temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                initial_value, input.size(), scan_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::exclusive_scan(
+            d_temp_storage,
+            temp_storage_size_bytes,
+            d_input,
+            test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
+            initial_value,
+            input.size(),
+            scan_op,
+            stream,
+            debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Copy output to host
         HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(U),
-                hipMemcpyDeviceToHost
-            )
-        );
+            hipMemcpy(output.data(), d_output, output.size() * sizeof(U), hipMemcpyDeviceToHost));
         HIP_CHECK(hipDeviceSynchronize());
 
         // Check if output values are as expected
@@ -362,10 +333,10 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
 {
     // scan-by-key does not support output iterator with void value_type
-    using T = typename TestFixture::input_type;
-    using K = unsigned int; // key type
-    using U = typename TestFixture::output_type;
-    using scan_op_type = typename TestFixture::scan_op_type;
+    using T                      = typename TestFixture::input_type;
+    using K                      = unsigned int; // key type
+    using U                      = typename TestFixture::output_type;
+    using scan_op_type           = typename TestFixture::scan_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     const std::vector<size_t> sizes = get_sizes();
@@ -391,26 +362,15 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
         }
         std::vector<U> output(input.size(), 0);
 
-        T * d_input;
-        K * d_keys;
-        U * d_output;
+        T* d_input;
+        K* d_keys;
+        U* d_output;
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
         HIP_CHECK(hipMalloc(&d_keys, keys.size() * sizeof(K)));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(U)));
         HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_keys, keys.data(),
-                keys.size() * sizeof(K),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_keys, keys.data(), keys.size() * sizeof(K), hipMemcpyHostToDevice));
         HIP_CHECK(hipDeviceSynchronize());
 
         // scan function
@@ -421,41 +381,34 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
         // Calculate expected results on host
         std::vector<U> expected(input.size());
         test_utils::host_inclusive_scan(
+            rocprim::make_zip_iterator(rocprim::make_tuple(input.begin(), keys.begin())),
+            rocprim::make_zip_iterator(rocprim::make_tuple(input.end(), keys.end())),
             rocprim::make_zip_iterator(
-                rocprim::make_tuple(input.begin(), keys.begin())
-            ),
-            rocprim::make_zip_iterator(
-                rocprim::make_tuple(input.end(), keys.end())
-            ),
-            rocprim::make_zip_iterator(
-                rocprim::make_tuple(expected.begin(), rocprim::make_discard_iterator())
-            ),
+                rocprim::make_tuple(expected.begin(), rocprim::make_discard_iterator())),
             [scan_op, keys_compare_op](const rocprim::tuple<U, K>& t1,
-                                       const rocprim::tuple<U, K>& t2)
-                -> rocprim::tuple<U, K>
-            {
+                                       const rocprim::tuple<U, K>& t2) -> rocprim::tuple<U, K> {
                 if(keys_compare_op(rocprim::get<1>(t1), rocprim::get<1>(t2)))
                 {
-                    return rocprim::make_tuple(
-                        scan_op(rocprim::get<0>(t1), rocprim::get<0>(t2)),
-                        rocprim::get<1>(t2)
-                    );
+                    return rocprim::make_tuple(scan_op(rocprim::get<0>(t1), rocprim::get<0>(t2)),
+                                               rocprim::get<1>(t2));
                 }
                 return t2;
-            }
-        );
+            });
 
         // temp storage
         size_t temp_storage_size_bytes;
-        void * d_temp_storage = nullptr;
+        void*  d_temp_storage = nullptr;
         // Get size of d_temp_storage
-        HIP_CHECK(
-            rocprim::inclusive_scan_by_key(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys, d_input, d_output, input.size(),
-                scan_op, keys_compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::inclusive_scan_by_key(d_temp_storage,
+                                                 temp_storage_size_bytes,
+                                                 d_keys,
+                                                 d_input,
+                                                 d_output,
+                                                 input.size(),
+                                                 scan_op,
+                                                 keys_compare_op,
+                                                 stream,
+                                                 debug_synchronous));
 
         // temp_storage_size_bytes must be >0
         ASSERT_GT(temp_storage_size_bytes, 0);
@@ -465,24 +418,22 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
         HIP_CHECK(hipDeviceSynchronize());
 
         // Run
-        HIP_CHECK(
-            rocprim::inclusive_scan_by_key(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys, d_input, d_output, input.size(),
-                scan_op, keys_compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::inclusive_scan_by_key(d_temp_storage,
+                                                 temp_storage_size_bytes,
+                                                 d_keys,
+                                                 d_input,
+                                                 d_output,
+                                                 input.size(),
+                                                 scan_op,
+                                                 keys_compare_op,
+                                                 stream,
+                                                 debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Copy output to host
         HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(U),
-                hipMemcpyDeviceToHost
-            )
-        );
+            hipMemcpy(output.data(), d_output, output.size() * sizeof(U), hipMemcpyDeviceToHost));
         HIP_CHECK(hipDeviceSynchronize());
 
         // Check if output values are as expected
@@ -498,10 +449,10 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
 TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
 {
     // scan-by-key does not support output iterator with void value_type
-    using T = typename TestFixture::input_type;
-    using K = unsigned int; // key type
-    using U = typename TestFixture::output_type;
-    using scan_op_type = typename TestFixture::scan_op_type;
+    using T                      = typename TestFixture::input_type;
+    using K                      = unsigned int; // key type
+    using U                      = typename TestFixture::output_type;
+    using scan_op_type           = typename TestFixture::scan_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     const std::vector<size_t> sizes = get_sizes();
@@ -514,8 +465,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
         const bool use_unique_keys = bool(test_utils::get_random_value<int>(0, 1));
 
         // Generate data
-        T initial_value = test_utils::get_random_value<T>(1, 100);
-        std::vector<T> input = test_utils::get_random_data<T>(size, 0, 9);
+        T              initial_value = test_utils::get_random_value<T>(1, 100);
+        std::vector<T> input         = test_utils::get_random_data<T>(size, 0, 9);
         std::vector<K> keys;
         if(use_unique_keys)
         {
@@ -528,26 +479,15 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
         }
         std::vector<U> output(input.size(), 0);
 
-        T * d_input;
-        K * d_keys;
-        U * d_output;
+        T* d_input;
+        K* d_keys;
+        U* d_output;
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
         HIP_CHECK(hipMalloc(&d_keys, keys.size() * sizeof(K)));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(U)));
         HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_keys, keys.data(),
-                keys.size() * sizeof(K),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_keys, keys.data(), keys.size() * sizeof(K), hipMemcpyHostToDevice));
         HIP_CHECK(hipDeviceSynchronize());
 
         // scan function
@@ -557,23 +497,29 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
 
         // Calculate expected results on host
         std::vector<U> expected(input.size());
-        test_utils::host_exclusive_scan_by_key(
-            input.begin(), input.end(), keys.begin(),
-            initial_value, expected.begin(),
-            scan_op, keys_compare_op
-        );
+        test_utils::host_exclusive_scan_by_key(input.begin(),
+                                               input.end(),
+                                               keys.begin(),
+                                               initial_value,
+                                               expected.begin(),
+                                               scan_op,
+                                               keys_compare_op);
 
         // temp storage
         size_t temp_storage_size_bytes;
-        void * d_temp_storage = nullptr;
+        void*  d_temp_storage = nullptr;
         // Get size of d_temp_storage
-        HIP_CHECK(
-            rocprim::exclusive_scan_by_key(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys, d_input, d_output, initial_value, input.size(),
-                scan_op, keys_compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::exclusive_scan_by_key(d_temp_storage,
+                                                 temp_storage_size_bytes,
+                                                 d_keys,
+                                                 d_input,
+                                                 d_output,
+                                                 initial_value,
+                                                 input.size(),
+                                                 scan_op,
+                                                 keys_compare_op,
+                                                 stream,
+                                                 debug_synchronous));
 
         // temp_storage_size_bytes must be >0
         ASSERT_GT(temp_storage_size_bytes, 0);
@@ -583,24 +529,23 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
         HIP_CHECK(hipDeviceSynchronize());
 
         // Run
-        HIP_CHECK(
-            rocprim::exclusive_scan_by_key(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys, d_input, d_output, initial_value, input.size(),
-                scan_op, keys_compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::exclusive_scan_by_key(d_temp_storage,
+                                                 temp_storage_size_bytes,
+                                                 d_keys,
+                                                 d_input,
+                                                 d_output,
+                                                 initial_value,
+                                                 input.size(),
+                                                 scan_op,
+                                                 keys_compare_op,
+                                                 stream,
+                                                 debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Copy output to host
         HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(U),
-                hipMemcpyDeviceToHost
-            )
-        );
+            hipMemcpy(output.data(), d_output, output.size() * sizeof(U), hipMemcpyDeviceToHost));
         HIP_CHECK(hipDeviceSynchronize());
 
         // Check if output values are as expected

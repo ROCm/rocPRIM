@@ -20,9 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
-#include <algorithm>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -37,39 +37,35 @@
 #define HIP_CHECK(error) ASSERT_EQ(error, hipSuccess)
 
 // Params for tests
-template<
-    class KeyType,
-    class ValueType,
-    class CompareOp = ::rocprim::less<KeyType>
->
+template <class KeyType, class ValueType, class CompareOp = ::rocprim::less<KeyType>>
 struct DeviceMergeParams
 {
-    using key_type = KeyType;
-    using value_type = ValueType;
+    using key_type        = KeyType;
+    using value_type      = ValueType;
     using compare_op_type = CompareOp;
 };
 
-template<class Params>
+template <class Params>
 class RocprimDeviceMergeTests : public ::testing::Test
 {
 public:
-    using key_type = typename Params::key_type;
-    using value_type = typename Params::value_type;
-    using compare_op_type = typename Params::compare_op_type;
+    using key_type               = typename Params::key_type;
+    using value_type             = typename Params::value_type;
+    using compare_op_type        = typename Params::compare_op_type;
     const bool debug_synchronous = false;
 };
 
-using custom_int2 = test_utils::custom_test_type<int>;
+using custom_int2    = test_utils::custom_test_type<int>;
 using custom_double2 = test_utils::custom_test_type<double>;
 
 typedef ::testing::Types<
     DeviceMergeParams<int, double>,
-    DeviceMergeParams<unsigned long, unsigned int, ::rocprim::greater<unsigned long> >,
+    DeviceMergeParams<unsigned long, unsigned int, ::rocprim::greater<unsigned long>>,
     DeviceMergeParams<float, custom_double2>,
     DeviceMergeParams<int, float>,
-    DeviceMergeParams<custom_double2, custom_int2, ::rocprim::greater<custom_double2> >,
-    DeviceMergeParams<custom_int2, char>
-> RocprimDeviceMergeTestsParams;
+    DeviceMergeParams<custom_double2, custom_int2, ::rocprim::greater<custom_double2>>,
+    DeviceMergeParams<custom_int2, char>>
+    RocprimDeviceMergeTestsParams;
 
 // size1, size2
 std::vector<std::tuple<size_t, size_t>> get_sizes()
@@ -95,18 +91,16 @@ TYPED_TEST_CASE(RocprimDeviceMergeTests, RocprimDeviceMergeTestsParams);
 
 TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 {
-    using key_type = typename TestFixture::key_type;
-    using compare_op_type = typename TestFixture::compare_op_type;
+    using key_type               = typename TestFixture::key_type;
+    using compare_op_type        = typename TestFixture::compare_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     hipStream_t stream = 0; // default
 
     for(auto sizes : get_sizes())
     {
-        SCOPED_TRACE(
-            testing::Message() << "with sizes = {" <<
-            std::get<0>(sizes) << ", " << std::get<1>(sizes) << "}"
-        );
+        SCOPED_TRACE(testing::Message() << "with sizes = {" << std::get<0>(sizes) << ", "
+                                        << std::get<1>(sizes) << "}");
 
         const size_t size1 = std::get<0>(sizes);
         const size_t size2 = std::get<1>(sizes);
@@ -123,57 +117,47 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 
         // Calculate expected results on host
         std::vector<key_type> expected(keys_output.size());
-        std::merge(
-            keys_input1.begin(),
-            keys_input1.end(),
-            keys_input2.begin(),
-            keys_input2.end(),
-            expected.begin(),
-            compare_op
-        );
+        std::merge(keys_input1.begin(),
+                   keys_input1.end(),
+                   keys_input2.begin(),
+                   keys_input2.end(),
+                   expected.begin(),
+                   compare_op);
 
         test_utils::out_of_bounds_flag out_of_bounds;
 
-        key_type * d_keys_input1;
-        key_type * d_keys_input2;
-        key_type * d_keys_output;
+        key_type* d_keys_input1;
+        key_type* d_keys_input2;
+        key_type* d_keys_output;
         HIP_CHECK(hipMalloc(&d_keys_input1, keys_input1.size() * sizeof(key_type)));
         HIP_CHECK(hipMalloc(&d_keys_input2, keys_input2.size() * sizeof(key_type)));
         HIP_CHECK(hipMalloc(&d_keys_output, keys_output.size() * sizeof(key_type)));
-        HIP_CHECK(
-            hipMemcpy(
-                d_keys_input1, keys_input1.data(),
-                keys_input1.size() * sizeof(key_type),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_keys_input2, keys_input2.data(),
-                keys_input2.size() * sizeof(key_type),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(d_keys_input1,
+                            keys_input1.data(),
+                            keys_input1.size() * sizeof(key_type),
+                            hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_keys_input2,
+                            keys_input2.data(),
+                            keys_input2.size() * sizeof(key_type),
+                            hipMemcpyHostToDevice));
 
         test_utils::bounds_checking_iterator<key_type> d_keys_checking_output(
-            d_keys_output,
-            out_of_bounds.device_pointer(),
-            size1 + size2
-        );
+            d_keys_output, out_of_bounds.device_pointer(), size1 + size2);
 
         // temp storage
         size_t temp_storage_size_bytes;
-        void * d_temp_storage = nullptr;
+        void*  d_temp_storage = nullptr;
         // Get size of d_temp_storage
-        HIP_CHECK(
-            rocprim::merge(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys_input1, d_keys_input2,
-                d_keys_checking_output,
-                keys_input1.size(), keys_input2.size(),
-                compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::merge(d_temp_storage,
+                                 temp_storage_size_bytes,
+                                 d_keys_input1,
+                                 d_keys_input2,
+                                 d_keys_checking_output,
+                                 keys_input1.size(),
+                                 keys_input2.size(),
+                                 compare_op,
+                                 stream,
+                                 debug_synchronous));
 
         // temp_storage_size_bytes must be >0
         ASSERT_GT(temp_storage_size_bytes, 0);
@@ -182,28 +166,26 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
         HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
 
         // Run
-        HIP_CHECK(
-            rocprim::merge(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys_input1, d_keys_input2,
-                d_keys_checking_output,
-                keys_input1.size(), keys_input2.size(),
-                compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::merge(d_temp_storage,
+                                 temp_storage_size_bytes,
+                                 d_keys_input1,
+                                 d_keys_input2,
+                                 d_keys_checking_output,
+                                 keys_input1.size(),
+                                 keys_input2.size(),
+                                 compare_op,
+                                 stream,
+                                 debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         ASSERT_FALSE(out_of_bounds.get());
 
         // Copy keys_output to host
-        HIP_CHECK(
-            hipMemcpy(
-                keys_output.data(), d_keys_output,
-                keys_output.size() * sizeof(key_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(keys_output.data(),
+                            d_keys_output,
+                            keys_output.size() * sizeof(key_type),
+                            hipMemcpyDeviceToHost));
 
         // Check if keys_output values are as expected
         for(size_t i = 0; i < keys_output.size(); i++)
@@ -220,9 +202,9 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 
 TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 {
-    using key_type = typename TestFixture::key_type;
-    using value_type = typename TestFixture::value_type;
-    using compare_op_type = typename TestFixture::compare_op_type;
+    using key_type               = typename TestFixture::key_type;
+    using value_type             = typename TestFixture::value_type;
+    using compare_op_type        = typename TestFixture::compare_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     using key_value = std::pair<key_type, value_type>;
@@ -231,10 +213,8 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 
     for(auto sizes : get_sizes())
     {
-        SCOPED_TRACE(
-            testing::Message() << "with sizes = {" <<
-            std::get<0>(sizes) << ", " << std::get<1>(sizes) << "}"
-        );
+        SCOPED_TRACE(testing::Message() << "with sizes = {" << std::get<0>(sizes) << ", "
+                                        << std::get<1>(sizes) << "}");
 
         const size_t size1 = std::get<0>(sizes);
         const size_t size2 = std::get<1>(sizes);
@@ -251,7 +231,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
         std::vector<value_type> values_input2(size2);
         std::iota(values_input1.begin(), values_input1.end(), 0);
         std::iota(values_input2.begin(), values_input2.end(), size1);
-        std::vector<key_type> keys_output(size1 + size2, 0);
+        std::vector<key_type>   keys_output(size1 + size2, 0);
         std::vector<value_type> values_output(size1 + size2, 0);
 
         // Calculate expected results on host
@@ -268,84 +248,68 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
         }
 
         std::vector<key_value> expected(size1 + size2);
-        std::merge(
-            vector1.begin(),
-            vector1.end(),
-            vector2.begin(),
-            vector2.end(),
-            expected.begin(),
-            [compare_op](const key_value& a, const key_value& b) { return compare_op(a.first, b.first); }
-        );
+        std::merge(vector1.begin(),
+                   vector1.end(),
+                   vector2.begin(),
+                   vector2.end(),
+                   expected.begin(),
+                   [compare_op](const key_value& a, const key_value& b) {
+                       return compare_op(a.first, b.first);
+                   });
 
         test_utils::out_of_bounds_flag out_of_bounds;
 
-        key_type * d_keys_input1;
-        key_type * d_keys_input2;
-        key_type * d_keys_output;
-        value_type * d_values_input1;
-        value_type * d_values_input2;
-        value_type * d_values_output;
+        key_type*   d_keys_input1;
+        key_type*   d_keys_input2;
+        key_type*   d_keys_output;
+        value_type* d_values_input1;
+        value_type* d_values_input2;
+        value_type* d_values_output;
         HIP_CHECK(hipMalloc(&d_keys_input1, keys_input1.size() * sizeof(key_type)));
         HIP_CHECK(hipMalloc(&d_keys_input2, keys_input2.size() * sizeof(key_type)));
         HIP_CHECK(hipMalloc(&d_keys_output, keys_output.size() * sizeof(key_type)));
         HIP_CHECK(hipMalloc(&d_values_input1, values_input1.size() * sizeof(value_type)));
         HIP_CHECK(hipMalloc(&d_values_input2, values_input2.size() * sizeof(value_type)));
         HIP_CHECK(hipMalloc(&d_values_output, values_output.size() * sizeof(value_type)));
-        HIP_CHECK(
-            hipMemcpy(
-                d_keys_input1, keys_input1.data(),
-                keys_input1.size() * sizeof(key_type),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_keys_input2, keys_input2.data(),
-                keys_input2.size() * sizeof(key_type),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_values_input1, values_input1.data(),
-                values_input1.size() * sizeof(value_type),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_values_input2, values_input2.data(),
-                values_input2.size() * sizeof(value_type),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(d_keys_input1,
+                            keys_input1.data(),
+                            keys_input1.size() * sizeof(key_type),
+                            hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_keys_input2,
+                            keys_input2.data(),
+                            keys_input2.size() * sizeof(key_type),
+                            hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_values_input1,
+                            values_input1.data(),
+                            values_input1.size() * sizeof(value_type),
+                            hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_values_input2,
+                            values_input2.data(),
+                            values_input2.size() * sizeof(value_type),
+                            hipMemcpyHostToDevice));
 
         test_utils::bounds_checking_iterator<key_type> d_keys_checking_output(
-            d_keys_output,
-            out_of_bounds.device_pointer(),
-            size1 + size2
-        );
+            d_keys_output, out_of_bounds.device_pointer(), size1 + size2);
         test_utils::bounds_checking_iterator<value_type> d_values_checking_output(
-            d_values_output,
-            out_of_bounds.device_pointer(),
-            size1 + size2
-        );
+            d_values_output, out_of_bounds.device_pointer(), size1 + size2);
 
         // temp storage
         size_t temp_storage_size_bytes;
-        void * d_temp_storage = nullptr;
+        void*  d_temp_storage = nullptr;
         // Get size of d_temp_storage
-        HIP_CHECK(
-            rocprim::merge(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys_input1, d_keys_input2,
-                d_keys_checking_output,
-                d_values_input1, d_values_input2,
-                d_values_checking_output,
-                keys_input1.size(), keys_input2.size(),
-                compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::merge(d_temp_storage,
+                                 temp_storage_size_bytes,
+                                 d_keys_input1,
+                                 d_keys_input2,
+                                 d_keys_checking_output,
+                                 d_values_input1,
+                                 d_values_input2,
+                                 d_values_checking_output,
+                                 keys_input1.size(),
+                                 keys_input2.size(),
+                                 compare_op,
+                                 stream,
+                                 debug_synchronous));
 
         // temp_storage_size_bytes must be >0
         ASSERT_GT(temp_storage_size_bytes, 0);
@@ -354,36 +318,32 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
         HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
 
         // Run
-        HIP_CHECK(
-            rocprim::merge(
-                d_temp_storage, temp_storage_size_bytes,
-                d_keys_input1, d_keys_input2,
-                d_keys_checking_output,
-                d_values_input1, d_values_input2,
-                d_values_checking_output,
-                keys_input1.size(), keys_input2.size(),
-                compare_op, stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::merge(d_temp_storage,
+                                 temp_storage_size_bytes,
+                                 d_keys_input1,
+                                 d_keys_input2,
+                                 d_keys_checking_output,
+                                 d_values_input1,
+                                 d_values_input2,
+                                 d_values_checking_output,
+                                 keys_input1.size(),
+                                 keys_input2.size(),
+                                 compare_op,
+                                 stream,
+                                 debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         ASSERT_FALSE(out_of_bounds.get());
 
-        HIP_CHECK(
-            hipMemcpy(
-                keys_output.data(), d_keys_output,
-                keys_output.size() * sizeof(key_type),
-                hipMemcpyDeviceToHost
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                values_output.data(), d_values_output,
-                values_output.size() * sizeof(value_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(keys_output.data(),
+                            d_keys_output,
+                            keys_output.size() * sizeof(key_type),
+                            hipMemcpyDeviceToHost));
+        HIP_CHECK(hipMemcpy(values_output.data(),
+                            d_values_output,
+                            values_output.size() * sizeof(value_type),
+                            hipMemcpyDeviceToHost));
 
         // Check if keys_output values are as expected
         for(size_t i = 0; i < keys_output.size(); i++)

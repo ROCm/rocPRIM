@@ -42,59 +42,69 @@ namespace detail
 // Define vector types that will be used by rocPRIM internally.
 // We don't use HIP vector types because they don't generate correct
 // load/store operations, see https://github.com/RadeonOpenCompute/ROCm/issues/341
-#define DEFINE_VECTOR_TYPE(name, base) \
-\
-struct name##2 \
-{ \
-    typedef base vector_value_type __attribute__((ext_vector_type(2))); \
-    union { \
-        vector_value_type data; \
-        struct { base x, y; }; \
-    }; \
-} __attribute__((aligned(sizeof(base) * 2))); \
-\
-struct name##4 \
-{ \
-    typedef base vector_value_type __attribute__((ext_vector_type(4))); \
-    union { \
-        vector_value_type data; \
-        struct { base x, y, w, z; }; \
-    }; \
-} __attribute__((aligned(sizeof(base) * 4)));
+#define DEFINE_VECTOR_TYPE(name, base)                                      \
+                                                                            \
+    struct name##2                                                          \
+    {                                                                       \
+        typedef base vector_value_type __attribute__((ext_vector_type(2))); \
+        union                                                               \
+        {                                                                   \
+            vector_value_type data;                                         \
+            struct                                                          \
+            {                                                               \
+                base x, y;                                                  \
+            };                                                              \
+        };                                                                  \
+    }                                                                       \
+    __attribute__((aligned(sizeof(base) * 2)));                             \
+                                                                            \
+    struct name##4                                                          \
+    {                                                                       \
+        typedef base vector_value_type __attribute__((ext_vector_type(4))); \
+        union                                                               \
+        {                                                                   \
+            vector_value_type data;                                         \
+            struct                                                          \
+            {                                                               \
+                base x, y, w, z;                                            \
+            };                                                              \
+        };                                                                  \
+    }                                                                       \
+    __attribute__((aligned(sizeof(base) * 4)));
 
-DEFINE_VECTOR_TYPE(char, char);
-DEFINE_VECTOR_TYPE(short, short);
-DEFINE_VECTOR_TYPE(int, int);
-DEFINE_VECTOR_TYPE(longlong, long long);
+    DEFINE_VECTOR_TYPE(char, char);
+    DEFINE_VECTOR_TYPE(short, short);
+    DEFINE_VECTOR_TYPE(int, int);
+    DEFINE_VECTOR_TYPE(longlong, long long);
 
-// Takes a scalar type T and matches to a vector type based on NumElements.
-template <class T, unsigned int NumElements>
-struct make_vector_type
-{
-    using type = void;
-};
+    // Takes a scalar type T and matches to a vector type based on NumElements.
+    template <class T, unsigned int NumElements>
+    struct make_vector_type
+    {
+        using type = void;
+    };
 
 #define DEFINE_MAKE_VECTOR_N_TYPE(name, base, suffix) \
-template<> \
-struct make_vector_type<base, suffix> \
-{ \
-    using type = name##suffix; \
-};
+    template <>                                       \
+    struct make_vector_type<base, suffix>             \
+    {                                                 \
+        using type = name##suffix;                    \
+    };
 
-#define DEFINE_MAKE_VECTOR_TYPE(name, base) \
-\
-template <> \
-struct make_vector_type<base, 1> \
-{ \
-    using type = base; \
-}; \
-DEFINE_MAKE_VECTOR_N_TYPE(name, base, 2) \
-DEFINE_MAKE_VECTOR_N_TYPE(name, base, 4)
+#define DEFINE_MAKE_VECTOR_TYPE(name, base)  \
+                                             \
+    template <>                              \
+    struct make_vector_type<base, 1>         \
+    {                                        \
+        using type = base;                   \
+    };                                       \
+    DEFINE_MAKE_VECTOR_N_TYPE(name, base, 2) \
+    DEFINE_MAKE_VECTOR_N_TYPE(name, base, 4)
 
-DEFINE_MAKE_VECTOR_TYPE(char, char);
-DEFINE_MAKE_VECTOR_TYPE(short, short);
-DEFINE_MAKE_VECTOR_TYPE(int, int);
-DEFINE_MAKE_VECTOR_TYPE(longlong, long long);
+    DEFINE_MAKE_VECTOR_TYPE(char, char);
+    DEFINE_MAKE_VECTOR_TYPE(short, short);
+    DEFINE_MAKE_VECTOR_TYPE(int, int);
+    DEFINE_MAKE_VECTOR_TYPE(longlong, long long);
 
 #undef DEFINE_VECTOR_TYPE
 #undef DEFINE_MAKE_VECTOR_TYPE
@@ -106,7 +116,6 @@ DEFINE_MAKE_VECTOR_TYPE(longlong, long long);
 /// template parameter should not be used.
 struct empty_type
 {
-
 };
 
 /// \brief Half-precision floating point type

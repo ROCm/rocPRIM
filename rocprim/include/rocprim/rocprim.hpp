@@ -30,11 +30,11 @@
 
 #include "rocprim_version.hpp"
 
-#include "intrinsics.hpp"
 #include "functional.hpp"
-#include "types.hpp"
-#include "type_traits.hpp"
+#include "intrinsics.hpp"
 #include "iterator.hpp"
+#include "type_traits.hpp"
+#include "types.hpp"
 
 #include "warp/warp_reduce.hpp"
 #include "warp/warp_scan.hpp"
@@ -55,11 +55,11 @@
 #include "device/device_merge_sort.hpp"
 #include "device/device_partition.hpp"
 #include "device/device_radix_sort.hpp"
-#include "device/device_reduce_by_key.hpp"
 #include "device/device_reduce.hpp"
+#include "device/device_reduce_by_key.hpp"
 #include "device/device_run_length_encode.hpp"
-#include "device/device_scan_by_key.hpp"
 #include "device/device_scan.hpp"
+#include "device/device_scan_by_key.hpp"
 #include "device/device_segmented_radix_sort.hpp"
 #include "device/device_segmented_reduce.hpp"
 #include "device/device_segmented_scan.hpp"
@@ -70,8 +70,7 @@ BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Returns version of rocPRIM library.
 /// \return version of rocPRIM library
-ROCPRIM_HOST_DEVICE inline
-unsigned int version()
+ROCPRIM_HOST_DEVICE inline unsigned int version()
 {
     return ROCPRIM_VERSION;
 }

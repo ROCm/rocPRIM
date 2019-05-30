@@ -35,93 +35,134 @@
 namespace rp = rocprim;
 
 // Params for tests
-template<
-    class T,
-    class BinType,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U,
-    unsigned int BinSize = BlockSize,
-    rocprim::block_histogram_algorithm Algorithm = rocprim::block_histogram_algorithm::using_atomic
->
+template <class T,
+          class BinType,
+          unsigned int                       BlockSize      = 256U,
+          unsigned int                       ItemsPerThread = 1U,
+          unsigned int                       BinSize        = BlockSize,
+          rocprim::block_histogram_algorithm Algorithm
+          = rocprim::block_histogram_algorithm::using_atomic>
 struct params
 {
-    using type = T;
-    using bin_type = BinType;
-    static constexpr rocprim::block_histogram_algorithm algorithm = Algorithm;
-    static constexpr unsigned int block_size = BlockSize;
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    static constexpr unsigned int bin_size = BinSize;
+    using type                                                           = T;
+    using bin_type                                                       = BinType;
+    static constexpr rocprim::block_histogram_algorithm algorithm        = Algorithm;
+    static constexpr unsigned int                       block_size       = BlockSize;
+    static constexpr unsigned int                       items_per_thread = ItemsPerThread;
+    static constexpr unsigned int                       bin_size         = BinSize;
 };
 
-template<class Params>
+template <class Params>
 class RocprimBlockHistogramInputArrayTests : public ::testing::Test
 {
 public:
-    using type = typename Params::type;
-    using bin_type = typename Params::bin_type;
-    static constexpr unsigned int block_size = Params::block_size;
-    static constexpr rocprim::block_histogram_algorithm algorithm = Params::algorithm;
-    static constexpr unsigned int items_per_thread = Params::items_per_thread;
-    static constexpr unsigned int bin_size = Params::bin_size;
+    using type                                                     = typename Params::type;
+    using bin_type                                                 = typename Params::bin_type;
+    static constexpr unsigned int                       block_size = Params::block_size;
+    static constexpr rocprim::block_histogram_algorithm algorithm  = Params::algorithm;
+    static constexpr unsigned int                       items_per_thread = Params::items_per_thread;
+    static constexpr unsigned int                       bin_size         = Params::bin_size;
 };
 
 typedef ::testing::Types<
     // -----------------------------------------------------------------------
     // rocprim::block_histogram_algorithm::using_atomic
     // -----------------------------------------------------------------------
-    params<unsigned int, unsigned int, 6U,   32, 18U>,
-    params<unsigned int, unsigned int, 32,   2, 64>,
-    params<unsigned int, unsigned int, 256,  3, 512>,
-    params<unsigned int, unsigned int, 512,  4>,
+    params<unsigned int, unsigned int, 6U, 32, 18U>,
+    params<unsigned int, unsigned int, 32, 2, 64>,
+    params<unsigned int, unsigned int, 256, 3, 512>,
+    params<unsigned int, unsigned int, 512, 4>,
     params<unsigned int, unsigned int, 1024, 1>,
-    params<unsigned int, unsigned int, 37,   2>,
-    params<unsigned int, unsigned int, 65,   5>,
-    params<unsigned int, unsigned int, 162,  7>,
-    params<unsigned int, unsigned int, 255,  15>,
-    params<float, float, 6U,   32, 18U>,
-    params<float, float, 32,   2, 64>,
-    params<float, float, 256,  3, 512>,
-    params<float, unsigned int, 512,  4>,
+    params<unsigned int, unsigned int, 37, 2>,
+    params<unsigned int, unsigned int, 65, 5>,
+    params<unsigned int, unsigned int, 162, 7>,
+    params<unsigned int, unsigned int, 255, 15>,
+    params<float, float, 6U, 32, 18U>,
+    params<float, float, 32, 2, 64>,
+    params<float, float, 256, 3, 512>,
+    params<float, unsigned int, 512, 4>,
     params<float, unsigned int, 1024, 1>,
     // -----------------------------------------------------------------------
     // rocprim::block_histogram_algorithm::using_sort
     // -----------------------------------------------------------------------
-    params<unsigned int, unsigned int, 6U,   32,  18U, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 32,   2,   64, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 256,  3,  512, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 512,  4,  512, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 1024, 1, 1024, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 37,   2,   37, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 65,   5,   65, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 162,  7,  162, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned int, unsigned int, 255,  15, 255, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned char, unsigned int, 6U,   32,  18U, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned char, unsigned int, 32,   2,   64, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned char, unsigned int,   64, 3, 190, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned char, unsigned char,  64, 4, 256, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned char, unsigned char, 128, 1, 192, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned short, unsigned int, 6U,   32,  18U, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned short, unsigned int, 32,   2,   64, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned short, unsigned int, 256,  3,  512, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned short, unsigned short, 512,  4,  512, rocprim::block_histogram_algorithm::using_sort>,
-    params<unsigned short, unsigned short, 1024, 1, 1024, rocprim::block_histogram_algorithm::using_sort>
-> InputArrayTestParams;
+    params<unsigned int, unsigned int, 6U, 32, 18U, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int, unsigned int, 32, 2, 64, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int, unsigned int, 256, 3, 512, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int, unsigned int, 512, 4, 512, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int,
+           unsigned int,
+           1024,
+           1,
+           1024,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int, unsigned int, 37, 2, 37, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int, unsigned int, 65, 5, 65, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int, unsigned int, 162, 7, 162, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned int,
+           unsigned int,
+           255,
+           15,
+           255,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned char,
+           unsigned int,
+           6U,
+           32,
+           18U,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned char, unsigned int, 32, 2, 64, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned char, unsigned int, 64, 3, 190, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned char,
+           unsigned char,
+           64,
+           4,
+           256,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned char,
+           unsigned char,
+           128,
+           1,
+           192,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned short,
+           unsigned int,
+           6U,
+           32,
+           18U,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned short, unsigned int, 32, 2, 64, rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned short,
+           unsigned int,
+           256,
+           3,
+           512,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned short,
+           unsigned short,
+           512,
+           4,
+           512,
+           rocprim::block_histogram_algorithm::using_sort>,
+    params<unsigned short,
+           unsigned short,
+           1024,
+           1,
+           1024,
+           rocprim::block_histogram_algorithm::using_sort>>
+    InputArrayTestParams;
 
 TYPED_TEST_CASE(RocprimBlockHistogramInputArrayTests, InputArrayTestParams);
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    unsigned int BinSize,
-    rocprim::block_histogram_algorithm Algorithm,
-    class T,
-    class BinType
->
-__global__
-void histogram_kernel(T* device_output, T* device_output_bin)
+template <unsigned int                       BlockSize,
+          unsigned int                       ItemsPerThread,
+          unsigned int                       BinSize,
+          rocprim::block_histogram_algorithm Algorithm,
+          class T,
+          class BinType>
+__global__ void histogram_kernel(T* device_output, T* device_output_bin)
 {
     const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
-    unsigned int global_offset = hipBlockIdx_x * BinSize;
+    unsigned int       global_offset = hipBlockIdx_x * BinSize;
     __shared__ BinType hist[BinSize];
     // load
     T in_out[ItemsPerThread];
@@ -133,8 +174,8 @@ void histogram_kernel(T* device_output, T* device_output_bin)
     rp::block_histogram<T, BlockSize, ItemsPerThread, BinSize, Algorithm> bhist;
     bhist.histogram(in_out, hist);
 
-    #pragma unroll
-    for (unsigned int offset = 0; offset < BinSize; offset += BlockSize)
+#pragma unroll
+    for(unsigned int offset = 0; offset < BinSize; offset += BlockSize)
     {
         if(offset + hipThreadIdx_x < BinSize)
         {
@@ -146,12 +187,12 @@ void histogram_kernel(T* device_output, T* device_output_bin)
 
 TYPED_TEST(RocprimBlockHistogramInputArrayTests, Histogram)
 {
-    using T = typename TestFixture::type;
-    using BinType = typename TestFixture::bin_type;
-    constexpr auto algorithm = TestFixture::algorithm;
-    constexpr size_t block_size = TestFixture::block_size;
+    using T                           = typename TestFixture::type;
+    using BinType                     = typename TestFixture::bin_type;
+    constexpr auto   algorithm        = TestFixture::algorithm;
+    constexpr size_t block_size       = TestFixture::block_size;
     constexpr size_t items_per_thread = TestFixture::items_per_thread;
-    constexpr size_t bin = TestFixture::bin_size;
+    constexpr size_t bin              = TestFixture::bin_size;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -160,9 +201,9 @@ TYPED_TEST(RocprimBlockHistogramInputArrayTests, Histogram)
     }
 
     const size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 37;
-    const size_t bin_sizes = bin * 37;
-    const size_t grid_size = size / items_per_block;
+    const size_t size            = items_per_block * 37;
+    const size_t bin_sizes       = bin * 37;
+    const size_t grid_size       = size / items_per_block;
     // Generate data
     std::vector<T> output = test_utils::get_random_data<T>(size, 0, bin - 1);
 
@@ -176,7 +217,7 @@ TYPED_TEST(RocprimBlockHistogramInputArrayTests, Histogram)
         for(size_t j = 0; j < items_per_block; j++)
         {
             auto bin_idx = i * bin;
-            auto idx = i * items_per_block + j;
+            auto idx     = i * items_per_block + j;
             expected_bin[bin_idx + static_cast<unsigned int>(output[idx])]++;
         }
     }
@@ -188,42 +229,32 @@ TYPED_TEST(RocprimBlockHistogramInputArrayTests, Histogram)
     HIP_CHECK(hipMalloc(&device_output_bin, output_bin.size() * sizeof(T)));
 
     HIP_CHECK(
-        hipMemcpy(
-            device_output, output.data(),
-            output.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+        hipMemcpy(device_output, output.data(), output.size() * sizeof(T), hipMemcpyHostToDevice));
 
-    HIP_CHECK(
-        hipMemcpy(
-            device_output_bin, output_bin.data(),
-            output_bin.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(device_output_bin,
+                        output_bin.data(),
+                        output_bin.size() * sizeof(T),
+                        hipMemcpyHostToDevice));
 
     // Running kernel
     hipLaunchKernelGGL(
         HIP_KERNEL_NAME(histogram_kernel<block_size, items_per_thread, bin, algorithm, T, BinType>),
-        dim3(grid_size), dim3(block_size), 0, 0,
-        device_output, device_output_bin
-    );
+        dim3(grid_size),
+        dim3(block_size),
+        0,
+        0,
+        device_output,
+        device_output_bin);
 
     // Reading results back
-    HIP_CHECK(
-        hipMemcpy(
-            output_bin.data(), device_output_bin,
-            output_bin.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(output_bin.data(),
+                        device_output_bin,
+                        output_bin.size() * sizeof(T),
+                        hipMemcpyDeviceToHost));
 
     for(size_t i = 0; i < output_bin.size(); i++)
     {
-        ASSERT_EQ(
-            output_bin[i], expected_bin[i]
-        );
+        ASSERT_EQ(output_bin[i], expected_bin[i]);
     }
 
     HIP_CHECK(hipFree(device_output));

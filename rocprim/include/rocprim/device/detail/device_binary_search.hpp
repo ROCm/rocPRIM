@@ -26,98 +26,101 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<class Size>
-ROCPRIM_DEVICE inline
-Size get_binary_search_middle(Size left, Size right)
-{
-    // Instead of `/ 2` we use `* 33 / 64`, i.e. the middle is slightly moved.
-    // This greatly reduces address aliasing and hence cache misses for (nearly-)power-of-two
-    // sizes of haystack (when addresses are mapped to the same cache line).
-    // For random needles and (nearly-)power-of-two sizes, this change increases performance
-    // 4-20 times making it equal to performance of arbitrary sizes of haystack.
-    // See https://www.pvk.ca/Blog/2012/07/30/binary-search-is-a-pathological-case-for-caches/
-    const Size d = right - left;
-    return left + d / 2 + d / 64;
-}
-
-template<class RandomAccessIterator, class Size, class T, class BinaryPredicate>
-ROCPRIM_DEVICE inline
-Size lower_bound_n(RandomAccessIterator first,
-                   Size size,
-                   const T& value,
-                   BinaryPredicate compare_op)
-{
-    Size left = 0;
-    Size right = size;
-    while(left < right)
+    template <class Size>
+    ROCPRIM_DEVICE inline Size get_binary_search_middle(Size left, Size right)
     {
-        const Size mid = get_binary_search_middle(left, right);
-        if(compare_op(first[mid], value))
+        // Instead of `/ 2` we use `* 33 / 64`, i.e. the middle is slightly moved.
+        // This greatly reduces address aliasing and hence cache misses for (nearly-)power-of-two
+        // sizes of haystack (when addresses are mapped to the same cache line).
+        // For random needles and (nearly-)power-of-two sizes, this change increases performance
+        // 4-20 times making it equal to performance of arbitrary sizes of haystack.
+        // See https://www.pvk.ca/Blog/2012/07/30/binary-search-is-a-pathological-case-for-caches/
+        const Size d = right - left;
+        return left + d / 2 + d / 64;
+    }
+
+    template <class RandomAccessIterator, class Size, class T, class BinaryPredicate>
+    ROCPRIM_DEVICE inline Size lower_bound_n(RandomAccessIterator first,
+                                             Size                 size,
+                                             const T&             value,
+                                             BinaryPredicate      compare_op)
+    {
+        Size left  = 0;
+        Size right = size;
+        while(left < right)
         {
-            left = mid + 1;
+            const Size mid = get_binary_search_middle(left, right);
+            if(compare_op(first[mid], value))
+            {
+                left = mid + 1;
+            }
+            else
+            {
+                right = mid;
+            }
         }
-        else
+        return left;
+    }
+
+    template <class RandomAccessIterator, class Size, class T, class BinaryPredicate>
+    ROCPRIM_DEVICE inline Size upper_bound_n(RandomAccessIterator first,
+                                             Size                 size,
+                                             const T&             value,
+                                             BinaryPredicate      compare_op)
+    {
+        Size left  = 0;
+        Size right = size;
+        while(left < right)
         {
-            right = mid;
+            const Size mid = get_binary_search_middle(left, right);
+            if(compare_op(value, first[mid]))
+            {
+                right = mid;
+            }
+            else
+            {
+                left = mid + 1;
+            }
         }
+        return left;
     }
-    return left;
-}
 
-template<class RandomAccessIterator, class Size, class T, class BinaryPredicate>
-ROCPRIM_DEVICE inline
-Size upper_bound_n(RandomAccessIterator first,
-                   Size size,
-                   const T& value,
-                   BinaryPredicate compare_op)
-{
-    Size left = 0;
-    Size right = size;
-    while(left < right)
+    struct lower_bound_search_op
     {
-        const Size mid = get_binary_search_middle(left, right);
-        if(compare_op(value, first[mid]))
+        template <class HaystackIterator, class CompareOp, class Size, class T>
+        ROCPRIM_DEVICE inline Size operator()(HaystackIterator haystack,
+                                              Size             size,
+                                              const T&         value,
+                                              CompareOp        compare_op) const
         {
-            right = mid;
+            return lower_bound_n(haystack, size, value, compare_op);
         }
-        else
+    };
+
+    struct upper_bound_search_op
+    {
+        template <class HaystackIterator, class CompareOp, class Size, class T>
+        ROCPRIM_DEVICE inline Size operator()(HaystackIterator haystack,
+                                              Size             size,
+                                              const T&         value,
+                                              CompareOp        compare_op) const
         {
-            left = mid + 1;
+            return upper_bound_n(haystack, size, value, compare_op);
         }
-    }
-    return left;
-}
+    };
 
-struct lower_bound_search_op
-{
-    template<class HaystackIterator, class CompareOp, class Size, class T>
-    ROCPRIM_DEVICE inline
-    Size operator()(HaystackIterator haystack, Size size, const T& value, CompareOp compare_op) const
+    struct binary_search_op
     {
-        return lower_bound_n(haystack, size, value, compare_op);
-    }
-};
-
-struct upper_bound_search_op
-{
-    template<class HaystackIterator, class CompareOp, class Size, class T>
-    ROCPRIM_DEVICE inline
-    Size operator()(HaystackIterator haystack, Size size, const T& value, CompareOp compare_op) const
-    {
-        return upper_bound_n(haystack, size, value, compare_op);
-    }
-};
-
-struct binary_search_op
-{
-    template<class HaystackIterator, class CompareOp, class Size, class T>
-    ROCPRIM_DEVICE inline
-    bool operator()(HaystackIterator haystack, Size size, const T& value, CompareOp compare_op) const
-    {
-        const Size n = lower_bound_n(haystack, size, value, compare_op);
-        return n != size && !compare_op(value, haystack[n]);
-    }
-};
+        template <class HaystackIterator, class CompareOp, class Size, class T>
+        ROCPRIM_DEVICE inline bool operator()(HaystackIterator haystack,
+                                              Size             size,
+                                              const T&         value,
+                                              CompareOp        compare_op) const
+        {
+            const Size n = lower_bound_n(haystack, size, value, compare_op);
+            return n != size && !compare_op(value, haystack[n]);
+        }
+    };
 
 } // end of detail namespace
 

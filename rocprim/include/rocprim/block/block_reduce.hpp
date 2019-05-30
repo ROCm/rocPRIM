@@ -26,11 +26,11 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "../intrinsics.hpp"
 #include "../functional.hpp"
+#include "../intrinsics.hpp"
 
-#include "detail/block_reduce_warp_reduce.hpp"
 #include "detail/block_reduce_raking_reduce.hpp"
+#include "detail/block_reduce_warp_reduce.hpp"
 
 /// \addtogroup blockmodule
 /// @{
@@ -51,24 +51,24 @@ enum class block_reduce_algorithm
 namespace detail
 {
 
-// Selector for block_reduce algorithm which gives block reduce implementation
-// type based on passed block_reduce_algorithm enum
-template<block_reduce_algorithm Algorithm>
-struct select_block_reduce_impl;
+    // Selector for block_reduce algorithm which gives block reduce implementation
+    // type based on passed block_reduce_algorithm enum
+    template <block_reduce_algorithm Algorithm>
+    struct select_block_reduce_impl;
 
-template<>
-struct select_block_reduce_impl<block_reduce_algorithm::using_warp_reduce>
-{
-    template<class T, unsigned int BlockSize>
-    using type = block_reduce_warp_reduce<T, BlockSize>;
-};
+    template <>
+    struct select_block_reduce_impl<block_reduce_algorithm::using_warp_reduce>
+    {
+        template <class T, unsigned int BlockSize>
+        using type = block_reduce_warp_reduce<T, BlockSize>;
+    };
 
-template<>
-struct select_block_reduce_impl<block_reduce_algorithm::raking_reduce>
-{
-    template<class T, unsigned int BlockSize>
-    using type = block_reduce_raking_reduce<T, BlockSize>;
-};
+    template <>
+    struct select_block_reduce_impl<block_reduce_algorithm::raking_reduce>
+    {
+        template <class T, unsigned int BlockSize>
+        using type = block_reduce_raking_reduce<T, BlockSize>;
+    };
 
 } // end namespace detail
 
@@ -115,17 +115,17 @@ struct select_block_reduce_impl<block_reduce_algorithm::raking_reduce>
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int BlockSize,
-    block_reduce_algorithm Algorithm = block_reduce_algorithm::default_algorithm
->
+template <class T,
+          unsigned int           BlockSize,
+          block_reduce_algorithm Algorithm = block_reduce_algorithm::default_algorithm>
 class block_reduce
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     : private detail::select_block_reduce_impl<Algorithm>::template type<T, BlockSize>
 #endif
 {
-    using base_type = typename detail::select_block_reduce_impl<Algorithm>::template type<T, BlockSize>;
+    using base_type =
+        typename detail::select_block_reduce_impl<Algorithm>::template type<T, BlockSize>;
+
 public:
     /// \brief Struct used to allocate a temporary memory that is required for thread
     /// communication during operations provided by related parallel primitive.
@@ -183,12 +183,11 @@ public:
     /// If the \p input values across threads in a block are <tt>{1, -2, 3, -4, ..., 255, -256}</tt>, then
     /// \p output value will be <tt>{-256}</tt>.
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void reduce(T input,
-                T& output,
-                storage_type& storage,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void reduce(T              input,
+                                      T&             output,
+                                      storage_type&  storage,
+                                      BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, storage, reduce_op);
     }
@@ -208,11 +207,9 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>T f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void reduce(T input,
-                T& output,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void
+        reduce(T input, T& output, BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, reduce_op);
     }
@@ -264,15 +261,11 @@ public:
     /// If the \p input values across threads in a block are <tt>{-1, 2, -3, 4, ..., -255, 256}</tt>, then
     /// \p output value will be <tt>{256}</tt>.
     /// \endparblock
-    template<
-        unsigned int ItemsPerThread,
-        class BinaryFunction = ::rocprim::plus<T>
-    >
-    ROCPRIM_DEVICE inline
-    void reduce(T (&input)[ItemsPerThread],
-                T& output,
-                storage_type& storage,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <unsigned int ItemsPerThread, class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void reduce(T (&input)[ItemsPerThread],
+                                      T&             output,
+                                      storage_type&  storage,
+                                      BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, storage, reduce_op);
     }
@@ -293,14 +286,9 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>T f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<
-        unsigned int ItemsPerThread,
-        class BinaryFunction = ::rocprim::plus<T>
-    >
-    ROCPRIM_DEVICE inline
-    void reduce(T (&input)[ItemsPerThread],
-                T& output,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <unsigned int ItemsPerThread, class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void
+        reduce(T (&input)[ItemsPerThread], T& output, BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, reduce_op);
     }
@@ -351,13 +339,12 @@ public:
     /// }
     /// \endcode
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void reduce(T input,
-                T& output,
-                unsigned int valid_items,
-                storage_type& storage,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void reduce(T              input,
+                                      T&             output,
+                                      unsigned int   valid_items,
+                                      storage_type&  storage,
+                                      BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, valid_items, storage, reduce_op);
     }
@@ -379,12 +366,11 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>T f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void reduce(T input,
-                T& output,
-                unsigned int valid_items,
-                BinaryFunction reduce_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void reduce(T              input,
+                                      T&             output,
+                                      unsigned int   valid_items,
+                                      BinaryFunction reduce_op = BinaryFunction())
     {
         base_type::reduce(input, output, valid_items, reduce_op);
     }

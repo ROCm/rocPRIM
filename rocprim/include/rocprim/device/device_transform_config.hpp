@@ -34,38 +34,38 @@
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Configuration of device-level transform primitives.
-template<unsigned int BlockSize, unsigned int ItemsPerThread>
+template <unsigned int BlockSize, unsigned int ItemsPerThread>
 using transform_config = kernel_config<BlockSize, ItemsPerThread>;
 
 namespace detail
 {
 
-template<class Value>
-struct transform_config_803
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+    template <class Value>
+    struct transform_config_803
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = transform_config<256, ::rocprim::max(1u, 16u / item_scale)>;
-};
+        using type = transform_config<256, ::rocprim::max(1u, 16u / item_scale)>;
+    };
 
-template<class Value>
-struct transform_config_900
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+    template <class Value>
+    struct transform_config_900
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = transform_config<256, ::rocprim::max(1u, 16u / item_scale)>;
-};
+        using type = transform_config<256, ::rocprim::max(1u, 16u / item_scale)>;
+    };
 
-template<unsigned int TargetArch, class Value>
-struct default_transform_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, transform_config_803<Value>>,
-        select_arch_case<900, transform_config_900<Value>>,
-        transform_config_900<Value>
-    > { };
+    template <unsigned int TargetArch, class Value>
+    struct default_transform_config
+        : select_arch<TargetArch,
+                      select_arch_case<803, transform_config_803<Value>>,
+                      select_arch_case<900, transform_config_900<Value>>,
+                      transform_config_900<Value>>
+    {
+    };
 
 } // end namespace detail
 

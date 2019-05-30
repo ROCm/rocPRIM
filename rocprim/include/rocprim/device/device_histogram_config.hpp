@@ -40,63 +40,62 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam SharedImplMaxBins - maximum total number of bins for all active channels
 /// for the shared memory histogram implementation (samples -> shared memory bins -> global memory bins),
 /// when exceeded the global memory implementation is used (samples -> global memory bins).
-template<
-    class HistogramConfig,
-    unsigned int MaxGridSize = 1024,
-    unsigned int SharedImplMaxBins = 2048
->
+template <class HistogramConfig,
+          unsigned int MaxGridSize       = 1024,
+          unsigned int SharedImplMaxBins = 2048>
 struct histogram_config
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     using histogram = HistogramConfig;
 
-    static constexpr unsigned int max_grid_size = MaxGridSize;
+    static constexpr unsigned int max_grid_size        = MaxGridSize;
     static constexpr unsigned int shared_impl_max_bins = SharedImplMaxBins;
 #endif
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-template<
-    class HistogramConfig,
-    unsigned int MaxGridSize,
-    unsigned int SharedImplMaxBins
-> constexpr unsigned int
-histogram_config<HistogramConfig, MaxGridSize, SharedImplMaxBins>::max_grid_size;
-template<
-    class HistogramConfig,
-    unsigned int MaxGridSize,
-    unsigned int SharedImplMaxBins
-> constexpr unsigned int
-histogram_config<HistogramConfig, MaxGridSize, SharedImplMaxBins>::shared_impl_max_bins;
+template <class HistogramConfig, unsigned int MaxGridSize, unsigned int SharedImplMaxBins>
+constexpr unsigned int
+    histogram_config<HistogramConfig, MaxGridSize, SharedImplMaxBins>::max_grid_size;
+template <class HistogramConfig, unsigned int MaxGridSize, unsigned int SharedImplMaxBins>
+constexpr unsigned int
+    histogram_config<HistogramConfig, MaxGridSize, SharedImplMaxBins>::shared_impl_max_bins;
 #endif
 
 namespace detail
 {
 
-template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
-struct histogram_config_803
-{
-    static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div(sizeof(Sample), sizeof(int));
+    template <class Sample, unsigned int Channels, unsigned int ActiveChannels>
+    struct histogram_config_803
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div(sizeof(Sample), sizeof(int));
 
-    using type = histogram_config<kernel_config<256, ::rocprim::max(10u / Channels / item_scale, 1u)>>;
-};
+        using type
+            = histogram_config<kernel_config<256, ::rocprim::max(10u / Channels / item_scale, 1u)>>;
+    };
 
-template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
-struct histogram_config_900
-{
-    static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div(sizeof(Sample), sizeof(int));
+    template <class Sample, unsigned int Channels, unsigned int ActiveChannels>
+    struct histogram_config_900
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div(sizeof(Sample), sizeof(int));
 
-    using type = histogram_config<kernel_config<256, ::rocprim::max(8u / Channels / item_scale, 1u)>>;
-};
+        using type
+            = histogram_config<kernel_config<256, ::rocprim::max(8u / Channels / item_scale, 1u)>>;
+    };
 
-template<unsigned int TargetArch, class Sample, unsigned int Channels, unsigned int ActiveChannels>
-struct default_histogram_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, histogram_config_803<Sample, Channels, ActiveChannels> >,
-        select_arch_case<900, histogram_config_900<Sample, Channels, ActiveChannels> >,
-        histogram_config_900<Sample, Channels, ActiveChannels>
-    > { };
+    template <unsigned int TargetArch,
+              class Sample,
+              unsigned int Channels,
+              unsigned int ActiveChannels>
+    struct default_histogram_config
+        : select_arch<TargetArch,
+                      select_arch_case<803, histogram_config_803<Sample, Channels, ActiveChannels>>,
+                      select_arch_case<900, histogram_config_900<Sample, Channels, ActiveChannels>>,
+                      histogram_config_900<Sample, Channels, ActiveChannels>>
+    {
+    };
 
 } // end namespace detail
 

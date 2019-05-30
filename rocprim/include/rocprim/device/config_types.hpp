@@ -34,13 +34,15 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief Special type used to show that the given device-level operation
 /// will be executed with optimal configuration dependent on types of the function's parameters
 /// and the target device architecture specified by ROCPRIM_TARGET_ARCH.
-struct default_config { };
+struct default_config
+{
+};
 
 /// \brief Configuration of particular kernels launched by device-level operation
 ///
 /// \tparam BlockSize - number of threads in a block.
 /// \tparam ItemsPerThread - number of items processed by each thread.
-template<unsigned int BlockSize, unsigned int ItemsPerThread>
+template <unsigned int BlockSize, unsigned int ItemsPerThread>
 struct kernel_config
 {
     /// \brief Number of threads in a block.
@@ -52,104 +54,101 @@ struct kernel_config
 namespace detail
 {
 
-template<
-    unsigned int MaxBlockSize,
-    unsigned int SharedMemoryPerThread,
-    // Most kernels require block sizes not smaller than warp
-    unsigned int MinBlockSize = ::rocprim::warp_size(),
-    // Can fit in shared memory?
-    // Although GPUs have 64KiB, 32KiB is used here as a "soft" limit,
-    // because some additional memory may be required in kernels
-    bool = (MaxBlockSize * SharedMemoryPerThread <= (1u << 15))
->
-struct limit_block_size
-{
-    // No, then try to decrease block size
-    static constexpr unsigned int value =
-        limit_block_size<
-            detail::next_power_of_two(MaxBlockSize) / 2,
-            SharedMemoryPerThread,
-            MinBlockSize
-        >::value;
-};
+    template <unsigned int MaxBlockSize,
+              unsigned int SharedMemoryPerThread,
+              // Most kernels require block sizes not smaller than warp
+              unsigned int MinBlockSize = ::rocprim::warp_size(),
+              // Can fit in shared memory?
+              // Although GPUs have 64KiB, 32KiB is used here as a "soft" limit,
+              // because some additional memory may be required in kernels
+              bool = (MaxBlockSize * SharedMemoryPerThread <= (1u << 15))>
+    struct limit_block_size
+    {
+        // No, then try to decrease block size
+        static constexpr unsigned int value
+            = limit_block_size<detail::next_power_of_two(MaxBlockSize) / 2,
+                               SharedMemoryPerThread,
+                               MinBlockSize>::value;
+    };
 
-template<
-    unsigned int MaxBlockSize,
-    unsigned int SharedMemoryPerThread,
-    unsigned int MinBlockSize
->
-struct limit_block_size<MaxBlockSize, SharedMemoryPerThread, MinBlockSize, true>
-{
-    static_assert(MaxBlockSize >= MinBlockSize, "Data is too large, it cannot fit in shared memory");
+    template <unsigned int MaxBlockSize,
+              unsigned int SharedMemoryPerThread,
+              unsigned int MinBlockSize>
+    struct limit_block_size<MaxBlockSize, SharedMemoryPerThread, MinBlockSize, true>
+    {
+        static_assert(MaxBlockSize >= MinBlockSize,
+                      "Data is too large, it cannot fit in shared memory");
 
-    static constexpr unsigned int value = MaxBlockSize;
-};
+        static constexpr unsigned int value = MaxBlockSize;
+    };
 
-template<class...>
-using void_t = void;
+    template <class...>
+    using void_t = void;
 
-template<class T, class = void>
-struct extract_type : T { };
+    template <class T, class = void>
+    struct extract_type : T
+    {
+    };
 
-template<class T>
-struct extract_type<T, void_t<typename T::type> > : extract_type<typename T::type> { };
+    template <class T>
+    struct extract_type<T, void_t<typename T::type>> : extract_type<typename T::type>
+    {
+    };
 
-template<bool Value, class T>
-struct select_type_case
-{
-    static constexpr bool value = Value;
-    using type = T;
-};
+    template <bool Value, class T>
+    struct select_type_case
+    {
+        static constexpr bool value = Value;
+        using type                  = T;
+    };
 
-template<class Case, class... OtherCases>
-struct select_type
-    : std::conditional<
-        Case::value,
-        extract_type<typename Case::type>,
-        select_type<OtherCases...>
-    >::type { };
+    template <class Case, class... OtherCases>
+    struct select_type : std::conditional<Case::value,
+                                          extract_type<typename Case::type>,
+                                          select_type<OtherCases...>>::type
+    {
+    };
 
-template<class T>
-struct select_type<select_type_case<true, T>> : extract_type<T> { };
+    template <class T>
+    struct select_type<select_type_case<true, T>> : extract_type<T>
+    {
+    };
 
-template<class T>
-struct select_type<select_type_case<false, T>>
-{
-    static_assert(
-        sizeof(T) == 0,
-        "Cannot select any case. "
-        "The last case must have true condition or be a fallback type."
-    );
-};
+    template <class T>
+    struct select_type<select_type_case<false, T>>
+    {
+        static_assert(sizeof(T) == 0,
+                      "Cannot select any case. "
+                      "The last case must have true condition or be a fallback type.");
+    };
 
-template<class Fallback>
-struct select_type<Fallback> : extract_type<Fallback> { };
+    template <class Fallback>
+    struct select_type<Fallback> : extract_type<Fallback>
+    {
+    };
 
-template<unsigned int Arch, class T>
-struct select_arch_case
-{
-    static constexpr unsigned int arch = Arch;
-    using type = T;
-};
+    template <unsigned int Arch, class T>
+    struct select_arch_case
+    {
+        static constexpr unsigned int arch = Arch;
+        using type                         = T;
+    };
 
-template<unsigned int TargetArch, class Case, class... OtherCases>
-struct select_arch
-    : std::conditional<
-        Case::arch == TargetArch,
-        extract_type<typename Case::type>,
-        select_arch<TargetArch, OtherCases...>
-    >::type { };
+    template <unsigned int TargetArch, class Case, class... OtherCases>
+    struct select_arch : std::conditional<Case::arch == TargetArch,
+                                          extract_type<typename Case::type>,
+                                          select_arch<TargetArch, OtherCases...>>::type
+    {
+    };
 
-template<unsigned int TargetArch, class Universal>
-struct select_arch<TargetArch, Universal> : extract_type<Universal> { };
+    template <unsigned int TargetArch, class Universal>
+    struct select_arch<TargetArch, Universal> : extract_type<Universal>
+    {
+    };
 
-template<class Config, class Default>
-using default_or_custom_config =
-    typename std::conditional<
-        std::is_same<Config, default_config>::value,
-        Default,
-        Config
-    >::type;
+    template <class Config, class Default>
+    using default_or_custom_config = typename std::
+        conditional<std::is_same<Config, default_config>::value, Default, Config>::type;
 
 } // end namespace detail
 

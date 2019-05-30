@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iostream>
 #include <type_traits>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -34,36 +34,34 @@
 
 #include "test_utils.hpp"
 
-#define HIP_CHECK(error)         \
-    ASSERT_EQ(static_cast<hipError_t>(error),hipSuccess)
+#define HIP_CHECK(error) ASSERT_EQ(static_cast<hipError_t>(error), hipSuccess)
 
 // Params for tests
-template<class InputType>
+template <class InputType>
 struct RocprimArgIndexIteratorParams
 {
     using input_type = InputType;
 };
 
-template<class Params>
+template <class Params>
 class RocprimArgIndexIteratorTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
+    using input_type             = typename Params::input_type;
     const bool debug_synchronous = false;
 };
 
-typedef ::testing::Types<
-    RocprimArgIndexIteratorParams<int>,
-    RocprimArgIndexIteratorParams<unsigned int>,
-    RocprimArgIndexIteratorParams<unsigned long>,
-    RocprimArgIndexIteratorParams<float>
-> RocprimArgIndexIteratorTestsParams;
+typedef ::testing::Types<RocprimArgIndexIteratorParams<int>,
+                         RocprimArgIndexIteratorParams<unsigned int>,
+                         RocprimArgIndexIteratorParams<unsigned long>,
+                         RocprimArgIndexIteratorParams<float>>
+    RocprimArgIndexIteratorTestsParams;
 
 TYPED_TEST_CASE(RocprimArgIndexIteratorTests, RocprimArgIndexIteratorTestsParams);
 
 TYPED_TEST(RocprimArgIndexIteratorTests, Equal)
 {
-    using T = typename TestFixture::input_type;
+    using T        = typename TestFixture::input_type;
     using Iterator = typename rocprim::arg_index_iterator<T*>;
 
     std::vector<T> input = test_utils::get_random_data<T>(5, 1, 200);
@@ -87,14 +85,10 @@ TYPED_TEST(RocprimArgIndexIteratorTests, Equal)
 
 struct arg_min
 {
-    template<
-        class Key,
-        class Value
-    >
-    ROCPRIM_HOST_DEVICE inline
-    constexpr rocprim::key_value_pair<Key, Value>
-    operator()(const rocprim::key_value_pair<Key, Value>& a,
-               const rocprim::key_value_pair<Key, Value>& b) const
+    template <class Key, class Value>
+    ROCPRIM_HOST_DEVICE inline constexpr rocprim::key_value_pair<Key, Value>
+        operator()(const rocprim::key_value_pair<Key, Value>& a,
+                   const rocprim::key_value_pair<Key, Value>& b) const
     {
         return ((b.value < a.value) || ((a.value == b.value) && (b.key < a.key))) ? b : a;
     }
@@ -102,10 +96,10 @@ struct arg_min
 
 TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
 {
-    using T = typename TestFixture::input_type;
-    using Iterator = typename rocprim::arg_index_iterator<T*>;
-    using key_value = typename Iterator::value_type;
-    using difference_type = typename Iterator::difference_type;
+    using T                      = typename TestFixture::input_type;
+    using Iterator               = typename rocprim::arg_index_iterator<T*>;
+    using key_value              = typename Iterator::value_type;
+    using difference_type        = typename Iterator::difference_type;
     const bool debug_synchronous = false;
 
     const size_t size = 1024;
@@ -113,42 +107,38 @@ TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
     hipStream_t stream = 0; // default
 
     // Generate data
-    std::vector<T> input = test_utils::get_random_data<T>(size, 1, 200);
+    std::vector<T>         input = test_utils::get_random_data<T>(size, 1, 200);
     std::vector<key_value> output(1);
 
-    T * d_input;
-    key_value * d_output;
+    T*         d_input;
+    key_value* d_output;
     HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
     HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(key_value)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_input, input.data(),
-            input.size() * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
     HIP_CHECK(hipDeviceSynchronize());
 
     Iterator d_iter(d_input);
 
-    arg_min reduce_op;
+    arg_min         reduce_op;
     const key_value max(std::numeric_limits<difference_type>::max(), std::numeric_limits<T>::max());
 
     // Calculate expected results on host
-    Iterator x(input.data());
+    Iterator  x(input.data());
     key_value expected = std::accumulate(x, x + size, max, reduce_op);
 
     // temp storage
     size_t temp_storage_size_bytes;
-    void * d_temp_storage = nullptr;
+    void*  d_temp_storage = nullptr;
     // Get size of d_temp_storage
-    HIP_CHECK(
-        rocprim::reduce(
-            d_temp_storage, temp_storage_size_bytes,
-            d_iter, d_output, max, input.size(),
-            reduce_op, stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::reduce(d_temp_storage,
+                              temp_storage_size_bytes,
+                              d_iter,
+                              d_output,
+                              max,
+                              input.size(),
+                              reduce_op,
+                              stream,
+                              debug_synchronous));
 
     // temp_storage_size_bytes must be >0
     ASSERT_GT(temp_storage_size_bytes, 0);
@@ -158,29 +148,27 @@ TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
     HIP_CHECK(hipDeviceSynchronize());
 
     // Run
-    HIP_CHECK(
-        rocprim::reduce(
-            d_temp_storage, temp_storage_size_bytes,
-            d_iter, d_output, max, input.size(),
-            reduce_op, stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::reduce(d_temp_storage,
+                              temp_storage_size_bytes,
+                              d_iter,
+                              d_output,
+                              max,
+                              input.size(),
+                              reduce_op,
+                              stream,
+                              debug_synchronous));
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Copy output to host
-    HIP_CHECK(
-        hipMemcpy(
-            output.data(), d_output,
-            output.size() * sizeof(key_value),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(
+        output.data(), d_output, output.size() * sizeof(key_value), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Check if output values are as expected
     auto diff = std::max<T>(std::abs(0.01f * expected.value), T(0.01f));
-    if(std::is_integral<T>::value) diff = 0;
+    if(std::is_integral<T>::value)
+        diff = 0;
     ASSERT_EQ(output[0].key, expected.key);
     ASSERT_NEAR(output[0].value, expected.value, diff);
 

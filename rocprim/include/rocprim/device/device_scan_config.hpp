@@ -27,8 +27,8 @@
 #include "../detail/various.hpp"
 
 #include "../block/block_load.hpp"
-#include "../block/block_store.hpp"
 #include "../block/block_scan.hpp"
+#include "../block/block_store.hpp"
 
 #include "config_types.hpp"
 
@@ -45,14 +45,12 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam BlockLoadMethod - method for loading input values.
 /// \tparam StoreLoadMethod - method for storing values.
 /// \tparam BlockScanMethod - algorithm for block scan.
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    bool UseLookback,
-    ::rocprim::block_load_method BlockLoadMethod,
-    ::rocprim::block_store_method BlockStoreMethod,
-    ::rocprim::block_scan_algorithm BlockScanMethod
->
+template <unsigned int                    BlockSize,
+          unsigned int                    ItemsPerThread,
+          bool                            UseLookback,
+          ::rocprim::block_load_method    BlockLoadMethod,
+          ::rocprim::block_store_method   BlockStoreMethod,
+          ::rocprim::block_scan_algorithm BlockScanMethod>
 struct scan_config
 {
     /// \brief Number of threads in a block.
@@ -72,46 +70,41 @@ struct scan_config
 namespace detail
 {
 
-template<class Value>
-struct scan_config_803
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+    template <class Value>
+    struct scan_config_803
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = scan_config<
-        256,
-        ::rocprim::max(1u, 16u / item_scale),
-        ROCPRIM_DETAIL_USE_LOOKBACK_SCAN,
-        ::rocprim::block_load_method::block_load_transpose,
-        ::rocprim::block_store_method::block_store_transpose,
-        ::rocprim::block_scan_algorithm::using_warp_scan
-    >;
-};
+        using type = scan_config<256,
+                                 ::rocprim::max(1u, 16u / item_scale),
+                                 ROCPRIM_DETAIL_USE_LOOKBACK_SCAN,
+                                 ::rocprim::block_load_method::block_load_transpose,
+                                 ::rocprim::block_store_method::block_store_transpose,
+                                 ::rocprim::block_scan_algorithm::using_warp_scan>;
+    };
 
-template<class Value>
-struct scan_config_900
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+    template <class Value>
+    struct scan_config_900
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = scan_config<
-        256,
-        ::rocprim::max(1u, 16u / item_scale),
-        ROCPRIM_DETAIL_USE_LOOKBACK_SCAN,
-        ::rocprim::block_load_method::block_load_transpose,
-        ::rocprim::block_store_method::block_store_transpose,
-        ::rocprim::block_scan_algorithm::using_warp_scan
-    >;
-};
+        using type = scan_config<256,
+                                 ::rocprim::max(1u, 16u / item_scale),
+                                 ROCPRIM_DETAIL_USE_LOOKBACK_SCAN,
+                                 ::rocprim::block_load_method::block_load_transpose,
+                                 ::rocprim::block_store_method::block_store_transpose,
+                                 ::rocprim::block_scan_algorithm::using_warp_scan>;
+    };
 
-template<unsigned int TargetArch, class Value>
-struct default_scan_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, scan_config_803<Value>>,
-        select_arch_case<900, scan_config_900<Value>>,
-        scan_config_900<Value>
-    > { };
+    template <unsigned int TargetArch, class Value>
+    struct default_scan_config : select_arch<TargetArch,
+                                             select_arch_case<803, scan_config_803<Value>>,
+                                             select_arch_case<900, scan_config_900<Value>>,
+                                             scan_config_900<Value>>
+    {
+    };
 
 } // end namespace detail
 

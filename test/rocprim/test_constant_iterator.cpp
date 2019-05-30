@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iostream>
 #include <type_traits>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>
@@ -35,39 +35,37 @@
 
 #include "test_utils.hpp"
 
-#define HIP_CHECK(error) ASSERT_EQ(error,hipSuccess)
+#define HIP_CHECK(error) ASSERT_EQ(error, hipSuccess)
 
 namespace rp = rocprim;
 
 // Params for tests
-template<class InputType>
+template <class InputType>
 struct RocprimConstantIteratorParams
 {
     using input_type = InputType;
 };
 
-template<class Params>
+template <class Params>
 class RocprimConstantIteratorTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
+    using input_type             = typename Params::input_type;
     const bool debug_synchronous = false;
 };
 
-typedef ::testing::Types<
-    RocprimConstantIteratorParams<int>,
-    RocprimConstantIteratorParams<unsigned int>,
-    RocprimConstantIteratorParams<unsigned long>,
-    RocprimConstantIteratorParams<float>
-> RocprimConstantIteratorTestsParams;
+typedef ::testing::Types<RocprimConstantIteratorParams<int>,
+                         RocprimConstantIteratorParams<unsigned int>,
+                         RocprimConstantIteratorParams<unsigned long>,
+                         RocprimConstantIteratorParams<float>>
+    RocprimConstantIteratorTestsParams;
 
 TYPED_TEST_CASE(RocprimConstantIteratorTests, RocprimConstantIteratorTestsParams);
 
-template<class T>
+template <class T>
 struct transform
 {
-    __device__ __host__
-    constexpr T operator()(const T& a) const
+    __device__ __host__ constexpr T operator()(const T& a) const
     {
         return 5 + a;
     }
@@ -75,8 +73,8 @@ struct transform
 
 TYPED_TEST(RocprimConstantIteratorTests, Transform)
 {
-    using T = typename TestFixture::input_type;
-    using Iterator = typename rocprim::constant_iterator<T>;
+    using T                      = typename TestFixture::input_type;
+    using Iterator               = typename rocprim::constant_iterator<T>;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     const size_t size = 1024;
@@ -85,10 +83,10 @@ TYPED_TEST(RocprimConstantIteratorTests, Transform)
 
     // Create constant_iterator<U> with random starting point
     const auto value = test_utils::get_random_value<T>(0, 200);
-    Iterator input_begin(value);
+    Iterator   input_begin(value);
 
     std::vector<T> output(size);
-    T * d_output;
+    T*             d_output;
     HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(T)));
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -97,22 +95,12 @@ TYPED_TEST(RocprimConstantIteratorTests, Transform)
 
     // Run
     HIP_CHECK(
-        rocprim::transform(
-            input_begin, d_output, size,
-            transform<T>(), stream, debug_synchronous
-        )
-    );
+        rocprim::transform(input_begin, d_output, size, transform<T>(), stream, debug_synchronous));
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     // Copy output to host
-    HIP_CHECK(
-        hipMemcpy(
-            output.data(), d_output,
-            output.size() * sizeof(T),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(output.data(), d_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Validating results

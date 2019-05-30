@@ -21,15 +21,15 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_REDUCE_HPP_
 #define ROCPRIM_DEVICE_DEVICE_REDUCE_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "../config.hpp"
-#include "../detail/various.hpp"
 #include "../detail/match_result_type.hpp"
+#include "../detail/various.hpp"
 
-#include "device_reduce_config.hpp"
 #include "detail/device_reduce.hpp"
+#include "device_reduce_config.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -39,151 +39,158 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    bool WithInitialValue,
-    class Config,
-    class ResultType,
-    class InputIterator,
-    class OutputIterator,
-    class InitValueType,
-    class BinaryFunction
->
-__global__
-void block_reduce_kernel(InputIterator input,
-                         const size_t size,
-                         OutputIterator output,
-                         InitValueType initial_value,
-                         BinaryFunction reduce_op)
-{
-    block_reduce_kernel_impl<WithInitialValue, Config, ResultType>(
-        input, size, output, initial_value, reduce_op
-    );
-}
-
-#define ROCPRIM_DETAIL_HIP_SYNC(name, size, start) \
-    if(debug_synchronous) \
-    { \
-        std::cout << name << "(" << size << ")"; \
-        auto error = hipStreamSynchronize(stream); \
-        if(error != hipSuccess) return error; \
-        auto end = std::chrono::high_resolution_clock::now(); \
-        auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-        std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-    }
-
-#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start) \
-    { \
-        auto error = hipPeekAtLastError(); \
-        if(error != hipSuccess) return error; \
-        if(debug_synchronous) \
-        { \
-            std::cout << name << "(" << size << ")"; \
-            auto error = hipStreamSynchronize(stream); \
-            if(error != hipSuccess) return error; \
-            auto end = std::chrono::high_resolution_clock::now(); \
-            auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-            std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-        } \
-    }
-
-
-template<
-    bool WithInitialValue, // true when inital_value should be used in reduction
-    class Config,
-    class InputIterator,
-    class OutputIterator,
-    class InitValueType,
-    class BinaryFunction
->
-inline
-hipError_t reduce_impl(void * temporary_storage,
-                       size_t& storage_size,
-                       InputIterator input,
-                       OutputIterator output,
-                       const InitValueType initial_value,
-                       const size_t size,
-                       BinaryFunction reduce_op,
-                       const hipStream_t stream,
-                       bool debug_synchronous)
-{
-    using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryFunction
-    >::type;
-
-    // Get default config if Config is default_config
-    using config = default_or_custom_config<
-        Config,
-        default_reduce_config<ROCPRIM_TARGET_ARCH, result_type>
-    >;
-
-    constexpr unsigned int block_size = config::block_size;
-    constexpr unsigned int items_per_thread = config::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
-
-    if(temporary_storage == nullptr)
+    template <bool WithInitialValue,
+              class Config,
+              class ResultType,
+              class InputIterator,
+              class OutputIterator,
+              class InitValueType,
+              class BinaryFunction>
+    __global__ void block_reduce_kernel(InputIterator  input,
+                                        const size_t   size,
+                                        OutputIterator output,
+                                        InitValueType  initial_value,
+                                        BinaryFunction reduce_op)
     {
-        storage_size = reduce_get_temporary_storage_bytes<result_type>(size, items_per_block);
-        // Make sure user won't try to allocate 0 bytes memory
-        storage_size = storage_size == 0 ? 4 : storage_size;
+        block_reduce_kernel_impl<WithInitialValue, Config, ResultType>(
+            input, size, output, initial_value, reduce_op);
+    }
+
+#define ROCPRIM_DETAIL_HIP_SYNC(name, size, start)                                         \
+    if(debug_synchronous)                                                                  \
+    {                                                                                      \
+        std::cout << name << "(" << size << ")";                                           \
+        auto error = hipStreamSynchronize(stream);                                         \
+        if(error != hipSuccess)                                                            \
+            return error;                                                                  \
+        auto end = std::chrono::high_resolution_clock::now();                              \
+        auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+        std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+    }
+
+#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                         \
+    {                                                                                          \
+        auto error = hipPeekAtLastError();                                                     \
+        if(error != hipSuccess)                                                                \
+            return error;                                                                      \
+        if(debug_synchronous)                                                                  \
+        {                                                                                      \
+            std::cout << name << "(" << size << ")";                                           \
+            auto error = hipStreamSynchronize(stream);                                         \
+            if(error != hipSuccess)                                                            \
+                return error;                                                                  \
+            auto end = std::chrono::high_resolution_clock::now();                              \
+            auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+            std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+        }                                                                                      \
+    }
+
+    template <bool WithInitialValue, // true when inital_value should be used in reduction
+              class Config,
+              class InputIterator,
+              class OutputIterator,
+              class InitValueType,
+              class BinaryFunction>
+    inline hipError_t reduce_impl(void*               temporary_storage,
+                                  size_t&             storage_size,
+                                  InputIterator       input,
+                                  OutputIterator      output,
+                                  const InitValueType initial_value,
+                                  const size_t        size,
+                                  BinaryFunction      reduce_op,
+                                  const hipStream_t   stream,
+                                  bool                debug_synchronous)
+    {
+        using input_type = typename std::iterator_traits<InputIterator>::value_type;
+        using result_type =
+            typename ::rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
+
+        // Get default config if Config is default_config
+        using config
+            = default_or_custom_config<Config,
+                                       default_reduce_config<ROCPRIM_TARGET_ARCH, result_type>>;
+
+        constexpr unsigned int block_size       = config::block_size;
+        constexpr unsigned int items_per_thread = config::items_per_thread;
+        constexpr auto         items_per_block  = block_size * items_per_thread;
+
+        if(temporary_storage == nullptr)
+        {
+            storage_size = reduce_get_temporary_storage_bytes<result_type>(size, items_per_block);
+            // Make sure user won't try to allocate 0 bytes memory
+            storage_size = storage_size == 0 ? 4 : storage_size;
+            return hipSuccess;
+        }
+
+        // Start point for time measurements
+        std::chrono::high_resolution_clock::time_point start;
+
+        auto number_of_blocks = (size + items_per_block - 1) / items_per_block;
+        if(debug_synchronous)
+        {
+            std::cout << "block_size " << block_size << '\n';
+            std::cout << "number of blocks " << number_of_blocks << '\n';
+            std::cout << "items_per_block " << items_per_block << '\n';
+        }
+
+        if(number_of_blocks > 1)
+        {
+            // Pointer to array with block_prefixes
+            result_type* block_prefixes = static_cast<result_type*>(temporary_storage);
+
+            if(debug_synchronous)
+                start = std::chrono::high_resolution_clock::now();
+            hipLaunchKernelGGL(
+                HIP_KERNEL_NAME(detail::block_reduce_kernel<false, config, result_type>),
+                dim3(number_of_blocks),
+                dim3(block_size),
+                0,
+                stream,
+                input,
+                size,
+                block_prefixes,
+                initial_value,
+                reduce_op);
+            ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", size, start);
+
+            void* nested_temp_storage     = static_cast<void*>(block_prefixes + number_of_blocks);
+            auto nested_temp_storage_size = storage_size - (number_of_blocks * sizeof(result_type));
+
+            if(debug_synchronous)
+                start = std::chrono::high_resolution_clock::now();
+            auto error = reduce_impl<WithInitialValue, config>(nested_temp_storage,
+                                                               nested_temp_storage_size,
+                                                               block_prefixes, // input
+                                                               output, // output
+                                                               initial_value,
+                                                               number_of_blocks, // input size
+                                                               reduce_op,
+                                                               stream,
+                                                               debug_synchronous);
+            if(error != hipSuccess)
+                return error;
+            ROCPRIM_DETAIL_HIP_SYNC("nested_device_reduce", number_of_blocks, start);
+        }
+        else
+        {
+            if(debug_synchronous)
+                start = std::chrono::high_resolution_clock::now();
+            hipLaunchKernelGGL(
+                HIP_KERNEL_NAME(detail::block_reduce_kernel<WithInitialValue, config, result_type>),
+                dim3(1),
+                dim3(block_size),
+                0,
+                stream,
+                input,
+                size,
+                output,
+                initial_value,
+                reduce_op);
+            ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", size, start);
+        }
+
         return hipSuccess;
     }
-
-    // Start point for time measurements
-    std::chrono::high_resolution_clock::time_point start;
-
-    auto number_of_blocks = (size + items_per_block - 1)/items_per_block;
-    if(debug_synchronous)
-    {
-        std::cout << "block_size " << block_size << '\n';
-        std::cout << "number of blocks " << number_of_blocks << '\n';
-        std::cout << "items_per_block " << items_per_block << '\n';
-    }
-
-    if(number_of_blocks > 1)
-    {
-        // Pointer to array with block_prefixes
-        result_type * block_prefixes = static_cast<result_type*>(temporary_storage);
-
-        if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(detail::block_reduce_kernel<false, config, result_type>),
-            dim3(number_of_blocks), dim3(block_size), 0, stream,
-            input, size, block_prefixes, initial_value, reduce_op
-        );
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", size, start);
-
-        void * nested_temp_storage = static_cast<void*>(block_prefixes + number_of_blocks);
-        auto nested_temp_storage_size = storage_size - (number_of_blocks * sizeof(result_type));
-
-        if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-        auto error = reduce_impl<WithInitialValue, config>(
-            nested_temp_storage,
-            nested_temp_storage_size,
-            block_prefixes, // input
-            output, // output
-            initial_value,
-            number_of_blocks, // input size
-            reduce_op,
-            stream,
-            debug_synchronous
-        );
-        if(error != hipSuccess) return error;
-        ROCPRIM_DETAIL_HIP_SYNC("nested_device_reduce", number_of_blocks, start);
-    }
-    else
-    {
-        if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(detail::block_reduce_kernel<WithInitialValue, config, result_type>),
-            dim3(1), dim3(block_size), 0, stream,
-            input, size, output, initial_value, reduce_op
-        );
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", size, start);
-    }
-
-    return hipSuccess;
-}
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
 #undef ROCPRIM_DETAIL_HIP_SYNC
@@ -275,29 +282,31 @@ hipError_t reduce_impl(void * temporary_storage,
 /// // output: [1]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class OutputIterator,
-    class InitValueType,
-    class BinaryFunction = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>
->
-inline
-hipError_t reduce(void * temporary_storage,
-                 size_t& storage_size,
-                 InputIterator input,
-                 OutputIterator output,
-                 const InitValueType initial_value,
-                 const size_t size,
-                 BinaryFunction reduce_op = BinaryFunction(),
-                 const hipStream_t stream = 0,
-                 bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class OutputIterator,
+          class InitValueType,
+          class BinaryFunction
+          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>>
+inline hipError_t reduce(void*               temporary_storage,
+                         size_t&             storage_size,
+                         InputIterator       input,
+                         OutputIterator      output,
+                         const InitValueType initial_value,
+                         const size_t        size,
+                         BinaryFunction      reduce_op         = BinaryFunction(),
+                         const hipStream_t   stream            = 0,
+                         bool                debug_synchronous = false)
 {
-    return detail::reduce_impl<true, Config>(
-        temporary_storage, storage_size,
-        input, output, initial_value, size,
-        reduce_op, stream, debug_synchronous
-    );
+    return detail::reduce_impl<true, Config>(temporary_storage,
+                                             storage_size,
+                                             input,
+                                             output,
+                                             initial_value,
+                                             size,
+                                             reduce_op,
+                                             stream,
+                                             debug_synchronous);
 }
 
 /// \brief Parallel reduce primitive for device level.
@@ -375,29 +384,31 @@ hipError_t reduce(void * temporary_storage,
 /// // output: [36]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class OutputIterator,
-    class BinaryFunction = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>
->
-inline
-hipError_t reduce(void * temporary_storage,
-                  size_t& storage_size,
-                  InputIterator input,
-                  OutputIterator output,
-                  const size_t size,
-                  BinaryFunction reduce_op = BinaryFunction(),
-                  const hipStream_t stream = 0,
-                  bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class OutputIterator,
+          class BinaryFunction
+          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>>
+inline hipError_t reduce(void*             temporary_storage,
+                         size_t&           storage_size,
+                         InputIterator     input,
+                         OutputIterator    output,
+                         const size_t      size,
+                         BinaryFunction    reduce_op         = BinaryFunction(),
+                         const hipStream_t stream            = 0,
+                         bool              debug_synchronous = false)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
 
-    return detail::reduce_impl<false, Config>(
-        temporary_storage, storage_size,
-        input, output, input_type(), size,
-        reduce_op, stream, debug_synchronous
-    );
+    return detail::reduce_impl<false, Config>(temporary_storage,
+                                              storage_size,
+                                              input,
+                                              output,
+                                              input_type(),
+                                              size,
+                                              reduce_op,
+                                              stream,
+                                              debug_synchronous);
 }
 
 /// @}

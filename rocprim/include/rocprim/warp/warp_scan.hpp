@@ -26,8 +26,8 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "../intrinsics.hpp"
 #include "../functional.hpp"
+#include "../intrinsics.hpp"
 #include "../types.hpp"
 
 #include "detail/warp_scan_crosslane.hpp"
@@ -41,17 +41,17 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-// Select warp_scan implementation based WarpSize
-template<class T, unsigned int WarpSize>
-struct select_warp_scan_impl
-{
-    typedef typename std::conditional<
-        // can we use crosslane (DPP or shuffle-based) implementation?
-        detail::is_warpsize_shuffleable<WarpSize>::value,
-        detail::warp_scan_crosslane<T, WarpSize>, // yes
-        detail::warp_scan_shared_mem<T, WarpSize> // no
-    >::type type;
-};
+    // Select warp_scan implementation based WarpSize
+    template <class T, unsigned int WarpSize>
+    struct select_warp_scan_impl
+    {
+        typedef typename std::conditional<
+            // can we use crosslane (DPP or shuffle-based) implementation?
+            detail::is_warpsize_shuffleable<WarpSize>::value,
+            detail::warp_scan_crosslane<T, WarpSize>, // yes
+            detail::warp_scan_shared_mem<T, WarpSize> // no
+            >::type type;
+    };
 
 } // end namespace detail
 
@@ -104,10 +104,7 @@ struct select_warp_scan_impl
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int WarpSize = warp_size()
->
+template <class T, unsigned int WarpSize = warp_size()>
 class warp_scan
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     : private detail::select_warp_scan_impl<T, WarpSize>::type
@@ -177,12 +174,11 @@ public:
     /// output values in the first logical warp will be <tt>{1, -2, -2, -4, ..., -32},</tt> in the second:
     /// <tt>{33, -34, -34, -36, ..., -64}</tt> etc.
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void inclusive_scan(T input,
-                        T& output,
-                        storage_type& storage,
-                        BinaryFunction scan_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void inclusive_scan(T              input,
+                                              T&             output,
+                                              storage_type&  storage,
+                                              BinaryFunction scan_op = BinaryFunction())
     {
         base_type::inclusive_scan(input, output, storage, scan_op);
     }
@@ -236,13 +232,12 @@ public:
     /// \p output values in the every logical warp will be <tt>{1, 2, 3, 4, ..., 64}</tt>.
     /// The \p reduction will be equal \p 64.
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void inclusive_scan(T input,
-                        T& output,
-                        T& reduction,
-                        storage_type& storage,
-                        BinaryFunction scan_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void inclusive_scan(T              input,
+                                              T&             output,
+                                              T&             reduction,
+                                              storage_type&  storage,
+                                              BinaryFunction scan_op = BinaryFunction())
     {
         base_type::inclusive_scan(input, output, reduction, storage, scan_op);
     }
@@ -299,13 +294,12 @@ public:
     /// warp will be <tt>{100, 1, -2, -2, -4, ..., -30},</tt> in the second:
     /// <tt>{100, 33, -34, -34, -36, ..., -62}</tt> etc.
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void exclusive_scan(T input,
-                        T& output,
-                        T init,
-                        storage_type& storage,
-                        BinaryFunction scan_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void exclusive_scan(T              input,
+                                              T&             output,
+                                              T              init,
+                                              storage_type&  storage,
+                                              BinaryFunction scan_op = BinaryFunction())
     {
         base_type::exclusive_scan(input, output, init, storage, scan_op);
     }
@@ -363,14 +357,13 @@ public:
     /// <tt>{1, 1, ..., 1, 1}</tt>, then \p output values in every logical warp will be
     /// <tt>{10, 11, 12, 13, ..., 73}</tt>. The \p reduction will be 64.
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void exclusive_scan(T input,
-                        T& output,
-                        T init,
-                        T& reduction,
-                        storage_type& storage,
-                        BinaryFunction scan_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void exclusive_scan(T              input,
+                                              T&             output,
+                                              T              init,
+                                              T&             reduction,
+                                              storage_type&  storage,
+                                              BinaryFunction scan_op = BinaryFunction())
     {
         base_type::exclusive_scan(input, output, init, reduction, storage, scan_op);
     }
@@ -433,14 +426,13 @@ public:
     /// logical warp will be <tt>{100, 1, -2, -2, -4, ..., -30},</tt> in the second:
     /// <tt>{100, 33, -34, -34, -36, ..., -62}</tt> etc.
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void scan(T input,
-              T& inclusive_output,
-              T& exclusive_output,
-              T init,
-              storage_type& storage,
-              BinaryFunction scan_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void scan(T              input,
+                                    T&             inclusive_output,
+                                    T&             exclusive_output,
+                                    T              init,
+                                    storage_type&  storage,
+                                    BinaryFunction scan_op = BinaryFunction())
     {
         base_type::scan(input, inclusive_output, exclusive_output, init, storage, scan_op);
     }
@@ -503,20 +495,17 @@ public:
     /// <tt>{1, 2, 3, 4, ..., 63, 64}</tt>, and \p ex_output values in every logical warp will
     /// be <tt>{10, 11, 12, 13, ..., 73}</tt>. The \p reduction will be 64.
     /// \endparblock
-    template<class BinaryFunction = ::rocprim::plus<T>>
-    ROCPRIM_DEVICE inline
-    void scan(T input,
-              T& inclusive_output,
-              T& exclusive_output,
-              T init,
-              T& reduction,
-              storage_type& storage,
-              BinaryFunction scan_op = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::plus<T>>
+    ROCPRIM_DEVICE inline void scan(T              input,
+                                    T&             inclusive_output,
+                                    T&             exclusive_output,
+                                    T              init,
+                                    T&             reduction,
+                                    storage_type&  storage,
+                                    BinaryFunction scan_op = BinaryFunction())
     {
         base_type::scan(
-            input, inclusive_output, exclusive_output, init, reduction,
-            storage, scan_op
-        );
+            input, inclusive_output, exclusive_output, init, reduction, storage, scan_op);
     }
 
     /// \brief Broadcasts value from one thread to all threads in logical warp.
@@ -528,18 +517,15 @@ public:
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
-    ROCPRIM_DEVICE inline
-    T broadcast(T input,
-                const unsigned int src_lane,
-                storage_type& storage)
+    ROCPRIM_DEVICE inline T broadcast(T input, const unsigned int src_lane, storage_type& storage)
     {
         return base_type::broadcast(input, src_lane, storage);
     }
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 protected:
-    ROCPRIM_DEVICE inline
-    void to_exclusive(T inclusive_input, T& exclusive_output, storage_type& storage)
+    ROCPRIM_DEVICE inline void
+        to_exclusive(T inclusive_input, T& exclusive_output, storage_type& storage)
     {
         return base_type::to_exclusive(inclusive_input, exclusive_output, storage);
     }

@@ -34,55 +34,54 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<class T, class ShuffleOp>
-ROCPRIM_DEVICE inline
-T warp_shuffle_op(T input, ShuffleOp&& op)
-{
-    constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
-
-    int words[words_no];
-    __builtin_memcpy(words, &input, sizeof(T));
-
-    #pragma unroll
-    for(int i = 0; i < words_no; i++)
+    template <class T, class ShuffleOp>
+    ROCPRIM_DEVICE inline T warp_shuffle_op(T input, ShuffleOp&& op)
     {
-        words[i] = op(words[i]);
+        constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
+
+        int words[words_no];
+        __builtin_memcpy(words, &input, sizeof(T));
+
+#pragma unroll
+        for(int i = 0; i < words_no; i++)
+        {
+            words[i] = op(words[i]);
+        }
+
+        T output;
+        __builtin_memcpy(&output, words, sizeof(T));
+
+        return output;
     }
 
-    T output;
-    __builtin_memcpy(&output, words, sizeof(T));
+    ROCPRIM_DEVICE
+    int __amdgcn_update_dpp(int  old,
+                            int  src,
+                            int  dpp_ctrl,
+                            int  row_mask,
+                            int  bank_mask,
+                            bool bound_ctrl) __asm("llvm.amdgcn.update.dpp.i32");
 
-    return output;
-}
-
-ROCPRIM_DEVICE
-int __amdgcn_update_dpp(int old, int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl)
-    __asm("llvm.amdgcn.update.dpp.i32");
-
-template<class T>
-ROCPRIM_DEVICE inline
-T warp_move_dpp(T input, int dpp_ctrl,
-                int row_mask = 0xf, int bank_mask = 0xf, bool bound_ctrl = false)
-{
-    constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
-
-    int words[words_no];
-    __builtin_memcpy(words, &input, sizeof(T));
-
-    #pragma unroll
-    for(int i = 0; i < words_no; i++)
+    template <class T>
+    ROCPRIM_DEVICE inline T warp_move_dpp(
+        T input, int dpp_ctrl, int row_mask = 0xf, int bank_mask = 0xf, bool bound_ctrl = false)
     {
-        words[i] = __amdgcn_update_dpp(
-            0, words[i],
-            dpp_ctrl, row_mask, bank_mask, bound_ctrl
-        );
+        constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
+
+        int words[words_no];
+        __builtin_memcpy(words, &input, sizeof(T));
+
+#pragma unroll
+        for(int i = 0; i < words_no; i++)
+        {
+            words[i] = __amdgcn_update_dpp(0, words[i], dpp_ctrl, row_mask, bank_mask, bound_ctrl);
+        }
+
+        T output;
+        __builtin_memcpy(&output, words, sizeof(T));
+
+        return output;
     }
-
-    T output;
-    __builtin_memcpy(&output, words, sizeof(T));
-
-    return output;
-}
 
 } // end namespace detail
 
@@ -100,17 +99,10 @@ T warp_move_dpp(T input, int dpp_ctrl,
 /// \param input - input to pass to other threads
 /// \param src_lane - warp if of a thread whose \p input should be returned
 /// \param width - logical warp width
-template<class T>
-ROCPRIM_DEVICE inline
-T warp_shuffle(T input, const int src_lane, const int width = warp_size())
+template <class T>
+ROCPRIM_DEVICE inline T warp_shuffle(T input, const int src_lane, const int width = warp_size())
 {
-    return detail::warp_shuffle_op(
-        input,
-        [=](int v) -> int
-        {
-            return __shfl(v, src_lane, width);
-        }
-    );
+    return detail::warp_shuffle_op(input, [=](int v) -> int { return __shfl(v, src_lane, width); });
 }
 
 /// \brief Shuffle up for any data type.
@@ -125,17 +117,11 @@ T warp_shuffle(T input, const int src_lane, const int width = warp_size())
 /// \param input - input to pass to other threads
 /// \param delta - offset for calculating source lane id
 /// \param width - logical warp width
-template<class T>
-ROCPRIM_DEVICE inline
-T warp_shuffle_up(T input, const unsigned int delta, const int width = warp_size())
+template <class T>
+ROCPRIM_DEVICE inline T
+    warp_shuffle_up(T input, const unsigned int delta, const int width = warp_size())
 {
-    return detail::warp_shuffle_op(
-        input,
-        [=](int v) -> int
-        {
-            return __shfl_up(v, delta, width);
-        }
-    );
+    return detail::warp_shuffle_op(input, [=](int v) -> int { return __shfl_up(v, delta, width); });
 }
 
 /// \brief Shuffle down for any data type.
@@ -150,17 +136,12 @@ T warp_shuffle_up(T input, const unsigned int delta, const int width = warp_size
 /// \param input - input to pass to other threads
 /// \param delta - offset for calculating source lane id
 /// \param width - logical warp width
-template<class T>
-ROCPRIM_DEVICE inline
-T warp_shuffle_down(T input, const unsigned int delta, const int width = warp_size())
+template <class T>
+ROCPRIM_DEVICE inline T
+    warp_shuffle_down(T input, const unsigned int delta, const int width = warp_size())
 {
-    return detail::warp_shuffle_op(
-        input,
-        [=](int v) -> int
-        {
-            return __shfl_down(v, delta, width);
-        }
-    );
+    return detail::warp_shuffle_op(input,
+                                   [=](int v) -> int { return __shfl_down(v, delta, width); });
 }
 
 /// \brief Shuffle XOR for any data type.
@@ -174,17 +155,12 @@ T warp_shuffle_down(T input, const unsigned int delta, const int width = warp_si
 /// \param input - input to pass to other threads
 /// \param lane_mask - mask used for calculating source lane id
 /// \param width - logical warp width
-template<class T>
-ROCPRIM_DEVICE inline
-T warp_shuffle_xor(T input, const int lane_mask, const int width = warp_size())
+template <class T>
+ROCPRIM_DEVICE inline T
+    warp_shuffle_xor(T input, const int lane_mask, const int width = warp_size())
 {
-    return detail::warp_shuffle_op(
-        input,
-        [=](int v) -> int
-        {
-            return __shfl_xor(v, lane_mask, width);
-        }
-    );
+    return detail::warp_shuffle_op(input,
+                                   [=](int v) -> int { return __shfl_xor(v, lane_mask, width); });
 }
 
 END_ROCPRIM_NAMESPACE
