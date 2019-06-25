@@ -92,7 +92,7 @@ rocprimCI:
                 """
 
             platform.runCommand(this, command)
-            platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/build/package/*.rpm""")
+            platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/${project.testDirectory}/package/*.rpm""")
         }
         else if(platform.jenkinsLabel.contains('hip-clang'))
         {
@@ -110,7 +110,7 @@ rocprimCI:
                 """
 
             platform.runCommand(this, command)
-            platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/build/package/*.deb""")
+            platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/${project.testDirectory}/package/*.deb""")
         }
     }
 
