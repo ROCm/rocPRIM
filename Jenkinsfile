@@ -83,7 +83,7 @@ rocprimCI:
         {
             command = """
                     set -x
-                    cd ${project.paths.project_build_prefix}/build
+                    cd ${project.paths.project_build_prefix}/${project.testDirectory}
                     sudo make package
                     rm -rf package && mkdir -p package
                     mv *.rpm package/
@@ -101,7 +101,7 @@ rocprimCI:
         {
             command = """
                     set -x
-                    cd ${project.paths.project_build_prefix}/build
+                    cd ${project.paths.project_build_prefix}/${project.testDirectory}
                     make package
                     rm -rf package && mkdir -p package
                     mv *.deb package/
