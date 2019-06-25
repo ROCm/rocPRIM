@@ -102,10 +102,10 @@ rocprimCI:
             command = """
                     set -x
                     cd ${project.paths.project_build_prefix}/build
-                    sudo make package
+                    make package
                     rm -rf package && mkdir -p package
-                    mv *.rpm package/
-                    rpm -qlp package/*.rpm
+                    mv *.deb package/
+                    dpkg -c package/*.deb
                 """
 
             platform.runCommand(this, command)
