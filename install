@@ -112,7 +112,6 @@ if [[ "${run_tests}" == false ]]; then
     echo $cmake_common_options
 fi
 
-
 compiler="hcc"
 if [[ "${build_hip_clang}" == true ]]; then
     compiler="hipcc"
