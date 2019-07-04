@@ -117,4 +117,3 @@ rocprimCI:
     buildProject(rocprim, formatCheck, nodes.dockerArray, compileCommand, testCommand, packageCommand)
 
 }
-
