@@ -11,8 +11,7 @@ rocprimCI:
 
     def rocprim = new rocProject('rocPRIM')
 
-    def nodes = new dockerNodes(['gfx803 && ubuntu', 'gfx900 && ubuntu', 'gfx906 && ubuntu', 'gfx900 && centos7', 
-                'gfx803 && ubuntu && hip-clang', 'gfx900 && ubuntu && hip-clang', 'gfx906 && ubuntu && hip-clang'], rocprim)
+    def nodes = new dockerNodes(['gfx803 && ubuntu && hip-clang', 'gfx900 && ubuntu && hip-clang', 'gfx906 && ubuntu && hip-clang'], rocprim)
 
     boolean formatCheck = false
      
@@ -29,7 +28,7 @@ rocprimCI:
             command = """#!/usr/bin/env bash
                     set -x
                     cd ${project.paths.project_build_prefix}
-                    LD_LIBRARY_PATH=/opt/rocm/hcc/lib CXX=/opt/rocm/bin/hipcc ${project.paths.build_command} --hip-clang
+                    LD_LIBRARY_PATH=/opt/rocm/lib CXX=/opt/rocm/bin/hipcc ${project.paths.build_command} --hip-clang
                 """
         }
         else
@@ -67,7 +66,7 @@ rocprimCI:
                     set -x
                     cd ${project.paths.project_build_prefix}
                     cd ${project.testDirectory}
-                    LD_LIBRARY_PATH=/opt/rocm/hcc/lib ${testCommand}
+                    LD_LIBRARY_PATH=/opt/rocm/lib ${testCommand}
                 """
         }
 
