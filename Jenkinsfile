@@ -49,26 +49,12 @@ rocprimCI:
 
         def testCommand = 'ctest --output-on-failure -E rocprim.hip.device_merge_sort'
 
-        def command 
-
-        if(platform.jenkinsLabel.contains('centos'))
-        {
-            command = """#!/usr/bin/env bash
+        def command = """#!/usr/bin/env bash
                     set -x
                     cd ${project.paths.project_build_prefix}
                     cd ${project.testDirectory}
                     LD_LIBRARY_PATH=/opt/rocm/hcc/lib sudo ${testCommand}
                 """
-        }
-        else
-        {
-            command = """#!/usr/bin/env bash
-                    set -x
-                    cd ${project.paths.project_build_prefix}
-                    cd ${project.testDirectory}
-                    LD_LIBRARY_PATH=/opt/rocm/lib ${testCommand}
-                """
-        }
 
         platform.runCommand(this, command)
     }
