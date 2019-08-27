@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2019 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +50,7 @@ include(cmake/VerifyCompiler.cmake)
 option(DISABLE_WERROR "Disable building with Werror" ON)
 
 # Set CXX flags
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 if(DISABLE_WERROR)
@@ -73,7 +73,7 @@ include(cmake/Dependencies.cmake)
 set(AMDGPU_TARGETS gfx803;gfx900;gfx906;gfx908 CACHE STRING "List of specific machine types for library to target")
 
 # Setup VERSION
-set(VERSION_STRING "2.6.0")
+set(VERSION_STRING "2.7.0")
 rocm_setup_version(VERSION ${VERSION_STRING})
 
 # Print configuration summary
