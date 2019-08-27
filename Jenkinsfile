@@ -47,71 +47,19 @@ rocprimCI:
     {
         platform, project->
 
-        def testCommand = 'ctest --output-on-failure -E rocprim.hip.device_merge_sort'
+        def testCommand = 'sudo ctest --output-on-failure -E rocprim.hip.device_merge_sort'
 
-        def command 
-
-        if(platform.jenkinsLabel.contains('centos'))
-        {
-            command = """#!/usr/bin/env bash
+        def command = """#!/usr/bin/env bash
                     set -x
                     cd ${project.paths.project_build_prefix}
                     cd ${project.testDirectory}
-                    LD_LIBRARY_PATH=/opt/rocm/hcc/lib sudo ${testCommand}
+                    LD_LIBRARY_PATH=/opt/rocm/hcc/lib ${testCommand}
                 """
-        }
-        else
-        {
-            command = """#!/usr/bin/env bash
-                    set -x
-                    cd ${project.paths.project_build_prefix}
-                    cd ${project.testDirectory}
-                    LD_LIBRARY_PATH=/opt/rocm/lib ${testCommand}
-                """
-        }
 
         platform.runCommand(this, command)
     }
 
-    def packageCommand =
-    {
-        platform, project->
-
-        def command
-
-        if(platform.jenkinsLabel.contains('centos'))
-        {
-            command = """
-                    set -x
-                    cd ${project.paths.project_build_prefix}/${project.testDirectory}
-                    make package
-                    rm -rf package && mkdir -p package
-                    mv *.rpm package/
-                    rpm -qlp package/*.rpm
-                """
-
-            platform.runCommand(this, command)
-            platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/${project.testDirectory}/package/*.rpm""")
-        }
-        else if(platform.jenkinsLabel.contains('hip-clang'))
-        {
-            packageCommand = null
-        }
-        else
-        {
-            command = """
-                    set -x
-                    cd ${project.paths.project_build_prefix}/${project.testDirectory}
-                    make package
-                    rm -rf package && mkdir -p package
-                    mv *.deb package/
-                    dpkg -c package/*.deb
-                """
-
-            platform.runCommand(this, command)
-            platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/${project.testDirectory}/package/*.deb""")
-        }
-    }
+    def packageCommand = null
 
     buildProject(rocprim, formatCheck, nodes.dockerArray, compileCommand, testCommand, packageCommand)
 
