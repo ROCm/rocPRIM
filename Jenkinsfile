@@ -51,7 +51,7 @@ rocprimCI:
 
         def command 
 
-        if(platform.jenkinsLabel.contains('centos'))
+        if(platform.jenkinsLabel.contains('centos') || platform.jenkinsLabel.contains('sles'))
         {
             command = """#!/usr/bin/env bash
                     set -x
