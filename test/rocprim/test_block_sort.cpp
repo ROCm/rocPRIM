@@ -20,6 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if defined(__HIPCC__) && __HIP_DEVICE_COMPILE__
+#undef _GLIBCXX14_CONSTEXPR
+#define _GLIBCXX14_CONSTEXPR
+#endif // defined(__HIPCC__) && __HIP_DEVICE_COMPILE__
+
 #include <algorithm>
 #include <iostream>
 #include <random>
