@@ -11,7 +11,7 @@ rocprimCI:
 
     def rocprim = new rocProject('rocPRIM')
 
-    def nodes = new dockerNodes(['gfx803 && ubuntu && hip-clang', 'gfx900 && ubuntu && hip-clang', 'gfx906 && ubuntu && hip-clang'], rocprim)
+    def nodes = new dockerNodes(['gfx803 && ubuntu && hip-clang', 'gfx900 && centos && hip-clang', 'gfx906 && ubuntu && hip-clang'], rocprim)
 
     boolean formatCheck = false
      
@@ -21,24 +21,11 @@ rocprimCI:
 
         project.paths.construct_build_prefix()
         
-        def command 
-        
-        if(platform.jenkinsLabel.contains('hip-clang'))
-        {
-            command = """#!/usr/bin/env bash
+        def command = """#!/usr/bin/env bash
                     set -x
                     cd ${project.paths.project_build_prefix}
                     LD_LIBRARY_PATH=/opt/rocm/lib CXX=/opt/rocm/bin/hipcc ${project.paths.build_command} --hip-clang
                 """
-        }
-        else
-        {
-            command = """#!/usr/bin/env bash
-                    set -x
-                    cd ${project.paths.project_build_prefix}
-                    LD_LIBRARY_PATH=/opt/rocm/hcc/lib CXX=/opt/rocm/bin/hcc ${project.paths.build_command}
-                """
-        }
         
         platform.runCommand(this, command)
     }
@@ -47,13 +34,11 @@ rocprimCI:
     {
         platform, project->
 
-        def testCommand = 'sudo ctest --output-on-failure -E rocprim.hip.device_merge_sort'
-
         def command = """#!/usr/bin/env bash
                     set -x
-                    cd ${project.paths.project_build_prefix}
-                    cd ${project.testDirectory}
-                    LD_LIBRARY_PATH=/opt/rocm/hcc/lib ${testCommand}
+                    cd ${project.paths.project_build_prefix}/build/release
+                    make -j4
+                    sudo ctest --output-on-failure
                 """
 
         platform.runCommand(this, command)
