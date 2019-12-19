@@ -153,7 +153,7 @@ public:
     {
         prefix_type prefix;
         
-        const uint SLEEP_MAX = 32;
+        const uint SLEEP_MAX = 24;
         uint times_through = 1;
 
         prefix_underlying_type p = ::rocprim::detail::atomic_add(&prefixes[padding + block_id], 0);
@@ -264,7 +264,7 @@ public:
     ROCPRIM_DEVICE inline
     void get(const unsigned int block_id, flag_type& flag, T& value)
     {
-        const uint SLEEP_MAX = 32;
+        const uint SLEEP_MAX = 24;
         uint times_through = 1;
 
         flag = load_volatile(&prefixes_flags[padding + block_id]);
