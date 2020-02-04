@@ -12,6 +12,8 @@ def runCI =
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
+    def commonGroovy
+
     boolean formatCheck = false
      
     def compileCommand =
