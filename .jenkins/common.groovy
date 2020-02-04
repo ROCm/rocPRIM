@@ -7,7 +7,7 @@ def runCompileCommand(platform, project, jobName)
         
     def command
     
-    if(jobName.contains('hip-clang'))
+    if(jobName.contains('hipclang'))
     {
         command = """#!/usr/bin/env bash
                 set -x
