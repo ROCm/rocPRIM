@@ -42,7 +42,7 @@ def runTestCommand (platform, project)
     platform.runCommand(this, command)
 }
 
-def runPackageCommand(platform, project)
+def runPackageCommand(platform, project, jobName)
 {
     def command
 
@@ -60,7 +60,7 @@ def runPackageCommand(platform, project)
         platform.runCommand(this, command)
         platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/${project.testDirectory}/package/*.rpm""")
     }
-    else if(platform.jenkinsLabel.contains('hip-clang'))
+    else if(jobName.contains('hipclang'))
     {
         packageCommand = null
     }
