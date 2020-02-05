@@ -69,13 +69,17 @@ ci: {
         jobName, nodeDetails->
         seenJobNames.add(jobName)
         if (urlJobName == jobName)
-            runCI(nodeDetails, jobName)
+            stage(jobName) {
+                runCI(nodeDetails, jobName)
+            }
     }
 
     // For url job names that are outside of the standardJobNameSet i.e. compute-rocm-dkms-no-npi-1901
     if(!seenJobNames.contains(urlJobName))
     {
         properties(auxiliary.addCommonProperties([pipelineTriggers([cron('0 1 * * *')])]))
-        runCI([ubuntu16:['gfx906']], urlJobName)
+        stage(jobName) {
+            runCI([ubuntu16:['gfx906']], urlJobName)
+        }
     }
 }
