@@ -76,6 +76,6 @@ ci: {
     if(!seenJobNames.contains(urlJobName))
     {
         properties(auxiliary.addCommonProperties([pipelineTriggers([cron('0 1 * * *')])]))
-        runCI([centos7:['gfx906']], urlJobName)       
+        runCI([ubuntu16:['gfx906']], urlJobName)
     }
 }
