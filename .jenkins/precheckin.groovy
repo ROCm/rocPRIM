@@ -49,8 +49,6 @@ ci: {
                         "rocm-docker":[]]
     propertyList = auxiliary.appendPropertyList(propertyList)
 
-    Set standardJobNameSet = ["compute-rocm-dkms-no-npi", "compute-rocm-dkms-no-npi-hipclang", "rocm-docker"]
-
     def jobNameList = ["compute-rocm-dkms-no-npi":([ubuntu16:['gfx900'],centos7:['gfx906'],sles15sp1:['gfx908']]), 
                        "compute-rocm-dkms-no-npi-hipclang":([ubuntu16:['gfx900'],centos7:['gfx906'],sles15sp1:['gfx908']]), 
                        "rocm-docker":([ubuntu16:['gfx900'],centos7:['gfx906'],sles15sp1:['gfx908']])]
@@ -63,11 +61,9 @@ ci: {
             properties(auxiliary.addCommonProperties(property))
     }
 
-    Set seenJobNames = []
     jobNameList.each 
     {
         jobName, nodeDetails->
-        seenJobNames.add(jobName)
         if (urlJobName == jobName)
             stage(jobName) {
                 runCI(nodeDetails, jobName)
@@ -75,7 +71,8 @@ ci: {
     }
 
     // For url job names that are outside of the standardJobNameSet i.e. compute-rocm-dkms-no-npi-1901
-    if(!seenJobNames.contains(urlJobName))
+    Set standardJobNameSet = ["compute-rocm-dkms-no-npi", "compute-rocm-dkms-no-npi-hipclang", "rocm-docker"]
+    if(!standardJobNameSet.contains(urlJobName))
     {
         properties(auxiliary.addCommonProperties([pipelineTriggers([cron('0 1 * * *')])]))
         stage(jobName) {
