@@ -60,12 +60,10 @@ ci: {
         if (urlJobName == jobName)
             properties(auxiliary.addCommonProperties(property))
     }
-
-    Set seenJobNames = []
+    
     jobNameList.each 
     {
         jobName, nodeDetails->
-        seenJobNames.add(jobName)
         if (urlJobName == jobName)
             stage(jobName) {
                 runCI(nodeDetails, jobName)
@@ -73,7 +71,7 @@ ci: {
     }
 
     // For url job names that are not listed by the jobNameList i.e. compute-rocm-dkms-no-npi-1901
-    if(!seenJobNames.contains(urlJobName))
+    if(!jobNameList.keySet().contains(urlJobName))
     {
         properties(auxiliary.addCommonProperties([pipelineTriggers([cron('0 1 * * *')])]))
         stage(urlJobName) {
