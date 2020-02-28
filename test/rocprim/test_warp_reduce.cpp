@@ -87,67 +87,60 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    // Generate data
+    std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50); // used for input
+    std::vector<T> output(input.size() / logical_warp_size, 0);
+
+    // Calculate expected results on host
+    std::vector<T> expected(output.size(), 1);
+    binary_op_type binary_op;
+    for(size_t i = 0; i < output.size(); i++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size() / logical_warp_size, 0);
-
-        // Calculate expected results on host
-        std::vector<T> expected(output.size(), 1);
-        binary_op_type binary_op;
-        for(size_t i = 0; i < output.size(); i++)
+        T value = 0;
+        for(size_t j = 0; j < logical_warp_size; j++)
         {
-            T value = 0;
-            for(size_t j = 0; j < logical_warp_size; j++)
-            {
-                auto idx = i * logical_warp_size + j;
-                value = apply(binary_op, value, input[idx]);
-            }
-            expected[i] = value;
+            auto idx = i * logical_warp_size + j;
+            value = apply(binary_op, value, input[idx]);
         }
-
-        T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-
-        HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-
-        // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
-            dim3(size/block_size), dim3(block_size), 0, 0,
-            device_input, device_output
-        );
-
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
-
-        test_utils::assert_near(output, expected, 0.01);
-
-        HIP_CHECK(hipFree(device_input));
-        HIP_CHECK(hipFree(device_output));
+        expected[i] = value;
     }
-    
+
+    T* device_input;
+    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    T* device_output;
+    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+
+    HIP_CHECK(
+        hipMemcpy(
+            device_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+
+    // Launching kernel
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
+        dim3(size/block_size), dim3(block_size), 0, 0,
+        device_input, device_output
+    );
+
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Read from device memory
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), device_output,
+            output.size() * sizeof(T),
+            hipMemcpyDeviceToHost
+        )
+    );
+
+    test_utils::assert_near(output, expected, 0.01);
+
+    HIP_CHECK(hipFree(device_input));
+    HIP_CHECK(hipFree(device_output));
 }
 
 template<
@@ -189,71 +182,64 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    // Generate data
+    std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50); // used for input
+    std::vector<T> output(input.size(), 0);
+
+    // Calculate expected results on host
+    std::vector<T> expected(output.size(), 0);
+    binary_op_type binary_op;
+    for(size_t i = 0; i < output.size() / logical_warp_size; i++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size(), 0);
-
-        // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        binary_op_type binary_op;
-        for(size_t i = 0; i < output.size() / logical_warp_size; i++)
+        T value = 0;
+        for(size_t j = 0; j < logical_warp_size; j++)
         {
-            T value = 0;
-            for(size_t j = 0; j < logical_warp_size; j++)
-            {
-                auto idx = i * logical_warp_size + j;
-                value = apply(binary_op, value, input[idx]);
-            }
-            for (size_t j = 0; j < logical_warp_size; j++)
-            {
-                auto idx = i * logical_warp_size + j;
-                expected[idx] = value;
-            }
+            auto idx = i * logical_warp_size + j;
+            value = apply(binary_op, value, input[idx]);
         }
-
-        T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-
-        HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-
-        // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
-            dim3(size/block_size), dim3(block_size), 0, 0,
-            device_input, device_output
-        );
-
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
-
-        test_utils::assert_near(output, expected, 0.01);
-
-        HIP_CHECK(hipFree(device_input));
-        HIP_CHECK(hipFree(device_output));
+        for (size_t j = 0; j < logical_warp_size; j++)
+        {
+            auto idx = i * logical_warp_size + j;
+            expected[idx] = value;
+        }
     }
-    
+
+    T* device_input;
+    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    T* device_output;
+    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+
+    HIP_CHECK(
+        hipMemcpy(
+            device_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+
+    // Launching kernel
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
+        dim3(size/block_size), dim3(block_size), 0, 0,
+        device_input, device_output
+    );
+
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Read from device memory
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), device_output,
+            output.size() * sizeof(T),
+            hipMemcpyDeviceToHost
+        )
+    );
+
+    test_utils::assert_near(output, expected, 0.01);
+
+    HIP_CHECK(hipFree(device_input));
+    HIP_CHECK(hipFree(device_output));
 }
 
 template<
@@ -299,67 +285,60 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    // Generate data
+    std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50); // used for input
+    std::vector<T> output(input.size() / logical_warp_size, 0);
+
+    // Calculate expected results on host
+    std::vector<T> expected(output.size(), 1);
+    binary_op_type binary_op;
+    for(size_t i = 0; i < output.size(); i++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size() / logical_warp_size, 0);
-
-        // Calculate expected results on host
-        std::vector<T> expected(output.size(), 1);
-        binary_op_type binary_op;
-        for(size_t i = 0; i < output.size(); i++)
+        T value = 0;
+        for(size_t j = 0; j < valid; j++)
         {
-            T value = 0;
-            for(size_t j = 0; j < valid; j++)
-            {
-                auto idx = i * logical_warp_size + j;
-                value = apply(binary_op, value, input[idx]);
-            }
-            expected[i] = value;
+            auto idx = i * logical_warp_size + j;
+            value = apply(binary_op, value, input[idx]);
         }
-
-        T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-
-        HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-
-        // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
-            dim3(size/block_size), dim3(block_size), 0, 0,
-            device_input, device_output, valid
-        );
-
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
-
-        test_utils::assert_near(output, expected, 0.01);
-
-        HIP_CHECK(hipFree(device_input));
-        HIP_CHECK(hipFree(device_output));
+        expected[i] = value;
     }
-    
+
+    T* device_input;
+    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    T* device_output;
+    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+
+    HIP_CHECK(
+        hipMemcpy(
+            device_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+
+    // Launching kernel
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
+        dim3(size/block_size), dim3(block_size), 0, 0,
+        device_input, device_output, valid
+    );
+
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Read from device memory
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), device_output,
+            output.size() * sizeof(T),
+            hipMemcpyDeviceToHost
+        )
+    );
+
+    test_utils::assert_near(output, expected, 0.01);
+
+    HIP_CHECK(hipFree(device_input));
+    HIP_CHECK(hipFree(device_output));
 }
 
 template<
@@ -402,71 +381,64 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    // Generate data
+    std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50); // used for input
+    std::vector<T> output(input.size(), 0);
+
+    // Calculate expected results on host
+    std::vector<T> expected(output.size(), 0);
+    binary_op_type binary_op;
+    for(size_t i = 0; i < output.size() / logical_warp_size; i++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size(), 0);
-
-        // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        binary_op_type binary_op;
-        for(size_t i = 0; i < output.size() / logical_warp_size; i++)
+        T value = 0;
+        for(size_t j = 0; j < valid; j++)
         {
-            T value = 0;
-            for(size_t j = 0; j < valid; j++)
-            {
-                auto idx = i * logical_warp_size + j;
-                value = apply(binary_op, value, input[idx]);
-            }
-            for (size_t j = 0; j < logical_warp_size; j++)
-            {
-                auto idx = i * logical_warp_size + j;
-                expected[idx] = value;
-            }
+            auto idx = i * logical_warp_size + j;
+            value = apply(binary_op, value, input[idx]);
         }
-
-        T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-
-        HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-
-        // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
-            dim3(size/block_size), dim3(block_size), 0, 0,
-            device_input, device_output, valid
-        );
-
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
-
-        test_utils::assert_near(output, expected, 0.01);
-
-        HIP_CHECK(hipFree(device_input));
-        HIP_CHECK(hipFree(device_output));
+        for (size_t j = 0; j < logical_warp_size; j++)
+        {
+            auto idx = i * logical_warp_size + j;
+            expected[idx] = value;
+        }
     }
-    
+
+    T* device_input;
+    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    T* device_output;
+    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+
+    HIP_CHECK(
+        hipMemcpy(
+            device_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+
+    // Launching kernel
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(warp_allreduce_sum_kernel<T, block_size, logical_warp_size>),
+        dim3(size/block_size), dim3(block_size), 0, 0,
+        device_input, device_output, valid
+    );
+
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Read from device memory
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), device_output,
+            output.size() * sizeof(T),
+            hipMemcpyDeviceToHost
+        )
+    );
+
+    test_utils::assert_near(output, expected, 0.01);
+
+    HIP_CHECK(hipFree(device_input));
+    HIP_CHECK(hipFree(device_output));
 }
 
 TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
@@ -488,75 +460,68 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    // Generate data
+    std::vector<T> input(size);
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        // Generate data
-        std::vector<T> input(size);
+        auto random_values =
+            test_utils::get_random_data<base_type>(2 * input.size(), 2, 50);
+        for(size_t i = 0; i < input.size(); i++)
         {
-            auto random_values =
-                test_utils::get_random_data<base_type>(2 * input.size(), 2, 50, seed_value);
-            for(size_t i = 0; i < input.size(); i++)
-            {
-                input[i].x = random_values[i];
-                input[i].y = random_values[i + input.size()];
-            }
+            input[i].x = random_values[i];
+            input[i].y = random_values[i + input.size()];
         }
-        std::vector<T> output(input.size() / logical_warp_size);
-
-        // Calculate expected results on host
-        std::vector<T> expected(output.size());
-        for(size_t i = 0; i < output.size(); i++)
-        {
-            T value(0, 0);
-            for(size_t j = 0; j < logical_warp_size; j++)
-            {
-                auto idx = i * logical_warp_size + j;
-                value = value + input[idx];
-            }
-            expected[i] = value;
-        }
-
-        T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-
-        HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-
-        // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
-            dim3(size/block_size), dim3(block_size), 0, 0,
-            device_input, device_output
-        );
-
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
-
-        test_utils::assert_near(output, expected, 0.01);
-
-        HIP_CHECK(hipFree(device_input));
-        HIP_CHECK(hipFree(device_output));
     }
-    
+    std::vector<T> output(input.size() / logical_warp_size);
+
+    // Calculate expected results on host
+    std::vector<T> expected(output.size());
+    for(size_t i = 0; i < output.size(); i++)
+    {
+        T value(0, 0);
+        for(size_t j = 0; j < logical_warp_size; j++)
+        {
+            auto idx = i * logical_warp_size + j;
+            value = value + input[idx];
+        }
+        expected[i] = value;
+    }
+
+    T* device_input;
+    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    T* device_output;
+    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+
+    HIP_CHECK(
+        hipMemcpy(
+            device_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+
+    // Launching kernel
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(warp_reduce_sum_kernel<T, block_size, logical_warp_size>),
+        dim3(size/block_size), dim3(block_size), 0, 0,
+        device_input, device_output
+    );
+
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Read from device memory
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), device_output,
+            output.size() * sizeof(T),
+            hipMemcpyDeviceToHost
+        )
+    );
+
+    test_utils::assert_near(output, expected, 0.01);
+
+    HIP_CHECK(hipFree(device_input));
+    HIP_CHECK(hipFree(device_output));
 }
 
 template<
@@ -601,100 +566,93 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    // Generate data
+    std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10); // used for input
+    std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f);
+    for(size_t i = 0; i < flags.size(); i+= logical_warp_size)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value); // used for input
-        std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f, seed_value);
-        for(size_t i = 0; i < flags.size(); i+= logical_warp_size)
-        {
-            flags[i] = 1;
-        }
-        std::vector<T> output(input.size());
-
-        T* device_input;
-        flag_type* device_flags;
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-        HIP_CHECK(hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
-        HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                device_flags, flags.data(),
-                flags.size() * sizeof(flag_type),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Calculate expected results on host
-        std::vector<T> expected(output.size());
-        binary_op_type binary_op;
-        size_t segment_head_index = 0;
-        T reduction = input[0];
-        for(size_t i = 0; i < output.size(); i++)
-        {
-            if(i%logical_warp_size == 0 || flags[i])
-            {
-                expected[segment_head_index] = reduction;
-                segment_head_index = i;
-                reduction = input[i];
-            }
-            else
-            {
-                reduction = apply(binary_op, reduction, input[i]);
-            }
-        }
-        expected[segment_head_index] = reduction;
-
-        // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(head_segmented_warp_reduce_kernel<
-                T, flag_type, block_size, logical_warp_size
-            >),
-            dim3(size/block_size), dim3(block_size), 0, 0,
-            device_input, device_flags, device_output
-        );
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
-        HIP_CHECK(hipDeviceSynchronize());
-
-        std::vector<T> output_segment(output.size(), 0);
-        std::vector<T> expected_segment(output.size(), 0);
-        for(size_t i = 0; i < output.size(); i++)
-        {
-            if(flags[i])
-            {
-                output_segment[i] = output[i];
-                expected_segment[i] = expected[i];
-            }
-        }
-        test_utils::assert_near(output_segment, expected_segment, 0.01);
-
-        HIP_CHECK(hipFree(device_input));
-        HIP_CHECK(hipFree(device_flags));
-        HIP_CHECK(hipFree(device_output));
+        flags[i] = 1;
     }
-    
+    std::vector<T> output(input.size());
+
+    T* device_input;
+    flag_type* device_flags;
+    T* device_output;
+    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
+    HIP_CHECK(
+        hipMemcpy(
+            device_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+    HIP_CHECK(
+        hipMemcpy(
+            device_flags, flags.data(),
+            flags.size() * sizeof(flag_type),
+            hipMemcpyHostToDevice
+        )
+    );
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Calculate expected results on host
+    std::vector<T> expected(output.size());
+    binary_op_type binary_op;
+    size_t segment_head_index = 0;
+    T reduction = input[0];
+    for(size_t i = 0; i < output.size(); i++)
+    {
+        if(i%logical_warp_size == 0 || flags[i])
+        {
+            expected[segment_head_index] = reduction;
+            segment_head_index = i;
+            reduction = input[i];
+        }
+        else
+        {
+            reduction = apply(binary_op, reduction, input[i]);
+        }
+    }
+    expected[segment_head_index] = reduction;
+
+    // Launching kernel
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(head_segmented_warp_reduce_kernel<
+            T, flag_type, block_size, logical_warp_size
+        >),
+        dim3(size/block_size), dim3(block_size), 0, 0,
+        device_input, device_flags, device_output
+    );
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Read from device memory
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), device_output,
+            output.size() * sizeof(T),
+            hipMemcpyDeviceToHost
+        )
+    );
+    HIP_CHECK(hipDeviceSynchronize());
+
+    std::vector<T> output_segment(output.size(), 0);
+    std::vector<T> expected_segment(output.size(), 0);
+    for(size_t i = 0; i < output.size(); i++)
+    {
+        if(flags[i])
+        {
+            output_segment[i] = output[i];
+            expected_segment[i] = expected[i];
+        }
+    }
+    test_utils::assert_near(output_segment, expected_segment, 0.01);
+
+    HIP_CHECK(hipFree(device_input));
+    HIP_CHECK(hipFree(device_flags));
+    HIP_CHECK(hipFree(device_output));
 }
 
 template<
@@ -739,107 +697,100 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    // Generate data
+    std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10); // used for input
+    std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f);
+    for(size_t i = logical_warp_size - 1; i < flags.size(); i+= logical_warp_size)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value); // used for input
-        std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f, seed_value);
-        for(size_t i = logical_warp_size - 1; i < flags.size(); i+= logical_warp_size)
-        {
-            flags[i] = 1;
-        }
-        std::vector<T> output(input.size());
-
-        T* device_input;
-        flag_type* device_flags;
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-        HIP_CHECK(hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
-        HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                device_flags, flags.data(),
-                flags.size() * sizeof(flag_type),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Calculate expected results on host
-        std::vector<T> expected(output.size());
-        binary_op_type binary_op;
-        std::vector<size_t> segment_indexes;
-        size_t segment_index = 0;
-        T reduction;
-        for(size_t i = 0; i < output.size(); i++)
-        {
-            // single value segments
-            if(flags[i])
-            {
-                expected[i] = input[i];
-                segment_indexes.push_back(i);
-            }
-            else
-            {
-                segment_index = i;
-                reduction = input[i];
-                auto next = i + 1;
-                while(next < output.size() && !flags[next])
-                {
-                    reduction = apply(binary_op, reduction, input[next]);
-                    i++;
-                    next++;
-                }
-                i++;
-                expected[segment_index] = apply(binary_op, reduction, input[i]);
-                segment_indexes.push_back(segment_index);
-            }
-        }
-
-        // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(tail_segmented_warp_reduce_kernel<
-                T, flag_type, block_size, logical_warp_size
-            >),
-            dim3(size/block_size), dim3(block_size), 0, 0,
-            device_input, device_flags, device_output
-        );
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
-
-        // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
-        HIP_CHECK(hipDeviceSynchronize());
-
-        std::vector<T> output_segment(segment_indexes.size());
-        std::vector<T> expected_segment(segment_indexes.size());
-        for(size_t i = 0; i < segment_indexes.size(); i++)
-        {
-            auto index = segment_indexes[i];
-            output_segment[i] = output[index];
-            expected_segment[i] = expected[index];
-        }
-        test_utils::assert_near(output_segment, expected_segment, 0.01);
-
-        HIP_CHECK(hipFree(device_input));
-        HIP_CHECK(hipFree(device_flags));
-        HIP_CHECK(hipFree(device_output));
+        flags[i] = 1;
     }
-    
+    std::vector<T> output(input.size());
+
+    T* device_input;
+    flag_type* device_flags;
+    T* device_output;
+    HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+    HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+    HIP_CHECK(hipMalloc(&device_flags, flags.size() * sizeof(typename decltype(flags)::value_type)));
+    HIP_CHECK(
+        hipMemcpy(
+            device_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+    HIP_CHECK(
+        hipMemcpy(
+            device_flags, flags.data(),
+            flags.size() * sizeof(flag_type),
+            hipMemcpyHostToDevice
+        )
+    );
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Calculate expected results on host
+    std::vector<T> expected(output.size());
+    binary_op_type binary_op;
+    std::vector<size_t> segment_indexes;
+    size_t segment_index = 0;
+    T reduction;
+    for(size_t i = 0; i < output.size(); i++)
+    {
+        // single value segments
+        if(flags[i])
+        {
+            expected[i] = input[i];
+            segment_indexes.push_back(i);
+        }
+        else
+        {
+            segment_index = i;
+            reduction = input[i];
+            auto next = i + 1;
+            while(next < output.size() && !flags[next])
+            {
+                reduction = apply(binary_op, reduction, input[next]);
+                i++;
+                next++;
+            }
+            i++;
+            expected[segment_index] = apply(binary_op, reduction, input[i]);
+            segment_indexes.push_back(segment_index);
+        }
+    }
+
+    // Launching kernel
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(tail_segmented_warp_reduce_kernel<
+            T, flag_type, block_size, logical_warp_size
+        >),
+        dim3(size/block_size), dim3(block_size), 0, 0,
+        device_input, device_flags, device_output
+    );
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
+
+    // Read from device memory
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), device_output,
+            output.size() * sizeof(T),
+            hipMemcpyDeviceToHost
+        )
+    );
+    HIP_CHECK(hipDeviceSynchronize());
+
+    std::vector<T> output_segment(segment_indexes.size());
+    std::vector<T> expected_segment(segment_indexes.size());
+    for(size_t i = 0; i < segment_indexes.size(); i++)
+    {
+        auto index = segment_indexes[i];
+        output_segment[i] = output[index];
+        expected_segment[i] = expected[index];
+    }
+    test_utils::assert_near(output_segment, expected_segment, 0.01);
+
+    HIP_CHECK(hipFree(device_input));
+    HIP_CHECK(hipFree(device_flags));
+    HIP_CHECK(hipFree(device_output));
 }

@@ -13,7 +13,6 @@ test:s9300:
   tags:
     - s9300
     - rocm
-  allow_failure: true
 
 test:mi25:
   extends: .test

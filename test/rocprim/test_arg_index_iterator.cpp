@@ -66,29 +66,23 @@ TYPED_TEST(RocprimArgIndexIteratorTests, Equal)
     using T = typename TestFixture::input_type;
     using Iterator = typename rocprim::arg_index_iterator<T*>;
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    std::vector<T> input = test_utils::get_random_data<T>(5, 1, 200);
+
+    Iterator x(input.data());
+    Iterator y = x;
+    for(size_t i = 0; i < 5; i++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
-
-        std::vector<T> input = test_utils::get_random_data<T>(5, 1, 200, seed_value);
-
-        Iterator x(input.data());
-        Iterator y = x;
-        for(size_t i = 0; i < 5; i++)
-        {
-            ASSERT_EQ(x[i].key, i);
-            ASSERT_EQ(x[i].value, input[i]);
-        }
-        ASSERT_EQ(x[2].value, input[2]);
-
-        x += 2;
-        for(size_t i = 0; i < 2; i++)
-        {
-            y++;
-        }
-        ASSERT_EQ(x, y); 
+        ASSERT_EQ(x[i].key, i);
+        ASSERT_EQ(x[i].value, input[i]);
     }
+    ASSERT_EQ(x[2].value, input[2]);
+
+    x += 2;
+    for(size_t i = 0; i < 2; i++)
+    {
+        y++;
+    }
+    ASSERT_EQ(x, y);
 }
 
 struct arg_min
@@ -118,85 +112,79 @@ TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
 
     hipStream_t stream = 0; // default
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
-    {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value); 
+    // Generate data
+    std::vector<T> input = test_utils::get_random_data<T>(size, 1, 200);
+    std::vector<key_value> output(1);
 
-        // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 1, 200, seed_value);
-        std::vector<key_value> output(1);
+    T * d_input;
+    key_value * d_output;
+    HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
+    HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(key_value)));
+    HIP_CHECK(
+        hipMemcpy(
+            d_input, input.data(),
+            input.size() * sizeof(T),
+            hipMemcpyHostToDevice
+        )
+    );
+    HIP_CHECK(hipDeviceSynchronize());
 
-        T * d_input;
-        key_value * d_output;
-        HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
-        HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(key_value)));
-        HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(hipDeviceSynchronize());
+    Iterator d_iter(d_input);
 
-        Iterator d_iter(d_input);
+    arg_min reduce_op;
+    const key_value max(std::numeric_limits<difference_type>::max(), std::numeric_limits<T>::max());
 
-        arg_min reduce_op;
-        const key_value max(std::numeric_limits<difference_type>::max(), std::numeric_limits<T>::max());
+    // Calculate expected results on host
+    Iterator x(input.data());
+    key_value expected = std::accumulate(x, x + size, max, reduce_op);
 
-        // Calculate expected results on host
-        Iterator x(input.data());
-        key_value expected = std::accumulate(x, x + size, max, reduce_op);
+    // temp storage
+    size_t temp_storage_size_bytes;
+    void * d_temp_storage = nullptr;
+    // Get size of d_temp_storage
+    HIP_CHECK(
+        rocprim::reduce(
+            d_temp_storage, temp_storage_size_bytes,
+            d_iter, d_output, max, input.size(),
+            reduce_op, stream, debug_synchronous
+        )
+    );
 
-        // temp storage
-        size_t temp_storage_size_bytes;
-        void * d_temp_storage = nullptr;
-        // Get size of d_temp_storage
-        HIP_CHECK(
-            rocprim::reduce(
-                d_temp_storage, temp_storage_size_bytes,
-                d_iter, d_output, max, input.size(),
-                reduce_op, stream, debug_synchronous
-            )
-        );
+    // temp_storage_size_bytes must be >0
+    ASSERT_GT(temp_storage_size_bytes, 0);
 
-        // temp_storage_size_bytes must be >0
-        ASSERT_GT(temp_storage_size_bytes, 0);
+    // allocate temporary storage
+    HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
+    HIP_CHECK(hipDeviceSynchronize());
 
-        // allocate temporary storage
-        HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
-        HIP_CHECK(hipDeviceSynchronize());
+    // Run
+    HIP_CHECK(
+        rocprim::reduce(
+            d_temp_storage, temp_storage_size_bytes,
+            d_iter, d_output, max, input.size(),
+            reduce_op, stream, debug_synchronous
+        )
+    );
+    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipDeviceSynchronize());
 
-        // Run
-        HIP_CHECK(
-            rocprim::reduce(
-                d_temp_storage, temp_storage_size_bytes,
-                d_iter, d_output, max, input.size(),
-                reduce_op, stream, debug_synchronous
-            )
-        );
-        HIP_CHECK(hipPeekAtLastError());
-        HIP_CHECK(hipDeviceSynchronize());
+    // Copy output to host
+    HIP_CHECK(
+        hipMemcpy(
+            output.data(), d_output,
+            output.size() * sizeof(key_value),
+            hipMemcpyDeviceToHost
+        )
+    );
+    HIP_CHECK(hipDeviceSynchronize());
 
-        // Copy output to host
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(key_value),
-                hipMemcpyDeviceToHost
-            )
-        );
-        HIP_CHECK(hipDeviceSynchronize());
+    // Check if output values are as expected
+    auto diff = std::max<T>(std::abs(0.01f * expected.value), T(0.01f));
+    if(std::is_integral<T>::value) diff = 0;
+    ASSERT_EQ(output[0].key, expected.key);
+    ASSERT_NEAR(output[0].value, expected.value, diff);
 
-        // Check if output values are as expected
-        auto diff = std::max<T>(std::abs(0.01f * expected.value), T(0.01f));
-        if(std::is_integral<T>::value) diff = 0;
-        ASSERT_EQ(output[0].key, expected.key);
-        ASSERT_NEAR(output[0].value, expected.value, diff);
-
-        hipFree(d_input);
-        hipFree(d_output);
-        hipFree(d_temp_storage);
-    }    
+    hipFree(d_input);
+    hipFree(d_output);
+    hipFree(d_temp_storage);
 }
