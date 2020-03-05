@@ -378,8 +378,8 @@ hipError_t run_length_encode_non_trivial_runs(void * temporary_storage,
 
     // Read count of all runs (including trivial runs)
     count_type all_runs_count;
-    #ifdef HIP_VERSION_MAJOR > 3
-    #ifdef HIP_VERSION_MINOR > 0
+    #if HIP_VERSION_MAJOR > 3
+    #if HIP_VERSION_MINOR > 0
     error = hipMemcpyWithStream(&all_runs_count, all_runs_count_tmp, sizeof(count_type), hipMemcpyDeviceToHost, stream);
     if(error != hipSuccess) return error;
     #else
