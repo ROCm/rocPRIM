@@ -380,7 +380,7 @@ hipError_t run_length_encode_non_trivial_runs(void * temporary_storage,
     count_type all_runs_count;
     // hipMemcpyWithStream is only supported on rocm 3.1 and above
     #if HIP_VERSION_MAJOR >= 3
-    #if HIP_VERSION_MINOR >= 1
+    #if HIP_VERSION_MINOR >= 1 || HIP_VERSION_MAJOR >= 4
     error = hipMemcpyWithStream(&all_runs_count, all_runs_count_tmp, sizeof(count_type), hipMemcpyDeviceToHost, stream);
     if(error != hipSuccess) return error;
     #else
