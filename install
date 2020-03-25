@@ -54,6 +54,12 @@ fi
 
 eval set -- "${GETOPT_PARSE}"
 
+check_exit_code( )
+{
+    if (( $? != 0 )); then
+	exit $?
+    fi
+}
 
 while true; do
     case "${1}" in
@@ -97,10 +103,6 @@ if [[ "${build_relocatable}" == true ]]; then
         rocm_path=${ROCM_PATH}
     fi
 fi
-
-# Instal the pre-commit hook
-bash ./githooks/install
-
 
 # Go to rocPRIM directory, create and go to the build directory.
 mkdir -p build; cd build
@@ -146,6 +148,7 @@ fi
 
 # Build
 make -j$(nproc)
+check_exit_code
 
 if ($run_tests); then
 # Optionally, run tests if they're enabled.
@@ -155,9 +158,11 @@ fi
 if ($install_package); then
 # Install
 make install
+check_exit_code
 fi
 
 if ($build_package); then
 # Install
 make package -j$(nproc)
+check_exit_code    
 fi
