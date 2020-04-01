@@ -64,41 +64,41 @@ check_exit_code( )
 
 while true; do
     case "${1}" in
-	-h|--help)
-	    display_help
-	    exit 0
-	    ;;
-	-i|--install)
-	    install_package=true
-	    shift ;;
-	-p|--package)
-	    build_package=true
-	    shift ;;
-    -r|--relocatable)
-         build_relocatable=true
-         shift ;;
-    -c|--clients)
-        build_clients=true
-        shift ;;
-	-g|--debug)
-	    build_release=false
-        build_type=Debug
-	    shift ;;
-	-t|--test)
-	    run_tests=true
-	    shift ;;
-    -b|--benchmark)
-        build_benchmark=true
-        shift ;;
-	--hip-clang)
-	    build_hip_clang=true
-	    shift ;;
-	--) shift ; break ;;
-	*)  echo "Unexpected command line parameter received; aborting";
-	    exit 1
-	    ;;
+        -h|--help)
+            display_help
+            exit 0
+            ;;
+        -i|--install)
+            install_package=true
+            shift ;;
+        -p|--package)
+            build_package=true
+            shift ;;
+        -r|--relocatable)
+            build_relocatable=true
+            shift ;;
+        -c|--clients)
+            build_clients=true
+            shift ;;
+        -g|--debug)
+            build_release=false
+            build_type=Debug
+            shift ;;
+        -t|--test)
+            run_tests=true
+            shift ;;
+        -b|--benchmark)
+            build_benchmark=true
+            shift ;;
+        --hip-clang)
+            build_hip_clang=true
+            shift ;;
+        --) shift ; break ;;
+        *)  echo "Unexpected command line parameter received; aborting";
+            exit 1
+            ;;
     esac
-    done
+done
 
 if [[ "${build_relocatable}" == true ]]; then
     if ! [ -z ${ROCM_PATH+x} ]; then
