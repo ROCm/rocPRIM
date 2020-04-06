@@ -70,7 +70,9 @@ option(ONLY_INSTALL "Only install" OFF)
 include(cmake/Dependencies.cmake)
 
 # Add compile option to treat .cpp files as .hip files
-add_compile_options(-x hip)
+if (HIP_PLATFORM STREQUAL "clang")
+  add_compile_options(-x hip)
+endif()
 
 # AMD targets
 set(AMDGPU_TARGETS gfx803;gfx900;gfx906;gfx908 CACHE STRING "List of specific machine types for library to target")
