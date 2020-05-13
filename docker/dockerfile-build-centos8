@@ -17,7 +17,6 @@ RUN yum install -y --nogpgcheck\
     gcc-c++ \
     gcc-gfortran \
     pkgconfig \
-    python27 \
     boost-devel \
     numactl-libs \
     rpm-build
