@@ -68,6 +68,7 @@ template<
     unsigned int Trials
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void sort_keys_kernel(const T * input, T * output)
 {
     const unsigned int lid = hipThreadIdx_x;
@@ -93,6 +94,7 @@ template<
     unsigned int Trials
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void sort_pairs_kernel(const T * input, T * output)
 {
     const unsigned int lid = hipThreadIdx_x;

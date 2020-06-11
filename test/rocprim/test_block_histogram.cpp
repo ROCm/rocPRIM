@@ -81,6 +81,7 @@ template<
     class BinType
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void histogram_kernel(T* device_output, T* device_output_bin)
 {
     const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;

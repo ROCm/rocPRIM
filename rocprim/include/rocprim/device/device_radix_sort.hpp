@@ -54,6 +54,7 @@ template<
     class KeysInputIterator
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void fill_digit_counts_kernel(KeysInputIterator keys_input,
                               unsigned int size,
                               unsigned int * batch_digit_counts,
@@ -76,6 +77,7 @@ template<
     unsigned int RadixBits
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void scan_batches_kernel(unsigned int * batch_digit_counts,
                          unsigned int * digit_counts,
                          unsigned int batches)
@@ -101,6 +103,7 @@ template<
     class ValuesOutputIterator
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void sort_and_scatter_kernel(KeysInputIterator keys_input,
                              KeysOutputIterator keys_output,
                              ValuesInputIterator values_input,

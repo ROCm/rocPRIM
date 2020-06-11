@@ -63,6 +63,7 @@ template<
     unsigned int Trials
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void kernel(const T * d_input, const unsigned int * d_ranks, T * d_output)
 {
     Runner::template run<T, BlockSize, ItemsPerThread, Trials>(d_input, d_ranks, d_output);

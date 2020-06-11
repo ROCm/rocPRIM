@@ -35,6 +35,10 @@
     #define ROCPRIM_HOST __host__
     #define ROCPRIM_HOST_DEVICE __host__ __device__
     #define ROCPRIM_SHARED_MEMORY __shared__
+    #define ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)  \
+            __attribute__((amdgpu_flat_work_group_size(BlockSize,BlockSize)))
+    #define ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(MinBlockSize,MaxBlockSize)  \
+            __attribute__((amdgpu_flat_work_group_size(MinBlockSize,MaxBlockSize)))
 #endif
 
 #ifdef ROCPRIM_DISABLE_DPP

@@ -108,6 +108,7 @@ template<
     unsigned int ItemsPerThread
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void flag_heads_kernel(Type* device_input, long long* device_heads)
 {
     const unsigned int lid = hipThreadIdx_x;
@@ -141,6 +142,7 @@ template<
     unsigned int ItemsPerThread
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void flag_tails_kernel(Type* device_input, long long* device_tails)
 {
     const unsigned int lid = hipThreadIdx_x;
@@ -174,6 +176,7 @@ template<
     unsigned int ItemsPerThread
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void flag_heads_and_tails_kernel(Type* device_input, long long* device_heads, long long* device_tails)
 {
     const unsigned int lid = hipThreadIdx_x;

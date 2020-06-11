@@ -50,6 +50,7 @@ template<
     class BinaryOp
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void reduce_kernel(T* device_output, T* device_output_reductions)
 {
     const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
@@ -252,6 +253,7 @@ template<
     class BinaryOp
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void reduce_valid_kernel(T* device_output, T* device_output_reductions, const unsigned int valid_items)
 {
     const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
@@ -392,6 +394,7 @@ template<
     class BinaryOp
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void reduce_array_kernel(T* device_output, T* device_output_reductions)
 {
     const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
@@ -543,7 +546,7 @@ TYPED_TEST(RocprimBlockReduceInputArrayTests, Reduce)
     int device_id = test_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
-    
+
     using T = typename TestFixture::input_type;
     constexpr size_t block_size = TestFixture::block_size;
 

@@ -50,6 +50,7 @@ template<
     class UnaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void transform_kernel(InputIterator input,
                       const size_t size,
                       OutputIterator output,

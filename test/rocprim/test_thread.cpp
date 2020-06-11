@@ -76,6 +76,7 @@ template<
     unsigned int BlockSizeZ
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(32,1024)
 void flat_id_kernel(unsigned int* device_output)
 {
     unsigned int thread_id = rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
@@ -146,6 +147,7 @@ template<
     unsigned int BlockSizeZ
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(32,1024)
 void block_id_kernel(unsigned int* device_output)
 {
     unsigned int block_id = rocprim::flat_block_id<BlockSizeX, BlockSizeY, BlockSizeZ>();

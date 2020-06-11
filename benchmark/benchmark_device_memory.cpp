@@ -217,6 +217,7 @@ template<
     typename std::enable_if<MemOp == block_primitive_direct, int>::type = 0
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void operation_kernel(T* input, T* output, CustomOp op)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
@@ -255,6 +256,7 @@ template<
     typename std::enable_if<MemOp == vectorized, int>::type = 0
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void operation_kernel(T* input, T* output, CustomOp op)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
@@ -282,6 +284,7 @@ template<
     typename std::enable_if<MemOp == striped, int>::type = 0
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void operation_kernel(T* input, T* output, CustomOp op)
 {
     const unsigned int lid = hipThreadIdx_x;
@@ -303,6 +306,7 @@ template<
     typename std::enable_if<MemOp == block_primitives_transpose, int>::type = 0
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void operation_kernel(T* input, T* output, CustomOp op)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;

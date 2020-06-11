@@ -56,6 +56,7 @@ namespace rp = rocprim;
 
 template<class K, unsigned int WarpSize, unsigned int Trials>
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(64,256)
 void warp_sort_kernel(K* input_key)
 {
     const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
@@ -72,6 +73,7 @@ void warp_sort_kernel(K* input_key)
 
 template<class K, class V, unsigned int WarpSize, unsigned int Trials>
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(64,256)
 void warp_sort_by_key_kernel(K* input_key, V* input_value)
 {
     const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;

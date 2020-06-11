@@ -48,6 +48,7 @@ template<
     class KeyCompareFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void fill_unique_counts_kernel(KeysInputIterator keys_input,
                                unsigned int size,
                                unsigned int * unique_counts,
@@ -69,6 +70,7 @@ template<
     class UniqueCountOutputIterator
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void scan_unique_counts_kernel(unsigned int * unique_counts,
                                UniqueCountOutputIterator unique_count_output,
                                unsigned int batches)
@@ -88,6 +90,7 @@ template<
     class BinaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void reduce_by_key_kernel(KeysInputIterator keys_input,
                           ValuesInputIterator values_input,
                           unsigned int size,
@@ -118,6 +121,7 @@ template<
     class BinaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void scan_and_scatter_carry_outs_kernel(const carry_out<Result> * carry_outs,
                                         const Result * leading_aggregates,
                                         AggregatesOutputIterator aggregates_output,

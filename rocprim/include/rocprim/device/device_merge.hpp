@@ -72,6 +72,7 @@ template<
     class BinaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void merge_kernel(IndexIterator index,
                   KeysInputIterator1 keys_input1,
                   KeysInputIterator2 keys_input2,
