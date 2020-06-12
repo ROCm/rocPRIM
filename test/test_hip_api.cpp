@@ -30,7 +30,6 @@ T ax(const T a, const T x) __device__
 
 template <class T>
 __global__
-ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void saxpy_kernel(const T * x, T * y, const T a, const size_t size)
 {
     const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
