@@ -40,7 +40,7 @@
     #define ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(MinBlockSize,MaxBlockSize)  \
             __attribute__((amdgpu_flat_work_group_size(MinBlockSize,MaxBlockSize)))
     #define ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT  \
-            ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(128,256)
+            ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE(64,256)
 #endif
 
 #ifdef ROCPRIM_DISABLE_DPP
