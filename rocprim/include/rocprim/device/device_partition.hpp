@@ -53,6 +53,7 @@ template<
     class OffsetLookbackScanState
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void partition_kernel(InputIterator input,
                       FlagIterator flags,
                       OutputIterator output,
@@ -72,6 +73,7 @@ void partition_kernel(InputIterator input,
 
 template<class OffsetLookBackScanState>
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void init_offset_scan_state_kernel(OffsetLookBackScanState offset_scan_state,
                                    const unsigned int number_of_blocks,
                                    ordered_block_id<unsigned int> ordered_bid)

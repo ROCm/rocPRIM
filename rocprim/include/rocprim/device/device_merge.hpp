@@ -45,6 +45,7 @@ template<
     class BinaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void partition_kernel(IndexIterator index,
                       KeysInputIterator1 keys_input1,
                       KeysInputIterator2 keys_input2,

@@ -49,6 +49,7 @@ template<
     class BinaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void block_reduce_kernel(InputIterator input,
                          const size_t size,
                          OutputIterator output,

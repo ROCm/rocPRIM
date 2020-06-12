@@ -400,6 +400,7 @@ template<
     unsigned int LogicalWarpSize
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void warp_exclusive_scan_reduce_kernel(
     T* device_input,
     T* device_output,
@@ -544,6 +545,7 @@ template<
     unsigned int LogicalWarpSize
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void warp_scan_kernel(
     T* device_input,
     T* device_inclusive_output,
@@ -687,6 +689,7 @@ template<
     unsigned int LogicalWarpSize
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE(BlockSize)
 void warp_scan_reduce_kernel(
     T* device_input,
     T* device_inclusive_output,

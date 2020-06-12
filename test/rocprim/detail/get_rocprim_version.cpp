@@ -23,6 +23,7 @@
 #include "get_rocprim_version.hpp"
 
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void get_version_kernel(unsigned int * version)
 {
     *version = rocprim::version();

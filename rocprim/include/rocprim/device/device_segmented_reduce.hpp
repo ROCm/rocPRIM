@@ -50,6 +50,7 @@ template<
     class BinaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void segmented_reduce_kernel(InputIterator input,
                              OutputIterator output,
                              OffsetIterator begin_offsets,

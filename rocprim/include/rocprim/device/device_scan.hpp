@@ -52,6 +52,7 @@ template<
     class ResultType
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void single_scan_kernel(InputIterator input,
                         const size_t size,
                         ResultType initial_value,
@@ -74,6 +75,7 @@ template<
     class ResultType
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void block_reduce_kernel(InputIterator input,
                          BinaryFunction scan_op,
                          ResultType * block_prefixes)
@@ -92,6 +94,7 @@ template<
     class ResultType
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void final_scan_kernel(InputIterator input,
                        const size_t size,
                        OutputIterator output,
@@ -116,6 +119,7 @@ template<
     class LookBackScanState
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void lookback_scan_kernel(InputIterator input,
                           OutputIterator output,
                           const size_t size,
@@ -133,6 +137,7 @@ void lookback_scan_kernel(InputIterator input,
 
 template<class LookBackScanState>
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void init_lookback_scan_state_kernel(LookBackScanState lookback_scan_state,
                                      const unsigned int number_of_blocks,
                                      ordered_block_id<unsigned int> ordered_bid)

@@ -70,6 +70,7 @@ template<
     class BinaryFunction
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void block_merge_kernel(KeysInputIterator keys_input,
                         KeysOutputIterator keys_output,
                         ValuesInputIterator values_input,

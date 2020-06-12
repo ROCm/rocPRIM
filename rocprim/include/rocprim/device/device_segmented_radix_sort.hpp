@@ -57,6 +57,7 @@ template<
     class OffsetIterator
 >
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void segmented_sort_kernel(KeysInputIterator keys_input,
                            typename std::iterator_traits<KeysInputIterator>::value_type * keys_tmp,
                            KeysOutputIterator keys_output,

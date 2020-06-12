@@ -87,6 +87,7 @@ void scan_batches_kernel(unsigned int * batch_digit_counts,
 
 template<unsigned int RadixBits>
 __global__
+ROCPRIM_ATTRIBUTE_WORK_GROUP_SIZE_RANGE_DEFAULT
 void scan_digits_kernel(unsigned int * digit_counts)
 {
     scan_digits<RadixBits>(digit_counts);
