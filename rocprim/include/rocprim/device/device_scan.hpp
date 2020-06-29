@@ -380,7 +380,7 @@ auto scan_impl(void * temporary_storage,
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
         auto grid_size = (number_of_blocks + block_size - 1)/block_size;
 
-        if (prop.gcnArch == 908)
+        if (prop.gcnArch == 908 && prop.asicRevision < 2)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(init_lookback_scan_state_kernel<scan_state_with_sleep_type>),
@@ -399,7 +399,7 @@ auto scan_impl(void * temporary_storage,
 
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
         grid_size = number_of_blocks;
-        if (prop.gcnArch == 908)
+        if (prop.gcnArch == 908 && prop.asicRevision < 2)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(lookback_scan_kernel<
