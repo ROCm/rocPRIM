@@ -380,11 +380,11 @@ auto scan_impl(void * temporary_storage,
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
         auto grid_size = (number_of_blocks + block_size - 1)/block_size;
 
-        #if HIP_VERSION >= 307
+#if HIP_VERSION >= 307
         int asicRevision = prop.asicRevision;
-        #else
+#else
         int asicRevision = 0;
-        #endif
+#endif
 
         if (prop.gcnArch == 908 && asicRevision < 2)
         {

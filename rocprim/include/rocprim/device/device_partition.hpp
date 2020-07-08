@@ -199,11 +199,11 @@ hipError_t partition_impl(void * temporary_storage,
     static_cast<void>(hipGetDevice(&deviceId));
     static_cast<void>(hipGetDeviceProperties(&prop, deviceId));
 
-    #if HIP_VERSION >= 307
+#if HIP_VERSION >= 307
     int asicRevision = prop.asicRevision;
-    #else
+#else
     int asicRevision = 0;
-    #endif
+#endif
 
     if (prop.gcnArch == 908 && asicRevision < 2)
     {
