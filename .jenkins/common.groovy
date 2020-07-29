@@ -38,38 +38,12 @@ def runTestCommand (platform, project)
     platform.runCommand(this, command)
 }
 
-def runPackageCommand(platform, project, jobName)
+def runPackageCommand(platform, project)
 {
-    def command
+    def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/release")
 
-    if(platform.jenkinsLabel.contains('centos') || platform.jenkinsLabel.contains('sles'))
-    {
-        command = """
-                set -x
-                cd ${project.paths.project_build_prefix}/${project.testDirectory}
-                make package
-                rm -rf package && mkdir -p package
-                mv *.rpm package/
-                rpm -qlp package/*.rpm
-            """
-
-        platform.runCommand(this, command)
-        platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/${project.testDirectory}/package/*.rpm""")
-    }
-    else
-    {
-        command = """
-                set -x
-                cd ${project.paths.project_build_prefix}/${project.testDirectory}
-                make package
-                rm -rf package && mkdir -p package
-                mv *.deb package/
-                dpkg -c package/*.deb
-            """
-
-        platform.runCommand(this, command)
-        platform.archiveArtifacts(this, """${project.paths.project_build_prefix}/${project.testDirectory}/package/*.deb""")
-    }
+    platform.runCommand(this, packageHelper[0])
+        platform.archiveArtifacts(this, packageHelper[1])
 }
 
 return this
