@@ -32,7 +32,7 @@ def runTestCommand (platform, project)
                 set -x
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
-                ${sudo} LD_LIBRARY_PATH=/opt/rocm/lib ${testCommand}
+                ${sudo} LD_LIBRARY_PATH=/opt/rocm/lib ${testCommand} --exclude-regex rocprim.texture_cache_iterator
             """
 
     platform.runCommand(this, command)
