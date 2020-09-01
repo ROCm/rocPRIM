@@ -21,8 +21,8 @@
 #ifndef ROCPRIM_ITERATOR_DISCARD_ITERATOR_HPP_
 #define ROCPRIM_ITERATOR_DISCARD_ITERATOR_HPP_
 
-#include <iterator>
 #include <cstddef>
+#include <iterator>
 #include <type_traits>
 
 #include "../config.hpp"
@@ -45,19 +45,15 @@ class discard_iterator
 public:
     struct discard_value
     {
-        ROCPRIM_HOST_DEVICE inline
-        discard_value() = default;
+        ROCPRIM_HOST_DEVICE inline discard_value() = default;
 
-        template<class T>
-        ROCPRIM_HOST_DEVICE inline
-        discard_value(T) {};
+        template <class T>
+        ROCPRIM_HOST_DEVICE inline discard_value(T) {};
 
-        ROCPRIM_HOST_DEVICE inline
-        ~discard_value() = default;
+        ROCPRIM_HOST_DEVICE inline ~discard_value() = default;
 
-        template<class T>
-        ROCPRIM_HOST_DEVICE inline
-        discard_value& operator=(const T&)
+        template <class T>
+        ROCPRIM_HOST_DEVICE inline discard_value& operator=(const T&)
         {
             return *this;
         }
@@ -77,124 +73,105 @@ public:
     /// \brief Creates a new discard_iterator.
     ///
     /// \param index - optional index of discard iterator (default = 0).
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator(size_t index = 0)
+    ROCPRIM_HOST_DEVICE inline discard_iterator(size_t index = 0)
         : index_(index)
     {
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    ~discard_iterator() = default;
+    ROCPRIM_HOST_DEVICE inline ~discard_iterator() = default;
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator& operator++()
+    ROCPRIM_HOST_DEVICE inline discard_iterator& operator++()
     {
         index_++;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator operator++(int)
+    ROCPRIM_HOST_DEVICE inline discard_iterator operator++(int)
     {
         discard_iterator old = *this;
         index_++;
         return old;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator& operator--()
+    ROCPRIM_HOST_DEVICE inline discard_iterator& operator--()
     {
         index_--;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator operator--(int)
+    ROCPRIM_HOST_DEVICE inline discard_iterator operator--(int)
     {
         discard_iterator old = *this;
         index_--;
         return old;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_value operator*() const
+    ROCPRIM_HOST_DEVICE inline discard_value operator*() const
     {
         return discard_value();
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_value operator[](difference_type distance) const
+    ROCPRIM_HOST_DEVICE inline discard_value operator[](difference_type distance) const
     {
         discard_iterator i = (*this) + distance;
         return *i;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator operator+(difference_type distance) const
+    ROCPRIM_HOST_DEVICE inline discard_iterator operator+(difference_type distance) const
     {
         auto i = static_cast<size_t>(static_cast<difference_type>(index_) + distance);
         return discard_iterator(i);
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator& operator+=(difference_type distance)
+    ROCPRIM_HOST_DEVICE inline discard_iterator& operator+=(difference_type distance)
     {
         index_ = static_cast<size_t>(static_cast<difference_type>(index_) + distance);
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator operator-(difference_type distance) const
+    ROCPRIM_HOST_DEVICE inline discard_iterator operator-(difference_type distance) const
     {
         auto i = static_cast<size_t>(static_cast<difference_type>(index_) - distance);
         return discard_iterator(i);
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    discard_iterator& operator-=(difference_type distance)
+    ROCPRIM_HOST_DEVICE inline discard_iterator& operator-=(difference_type distance)
     {
         index_ = static_cast<size_t>(static_cast<difference_type>(index_) - distance);
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    difference_type operator-(discard_iterator other) const
+    ROCPRIM_HOST_DEVICE inline difference_type operator-(discard_iterator other) const
     {
         return index_ - other.index_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator==(discard_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator==(discard_iterator other) const
     {
         return index_ == other.index_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator!=(discard_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator!=(discard_iterator other) const
     {
         return index_ != other.index_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator<(discard_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator<(discard_iterator other) const
     {
         return index_ < other.index_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator<=(discard_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator<=(discard_iterator other) const
     {
         return index_ <= other.index_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator>(discard_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator>(discard_iterator other) const
     {
         return index_ > other.index_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator>=(discard_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator>=(discard_iterator other) const
     {
         return index_ >= other.index_;
     }
@@ -208,10 +185,8 @@ private:
     mutable size_t index_;
 };
 
-ROCPRIM_HOST_DEVICE inline
-discard_iterator
-operator+(typename discard_iterator::difference_type distance,
-          const discard_iterator& iterator)
+ROCPRIM_HOST_DEVICE inline discard_iterator
+    operator+(typename discard_iterator::difference_type distance, const discard_iterator& iterator)
 {
     return iterator + distance;
 }
@@ -221,9 +196,7 @@ operator+(typename discard_iterator::difference_type distance,
 ///
 /// \param index - optional index of discard iterator (default = 0).
 /// \return A new discard_iterator object.
-ROCPRIM_HOST_DEVICE inline
-discard_iterator
-make_discard_iterator(size_t index = 0)
+ROCPRIM_HOST_DEVICE inline discard_iterator make_discard_iterator(size_t index = 0)
 {
     return discard_iterator(index);
 }

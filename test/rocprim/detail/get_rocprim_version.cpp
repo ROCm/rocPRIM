@@ -22,9 +22,9 @@
 
 #include "get_rocprim_version.hpp"
 
-__global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void get_version_kernel(unsigned int * version)
+__global__ __launch_bounds__(
+    ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
+    ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void get_version_kernel(unsigned int* version)
 {
     *version = rocprim::version();
 }
@@ -33,25 +33,15 @@ unsigned int get_rocprim_version_on_device()
 {
     unsigned int version = 0;
 
-    unsigned int * d_version;
+    unsigned int* d_version;
     HIP_CHECK(hipMalloc(&d_version, sizeof(unsigned int)));
     HIP_CHECK(hipDeviceSynchronize());
 
-    hipLaunchKernelGGL(
-        get_version_kernel,
-        dim3(1), dim3(1), 0, 0,
-        d_version
-    );
+    hipLaunchKernelGGL(get_version_kernel, dim3(1), dim3(1), 0, 0, d_version);
     HIP_CHECK(hipPeekAtLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
-    HIP_CHECK(
-        hipMemcpy(
-            &version, d_version,
-            sizeof(unsigned int),
-            hipMemcpyDeviceToHost
-        )
-    );
+    HIP_CHECK(hipMemcpy(&version, d_version, sizeof(unsigned int), hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());
     HIP_CHECK(hipFree(d_version));
 

@@ -34,70 +34,73 @@ BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Behaves like std::is_floating_point, but also includes half-precision
 /// floating point type (rocprim::half).
-template<class T>
+template <class T>
 struct is_floating_point
     : std::integral_constant<
-        bool,
-        std::is_floating_point<T>::value ||
-        std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-    > {};
+          bool,
+          std::is_floating_point<T>::value
+              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value>
+{
+};
 
 /// \brief Alias for std::is_integral.
-template<class T>
+template <class T>
 using is_integral = std::is_integral<T>;
 
 /// \brief Behaves like std::is_arithmetic, but also includes half-precision
 /// floating point type (\ref rocprim::half).
-template<class T>
+template <class T>
 struct is_arithmetic
     : std::integral_constant<
-        bool,
-        std::is_arithmetic<T>::value ||
-        std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-    > {};
+          bool,
+          std::is_arithmetic<T>::value
+              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value>
+{
+};
 
 /// \brief Behaves like std::is_fundamental, but also includes half-precision
 /// floating point type (\ref rocprim::half).
-template<class T>
+template <class T>
 struct is_fundamental
-  : std::integral_constant<
-        bool,
-        std::is_fundamental<T>::value ||
-        std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-> {};
+    : std::integral_constant<
+          bool,
+          std::is_fundamental<T>::value
+              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value>
+{
+};
 
 /// \brief Alias for std::is_unsigned.
-template<class T>
+template <class T>
 using is_unsigned = std::is_unsigned<T>;
 
 /// \brief Behaves like std::is_signed, but also includes half-precision
 /// floating point type (\ref rocprim::half).
-template<class T>
+template <class T>
 struct is_signed
     : std::integral_constant<
-        bool,
-        std::is_signed<T>::value ||
-        std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-    > {};
+          bool,
+          std::is_signed<T>::value
+              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value>
+{
+};
 
 /// \brief Behaves like std::is_scalar, but also includes half-precision
 /// floating point type (\ref rocprim::half).
-template<class T>
+template <class T>
 struct is_scalar
     : std::integral_constant<
-        bool,
-        std::is_scalar<T>::value ||
-        std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-    > {};
+          bool,
+          std::is_scalar<T>::value
+              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value>
+{
+};
 
 /// \brief Behaves like std::is_compound, but also supports half-precision
 /// floating point type (\ref rocprim::half). `value` for \ref rocprim::half is `false`.
-template<class T>
-struct is_compound
-    : std::integral_constant<
-        bool,
-        !is_fundamental<T>::value
-    > {};
+template <class T>
+struct is_compound : std::integral_constant<bool, !is_fundamental<T>::value>
+{
+};
 
 END_ROCPRIM_NAMESPACE
 

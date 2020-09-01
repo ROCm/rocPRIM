@@ -21,21 +21,21 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_SCAN_BY_KEY_HPP_
 #define ROCPRIM_DEVICE_DEVICE_SCAN_BY_KEY_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "device_scan.hpp"
 
 #include "../config.hpp"
 #include "../detail/match_result_type.hpp"
-#include "../iterator/zip_iterator.hpp"
-#include "../iterator/discard_iterator.hpp"
 #include "../iterator/counting_iterator.hpp"
+#include "../iterator/discard_iterator.hpp"
 #include "../iterator/transform_iterator.hpp"
+#include "../iterator/zip_iterator.hpp"
 #include "../types/tuple.hpp"
 
-#include "../detail/various.hpp"
 #include "../detail/binary_op_wrappers.hpp"
+#include "../detail/various.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -132,60 +132,53 @@ BEGIN_ROCPRIM_NAMESPACE
 /// // values_output: [1, 2, 3, 7, 5, 11, 18, 8]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class KeysInputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class BinaryFunction = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
-    class KeyCompareFunction = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>
->
-inline
-hipError_t inclusive_scan_by_key(void * temporary_storage,
-                                 size_t& storage_size,
-                                 KeysInputIterator keys_input,
-                                 ValuesInputIterator values_input,
-                                 ValuesOutputIterator values_output,
-                                 const size_t size,
-                                 BinaryFunction scan_op = BinaryFunction(),
-                                 KeyCompareFunction key_compare_op = KeyCompareFunction(),
-                                 const hipStream_t stream = 0,
-                                 bool debug_synchronous = false)
+template <class Config = default_config,
+          class KeysInputIterator,
+          class ValuesInputIterator,
+          class ValuesOutputIterator,
+          class BinaryFunction
+          = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
+          class KeyCompareFunction
+          = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>>
+inline hipError_t inclusive_scan_by_key(void*                temporary_storage,
+                                        size_t&              storage_size,
+                                        KeysInputIterator    keys_input,
+                                        ValuesInputIterator  values_input,
+                                        ValuesOutputIterator values_output,
+                                        const size_t         size,
+                                        BinaryFunction       scan_op        = BinaryFunction(),
+                                        KeyCompareFunction   key_compare_op = KeyCompareFunction(),
+                                        const hipStream_t    stream         = 0,
+                                        bool                 debug_synchronous = false)
 {
     using input_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryFunction
-    >::type;
+    using result_type =
+        typename ::rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
     using flag_type = bool;
-    using headflag_scan_op_wrapper_type =
-        detail::headflag_scan_op_wrapper<
-            result_type, flag_type, BinaryFunction
-        >;
+    using headflag_scan_op_wrapper_type
+        = detail::headflag_scan_op_wrapper<result_type, flag_type, BinaryFunction>;
 
     // Flag the first item of each segment as its head,
     // then run inclusive scan
     return inclusive_scan<Config>(
-        temporary_storage, storage_size,
+        temporary_storage,
+        storage_size,
         rocprim::make_transform_iterator(
             rocprim::make_counting_iterator<size_t>(0),
-            [values_input, keys_input, key_compare_op]
-            ROCPRIM_DEVICE
-            (const size_t i)
-            {
+            [values_input, keys_input, key_compare_op] ROCPRIM_DEVICE(const size_t i) {
                 flag_type flag(true);
                 if(i > 0)
                 {
                     flag = flag_type(!key_compare_op(keys_input[i - 1], keys_input[i]));
                 }
                 return rocprim::make_tuple(values_input[i], flag);
-            }
-        ),
-        rocprim::make_zip_iterator(rocprim::make_tuple(values_output, rocprim::make_discard_iterator())),
+            }),
+        rocprim::make_zip_iterator(
+            rocprim::make_tuple(values_output, rocprim::make_discard_iterator())),
         size,
         headflag_scan_op_wrapper_type(scan_op),
         stream,
-        debug_synchronous
-    );
+        debug_synchronous);
 }
 
 /// \brief Parallel exclusive scan-by-key primitive for device level.
@@ -281,69 +274,68 @@ hipError_t inclusive_scan_by_key(void * temporary_storage,
 /// // values_output: [9, 10, 12, 9, 13, 9, 15, 9]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class KeysInputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class InitialValueType,
-    class BinaryFunction = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
-    class KeyCompareFunction = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>
->
-inline
-hipError_t exclusive_scan_by_key(void * temporary_storage,
-                                 size_t& storage_size,
-                                 KeysInputIterator keys_input,
-                                 ValuesInputIterator values_input,
-                                 ValuesOutputIterator values_output,
-                                 const InitialValueType initial_value,
-                                 const size_t size,
-                                 BinaryFunction scan_op = BinaryFunction(),
-                                 KeyCompareFunction key_compare_op = KeyCompareFunction(),
-                                 const hipStream_t stream = 0,
-                                 bool debug_synchronous = false)
+template <class Config = default_config,
+          class KeysInputIterator,
+          class ValuesInputIterator,
+          class ValuesOutputIterator,
+          class InitialValueType,
+          class BinaryFunction
+          = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
+          class KeyCompareFunction
+          = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>>
+inline hipError_t exclusive_scan_by_key(void*                  temporary_storage,
+                                        size_t&                storage_size,
+                                        KeysInputIterator      keys_input,
+                                        ValuesInputIterator    values_input,
+                                        ValuesOutputIterator   values_output,
+                                        const InitialValueType initial_value,
+                                        const size_t           size,
+                                        BinaryFunction         scan_op       = BinaryFunction(),
+                                        KeyCompareFunction key_compare_op    = KeyCompareFunction(),
+                                        const hipStream_t  stream            = 0,
+                                        bool               debug_synchronous = false)
 {
     using input_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryFunction
-    >::type;
+    using result_type =
+        typename ::rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
     using flag_type = bool;
-    using headflag_scan_op_wrapper_type =
-        detail::headflag_scan_op_wrapper<
-            result_type, flag_type, BinaryFunction
-        >;
+    using headflag_scan_op_wrapper_type
+        = detail::headflag_scan_op_wrapper<result_type, flag_type, BinaryFunction>;
 
     const result_type initial_value_converted = static_cast<result_type>(initial_value);
 
     // Flag the last item of each segment as the next segment's head, use initial_value as its value,
     // then run exclusive scan
     return exclusive_scan<Config>(
-        temporary_storage, storage_size,
-        rocprim::make_transform_iterator(
-            rocprim::make_counting_iterator<size_t>(0),
-            [values_input, keys_input, key_compare_op, initial_value_converted, size]
-            ROCPRIM_HOST_DEVICE (const size_t i)
-            {
-                flag_type flag(false);
-                if(i + 1 < size)
-                {
-                    flag = flag_type(!key_compare_op(keys_input[i], keys_input[i + 1]));
-                }
-                result_type value = initial_value_converted;
-                if(!flag)
-                {
-                    value = values_input[i];
-                }
-                return rocprim::make_tuple(value, flag);
-            }
-        ),
-        rocprim::make_zip_iterator(rocprim::make_tuple(values_output, rocprim::make_discard_iterator())),
-        rocprim::make_tuple(initial_value_converted, flag_type(true)), // init value is a head of the first segment
+        temporary_storage,
+        storage_size,
+        rocprim::make_transform_iterator(rocprim::make_counting_iterator<size_t>(0),
+                                         [values_input,
+                                          keys_input,
+                                          key_compare_op,
+                                          initial_value_converted,
+                                          size] ROCPRIM_HOST_DEVICE(const size_t i) {
+                                             flag_type flag(false);
+                                             if(i + 1 < size)
+                                             {
+                                                 flag = flag_type(!key_compare_op(
+                                                     keys_input[i], keys_input[i + 1]));
+                                             }
+                                             result_type value = initial_value_converted;
+                                             if(!flag)
+                                             {
+                                                 value = values_input[i];
+                                             }
+                                             return rocprim::make_tuple(value, flag);
+                                         }),
+        rocprim::make_zip_iterator(
+            rocprim::make_tuple(values_output, rocprim::make_discard_iterator())),
+        rocprim::make_tuple(initial_value_converted,
+                            flag_type(true)), // init value is a head of the first segment
         size,
         headflag_scan_op_wrapper_type(scan_op),
         stream,
-        debug_synchronous
-    );
+        debug_synchronous);
 }
 
 /// @}

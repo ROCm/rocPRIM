@@ -36,44 +36,44 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief Configuration of device-level merge primitives.
 ///
 /// \tparam BlockSize - block size used in merge sort.
-template<unsigned int BlockSize>
+template <unsigned int BlockSize>
 using merge_sort_config = kernel_config<BlockSize, 1>;
 
 namespace detail
 {
 
-template<class Key, class Value>
-struct merge_sort_config_803
-{
-    using type = merge_sort_config<limit_block_size<256U, sizeof(Key) + sizeof(Value)>::value>;
-};
+    template <class Key, class Value>
+    struct merge_sort_config_803
+    {
+        using type = merge_sort_config<limit_block_size<256U, sizeof(Key) + sizeof(Value)>::value>;
+    };
 
-template<class Key>
-struct merge_sort_config_803<Key, empty_type>
-{
-    using type = merge_sort_config<limit_block_size<256U, sizeof(Key)>::value>;
-};
+    template <class Key>
+    struct merge_sort_config_803<Key, empty_type>
+    {
+        using type = merge_sort_config<limit_block_size<256U, sizeof(Key)>::value>;
+    };
 
-template<class Key, class Value>
-struct merge_sort_config_900
-{
-    using type = merge_sort_config<limit_block_size<256U, sizeof(Key) + sizeof(Value)>::value>;
-};
+    template <class Key, class Value>
+    struct merge_sort_config_900
+    {
+        using type = merge_sort_config<limit_block_size<256U, sizeof(Key) + sizeof(Value)>::value>;
+    };
 
-template<class Key>
-struct merge_sort_config_900<Key, empty_type>
-{
-    using type = merge_sort_config<limit_block_size<256U, sizeof(Key)>::value>;
-};
+    template <class Key>
+    struct merge_sort_config_900<Key, empty_type>
+    {
+        using type = merge_sort_config<limit_block_size<256U, sizeof(Key)>::value>;
+    };
 
-template<unsigned int TargetArch, class Key, class Value>
-struct default_merge_sort_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, merge_sort_config_803<Key, Value>>,
-        select_arch_case<900, merge_sort_config_900<Key, Value>>,
-        merge_sort_config_900<Key, Value>
-    > { };
+    template <unsigned int TargetArch, class Key, class Value>
+    struct default_merge_sort_config
+        : select_arch<TargetArch,
+                      select_arch_case<803, merge_sort_config_803<Key, Value>>,
+                      select_arch_case<900, merge_sort_config_900<Key, Value>>,
+                      merge_sort_config_900<Key, Value>>
+    {
+    };
 
 } // end namespace detail
 

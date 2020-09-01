@@ -33,17 +33,9 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    class T,
-    unsigned int WarpSize,
-    bool UseDPP = ROCPRIM_DETAIL_USE_DPP
->
-using warp_scan_crosslane =
-    typename std::conditional<
-        UseDPP,
-        warp_scan_dpp<T, WarpSize>,
-        warp_scan_shuffle<T, WarpSize>
-    >::type;
+    template <class T, unsigned int WarpSize, bool UseDPP = ROCPRIM_DETAIL_USE_DPP>
+    using warp_scan_crosslane = typename std::
+        conditional<UseDPP, warp_scan_dpp<T, WarpSize>, warp_scan_shuffle<T, WarpSize>>::type;
 
 } // end namespace detail
 

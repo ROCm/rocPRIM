@@ -24,8 +24,8 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "../intrinsics.hpp"
 #include "../functional.hpp"
+#include "../intrinsics.hpp"
 #include "../types.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -49,20 +49,15 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \param flat_id - a local flat 1D thread id in a block (tile) for the calling thread
 /// \param block_input - the input iterator from the thread block to load from
 /// \param items - array that data is loaded to
-template<
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-void block_load_direct_blocked(unsigned int flat_id,
-                               InputIterator block_input,
-                               T (&items)[ItemsPerThread])
+template <class InputIterator, class T, unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline void block_load_direct_blocked(unsigned int  flat_id,
+                                                     InputIterator block_input,
+                                                     T (&items)[ItemsPerThread])
 {
-    unsigned int offset = flat_id * ItemsPerThread;
+    unsigned int  offset      = flat_id * ItemsPerThread;
     InputIterator thread_iter = block_input + offset;
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         items[item] = thread_iter[item];
     }
@@ -85,23 +80,18 @@ void block_load_direct_blocked(unsigned int flat_id,
 /// \param block_input - the input iterator from the thread block to load from
 /// \param items - array that data is loaded to
 /// \param valid - maximum range of valid numbers to load
-template<
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-void block_load_direct_blocked(unsigned int flat_id,
-                               InputIterator block_input,
-                               T (&items)[ItemsPerThread],
-                               unsigned int valid)
+template <class InputIterator, class T, unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline void block_load_direct_blocked(unsigned int  flat_id,
+                                                     InputIterator block_input,
+                                                     T (&items)[ItemsPerThread],
+                                                     unsigned int valid)
 {
-    unsigned int offset = flat_id * ItemsPerThread;
+    unsigned int  offset      = flat_id * ItemsPerThread;
     InputIterator thread_iter = block_input + offset;
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
-        if (item + offset < valid)
+        if(item + offset < valid)
         {
             items[item] = thread_iter[item];
         }
@@ -128,21 +118,15 @@ void block_load_direct_blocked(unsigned int flat_id,
 /// \param items - array that data is loaded to
 /// \param valid - maximum range of valid numbers to load
 /// \param out_of_bounds - default value assigned to out-of-bound items
-template<
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread,
-    class Default
->
-ROCPRIM_DEVICE inline
-void block_load_direct_blocked(unsigned int flat_id,
-                               InputIterator block_input,
-                               T (&items)[ItemsPerThread],
-                               unsigned int valid,
-                               Default out_of_bounds)
+template <class InputIterator, class T, unsigned int ItemsPerThread, class Default>
+ROCPRIM_DEVICE inline void block_load_direct_blocked(unsigned int  flat_id,
+                                                     InputIterator block_input,
+                                                     T (&items)[ItemsPerThread],
+                                                     unsigned int valid,
+                                                     Default      out_of_bounds)
 {
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         items[item] = out_of_bounds;
     }
@@ -175,47 +159,37 @@ void block_load_direct_blocked(unsigned int flat_id,
 /// \param flat_id - a local flat 1D thread id in a block (tile) for the calling thread
 /// \param block_input - the input iterator from the thread block to load from
 /// \param items - array that data is loaded to
-template<
-    class T,
-    class U,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-typename std::enable_if<detail::is_vectorizable<T, ItemsPerThread>()>::type
-block_load_direct_blocked_vectorized(unsigned int flat_id,
-                                     T* block_input,
-                                     U (&items)[ItemsPerThread])
+template <class T, class U, unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline typename std::enable_if<detail::is_vectorizable<T, ItemsPerThread>()>::type
+    block_load_direct_blocked_vectorized(unsigned int flat_id,
+                                         T*           block_input,
+                                         U (&items)[ItemsPerThread])
 {
     typedef typename detail::match_vector_type<T, ItemsPerThread>::type vector_type;
     constexpr unsigned int vectors_per_thread = (sizeof(T) * ItemsPerThread) / sizeof(vector_type);
-    vector_type vector_items[vectors_per_thread];
+    vector_type            vector_items[vectors_per_thread];
 
-    const vector_type* vector_ptr = reinterpret_cast<const vector_type*>(block_input) +
-        (flat_id * vectors_per_thread);
+    const vector_type* vector_ptr
+        = reinterpret_cast<const vector_type*>(block_input) + (flat_id * vectors_per_thread);
 
-    #pragma unroll
-    for (unsigned int item = 0; item < vectors_per_thread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < vectors_per_thread; item++)
     {
         vector_items[item] = *(vector_ptr + item);
     }
 
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         items[item] = *(reinterpret_cast<T*>(vector_items) + item);
     }
 }
 
-template<
-    class T,
-    class U,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-typename std::enable_if<!detail::is_vectorizable<T, ItemsPerThread>()>::type
-block_load_direct_blocked_vectorized(unsigned int flat_id,
-                                     T* block_input,
-                                     U (&items)[ItemsPerThread])
+template <class T, class U, unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline typename std::enable_if<!detail::is_vectorizable<T, ItemsPerThread>()>::type
+    block_load_direct_blocked_vectorized(unsigned int flat_id,
+                                         T*           block_input,
+                                         U (&items)[ItemsPerThread])
 {
     block_load_direct_blocked(flat_id, block_input, items);
 }
@@ -237,20 +211,14 @@ block_load_direct_blocked_vectorized(unsigned int flat_id,
 /// \param flat_id - a local flat 1D thread id in a block (tile) for the calling thread
 /// \param block_input - the input iterator from the thread block to load from
 /// \param items - array that data is loaded to
-template<
-    unsigned int BlockSize,
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-void block_load_direct_striped(unsigned int flat_id,
-                               InputIterator block_input,
-                               T (&items)[ItemsPerThread])
+template <unsigned int BlockSize, class InputIterator, class T, unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline void block_load_direct_striped(unsigned int  flat_id,
+                                                     InputIterator block_input,
+                                                     T (&items)[ItemsPerThread])
 {
     InputIterator thread_iter = block_input + flat_id;
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         items[item] = thread_iter[item * BlockSize];
     }
@@ -274,24 +242,18 @@ void block_load_direct_striped(unsigned int flat_id,
 /// \param block_input - the input iterator from the thread block to load from
 /// \param items - array that data is loaded to
 /// \param valid - maximum range of valid numbers to load
-template<
-    unsigned int BlockSize,
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-void block_load_direct_striped(unsigned int flat_id,
-                               InputIterator block_input,
-                               T (&items)[ItemsPerThread],
-                               unsigned int valid)
+template <unsigned int BlockSize, class InputIterator, class T, unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline void block_load_direct_striped(unsigned int  flat_id,
+                                                     InputIterator block_input,
+                                                     T (&items)[ItemsPerThread],
+                                                     unsigned int valid)
 {
     InputIterator thread_iter = block_input + flat_id;
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         unsigned int offset = item * BlockSize;
-        if (flat_id + offset < valid)
+        if(flat_id + offset < valid)
         {
             items[item] = thread_iter[offset];
         }
@@ -319,22 +281,19 @@ void block_load_direct_striped(unsigned int flat_id,
 /// \param items - array that data is loaded to
 /// \param valid - maximum range of valid numbers to load
 /// \param out_of_bounds - default value assigned to out-of-bound items
-template<
-    unsigned int BlockSize,
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread,
-    class Default
->
-ROCPRIM_DEVICE inline
-void block_load_direct_striped(unsigned int flat_id,
-                               InputIterator block_input,
-                               T (&items)[ItemsPerThread],
-                               unsigned int valid,
-                               Default out_of_bounds)
+template <unsigned int BlockSize,
+          class InputIterator,
+          class T,
+          unsigned int ItemsPerThread,
+          class Default>
+ROCPRIM_DEVICE inline void block_load_direct_striped(unsigned int  flat_id,
+                                                     InputIterator block_input,
+                                                     T (&items)[ItemsPerThread],
+                                                     unsigned int valid,
+                                                     Default      out_of_bounds)
 {
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         items[item] = out_of_bounds;
     }
@@ -366,27 +325,24 @@ void block_load_direct_striped(unsigned int flat_id,
 /// \param flat_id - a local flat 1D thread id in a block (tile) for the calling thread
 /// \param block_input - the input iterator from the thread block to load from
 /// \param items - array that data is loaded to
-template<
-    unsigned int WarpSize = warp_size(),
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-void block_load_direct_warp_striped(unsigned int flat_id,
-                                    InputIterator block_input,
-                                    T (&items)[ItemsPerThread])
+template <unsigned int WarpSize = warp_size(),
+          class InputIterator,
+          class T,
+          unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline void block_load_direct_warp_striped(unsigned int  flat_id,
+                                                          InputIterator block_input,
+                                                          T (&items)[ItemsPerThread])
 {
     static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= warp_size(),
-                 "WarpSize must be a power of two and equal or less"
-                 "than the size of hardware warp.");
-    unsigned int thread_id = detail::logical_lane_id<WarpSize>();
-    unsigned int warp_id = flat_id / WarpSize;
+                  "WarpSize must be a power of two and equal or less"
+                  "than the size of hardware warp.");
+    unsigned int thread_id   = detail::logical_lane_id<WarpSize>();
+    unsigned int warp_id     = flat_id / WarpSize;
     unsigned int warp_offset = warp_id * WarpSize * ItemsPerThread;
 
     InputIterator thread_iter = block_input + thread_id + warp_offset;
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         items[item] = thread_iter[item * WarpSize];
     }
@@ -417,31 +373,28 @@ void block_load_direct_warp_striped(unsigned int flat_id,
 /// \param block_input - the input iterator from the thread block to load from
 /// \param items - array that data is loaded to
 /// \param valid - maximum range of valid numbers to load
-template<
-    unsigned int WarpSize = warp_size(),
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread
->
-ROCPRIM_DEVICE inline
-void block_load_direct_warp_striped(unsigned int flat_id,
-                                    InputIterator block_input,
-                                    T (&items)[ItemsPerThread],
-                                    unsigned int valid)
+template <unsigned int WarpSize = warp_size(),
+          class InputIterator,
+          class T,
+          unsigned int ItemsPerThread>
+ROCPRIM_DEVICE inline void block_load_direct_warp_striped(unsigned int  flat_id,
+                                                          InputIterator block_input,
+                                                          T (&items)[ItemsPerThread],
+                                                          unsigned int valid)
 {
     static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= warp_size(),
-                 "WarpSize must be a power of two and equal or less"
-                 "than the size of hardware warp.");
-    unsigned int thread_id = detail::logical_lane_id<WarpSize>();
-    unsigned int warp_id = flat_id / WarpSize;
+                  "WarpSize must be a power of two and equal or less"
+                  "than the size of hardware warp.");
+    unsigned int thread_id   = detail::logical_lane_id<WarpSize>();
+    unsigned int warp_id     = flat_id / WarpSize;
     unsigned int warp_offset = warp_id * WarpSize * ItemsPerThread;
 
     InputIterator thread_iter = block_input + thread_id + warp_offset;
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         unsigned int offset = item * WarpSize;
-        if (warp_offset + thread_id + offset < valid)
+        if(warp_offset + thread_id + offset < valid)
         {
             items[item] = thread_iter[offset];
         }
@@ -476,25 +429,22 @@ void block_load_direct_warp_striped(unsigned int flat_id,
 /// \param items - array that data is loaded to
 /// \param valid - maximum range of valid numbers to load
 /// \param out_of_bounds - default value assigned to out-of-bound items
-template<
-    unsigned int WarpSize = warp_size(),
-    class InputIterator,
-    class T,
-    unsigned int ItemsPerThread,
-    class Default
->
-ROCPRIM_DEVICE inline
-void block_load_direct_warp_striped(unsigned int flat_id,
-                                    InputIterator block_input,
-                                    T (&items)[ItemsPerThread],
-                                    unsigned int valid,
-                                    Default out_of_bounds)
+template <unsigned int WarpSize = warp_size(),
+          class InputIterator,
+          class T,
+          unsigned int ItemsPerThread,
+          class Default>
+ROCPRIM_DEVICE inline void block_load_direct_warp_striped(unsigned int  flat_id,
+                                                          InputIterator block_input,
+                                                          T (&items)[ItemsPerThread],
+                                                          unsigned int valid,
+                                                          Default      out_of_bounds)
 {
     static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= warp_size(),
-                 "WarpSize must be a power of two and equal or less"
-                 "than the size of hardware warp.");
-    #pragma unroll
-    for (unsigned int item = 0; item < ItemsPerThread; item++)
+                  "WarpSize must be a power of two and equal or less"
+                  "than the size of hardware warp.");
+#pragma unroll
+    for(unsigned int item = 0; item < ItemsPerThread; item++)
     {
         items[item] = out_of_bounds;
     }

@@ -21,8 +21,8 @@
 #ifndef TEST_SEED_HPP_
 #define TEST_SEED_HPP_
 
-static constexpr int random_seeds_count = 1;
-static constexpr unsigned int seeds [] = {0, 1997132004};
-static constexpr size_t seed_size = sizeof(seeds) / sizeof(seeds[0]);
+static constexpr int          random_seeds_count = 1;
+static constexpr unsigned int seeds[]            = {0, 1997132004};
+static constexpr size_t       seed_size          = sizeof(seeds) / sizeof(seeds[0]);
 
 #endif // TEST_SEED_HPP_

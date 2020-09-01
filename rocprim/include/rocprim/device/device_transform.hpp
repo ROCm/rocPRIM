@@ -21,17 +21,17 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_TRANSFORM_HPP_
 #define ROCPRIM_DEVICE_DEVICE_TRANSFORM_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "../config.hpp"
-#include "../detail/various.hpp"
 #include "../detail/match_result_type.hpp"
-#include "../types/tuple.hpp"
+#include "../detail/various.hpp"
 #include "../iterator/zip_iterator.hpp"
+#include "../types/tuple.hpp"
 
-#include "device_transform_config.hpp"
 #include "detail/device_transform.hpp"
+#include "device_transform_config.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -41,39 +41,34 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class ResultType,
-    class InputIterator,
-    class OutputIterator,
-    class UnaryFunction
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void transform_kernel(InputIterator input,
-                      const size_t size,
-                      OutputIterator output,
-                      UnaryFunction transform_op)
-{
-    transform_kernel_impl<BlockSize, ItemsPerThread, ResultType>(
-        input, size, output, transform_op
-    );
-}
+    template <unsigned int BlockSize,
+              unsigned int ItemsPerThread,
+              class ResultType,
+              class InputIterator,
+              class OutputIterator,
+              class UnaryFunction>
+    __global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void transform_kernel(
+        InputIterator input, const size_t size, OutputIterator output, UnaryFunction transform_op)
+    {
+        transform_kernel_impl<BlockSize, ItemsPerThread, ResultType>(
+            input, size, output, transform_op);
+    }
 
-#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start) \
-    { \
-        auto error = hipPeekAtLastError(); \
-        if(error != hipSuccess) return error; \
-        if(debug_synchronous) \
-        { \
-            std::cout << name << "(" << size << ")"; \
-            auto error = hipStreamSynchronize(stream); \
-            if(error != hipSuccess) return error; \
-            auto end = std::chrono::high_resolution_clock::now(); \
-            auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-            std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-        } \
+#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                         \
+    {                                                                                          \
+        auto error = hipPeekAtLastError();                                                     \
+        if(error != hipSuccess)                                                                \
+            return error;                                                                      \
+        if(debug_synchronous)                                                                  \
+        {                                                                                      \
+            std::cout << name << "(" << size << ")";                                           \
+            auto error = hipStreamSynchronize(stream);                                         \
+            if(error != hipSuccess)                                                            \
+                return error;                                                                  \
+            auto end = std::chrono::high_resolution_clock::now();                              \
+            auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+            std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+        }                                                                                      \
     }
 
 } // end of detail namespace
@@ -132,37 +127,33 @@ void transform_kernel(InputIterator input,
 /// // output: [6, 7, 8, 9, 10, 11, 12, 13]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class OutputIterator,
-    class UnaryFunction
->
-inline
-hipError_t transform(InputIterator input,
-                     OutputIterator output,
-                     const size_t size,
-                     UnaryFunction transform_op,
-                     const hipStream_t stream = 0,
-                     bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class OutputIterator,
+          class UnaryFunction>
+inline hipError_t transform(InputIterator     input,
+                            OutputIterator    output,
+                            const size_t      size,
+                            UnaryFunction     transform_op,
+                            const hipStream_t stream            = 0,
+                            bool              debug_synchronous = false)
 {
-    using input_type = typename std::iterator_traits<InputIterator>::value_type;
+    using input_type  = typename std::iterator_traits<InputIterator>::value_type;
     using result_type = typename ::rocprim::detail::invoke_result<UnaryFunction, input_type>::type;
 
     // Get default config if Config is default_config
     using config = detail::default_or_custom_config<
         Config,
-        detail::default_transform_config<ROCPRIM_TARGET_ARCH, result_type>
-    >;
+        detail::default_transform_config<ROCPRIM_TARGET_ARCH, result_type>>;
 
-    constexpr unsigned int block_size = config::block_size;
+    constexpr unsigned int block_size       = config::block_size;
     constexpr unsigned int items_per_thread = config::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
+    constexpr auto         items_per_block  = block_size * items_per_thread;
 
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
-    auto number_of_blocks = (size + items_per_block - 1)/items_per_block;
+    auto number_of_blocks = (size + items_per_block - 1) / items_per_block;
     if(debug_synchronous)
     {
         std::cout << "block_size " << block_size << '\n';
@@ -170,15 +161,22 @@ hipError_t transform(InputIterator input,
         std::cout << "items_per_block " << items_per_block << '\n';
     }
 
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(detail::transform_kernel<
-            block_size, items_per_thread, result_type,
-            InputIterator, OutputIterator, UnaryFunction
-        >),
-        dim3(number_of_blocks), dim3(block_size), 0, stream,
-        input, size, output, transform_op
-    );
+    if(debug_synchronous)
+        start = std::chrono::high_resolution_clock::now();
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(detail::transform_kernel<block_size,
+                                                                items_per_thread,
+                                                                result_type,
+                                                                InputIterator,
+                                                                OutputIterator,
+                                                                UnaryFunction>),
+                       dim3(number_of_blocks),
+                       dim3(block_size),
+                       0,
+                       stream,
+                       input,
+                       size,
+                       output,
+                       transform_op);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("transform_kernel", size, start);
 
     return hipSuccess;
@@ -242,29 +240,28 @@ hipError_t transform(InputIterator input,
 /// // output: [2, 4, 6, 8, 10, 12, 14, 16]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator1,
-    class InputIterator2,
-    class OutputIterator,
-    class BinaryFunction
->
-inline
-hipError_t transform(InputIterator1 input1,
-                     InputIterator2 input2,
-                     OutputIterator output,
-                     const size_t size,
-                     BinaryFunction transform_op,
-                     const hipStream_t stream = 0,
-                     bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator1,
+          class InputIterator2,
+          class OutputIterator,
+          class BinaryFunction>
+inline hipError_t transform(InputIterator1    input1,
+                            InputIterator2    input2,
+                            OutputIterator    output,
+                            const size_t      size,
+                            BinaryFunction    transform_op,
+                            const hipStream_t stream            = 0,
+                            bool              debug_synchronous = false)
 {
     using value_type1 = typename std::iterator_traits<InputIterator1>::value_type;
     using value_type2 = typename std::iterator_traits<InputIterator2>::value_type;
     return transform<Config>(
-        ::rocprim::make_zip_iterator(::rocprim::make_tuple(input1, input2)), output,
-        size, detail::unpack_binary_op<value_type1, value_type2, BinaryFunction>(transform_op),
-        stream, debug_synchronous
-    );
+        ::rocprim::make_zip_iterator(::rocprim::make_tuple(input1, input2)),
+        output,
+        size,
+        detail::unpack_binary_op<value_type1, value_type2, BinaryFunction>(transform_op),
+        stream,
+        debug_synchronous);
 }
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR

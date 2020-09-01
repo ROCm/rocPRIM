@@ -23,44 +23,42 @@
 #include "common_test_header.hpp"
 
 // required rocprim headers
-#include <rocprim/iterator/texture_cache_iterator.hpp>
 #include <rocprim/device/device_transform.hpp>
+#include <rocprim/iterator/texture_cache_iterator.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
 
 // Params for tests
-template<class InputType>
+template <class InputType>
 struct RocprimTextureCacheIteratorParams
 {
     using input_type = InputType;
 };
 
-template<class Params>
+template <class Params>
 class RocprimTextureCacheIteratorTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
+    using input_type             = typename Params::input_type;
     const bool debug_synchronous = false;
 };
 
-typedef ::testing::Types<
-    RocprimTextureCacheIteratorParams<int>,
-    RocprimTextureCacheIteratorParams<unsigned int>,
-    RocprimTextureCacheIteratorParams<unsigned char>,
-    RocprimTextureCacheIteratorParams<float>,
-    RocprimTextureCacheIteratorParams<unsigned long long>,
-    RocprimTextureCacheIteratorParams<test_utils::custom_test_type<int>>,
-    RocprimTextureCacheIteratorParams<test_utils::custom_test_type<float>>
-> RocprimTextureCacheIteratorTestsParams;
+typedef ::testing::Types<RocprimTextureCacheIteratorParams<int>,
+                         RocprimTextureCacheIteratorParams<unsigned int>,
+                         RocprimTextureCacheIteratorParams<unsigned char>,
+                         RocprimTextureCacheIteratorParams<float>,
+                         RocprimTextureCacheIteratorParams<unsigned long long>,
+                         RocprimTextureCacheIteratorParams<test_utils::custom_test_type<int>>,
+                         RocprimTextureCacheIteratorParams<test_utils::custom_test_type<float>>>
+    RocprimTextureCacheIteratorTestsParams;
 
 TYPED_TEST_CASE(RocprimTextureCacheIteratorTests, RocprimTextureCacheIteratorTestsParams);
 
-template<class T>
+template <class T>
 struct transform
 {
-    __device__ __host__
-    constexpr T operator()(const T& a) const
+    __device__ __host__ constexpr T operator()(const T& a) const
     {
         return a + 5;
     }
@@ -71,9 +69,9 @@ TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
-    
-    using T = typename TestFixture::input_type;
-    using Iterator = typename rocprim::texture_cache_iterator<T>;
+
+    using T                      = typename TestFixture::input_type;
+    using Iterator               = typename rocprim::texture_cache_iterator<T>;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     const size_t size = 1024;
@@ -82,9 +80,10 @@ TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
 
     std::vector<T> input(size);
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         for(size_t i = 0; i < size; i++)
@@ -93,17 +92,12 @@ TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
         }
 
         std::vector<T> output(size);
-        T * d_input;
-        T * d_output;
+        T*             d_input;
+        T*             d_output;
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(T)));
         HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
         HIP_CHECK(hipDeviceSynchronize());
 
         Iterator x;
@@ -111,31 +105,16 @@ TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
 
         // Calculate expected results on host
         std::vector<T> expected(size);
-        std::transform(
-            input.begin(),
-            input.end(),
-            expected.begin(),
-            transform<T>()
-        );
+        std::transform(input.begin(), input.end(), expected.begin(), transform<T>());
 
         // Run
-        HIP_CHECK(
-            rocprim::transform(
-                x, d_output, size,
-                transform<T>(), stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::transform(x, d_output, size, transform<T>(), stream, debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Copy output to host
         HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+            hipMemcpy(output.data(), d_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
         HIP_CHECK(hipDeviceSynchronize());
 
         // Validating results

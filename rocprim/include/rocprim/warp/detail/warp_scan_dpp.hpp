@@ -34,226 +34,230 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    class T,
-    unsigned int WarpSize
->
-class warp_scan_dpp
-{
-public:
-    static_assert(detail::is_power_of_two(WarpSize), "WarpSize must be power of 2");
-
-    using storage_type = detail::empty_storage_type;
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void inclusive_scan(T input, T& output, BinaryFunction scan_op)
+    template <class T, unsigned int WarpSize>
+    class warp_scan_dpp
     {
-        const unsigned int lane_id = ::rocprim::lane_id();
-        const unsigned int row_lane_id = lane_id % ::rocprim::min(16u, WarpSize);
+    public:
+        static_assert(detail::is_power_of_two(WarpSize), "WarpSize must be power of 2");
 
-        output = input;
+        using storage_type = detail::empty_storage_type;
 
-        if(WarpSize > 1)
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void inclusive_scan(T input, T& output, BinaryFunction scan_op)
         {
-            T t = scan_op(warp_move_dpp<T, 0x111>(output), output); // row_shr:1
-            if(row_lane_id >= 1) output = t;
+            const unsigned int lane_id     = ::rocprim::lane_id();
+            const unsigned int row_lane_id = lane_id % ::rocprim::min(16u, WarpSize);
+
+            output = input;
+
+            if(WarpSize > 1)
+            {
+                T t = scan_op(warp_move_dpp<T, 0x111>(output), output); // row_shr:1
+                if(row_lane_id >= 1)
+                    output = t;
+            }
+            if(WarpSize > 2)
+            {
+                T t = scan_op(warp_move_dpp<T, 0x112>(output), output); // row_shr:2
+                if(row_lane_id >= 2)
+                    output = t;
+            }
+            if(WarpSize > 4)
+            {
+                T t = scan_op(warp_move_dpp<T, 0x114>(output), output); // row_shr:4
+                if(row_lane_id >= 4)
+                    output = t;
+            }
+            if(WarpSize > 8)
+            {
+                T t = scan_op(warp_move_dpp<T, 0x118>(output), output); // row_shr:8
+                if(row_lane_id >= 8)
+                    output = t;
+            }
+            if(WarpSize > 16)
+            {
+                T t = scan_op(warp_move_dpp<T, 0x142>(output), output); // row_bcast:15
+                if(lane_id % 32 >= 16)
+                    output = t;
+            }
+            if(WarpSize > 32)
+            {
+                T t = scan_op(warp_move_dpp<T, 0x143>(output), output); // row_bcast:31
+                if(lane_id >= 32)
+                    output = t;
+            }
         }
-        if(WarpSize > 2)
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void
+            inclusive_scan(T input, T& output, storage_type& storage, BinaryFunction scan_op)
         {
-            T t = scan_op(warp_move_dpp<T, 0x112>(output), output); // row_shr:2
-            if(row_lane_id >= 2) output = t;
+            (void)storage; // disables unused parameter warning
+            inclusive_scan(input, output, scan_op);
         }
-        if(WarpSize > 4)
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void
+            inclusive_scan(T input, T& output, T& reduction, BinaryFunction scan_op)
         {
-            T t = scan_op(warp_move_dpp<T, 0x114>(output), output); // row_shr:4
-            if(row_lane_id >= 4) output = t;
+            inclusive_scan(input, output, scan_op);
+            // Broadcast value from the last thread in warp
+            reduction = warp_shuffle(output, WarpSize - 1, WarpSize);
         }
-        if(WarpSize > 8)
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void inclusive_scan(
+            T input, T& output, T& reduction, storage_type& storage, BinaryFunction scan_op)
         {
-            T t = scan_op(warp_move_dpp<T, 0x118>(output), output); // row_shr:8
-            if(row_lane_id >= 8) output = t;
+            (void)storage;
+            inclusive_scan(input, output, reduction, scan_op);
         }
-        if(WarpSize > 16)
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void
+            exclusive_scan(T input, T& output, T init, BinaryFunction scan_op)
         {
-            T t = scan_op(warp_move_dpp<T, 0x142>(output), output); // row_bcast:15
-            if(lane_id % 32 >= 16) output = t;
+            inclusive_scan(input, output, scan_op);
+            // Convert inclusive scan result to exclusive
+            to_exclusive(output, output, init, scan_op);
         }
-        if(WarpSize > 32)
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void exclusive_scan(
+            T input, T& output, T init, storage_type& storage, BinaryFunction scan_op)
         {
-            T t = scan_op(warp_move_dpp<T, 0x143>(output), output); // row_bcast:31
-            if(lane_id >= 32) output = t;
+            (void)storage; // disables unused parameter warning
+            exclusive_scan(input, output, init, scan_op);
         }
-    }
 
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void inclusive_scan(T input, T& output,
-                        storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage; // disables unused parameter warning
-        inclusive_scan(input, output, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void inclusive_scan(T input, T& output, T& reduction,
-                        BinaryFunction scan_op)
-    {
-        inclusive_scan(input, output, scan_op);
-        // Broadcast value from the last thread in warp
-        reduction = warp_shuffle(output, WarpSize-1, WarpSize);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void inclusive_scan(T input, T& output, T& reduction,
-                        storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage;
-        inclusive_scan(input, output, reduction, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void exclusive_scan(T input, T& output, T init, BinaryFunction scan_op)
-    {
-        inclusive_scan(input, output, scan_op);
-        // Convert inclusive scan result to exclusive
-        to_exclusive(output, output, init, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void exclusive_scan(T input, T& output, T init,
-                        storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage; // disables unused parameter warning
-        exclusive_scan(input, output, init, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void exclusive_scan(T input, T& output,
-                        storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage; // disables unused parameter warning
-        inclusive_scan(input, output, scan_op);
-        // Convert inclusive scan result to exclusive
-        to_exclusive(output, output);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void exclusive_scan(T input, T& output, T init, T& reduction,
-                        BinaryFunction scan_op)
-    {
-        inclusive_scan(input, output, scan_op);
-        // Broadcast value from the last thread in warp
-        reduction = warp_shuffle(output, WarpSize-1, WarpSize);
-        // Convert inclusive scan result to exclusive
-        to_exclusive(output, output, init, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void exclusive_scan(T input, T& output, T init, T& reduction,
-                        storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage;
-        exclusive_scan(input, output, init, reduction, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void scan(T input, T& inclusive_output, T& exclusive_output, T init,
-              BinaryFunction scan_op)
-    {
-        inclusive_scan(input, inclusive_output, scan_op);
-        // Convert inclusive scan result to exclusive
-        to_exclusive(inclusive_output, exclusive_output, init, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void scan(T input, T& inclusive_output, T& exclusive_output, T init,
-              storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage; // disables unused parameter warning
-        scan(input, inclusive_output, exclusive_output, init, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void scan(T input, T& inclusive_output, T& exclusive_output,
-              storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage; // disables unused parameter warning
-        inclusive_scan(input, inclusive_output, scan_op);
-        // Convert inclusive scan result to exclusive
-        to_exclusive(inclusive_output, exclusive_output);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void scan(T input, T& inclusive_output, T& exclusive_output, T init, T& reduction,
-              BinaryFunction scan_op)
-    {
-        inclusive_scan(input, inclusive_output, scan_op);
-        // Broadcast value from the last thread in warp
-        reduction = warp_shuffle(inclusive_output, WarpSize-1, WarpSize);
-        // Convert inclusive scan result to exclusive
-        to_exclusive(inclusive_output, exclusive_output, init, scan_op);
-    }
-
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void scan(T input, T& inclusive_output, T& exclusive_output, T init, T& reduction,
-              storage_type& storage, BinaryFunction scan_op)
-    {
-        (void) storage;
-        scan(input, inclusive_output, exclusive_output, init, reduction, scan_op);
-    }
-
-    ROCPRIM_DEVICE inline
-    T broadcast(T input, const unsigned int src_lane, storage_type& storage)
-    {
-        (void) storage;
-        return warp_shuffle(input, src_lane, WarpSize);
-    }
-
-protected:
-    ROCPRIM_DEVICE inline
-    void to_exclusive(T inclusive_input, T& exclusive_output, storage_type& storage)
-    {
-        (void) storage;
-        return to_exclusive(inclusive_input, exclusive_output);
-    }
-
-private:
-    // Changes inclusive scan results to exclusive scan results
-    template<class BinaryFunction>
-    ROCPRIM_DEVICE inline
-    void to_exclusive(T inclusive_input, T& exclusive_output, T init,
-                      BinaryFunction scan_op)
-    {
-        // include init value in scan results
-        exclusive_output = scan_op(init, inclusive_input);
-        // get exclusive results
-        exclusive_output = warp_shuffle_up(exclusive_output, 1, WarpSize);
-        if(detail::logical_lane_id<WarpSize>() == 0)
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void
+            exclusive_scan(T input, T& output, storage_type& storage, BinaryFunction scan_op)
         {
-            exclusive_output = init;
+            (void)storage; // disables unused parameter warning
+            inclusive_scan(input, output, scan_op);
+            // Convert inclusive scan result to exclusive
+            to_exclusive(output, output);
         }
-    }
 
-    ROCPRIM_DEVICE inline
-    void to_exclusive(T inclusive_input, T& exclusive_output)
-    {
-        // shift to get exclusive results
-        exclusive_output = warp_shuffle_up(inclusive_input, 1, WarpSize);
-    }
-};
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void
+            exclusive_scan(T input, T& output, T init, T& reduction, BinaryFunction scan_op)
+        {
+            inclusive_scan(input, output, scan_op);
+            // Broadcast value from the last thread in warp
+            reduction = warp_shuffle(output, WarpSize - 1, WarpSize);
+            // Convert inclusive scan result to exclusive
+            to_exclusive(output, output, init, scan_op);
+        }
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void exclusive_scan(
+            T input, T& output, T init, T& reduction, storage_type& storage, BinaryFunction scan_op)
+        {
+            (void)storage;
+            exclusive_scan(input, output, init, reduction, scan_op);
+        }
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void
+            scan(T input, T& inclusive_output, T& exclusive_output, T init, BinaryFunction scan_op)
+        {
+            inclusive_scan(input, inclusive_output, scan_op);
+            // Convert inclusive scan result to exclusive
+            to_exclusive(inclusive_output, exclusive_output, init, scan_op);
+        }
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void scan(T              input,
+                                        T&             inclusive_output,
+                                        T&             exclusive_output,
+                                        T              init,
+                                        storage_type&  storage,
+                                        BinaryFunction scan_op)
+        {
+            (void)storage; // disables unused parameter warning
+            scan(input, inclusive_output, exclusive_output, init, scan_op);
+        }
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void scan(T              input,
+                                        T&             inclusive_output,
+                                        T&             exclusive_output,
+                                        storage_type&  storage,
+                                        BinaryFunction scan_op)
+        {
+            (void)storage; // disables unused parameter warning
+            inclusive_scan(input, inclusive_output, scan_op);
+            // Convert inclusive scan result to exclusive
+            to_exclusive(inclusive_output, exclusive_output);
+        }
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void scan(T              input,
+                                        T&             inclusive_output,
+                                        T&             exclusive_output,
+                                        T              init,
+                                        T&             reduction,
+                                        BinaryFunction scan_op)
+        {
+            inclusive_scan(input, inclusive_output, scan_op);
+            // Broadcast value from the last thread in warp
+            reduction = warp_shuffle(inclusive_output, WarpSize - 1, WarpSize);
+            // Convert inclusive scan result to exclusive
+            to_exclusive(inclusive_output, exclusive_output, init, scan_op);
+        }
+
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void scan(T              input,
+                                        T&             inclusive_output,
+                                        T&             exclusive_output,
+                                        T              init,
+                                        T&             reduction,
+                                        storage_type&  storage,
+                                        BinaryFunction scan_op)
+        {
+            (void)storage;
+            scan(input, inclusive_output, exclusive_output, init, reduction, scan_op);
+        }
+
+        ROCPRIM_DEVICE inline T
+            broadcast(T input, const unsigned int src_lane, storage_type& storage)
+        {
+            (void)storage;
+            return warp_shuffle(input, src_lane, WarpSize);
+        }
+
+    protected:
+        ROCPRIM_DEVICE inline void
+            to_exclusive(T inclusive_input, T& exclusive_output, storage_type& storage)
+        {
+            (void)storage;
+            return to_exclusive(inclusive_input, exclusive_output);
+        }
+
+    private:
+        // Changes inclusive scan results to exclusive scan results
+        template <class BinaryFunction>
+        ROCPRIM_DEVICE inline void
+            to_exclusive(T inclusive_input, T& exclusive_output, T init, BinaryFunction scan_op)
+        {
+            // include init value in scan results
+            exclusive_output = scan_op(init, inclusive_input);
+            // get exclusive results
+            exclusive_output = warp_shuffle_up(exclusive_output, 1, WarpSize);
+            if(detail::logical_lane_id<WarpSize>() == 0)
+            {
+                exclusive_output = init;
+            }
+        }
+
+        ROCPRIM_DEVICE inline void to_exclusive(T inclusive_input, T& exclusive_output)
+        {
+            // shift to get exclusive results
+            exclusive_output = warp_shuffle_up(inclusive_input, 1, WarpSize);
+        }
+    };
 
 } // end namespace detail
 

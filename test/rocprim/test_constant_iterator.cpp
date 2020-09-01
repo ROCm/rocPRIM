@@ -23,41 +23,39 @@
 #include "common_test_header.hpp"
 
 // required rocprim headers
-#include <rocprim/iterator/constant_iterator.hpp>
 #include <rocprim/device/device_transform.hpp>
+#include <rocprim/iterator/constant_iterator.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
 
 // Params for tests
-template<class InputType>
+template <class InputType>
 struct RocprimConstantIteratorParams
 {
     using input_type = InputType;
 };
 
-template<class Params>
+template <class Params>
 class RocprimConstantIteratorTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
+    using input_type             = typename Params::input_type;
     const bool debug_synchronous = false;
 };
 
-typedef ::testing::Types<
-    RocprimConstantIteratorParams<int>,
-    RocprimConstantIteratorParams<unsigned int>,
-    RocprimConstantIteratorParams<unsigned long>,
-    RocprimConstantIteratorParams<float>
-> RocprimConstantIteratorTestsParams;
+typedef ::testing::Types<RocprimConstantIteratorParams<int>,
+                         RocprimConstantIteratorParams<unsigned int>,
+                         RocprimConstantIteratorParams<unsigned long>,
+                         RocprimConstantIteratorParams<float>>
+    RocprimConstantIteratorTestsParams;
 
 TYPED_TEST_CASE(RocprimConstantIteratorTests, RocprimConstantIteratorTestsParams);
 
-template<class T>
+template <class T>
 struct transform
 {
-    __device__ __host__
-    constexpr T operator()(const T& a) const
+    __device__ __host__ constexpr T operator()(const T& a) const
     {
         return 5 + a;
     }
@@ -68,26 +66,27 @@ TYPED_TEST(RocprimConstantIteratorTests, Transform)
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
-    
-    using T = typename TestFixture::input_type;
-    using Iterator = typename rocprim::constant_iterator<T>;
+
+    using T                      = typename TestFixture::input_type;
+    using Iterator               = typename rocprim::constant_iterator<T>;
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     const size_t size = 1024;
 
     hipStream_t stream = 0; // default
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Create constant_iterator<U> with random starting point
         const auto value = test_utils::get_random_value<T>(0, 200, seed_value);
-        Iterator input_begin(value);
+        Iterator   input_begin(value);
 
         std::vector<T> output(size);
-        T * d_output;
+        T*             d_output;
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(T)));
         HIP_CHECK(hipDeviceSynchronize());
 
@@ -95,23 +94,14 @@ TYPED_TEST(RocprimConstantIteratorTests, Transform)
         std::vector<T> expected(size, transform<T>()(value));
 
         // Run
-        HIP_CHECK(
-            rocprim::transform(
-                input_begin, d_output, size,
-                transform<T>(), stream, debug_synchronous
-            )
-        );
+        HIP_CHECK(rocprim::transform(
+            input_begin, d_output, size, transform<T>(), stream, debug_synchronous));
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Copy output to host
         HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+            hipMemcpy(output.data(), d_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
         HIP_CHECK(hipDeviceSynchronize());
 
         // Validating results
@@ -123,12 +113,12 @@ TYPED_TEST(RocprimConstantIteratorTests, Transform)
             }
             else if(std::is_floating_point<T>::value)
             {
-                auto tolerance = std::max<T>(std::abs(0.1f * expected[i]), T(test_utils::precision_threshold<T>::percentage));
+                auto tolerance = std::max<T>(std::abs(0.1f * expected[i]),
+                                             T(test_utils::precision_threshold<T>::percentage));
                 ASSERT_NEAR(output[i], expected[i], tolerance) << "where index = " << i;
             }
         }
 
         hipFree(d_output);
     }
-
 }

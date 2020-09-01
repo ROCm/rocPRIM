@@ -26,8 +26,8 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "../intrinsics.hpp"
 #include "../functional.hpp"
+#include "../intrinsics.hpp"
 
 #include "detail/warp_sort_shuffle.hpp"
 
@@ -91,11 +91,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class Key,
-    unsigned int WarpSize = warp_size(),
-    class Value = empty_type
->
+template <class Key, unsigned int WarpSize = warp_size(), class Value = empty_type>
 class warp_sort : detail::warp_sort_shuffle<Key, WarpSize, Value>
 {
     typedef typename detail::warp_sort_shuffle<Key, WarpSize, Value> base_type;
@@ -124,10 +120,9 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, compare_function);
     }
@@ -160,15 +155,12 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              storage_type& storage,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    storage_type&  storage,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
-        base_type::sort(
-            thread_key, storage, compare_function
-        );
+        base_type::sort(thread_key, storage, compare_function);
     }
 
     /// \brief Warp sort by key for any data type.
@@ -182,15 +174,12 @@ public:
     /// The signature of the function should be equivalent to the following:
     /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              Value& thread_value,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    Value&         thread_value,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
-        base_type::sort(
-            thread_key, thread_value, compare_function
-        );
+        base_type::sort(thread_key, thread_value, compare_function);
     }
 
     /// \brief Warp sort by key for any data type using temporary storage.
@@ -222,16 +211,13 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class BinaryFunction = ::rocprim::less<Key>>
-    ROCPRIM_DEVICE inline
-    void sort(Key& thread_key,
-              Value& thread_value,
-              storage_type& storage,
-              BinaryFunction compare_function = BinaryFunction())
+    template <class BinaryFunction = ::rocprim::less<Key>>
+    ROCPRIM_DEVICE inline void sort(Key&           thread_key,
+                                    Value&         thread_value,
+                                    storage_type&  storage,
+                                    BinaryFunction compare_function = BinaryFunction())
     {
-        base_type::sort(
-            thread_key, thread_value, storage, compare_function
-        );
+        base_type::sort(thread_key, thread_value, storage, compare_function);
     }
 };
 

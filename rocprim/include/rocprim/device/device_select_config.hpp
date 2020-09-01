@@ -43,13 +43,11 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam ValueBlockLoadMethod - method for loading input values.
 /// \tparam FlagBlockLoadMethod - method for loading flag values.
 /// \tparam BlockScanMethod - algorithm for block scan.
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    ::rocprim::block_load_method ValueBlockLoadMethod,
-    ::rocprim::block_load_method FlagBlockLoadMethod,
-    ::rocprim::block_scan_algorithm BlockScanMethod
->
+template <unsigned int                    BlockSize,
+          unsigned int                    ItemsPerThread,
+          ::rocprim::block_load_method    ValueBlockLoadMethod,
+          ::rocprim::block_load_method    FlagBlockLoadMethod,
+          ::rocprim::block_scan_algorithm BlockScanMethod>
 struct select_config
 {
     /// \brief Number of threads in a block.
@@ -67,44 +65,39 @@ struct select_config
 namespace detail
 {
 
-template<class Value>
-struct select_config_803
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+    template <class Value>
+    struct select_config_803
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = select_config<
-        limit_block_size<256U, sizeof(Value)>::value,
-        ::rocprim::max(1u, 13u / item_scale),
-        ::rocprim::block_load_method::block_load_transpose,
-        ::rocprim::block_load_method::block_load_transpose,
-        ::rocprim::block_scan_algorithm::using_warp_scan
-    >;
-};
+        using type = select_config<limit_block_size<256U, sizeof(Value)>::value,
+                                   ::rocprim::max(1u, 13u / item_scale),
+                                   ::rocprim::block_load_method::block_load_transpose,
+                                   ::rocprim::block_load_method::block_load_transpose,
+                                   ::rocprim::block_scan_algorithm::using_warp_scan>;
+    };
 
-template<class Value>
-struct select_config_900
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+    template <class Value>
+    struct select_config_900
+    {
+        static constexpr unsigned int item_scale
+            = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = select_config<
-        limit_block_size<256U, sizeof(Value)>::value,
-        ::rocprim::max(1u, 15u / item_scale),
-        ::rocprim::block_load_method::block_load_transpose,
-        ::rocprim::block_load_method::block_load_transpose,
-        ::rocprim::block_scan_algorithm::using_warp_scan
-    >;
-};
+        using type = select_config<limit_block_size<256U, sizeof(Value)>::value,
+                                   ::rocprim::max(1u, 15u / item_scale),
+                                   ::rocprim::block_load_method::block_load_transpose,
+                                   ::rocprim::block_load_method::block_load_transpose,
+                                   ::rocprim::block_scan_algorithm::using_warp_scan>;
+    };
 
-template<unsigned int TargetArch, class Value>
-struct default_select_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, select_config_803<Value>>,
-        select_arch_case<900, select_config_900<Value>>,
-        select_config_803<Value>
-    > { };
+    template <unsigned int TargetArch, class Value>
+    struct default_select_config : select_arch<TargetArch,
+                                               select_arch_case<803, select_config_803<Value>>,
+                                               select_arch_case<900, select_config_900<Value>>,
+                                               select_config_803<Value>>
+    {
+    };
 
 } // end namespace detail
 

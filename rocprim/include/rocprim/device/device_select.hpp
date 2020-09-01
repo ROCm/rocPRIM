@@ -21,17 +21,17 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_SELECT_HPP_
 #define ROCPRIM_DEVICE_DEVICE_SELECT_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "../config.hpp"
-#include "../detail/various.hpp"
 #include "../detail/binary_op_wrappers.hpp"
+#include "../detail/various.hpp"
 
 #include "../iterator/transform_iterator.hpp"
 
-#include "device_scan.hpp"
 #include "device_partition.hpp"
+#include "device_scan.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -41,18 +41,20 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start) \
-    { \
-        if(error != hipSuccess) return error; \
-        if(debug_synchronous) \
-        { \
-            std::cout << name << "(" << size << ")"; \
-            auto error = hipStreamSynchronize(stream); \
-            if(error != hipSuccess) return error; \
-            auto end = std::chrono::high_resolution_clock::now(); \
-            auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-            std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-        } \
+#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                         \
+    {                                                                                          \
+        if(error != hipSuccess)                                                                \
+            return error;                                                                      \
+        if(debug_synchronous)                                                                  \
+        {                                                                                      \
+            std::cout << name << "(" << size << ")";                                           \
+            auto error = hipStreamSynchronize(stream);                                         \
+            if(error != hipSuccess)                                                            \
+                return error;                                                                  \
+            auto end = std::chrono::high_resolution_clock::now();                              \
+            auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+            std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+        }                                                                                      \
     }
 
 } // end detail namespace
@@ -136,33 +138,37 @@ namespace detail
 /// // output_count: 4
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class FlagIterator,
-    class OutputIterator,
-    class SelectedCountOutputIterator
->
-inline
-hipError_t select(void * temporary_storage,
-                  size_t& storage_size,
-                  InputIterator input,
-                  FlagIterator flags,
-                  OutputIterator output,
-                  SelectedCountOutputIterator selected_count_output,
-                  const size_t size,
-                  const hipStream_t stream = 0,
-                  const bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class FlagIterator,
+          class OutputIterator,
+          class SelectedCountOutputIterator>
+inline hipError_t select(void*                       temporary_storage,
+                         size_t&                     storage_size,
+                         InputIterator               input,
+                         FlagIterator                flags,
+                         OutputIterator              output,
+                         SelectedCountOutputIterator selected_count_output,
+                         const size_t                size,
+                         const hipStream_t           stream            = 0,
+                         const bool                  debug_synchronous = false)
 {
     // Dummy unary predicate
     using unary_predicate_type = ::rocprim::empty_type;
     // Dummy inequality operation
     using inequality_op_type = ::rocprim::empty_type;
 
-    return detail::partition_impl<detail::select_method::flag, true, Config>(
-        temporary_storage, storage_size, input, flags, output, selected_count_output,
-        size, unary_predicate_type(), inequality_op_type(), stream, debug_synchronous
-    );
+    return detail::partition_impl<detail::select_method::flag, true, Config>(temporary_storage,
+                                                                             storage_size,
+                                                                             input,
+                                                                             flags,
+                                                                             output,
+                                                                             selected_count_output,
+                                                                             size,
+                                                                             unary_predicate_type(),
+                                                                             inequality_op_type(),
+                                                                             stream,
+                                                                             debug_synchronous);
 }
 
 /// \brief Parallel select primitive for device level using selection operator.
@@ -247,34 +253,39 @@ hipError_t select(void * temporary_storage,
 /// // output_count: 4
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class OutputIterator,
-    class SelectedCountOutputIterator,
-    class UnaryPredicate
->
-inline
-hipError_t select(void * temporary_storage,
-                  size_t& storage_size,
-                  InputIterator input,
-                  OutputIterator output,
-                  SelectedCountOutputIterator selected_count_output,
-                  const size_t size,
-                  UnaryPredicate predicate,
-                  const hipStream_t stream = 0,
-                  const bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class OutputIterator,
+          class SelectedCountOutputIterator,
+          class UnaryPredicate>
+inline hipError_t select(void*                       temporary_storage,
+                         size_t&                     storage_size,
+                         InputIterator               input,
+                         OutputIterator              output,
+                         SelectedCountOutputIterator selected_count_output,
+                         const size_t                size,
+                         UnaryPredicate              predicate,
+                         const hipStream_t           stream            = 0,
+                         const bool                  debug_synchronous = false)
 {
     // Dummy flag type
-    using flag_type = ::rocprim::empty_type;
-    flag_type * flags = nullptr;
+    using flag_type  = ::rocprim::empty_type;
+    flag_type* flags = nullptr;
     // Dummy inequality operation
     using inequality_op_type = ::rocprim::empty_type;
 
     return detail::partition_impl<detail::select_method::predicate, true, Config>(
-        temporary_storage, storage_size, input, flags, output, selected_count_output,
-        size, predicate, inequality_op_type(), stream, debug_synchronous
-    );
+        temporary_storage,
+        storage_size,
+        input,
+        flags,
+        output,
+        selected_count_output,
+        size,
+        predicate,
+        inequality_op_type(),
+        stream,
+        debug_synchronous);
 }
 
 /// \brief Device-level parallel unique primitive.
@@ -351,38 +362,44 @@ hipError_t select(void * temporary_storage,
 /// // output_count: 5
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class OutputIterator,
-    class UniqueCountOutputIterator,
-    class EqualityOp = ::rocprim::equal_to<typename std::iterator_traits<InputIterator>::value_type>
->
-inline
-hipError_t unique(void * temporary_storage,
-                  size_t& storage_size,
-                  InputIterator input,
-                  OutputIterator output,
-                  UniqueCountOutputIterator unique_count_output,
-                  const size_t size,
-                  EqualityOp equality_op = EqualityOp(),
-                  const hipStream_t stream = 0,
-                  const bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class OutputIterator,
+          class UniqueCountOutputIterator,
+          class EqualityOp
+          = ::rocprim::equal_to<typename std::iterator_traits<InputIterator>::value_type>>
+inline hipError_t unique(void*                     temporary_storage,
+                         size_t&                   storage_size,
+                         InputIterator             input,
+                         OutputIterator            output,
+                         UniqueCountOutputIterator unique_count_output,
+                         const size_t              size,
+                         EqualityOp                equality_op       = EqualityOp(),
+                         const hipStream_t         stream            = 0,
+                         const bool                debug_synchronous = false)
 {
     // Dummy unary predicate
     using unary_predicate_type = ::rocprim::empty_type;
 
     // Dummy flag type
-    using flag_type = ::rocprim::empty_type;
-    flag_type * flags = nullptr;
+    using flag_type  = ::rocprim::empty_type;
+    flag_type* flags = nullptr;
 
     // Convert equality operator to inequality operator
     auto inequality_op = detail::inequality_wrapper<EqualityOp>(equality_op);
 
     return detail::partition_impl<detail::select_method::unique, true, Config>(
-        temporary_storage, storage_size, input, flags, output, unique_count_output,
-        size, unary_predicate_type(), inequality_op, stream, debug_synchronous
-    );
+        temporary_storage,
+        storage_size,
+        input,
+        flags,
+        output,
+        unique_count_output,
+        size,
+        unary_predicate_type(),
+        inequality_op,
+        stream,
+        debug_synchronous);
 }
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR

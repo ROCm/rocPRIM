@@ -32,26 +32,23 @@
 // Test for scan ops taking single input value
 // ---------------------------------------------------------
 
-template<class Params>
-class RocprimWarpScanTests : public ::testing::Test {
+template <class Params>
+class RocprimWarpScanTests : public ::testing::Test
+{
 public:
     using params = Params;
 };
 
 TYPED_TEST_CASE(RocprimWarpScanTests, WarpParams);
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void warp_inclusive_scan_kernel(T* device_input, T* device_output)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ __launch_bounds__(
+    BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void warp_inclusive_scan_kernel(T* device_input,
+                                                                                 T* device_output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T value = device_input[index];
 
@@ -68,16 +65,18 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScan)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T              = typename TestFixture::params::type;
+    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rocprim::detail::is_power_of_two(logical_warp_size)
-        ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-        : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size
+        = rocprim::detail::is_power_of_two(logical_warp_size)
+              ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
+              : (rocprim::warp_size() / logical_warp_size) * logical_warp_size;
     unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size      = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rocprim::warp_size())
@@ -85,9 +84,10 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScan)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -101,43 +101,38 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScan)
         {
             for(size_t j = 0; j < logical_warp_size; j++)
             {
-                auto idx = i * logical_warp_size + j;
-                expected[idx] = apply(binary_op, input[idx], expected[j > 0 ? idx-1 : idx]);
+                auto idx      = i * logical_warp_size + j;
+                expected[idx] = apply(binary_op, input[idx], expected[j > 0 ? idx - 1 : idx]);
             }
         }
 
         // Writing to device memory
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        HIP_CHECK(
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
         T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+        HIP_CHECK(hipMalloc(&device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type)));
 
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(warp_inclusive_scan_kernel<T, block_size, logical_warp_size>),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_output
-        );
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_input,
+            device_output);
 
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
         // Validating results
         test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
@@ -145,24 +140,18 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScan)
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
     }
-
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void warp_inclusive_scan_reduce_kernel(
-    T* device_input,
-    T* device_output,
-    T* device_output_reductions)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ __launch_bounds__(
+    BlockSize,
+    ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void warp_inclusive_scan_reduce_kernel(T* device_input,
+                                                                             T* device_output,
+                                                                             T* device_output_reductions)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + ( hipBlockIdx_x * BlockSize );
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * BlockSize);
 
     T value = device_input[index];
     T reduction;
@@ -184,16 +173,18 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanReduce)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T              = typename TestFixture::params::type;
+    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rocprim::detail::is_power_of_two(logical_warp_size)
-            ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size
+        = rocprim::detail::is_power_of_two(logical_warp_size)
+              ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
+              : (rocprim::warp_size() / logical_warp_size) * logical_warp_size;
     unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size      = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rocprim::warp_size())
@@ -201,9 +192,10 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanReduce)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -219,83 +211,69 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanReduce)
         {
             for(size_t j = 0; j < logical_warp_size; j++)
             {
-                auto idx = i * logical_warp_size + j;
-                expected[idx] = apply(binary_op, input[idx], expected[j > 0 ? idx-1 : idx]);
+                auto idx      = i * logical_warp_size + j;
+                expected[idx] = apply(binary_op, input[idx], expected[j > 0 ? idx - 1 : idx]);
             }
-            expected_reductions[i] = expected[(i+1) * logical_warp_size - 1];
+            expected_reductions[i] = expected[(i + 1) * logical_warp_size - 1];
         }
 
         // Writing to device memory
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-        T* device_output_reductions;
         HIP_CHECK(
-            hipMalloc(
-                &device_output_reductions,
-                output_reductions.size() * sizeof(typename decltype(output_reductions)::value_type)
-            )
-        );
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        T* device_output;
+        HIP_CHECK(hipMalloc(&device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type)));
+        T* device_output_reductions;
+        HIP_CHECK(hipMalloc(&device_output_reductions,
+                            output_reductions.size()
+                                * sizeof(typename decltype(output_reductions)::value_type)));
 
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(warp_inclusive_scan_reduce_kernel<T, block_size, logical_warp_size>),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_output, device_output_reductions
-        );
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_input,
+            device_output,
+            device_output_reductions);
 
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
-        HIP_CHECK(
-            hipMemcpy(
-                output_reductions.data(), device_output_reductions,
-                output_reductions.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_reductions.data(),
+                            device_output_reductions,
+                            output_reductions.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
         test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
     }
-
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
 __global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void warp_exclusive_scan_kernel(T* device_input, T* device_output, T init)
+    __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void warp_exclusive_scan_kernel(
+        T* device_input, T* device_output, T init)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T value = device_input[index];
 
@@ -312,16 +290,18 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T              = typename TestFixture::params::type;
+    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rocprim::detail::is_power_of_two(logical_warp_size)
-        ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-        : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size
+        = rocprim::detail::is_power_of_two(logical_warp_size)
+              ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
+              : (rocprim::warp_size() / logical_warp_size) * logical_warp_size;
     unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size      = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rocprim::warp_size())
@@ -329,16 +309,17 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> expected(input.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        const T        init = test_utils::get_random_value(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -347,43 +328,39 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
             expected[i * logical_warp_size] = init;
             for(size_t j = 1; j < logical_warp_size; j++)
             {
-                auto idx = i * logical_warp_size + j;
-                expected[idx] = apply(binary_op, input[idx-1], expected[idx-1]);
+                auto idx      = i * logical_warp_size + j;
+                expected[idx] = apply(binary_op, input[idx - 1], expected[idx - 1]);
             }
         }
 
         // Writing to device memory
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        HIP_CHECK(
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
         T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+        HIP_CHECK(hipMalloc(&device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type)));
 
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(warp_exclusive_scan_kernel<T, block_size, logical_warp_size>),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_output, init
-        );
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_input,
+            device_output,
+            init);
 
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
         // Validating results
         test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
@@ -391,25 +368,19 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
     }
-
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void warp_exclusive_scan_reduce_kernel(
-    T* device_input,
-    T* device_output,
-    T* device_output_reductions,
-    T init)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ __launch_bounds__(
+    BlockSize,
+    ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void warp_exclusive_scan_reduce_kernel(T* device_input,
+                                                                             T* device_output,
+                                                                             T* device_output_reductions,
+                                                                             T init)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T value = device_input[index];
     T reduction;
@@ -431,16 +402,18 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T              = typename TestFixture::params::type;
+    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rocprim::detail::is_power_of_two(logical_warp_size)
-        ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-        : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size
+        = rocprim::detail::is_power_of_two(logical_warp_size)
+              ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
+              : (rocprim::warp_size() / logical_warp_size) * logical_warp_size;
     unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size      = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rocprim::warp_size())
@@ -448,9 +421,10 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -459,7 +433,7 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
         std::vector<T> output_reductions(size / logical_warp_size);
         std::vector<T> expected(input.size(), 0);
         std::vector<T> expected_reductions(output_reductions.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        const T        init = test_utils::get_random_value(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -468,93 +442,75 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
             expected[i * logical_warp_size] = init;
             for(size_t j = 1; j < logical_warp_size; j++)
             {
-                auto idx = i * logical_warp_size + j;
-                expected[idx] = apply(binary_op, input[idx-1], expected[idx-1]);
+                auto idx      = i * logical_warp_size + j;
+                expected[idx] = apply(binary_op, input[idx - 1], expected[idx - 1]);
             }
 
             expected_reductions[i] = 0;
             for(size_t j = 0; j < logical_warp_size; j++)
             {
-                auto idx = i * logical_warp_size + j;
+                auto idx               = i * logical_warp_size + j;
                 expected_reductions[i] = apply(binary_op, expected_reductions[i], input[idx]);
             }
         }
 
         // Writing to device memory
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
-        T* device_output_reductions;
         HIP_CHECK(
-            hipMalloc(
-                &device_output_reductions,
-                output_reductions.size() * sizeof(typename decltype(output_reductions)::value_type)
-            )
-        );
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        T* device_output;
+        HIP_CHECK(hipMalloc(&device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type)));
+        T* device_output_reductions;
+        HIP_CHECK(hipMalloc(&device_output_reductions,
+                            output_reductions.size()
+                                * sizeof(typename decltype(output_reductions)::value_type)));
 
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(warp_exclusive_scan_reduce_kernel<T, block_size, logical_warp_size>),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_output, device_output_reductions, init
-        );
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_input,
+            device_output,
+            device_output_reductions,
+            init);
 
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
-        HIP_CHECK(
-            hipMemcpy(
-                output_reductions.data(), device_output_reductions,
-                output_reductions.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_reductions.data(),
+                            device_output_reductions,
+                            output_reductions.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
         test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
     }
-
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void warp_scan_kernel(
-    T* device_input,
-    T* device_inclusive_output,
-    T* device_exclusive_output,
-    T init)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void warp_scan_kernel(
+    T* device_input, T* device_inclusive_output, T* device_exclusive_output, T init)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T input = device_input[index];
     T inclusive_output, exclusive_output;
@@ -573,16 +529,18 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T              = typename TestFixture::params::type;
+    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rocprim::detail::is_power_of_two(logical_warp_size)
-        ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-        : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size
+        = rocprim::detail::is_power_of_two(logical_warp_size)
+              ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
+              : (rocprim::warp_size() / logical_warp_size) * logical_warp_size;
     unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size      = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rocprim::warp_size())
@@ -590,9 +548,10 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -601,7 +560,7 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
         std::vector<T> output_exclusive(size);
         std::vector<T> expected_inclusive(output_inclusive.size(), 0);
         std::vector<T> expected_exclusive(output_exclusive.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        const T        init = test_utils::get_random_value(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -611,95 +570,81 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
             for(size_t j = 0; j < logical_warp_size; j++)
             {
                 auto idx = i * logical_warp_size + j;
-                expected_inclusive[idx] = apply(binary_op, input[idx], expected_inclusive[j > 0 ? idx-1 : idx]);
+                expected_inclusive[idx]
+                    = apply(binary_op, input[idx], expected_inclusive[j > 0 ? idx - 1 : idx]);
                 if(j > 0)
                 {
-                    expected_exclusive[idx] = apply(binary_op, input[idx-1], expected_exclusive[idx-1]);
+                    expected_exclusive[idx]
+                        = apply(binary_op, input[idx - 1], expected_exclusive[idx - 1]);
                 }
             }
         }
 
         // Writing to device memory
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        HIP_CHECK(
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
         T* device_inclusive_output;
-        HIP_CHECK(
-            hipMalloc(
-                &device_inclusive_output,
-                output_inclusive.size() * sizeof(typename decltype(output_inclusive)::value_type)
-            )
-        );
+        HIP_CHECK(hipMalloc(&device_inclusive_output,
+                            output_inclusive.size()
+                                * sizeof(typename decltype(output_inclusive)::value_type)));
         T* device_exclusive_output;
-        HIP_CHECK(
-            hipMalloc(
-                &device_exclusive_output,
-                output_exclusive.size() * sizeof(typename decltype(output_exclusive)::value_type)
-            )
-        );
+        HIP_CHECK(hipMalloc(&device_exclusive_output,
+                            output_exclusive.size()
+                                * sizeof(typename decltype(output_exclusive)::value_type)));
 
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(warp_scan_kernel<T, block_size, logical_warp_size>),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_inclusive_output, device_exclusive_output, init
-        );
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(warp_scan_kernel<T, block_size, logical_warp_size>),
+                           dim3(grid_size),
+                           dim3(block_size),
+                           0,
+                           0,
+                           device_input,
+                           device_inclusive_output,
+                           device_exclusive_output,
+                           init);
 
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output_inclusive.data(), device_inclusive_output,
-                output_inclusive.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_inclusive.data(),
+                            device_inclusive_output,
+                            output_inclusive.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
-        HIP_CHECK(
-            hipMemcpy(
-                output_exclusive.data(), device_exclusive_output,
-                output_exclusive.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_exclusive.data(),
+                            device_exclusive_output,
+                            output_exclusive.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
-        test_utils::assert_near(output_inclusive, expected_inclusive, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_exclusive, expected_exclusive, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_inclusive, expected_inclusive, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_exclusive, expected_exclusive, test_utils::precision_threshold<T>::percentage);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_inclusive_output));
         HIP_CHECK(hipFree(device_exclusive_output));
     }
-
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int LogicalWarpSize
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void warp_scan_reduce_kernel(
-    T* device_input,
-    T* device_inclusive_output,
-    T* device_exclusive_output,
-    T* device_output_reductions,
-    T init)
+template <class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ __launch_bounds__(
+    BlockSize,
+    ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void warp_scan_reduce_kernel(T* device_input,
+                                                                   T* device_inclusive_output,
+                                                                   T* device_exclusive_output,
+                                                                   T* device_output_reductions,
+                                                                   T  init)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
 
     T input = device_input[index];
     T inclusive_output, exclusive_output, reduction;
@@ -722,16 +667,18 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T              = typename TestFixture::params::type;
+    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rocprim::detail::is_power_of_two(logical_warp_size)
-        ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-        : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size
+        = rocprim::detail::is_power_of_two(logical_warp_size)
+              ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
+              : (rocprim::warp_size() / logical_warp_size) * logical_warp_size;
     unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size      = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rocprim::warp_size())
@@ -739,9 +686,10 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -752,7 +700,7 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
         std::vector<T> expected_inclusive(output_inclusive.size(), 0);
         std::vector<T> expected_exclusive(output_exclusive.size(), 0);
         std::vector<T> expected_reductions(output_reductions.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        const T        init = test_utils::get_random_value(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -762,96 +710,82 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
             for(size_t j = 0; j < logical_warp_size; j++)
             {
                 auto idx = i * logical_warp_size + j;
-                expected_inclusive[idx] = apply(binary_op, input[idx], expected_inclusive[j > 0 ? idx-1 : idx]);
+                expected_inclusive[idx]
+                    = apply(binary_op, input[idx], expected_inclusive[j > 0 ? idx - 1 : idx]);
                 if(j > 0)
                 {
-                    expected_exclusive[idx] = apply(binary_op, input[idx-1], expected_exclusive[idx-1]);
+                    expected_exclusive[idx]
+                        = apply(binary_op, input[idx - 1], expected_exclusive[idx - 1]);
                 }
             }
-            expected_reductions[i] = expected_inclusive[(i+1) * logical_warp_size - 1];
+            expected_reductions[i] = expected_inclusive[(i + 1) * logical_warp_size - 1];
         }
 
         // Writing to device memory
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        HIP_CHECK(
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
         T* device_inclusive_output;
-        HIP_CHECK(
-            hipMalloc(
-                &device_inclusive_output,
-                output_inclusive.size() * sizeof(typename decltype(output_inclusive)::value_type)
-            )
-        );
+        HIP_CHECK(hipMalloc(&device_inclusive_output,
+                            output_inclusive.size()
+                                * sizeof(typename decltype(output_inclusive)::value_type)));
         T* device_exclusive_output;
-        HIP_CHECK(
-            hipMalloc(
-                &device_exclusive_output,
-                output_exclusive.size() * sizeof(typename decltype(output_exclusive)::value_type)
-            )
-        );
+        HIP_CHECK(hipMalloc(&device_exclusive_output,
+                            output_exclusive.size()
+                                * sizeof(typename decltype(output_exclusive)::value_type)));
         T* device_output_reductions;
-        HIP_CHECK(
-            hipMalloc(
-                &device_output_reductions,
-                output_reductions.size() * sizeof(typename decltype(output_reductions)::value_type)
-            )
-        );
+        HIP_CHECK(hipMalloc(&device_output_reductions,
+                            output_reductions.size()
+                                * sizeof(typename decltype(output_reductions)::value_type)));
 
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(warp_scan_reduce_kernel<T, block_size, logical_warp_size>),
-            dim3(grid_size), dim3(block_size), 0, 0,
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
             device_input,
-            device_inclusive_output, device_exclusive_output, device_output_reductions, init
-        );
+            device_inclusive_output,
+            device_exclusive_output,
+            device_output_reductions,
+            init);
 
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output_inclusive.data(), device_inclusive_output,
-                output_inclusive.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_inclusive.data(),
+                            device_inclusive_output,
+                            output_inclusive.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
-        HIP_CHECK(
-            hipMemcpy(
-                output_exclusive.data(), device_exclusive_output,
-                output_exclusive.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_exclusive.data(),
+                            device_exclusive_output,
+                            output_exclusive.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
-        HIP_CHECK(
-            hipMemcpy(
-                output_reductions.data(), device_output_reductions,
-                output_reductions.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_reductions.data(),
+                            device_output_reductions,
+                            output_reductions.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
-        test_utils::assert_near(output_inclusive, expected_inclusive, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_exclusive, expected_exclusive, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_inclusive, expected_inclusive, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_exclusive, expected_exclusive, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_inclusive_output));
         HIP_CHECK(hipFree(device_exclusive_output));
     }
-
 }
-
 
 TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
 {
@@ -860,15 +794,15 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
     HIP_CHECK(hipSetDevice(device_id));
 
     using base_type = typename TestFixture::params::type;
-    using T = test_utils::custom_test_type<base_type>;
+    using T         = test_utils::custom_test_type<base_type>;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     constexpr size_t logical_warp_size = TestFixture::params::warp_size;
-    constexpr size_t block_size =
-        rocprim::detail::is_power_of_two(logical_warp_size)
-        ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-        : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+    constexpr size_t block_size
+        = rocprim::detail::is_power_of_two(logical_warp_size)
+              ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
+              : (rocprim::warp_size() / logical_warp_size) * logical_warp_size;
     unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size      = block_size * grid_size;
 
     // Given warp size not supported
     if(logical_warp_size > rocprim::warp_size())
@@ -876,9 +810,10 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -887,8 +822,8 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
         std::vector<T> expected(output.size(), T(0));
         // Initializing input data
         {
-            auto random_values =
-                test_utils::get_random_data<base_type>(2 * input.size(), 0, 100, seed_value);
+            auto random_values
+                = test_utils::get_random_data<base_type>(2 * input.size(), 0, 100, seed_value);
             for(size_t i = 0; i < input.size(); i++)
             {
                 input[i].x = random_values[i];
@@ -901,43 +836,38 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
         {
             for(size_t j = 0; j < logical_warp_size; j++)
             {
-                auto idx = i * logical_warp_size + j;
-                expected[idx] = input[idx] + expected[j > 0 ? idx-1 : idx];
+                auto idx      = i * logical_warp_size + j;
+                expected[idx] = input[idx] + expected[j > 0 ? idx - 1 : idx];
             }
         }
 
         // Writing to device memory
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        HIP_CHECK(
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
         T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+        HIP_CHECK(hipMalloc(&device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type)));
 
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(warp_inclusive_scan_kernel<T, block_size, logical_warp_size>),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_output
-        );
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_input,
+            device_output);
 
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Read from device memory
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), device_output, output.size() * sizeof(T), hipMemcpyDeviceToHost));
 
         // Validating results
         test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);

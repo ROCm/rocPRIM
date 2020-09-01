@@ -24,8 +24,8 @@
 
 // required rocprim headers
 #include <rocprim/block/block_load.hpp>
-#include <rocprim/block/block_store.hpp>
 #include <rocprim/block/block_reduce.hpp>
+#include <rocprim/block/block_store.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
@@ -33,28 +33,25 @@
 // ---------------------------------------------------------
 // Test for reduce ops taking single input value
 // ---------------------------------------------------------
-template<class Params>
+template <class Params>
 class RocprimBlockReduceSingleValueTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
+    using input_type                         = typename Params::input_type;
     static constexpr unsigned int block_size = Params::block_size;
 };
 
 TYPED_TEST_CASE(RocprimBlockReduceSingleValueTests, BlockParams);
 
-template<
-    unsigned int BlockSize,
-    rocprim::block_reduce_algorithm Algorithm,
-    class T,
-    class BinaryOp
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void reduce_kernel(T* device_output, T* device_output_reductions)
+template <unsigned int                    BlockSize,
+          rocprim::block_reduce_algorithm Algorithm,
+          class T,
+          class BinaryOp>
+__global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void reduce_kernel(
+    T* device_output, T* device_output_reductions)
 {
     const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
-    T value = device_output[index];
+    T                  value = device_output[index];
     rocprim::block_reduce<T, BlockSize, Algorithm> breduce;
     breduce.reduce(value, value, BinaryOp());
     if(hipThreadIdx_x == 0)
@@ -63,45 +60,37 @@ void reduce_kernel(T* device_output, T* device_output_reductions)
     }
 }
 
-template <
-    class T,
-    unsigned int BlockSize,
-    rocprim::block_reduce_algorithm Algorithm,
-    class BinaryOp
->
+template <class T,
+          unsigned int                    BlockSize,
+          rocprim::block_reduce_algorithm Algorithm,
+          class BinaryOp>
 struct static_run_algo
 {
     static void run(std::vector<T>& output,
                     std::vector<T>& output_reductions,
                     std::vector<T>& expected_reductions,
-                    T* device_output,
-                    T* device_output_reductions,
-                    size_t grid_size,
-                    bool check_equal)
+                    T*              device_output,
+                    T*              device_output_reductions,
+                    size_t          grid_size,
+                    bool            check_equal)
     {
-        HIP_CHECK(
-            hipMemcpy(
-                device_output, output.data(),
-                output.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            device_output, output.data(), output.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Running kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(reduce_kernel<BlockSize, Algorithm, T, BinaryOp>),
-            dim3(grid_size), dim3(BlockSize), 0, 0,
-            device_output, device_output_reductions
-        );
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(reduce_kernel<BlockSize, Algorithm, T, BinaryOp>),
+                           dim3(grid_size),
+                           dim3(BlockSize),
+                           0,
+                           0,
+                           device_output,
+                           device_output_reductions);
 
         // Reading results back
-        HIP_CHECK(
-            hipMemcpy(
-                output_reductions.data(), device_output_reductions,
-                output_reductions.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_reductions.data(),
+                            device_output_reductions,
+                            output_reductions.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
         // Verifying results
         if(check_equal)
@@ -110,7 +99,9 @@ struct static_run_algo
         }
         else
         {
-            test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+            test_utils::assert_near(output_reductions,
+                                    expected_reductions,
+                                    test_utils::precision_threshold<T>::percentage);
         }
     }
 };
@@ -121,8 +112,10 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, Reduce)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::input_type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T                     = typename TestFixture::input_type;
+    using binary_op_type        = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     // Given block size not supported
@@ -131,12 +124,13 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, Reduce)
         return;
     }
 
-    const size_t size = block_size * 58;
+    const size_t size      = block_size * 58;
     const size_t grid_size = size / block_size;
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -152,7 +146,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, Reduce)
             for(size_t j = 0; j < block_size; j++)
             {
                 auto idx = i * block_size + j;
-                value = apply(binary_op, value, output[idx]);
+                value    = apply(binary_op, value, output[idx]);
             }
             expected_reductions[i] = value;
         }
@@ -163,19 +157,30 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, Reduce)
         T* device_output_reductions;
         HIP_CHECK(hipMalloc(&device_output_reductions, output_reductions.size() * sizeof(T)));
 
-        static_run_algo<T, block_size, rocprim::block_reduce_algorithm::using_warp_reduce, binary_op_type>::run(
-            output, output_reductions, expected_reductions,
-            device_output, device_output_reductions, grid_size, false
-        );
-        static_run_algo<T, block_size, rocprim::block_reduce_algorithm::raking_reduce, binary_op_type>::run(
-            output, output_reductions, expected_reductions,
-            device_output, device_output_reductions, grid_size, false
-        );
+        static_run_algo<T,
+                        block_size,
+                        rocprim::block_reduce_algorithm::using_warp_reduce,
+                        binary_op_type>::run(output,
+                                             output_reductions,
+                                             expected_reductions,
+                                             device_output,
+                                             device_output_reductions,
+                                             grid_size,
+                                             false);
+        static_run_algo<T,
+                        block_size,
+                        rocprim::block_reduce_algorithm::raking_reduce,
+                        binary_op_type>::run(output,
+                                             output_reductions,
+                                             expected_reductions,
+                                             device_output,
+                                             device_output_reductions,
+                                             grid_size,
+                                             false);
 
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
     }
-
 }
 
 TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceMultiplies)
@@ -184,8 +189,10 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceMultiplies)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::input_type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_multiplies, rocprim::multiplies<T>>::type;
+    using T                     = typename TestFixture::input_type;
+    using binary_op_type        = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_multiplies,
+                                                     rocprim::multiplies<T>>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     // Given block size not supported
@@ -194,17 +201,19 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceMultiplies)
         return;
     }
 
-    const size_t size = block_size * 58;
+    const size_t size      = block_size * 58;
     const size_t grid_size = size / block_size;
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
         std::vector<T> output(size, 1);
-        auto two_places = test_utils::get_random_data<unsigned int>(size/32, 0, size-1, seed_value);
+        auto           two_places
+            = test_utils::get_random_data<unsigned int>(size / 32, 0, size - 1, seed_value);
         for(auto i : two_places)
         {
             output[i] = T(2);
@@ -220,7 +229,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceMultiplies)
             for(size_t j = 0; j < block_size; j++)
             {
                 auto idx = i * block_size + j;
-                value = apply(binary_op, value, output[idx]);
+                value    = apply(binary_op, value, output[idx]);
             }
             expected_reductions[i] = value;
         }
@@ -231,33 +240,41 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceMultiplies)
         T* device_output_reductions;
         HIP_CHECK(hipMalloc(&device_output_reductions, output_reductions.size() * sizeof(T)));
 
-        static_run_algo<T, block_size, rocprim::block_reduce_algorithm::using_warp_reduce, binary_op_type>::run(
-            output, output_reductions, expected_reductions,
-            device_output, device_output_reductions, grid_size, true
-        );
-        static_run_algo<T, block_size, rocprim::block_reduce_algorithm::raking_reduce, binary_op_type>::run(
-            output, output_reductions, expected_reductions,
-            device_output, device_output_reductions, grid_size, true
-        );
+        static_run_algo<T,
+                        block_size,
+                        rocprim::block_reduce_algorithm::using_warp_reduce,
+                        binary_op_type>::run(output,
+                                             output_reductions,
+                                             expected_reductions,
+                                             device_output,
+                                             device_output_reductions,
+                                             grid_size,
+                                             true);
+        static_run_algo<T,
+                        block_size,
+                        rocprim::block_reduce_algorithm::raking_reduce,
+                        binary_op_type>::run(output,
+                                             output_reductions,
+                                             expected_reductions,
+                                             device_output,
+                                             device_output_reductions,
+                                             grid_size,
+                                             true);
 
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
     }
-
 }
 
-template<
-    unsigned int BlockSize,
-    rocprim::block_reduce_algorithm Algorithm,
-    class T,
-    class BinaryOp
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void reduce_valid_kernel(T* device_output, T* device_output_reductions, const unsigned int valid_items)
+template <unsigned int                    BlockSize,
+          rocprim::block_reduce_algorithm Algorithm,
+          class T,
+          class BinaryOp>
+__global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void reduce_valid_kernel(
+    T* device_output, T* device_output_reductions, const unsigned int valid_items)
 {
     const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
-    T value = device_output[index];
+    T                  value = device_output[index];
     rocprim::block_reduce<T, BlockSize, Algorithm> breduce;
     breduce.reduce(value, value, valid_items, BinaryOp());
     if(hipThreadIdx_x == 0)
@@ -266,48 +283,42 @@ void reduce_valid_kernel(T* device_output, T* device_output_reductions, const un
     }
 }
 
-template <
-    class T,
-    unsigned int BlockSize,
-    rocprim::block_reduce_algorithm Algorithm,
-    class BinaryOp
->
+template <class T,
+          unsigned int                    BlockSize,
+          rocprim::block_reduce_algorithm Algorithm,
+          class BinaryOp>
 struct static_run_valid
 {
-    static void run(std::vector<T>& output,
-                    std::vector<T>& output_reductions,
-                    std::vector<T>& expected_reductions,
-                    T* device_output,
-                    T* device_output_reductions,
+    static void run(std::vector<T>&    output,
+                    std::vector<T>&    output_reductions,
+                    std::vector<T>&    expected_reductions,
+                    T*                 device_output,
+                    T*                 device_output_reductions,
                     const unsigned int valid_items,
-                    size_t grid_size)
+                    size_t             grid_size)
     {
-        HIP_CHECK(
-            hipMemcpy(
-                device_output, output.data(),
-                output.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            device_output, output.data(), output.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Running kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(reduce_valid_kernel<BlockSize, Algorithm, T, BinaryOp>),
-            dim3(grid_size), dim3(BlockSize), 0, 0,
-            device_output, device_output_reductions, valid_items
-        );
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(reduce_valid_kernel<BlockSize, Algorithm, T, BinaryOp>),
+                           dim3(grid_size),
+                           dim3(BlockSize),
+                           0,
+                           0,
+                           device_output,
+                           device_output_reductions,
+                           valid_items);
 
         // Reading results back
-        HIP_CHECK(
-            hipMemcpy(
-                output_reductions.data(), device_output_reductions,
-                output_reductions.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_reductions.data(),
+                            device_output_reductions,
+                            output_reductions.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
         // Verifying results
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(
+            output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
     }
 };
 
@@ -317,16 +328,20 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceValid)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::input_type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using T                     = typename TestFixture::input_type;
+    using binary_op_type        = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_plus,
+                                                     rocprim::plus<T>>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const unsigned int valid_items = test_utils::get_random_value(block_size - 10, block_size, seed_value);
+        const unsigned int valid_items
+            = test_utils::get_random_value(block_size - 10, block_size, seed_value);
 
         // Given block size not supported
         if(block_size > test_utils::get_max_block_size())
@@ -334,7 +349,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceValid)
             return;
         }
 
-        const size_t size = block_size * 58;
+        const size_t size      = block_size * 58;
         const size_t grid_size = size / block_size;
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -349,7 +364,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceValid)
             for(size_t j = 0; j < valid_items; j++)
             {
                 auto idx = i * block_size + j;
-                value = apply(binary_op, value, output[idx]);
+                value    = apply(binary_op, value, output[idx]);
             }
             expected_reductions[i] = value;
         }
@@ -360,42 +375,49 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceValid)
         T* device_output_reductions;
         HIP_CHECK(hipMalloc(&device_output_reductions, output_reductions.size() * sizeof(T)));
 
-        static_run_valid<T, block_size, rocprim::block_reduce_algorithm::using_warp_reduce, binary_op_type>::run(
-            output, output_reductions, expected_reductions,
-            device_output, device_output_reductions, valid_items, grid_size
-        );
-        static_run_valid<T, block_size, rocprim::block_reduce_algorithm::raking_reduce, binary_op_type>::run(
-            output, output_reductions, expected_reductions,
-            device_output, device_output_reductions, valid_items, grid_size
-        );
+        static_run_valid<T,
+                         block_size,
+                         rocprim::block_reduce_algorithm::using_warp_reduce,
+                         binary_op_type>::run(output,
+                                              output_reductions,
+                                              expected_reductions,
+                                              device_output,
+                                              device_output_reductions,
+                                              valid_items,
+                                              grid_size);
+        static_run_valid<T,
+                         block_size,
+                         rocprim::block_reduce_algorithm::raking_reduce,
+                         binary_op_type>::run(output,
+                                              output_reductions,
+                                              expected_reductions,
+                                              device_output,
+                                              device_output_reductions,
+                                              valid_items,
+                                              grid_size);
 
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
     }
-
 }
 
-
-template<class Params>
+template <class Params>
 class RocprimBlockReduceInputArrayTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
+    using input_type                         = typename Params::input_type;
     static constexpr unsigned int block_size = Params::block_size;
 };
 
 TYPED_TEST_CASE(RocprimBlockReduceInputArrayTests, BlockParams);
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    rocprim::block_reduce_algorithm Algorithm,
-    class T,
-    class BinaryOp
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void reduce_array_kernel(T* device_output, T* device_output_reductions)
+template <unsigned int                    BlockSize,
+          unsigned int                    ItemsPerThread,
+          rocprim::block_reduce_algorithm Algorithm,
+          class T,
+          class BinaryOp>
+__global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void reduce_array_kernel(
+    T* device_output, T* device_output_reductions)
 {
     const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
     // load
@@ -406,7 +428,7 @@ void reduce_array_kernel(T* device_output, T* device_output_reductions)
     }
 
     rocprim::block_reduce<T, BlockSize, Algorithm> breduce;
-    T reduction;
+    T                                              reduction;
     breduce.reduce(in_out, reduction, BinaryOp());
 
     if(hipThreadIdx_x == 0)
@@ -416,16 +438,17 @@ void reduce_array_kernel(T* device_output, T* device_output_reductions)
 }
 
 // Test for reduce
-template<
-    class T,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U,
-    rocprim::block_reduce_algorithm Algorithm = rocprim::block_reduce_algorithm::using_warp_reduce
->
+template <class T,
+          unsigned int                    BlockSize      = 256U,
+          unsigned int                    ItemsPerThread = 1U,
+          rocprim::block_reduce_algorithm Algorithm
+          = rocprim::block_reduce_algorithm::using_warp_reduce>
 void test_block_reduce_input_arrays()
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
-    constexpr auto algorithm = Algorithm;
+    using binary_op_type        = typename std::conditional<std::is_same<T, rocprim::half>::value,
+                                                     test_utils::half_maximum,
+                                                     rocprim::maximum<T>>::type;
+    constexpr auto   algorithm  = Algorithm;
     constexpr size_t block_size = BlockSize;
     constexpr size_t items_per_thread = ItemsPerThread;
 
@@ -436,12 +459,13 @@ void test_block_reduce_input_arrays()
     }
 
     const size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 19;
-    const size_t grid_size = size / items_per_block;
+    const size_t size            = items_per_block * 19;
+    const size_t grid_size       = size / items_per_block;
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -459,7 +483,7 @@ void test_block_reduce_input_arrays()
             for(size_t j = 0; j < items_per_block; j++)
             {
                 auto idx = i * items_per_block + j;
-                value = apply(binary_op, value, output[idx]);
+                value    = apply(binary_op, value, output[idx]);
             }
             expected_reductions[i] = value;
         }
@@ -470,37 +494,30 @@ void test_block_reduce_input_arrays()
         T* device_output_reductions;
         HIP_CHECK(hipMalloc(&device_output_reductions, output_reductions.size() * sizeof(T)));
 
-        HIP_CHECK(
-            hipMemcpy(
-                device_output, output.data(),
-                output.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            device_output, output.data(), output.size() * sizeof(T), hipMemcpyHostToDevice));
 
-        HIP_CHECK(
-            hipMemcpy(
-                device_output_reductions, output_reductions.data(),
-                output_reductions.size() * sizeof(T),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(device_output_reductions,
+                            output_reductions.data(),
+                            output_reductions.size() * sizeof(T),
+                            hipMemcpyHostToDevice));
 
         // Running kernel
         hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(reduce_array_kernel<block_size, items_per_thread, algorithm, T, binary_op_type>),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_output, device_output_reductions
-        );
+            HIP_KERNEL_NAME(
+                reduce_array_kernel<block_size, items_per_thread, algorithm, T, binary_op_type>),
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_output,
+            device_output_reductions);
 
         // Reading results back
-        HIP_CHECK(
-            hipMemcpy(
-                output_reductions.data(), device_output_reductions,
-                output_reductions.size() * sizeof(T),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output_reductions.data(),
+                            device_output_reductions,
+                            output_reductions.size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 
         // Verifying results
         test_utils::assert_near(output_reductions, expected_reductions, 0.05);
@@ -508,17 +525,15 @@ void test_block_reduce_input_arrays()
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
     }
-
 }
 
 // Static for-loop
-template <
-    unsigned int First,
-    unsigned int Last,
-    class T,
-    unsigned int BlockSize = 256U,
-    rocprim::block_reduce_algorithm Algorithm = rocprim::block_reduce_algorithm::using_warp_reduce
->
+template <unsigned int First,
+          unsigned int Last,
+          class T,
+          unsigned int                    BlockSize = 256U,
+          rocprim::block_reduce_algorithm Algorithm
+          = rocprim::block_reduce_algorithm::using_warp_reduce>
 struct static_for_input_array
 {
     static void run()
@@ -528,17 +543,13 @@ struct static_for_input_array
     }
 };
 
-template <
-    unsigned int N,
-    class T,
-    unsigned int BlockSize,
-    rocprim::block_reduce_algorithm Algorithm
->
+template <unsigned int N,
+          class T,
+          unsigned int                    BlockSize,
+          rocprim::block_reduce_algorithm Algorithm>
 struct static_for_input_array<N, N, T, BlockSize, Algorithm>
 {
-    static void run()
-    {
-    }
+    static void run() { }
 };
 
 TYPED_TEST(RocprimBlockReduceInputArrayTests, Reduce)
@@ -547,9 +558,14 @@ TYPED_TEST(RocprimBlockReduceInputArrayTests, Reduce)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = typename TestFixture::input_type;
+    using T                     = typename TestFixture::input_type;
     constexpr size_t block_size = TestFixture::block_size;
 
-    static_for_input_array<0, 2, T, block_size, rocprim::block_reduce_algorithm::using_warp_reduce>::run();
-    static_for_input_array<0, 2, T, block_size, rocprim::block_reduce_algorithm::raking_reduce>::run();
+    static_for_input_array<0,
+                           2,
+                           T,
+                           block_size,
+                           rocprim::block_reduce_algorithm::using_warp_reduce>::run();
+    static_for_input_array<0, 2, T, block_size, rocprim::block_reduce_algorithm::raking_reduce>::
+        run();
 }

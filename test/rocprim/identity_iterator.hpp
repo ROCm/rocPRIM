@@ -24,135 +24,118 @@
 namespace test_utils
 {
 
-// Output iterator used in tests to check situtations when
-// value_type of output iterator is void
-template<class T>
-class identity_iterator
-{
-public:
-    // Iterator traits
-    using difference_type = std::ptrdiff_t;
-    using value_type = void;
-    using pointer = void;
-    using reference = T&;
-
-    using iterator_category = std::random_access_iterator_tag;
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator(T * ptr)
-        : ptr_(ptr)
-    { }
-
-    ROCPRIM_HOST_DEVICE inline
-    ~identity_iterator() = default;
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator& operator++()
+    // Output iterator used in tests to check situtations when
+    // value_type of output iterator is void
+    template <class T>
+    class identity_iterator
     {
-        ptr_++;
-        return *this;
+    public:
+        // Iterator traits
+        using difference_type = std::ptrdiff_t;
+        using value_type      = void;
+        using pointer         = void;
+        using reference       = T&;
+
+        using iterator_category = std::random_access_iterator_tag;
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator(T* ptr)
+            : ptr_(ptr)
+        {
+        }
+
+        ROCPRIM_HOST_DEVICE inline ~identity_iterator() = default;
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator& operator++()
+        {
+            ptr_++;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator operator++(int)
+        {
+            identity_iterator old = *this;
+            ptr_++;
+            return old;
+        }
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator& operator--()
+        {
+            ptr_--;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator operator--(int)
+        {
+            identity_iterator old = *this;
+            ptr_--;
+            return old;
+        }
+
+        ROCPRIM_HOST_DEVICE inline reference operator*() const
+        {
+            return *ptr_;
+        }
+
+        ROCPRIM_HOST_DEVICE inline reference operator[](difference_type n) const
+        {
+            return *(ptr_ + n);
+        }
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator operator+(difference_type distance) const
+        {
+            auto i = ptr_ + distance;
+            return identity_iterator(i);
+        }
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator& operator+=(difference_type distance)
+        {
+            ptr_ += distance;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator operator-(difference_type distance) const
+        {
+            auto i = ptr_ - distance;
+            return identity_iterator(i);
+        }
+
+        ROCPRIM_HOST_DEVICE inline identity_iterator& operator-=(difference_type distance)
+        {
+            ptr_ -= distance;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline difference_type operator-(identity_iterator other) const
+        {
+            return ptr_ - other.ptr_;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bool operator==(identity_iterator other) const
+        {
+            return ptr_ == other.ptr_;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bool operator!=(identity_iterator other) const
+        {
+            return ptr_ != other.ptr_;
+        }
+
+    private:
+        T* ptr_;
+    };
+
+    template <bool Wrap, class T>
+    inline auto wrap_in_identity_iterator(T* ptr) ->
+        typename std::enable_if<Wrap, identity_iterator<T>>::type
+    {
+        return identity_iterator<T>(ptr);
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator operator++(int)
+    template <bool Wrap, class T>
+    inline auto wrap_in_identity_iterator(T* ptr) -> typename std::enable_if<!Wrap, T*>::type
     {
-        identity_iterator old = *this;
-        ptr_++;
-        return old;
+        return ptr;
     }
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator& operator--()
-    {
-        ptr_--;
-        return *this;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator operator--(int)
-    {
-        identity_iterator old = *this;
-        ptr_--;
-        return old;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    reference operator*() const
-    {
-        return *ptr_;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    reference operator[](difference_type n) const
-    {
-        return *(ptr_ + n);
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator operator+(difference_type distance) const
-    {
-        auto i = ptr_ + distance;
-        return identity_iterator(i);
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator& operator+=(difference_type distance)
-    {
-        ptr_ += distance;
-        return *this;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator operator-(difference_type distance) const
-    {
-        auto i = ptr_ - distance;
-        return identity_iterator(i);
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    identity_iterator& operator-=(difference_type distance)
-    {
-        ptr_ -= distance;
-        return *this;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    difference_type operator-(identity_iterator other) const
-    {
-        return ptr_ - other.ptr_;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    bool operator==(identity_iterator other) const
-    {
-        return ptr_ == other.ptr_;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    bool operator!=(identity_iterator other) const
-    {
-        return ptr_ != other.ptr_;
-    }
-
-private:
-    T* ptr_;
-};
-
-template<bool Wrap, class T>
-inline
-auto wrap_in_identity_iterator(T* ptr)
-    -> typename std::enable_if<Wrap, identity_iterator<T>>::type
-{
-    return identity_iterator<T>(ptr);
-}
-
-template<bool Wrap, class T>
-inline
-auto wrap_in_identity_iterator(T* ptr)
-    -> typename std::enable_if<!Wrap, T*>::type
-{
-    return ptr;
-}
 
 } // end test_utils namespace
 

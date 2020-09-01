@@ -24,8 +24,8 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "../intrinsics.hpp"
 #include "../functional.hpp"
+#include "../intrinsics.hpp"
 #include "../types.hpp"
 
 /// \addtogroup blockmodule
@@ -71,30 +71,28 @@ BEGIN_ROCPRIM_NAMESPACE
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int BlockSizeX,
-    unsigned int ItemsPerThread,
-    unsigned int BlockSizeY = 1,
-    unsigned int BlockSizeZ = 1
->
+template <class T,
+          unsigned int BlockSizeX,
+          unsigned int ItemsPerThread,
+          unsigned int BlockSizeY = 1,
+          unsigned int BlockSizeZ = 1>
 class block_exchange
 {
     static constexpr unsigned int BlockSize = BlockSizeX * BlockSizeY * BlockSizeZ;
     // Select warp size
-    static constexpr unsigned int warp_size =
-        detail::get_min_warp_size(BlockSize, ::rocprim::warp_size());
+    static constexpr unsigned int warp_size
+        = detail::get_min_warp_size(BlockSize, ::rocprim::warp_size());
     // Number of warps in block
     static constexpr unsigned int warps_no = (BlockSize + warp_size - 1) / warp_size;
 
     // Minimize LDS bank conflicts for power-of-two strides, i.e. when items accessed
     // using `thread_id * ItemsPerThread` pattern where ItemsPerThread is power of two
     // (all exchanges from/to blocked).
-    static constexpr bool has_bank_conflicts =
-        ItemsPerThread >= 2 && ::rocprim::detail::is_power_of_two(ItemsPerThread);
+    static constexpr bool has_bank_conflicts
+        = ItemsPerThread >= 2 && ::rocprim::detail::is_power_of_two(ItemsPerThread);
     static constexpr unsigned int banks_no = ::rocprim::detail::get_lds_banks_no();
-    static constexpr unsigned int bank_conflicts_padding =
-        has_bank_conflicts ? (BlockSize * ItemsPerThread / banks_no) : 0;
+    static constexpr unsigned int bank_conflicts_padding
+        = has_bank_conflicts ? (BlockSize * ItemsPerThread / banks_no) : 0;
 
     // Struct used for creating a raw_storage object for this primitive's temporary storage.
     struct storage_type_
@@ -103,20 +101,19 @@ class block_exchange
     };
 
 public:
-
-    /// \brief Struct used to allocate a temporary memory that is required for thread
-    /// communication during operations provided by related parallel primitive.
-    ///
-    /// Depending on the implemention the operations exposed by parallel primitive may
-    /// require a temporary storage for thread communication. The storage should be allocated
-    /// using keywords <tt>__shared__</tt>. It can be aliased to
-    /// an externally allocated memory, or be a part of a union type with other storage types
-    /// to increase shared memory reusability.
-    #ifndef DOXYGEN_SHOULD_SKIP_THIS // hides storage_type implementation for Doxygen
+/// \brief Struct used to allocate a temporary memory that is required for thread
+/// communication during operations provided by related parallel primitive.
+///
+/// Depending on the implemention the operations exposed by parallel primitive may
+/// require a temporary storage for thread communication. The storage should be allocated
+/// using keywords <tt>__shared__</tt>. It can be aliased to
+/// an externally allocated memory, or be a part of a union type with other storage types
+/// to increase shared memory reusability.
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // hides storage_type implementation for Doxygen
     using storage_type = detail::raw_storage<storage_type_>;
-    #else
+#else
     using storage_type = storage_type_; // only for Doxygen
-    #endif
+#endif
 
     /// \brief Transposes a blocked arrangement of items to a striped arrangement
     /// across the thread block.
@@ -125,10 +122,9 @@ public:
     ///
     /// \param [in] input - array that data is loaded from.
     /// \param [out] output - array that data is loaded to.
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void blocked_to_striped(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread])
+    template <class U>
+    ROCPRIM_DEVICE inline void blocked_to_striped(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         blocked_to_striped(input, output, storage);
@@ -163,13 +159,13 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void blocked_to_striped(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread],
-                            storage_type& storage)
+    template <class U>
+    ROCPRIM_DEVICE inline void blocked_to_striped(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread],
+                                                  storage_type& storage)
     {
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         storage_type_& storage_ = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
@@ -191,10 +187,9 @@ public:
     ///
     /// \param [in] input - array that data is loaded from.
     /// \param [out] output - array that data is loaded to.
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void striped_to_blocked(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread])
+    template <class U>
+    ROCPRIM_DEVICE inline void striped_to_blocked(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         striped_to_blocked(input, output, storage);
@@ -229,13 +224,13 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void striped_to_blocked(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread],
-                            storage_type& storage)
+    template <class U>
+    ROCPRIM_DEVICE inline void striped_to_blocked(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread],
+                                                  storage_type& storage)
     {
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         storage_type_& storage_ = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
@@ -257,10 +252,9 @@ public:
     ///
     /// \param [in] input - array that data is loaded from.
     /// \param [out] output - array that data is loaded to.
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void blocked_to_warp_striped(const T (&input)[ItemsPerThread],
-                                 U (&output)[ItemsPerThread])
+    template <class U>
+    ROCPRIM_DEVICE inline void blocked_to_warp_striped(const T (&input)[ItemsPerThread],
+                                                       U (&output)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         blocked_to_warp_striped(input, output, storage);
@@ -295,18 +289,17 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void blocked_to_warp_striped(const T (&input)[ItemsPerThread],
-                                 U (&output)[ItemsPerThread],
-                                 storage_type& storage)
+    template <class U>
+    ROCPRIM_DEVICE inline void blocked_to_warp_striped(const T (&input)[ItemsPerThread],
+                                                       U (&output)[ItemsPerThread],
+                                                       storage_type& storage)
     {
         constexpr unsigned int items_per_warp = warp_size * ItemsPerThread;
-        const unsigned int lane_id = ::rocprim::lane_id();
-        const unsigned int warp_id = ::rocprim::warp_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
-        const unsigned int current_warp_size = get_current_warp_size();
-        const unsigned int offset = warp_id * items_per_warp;
-        storage_type_& storage_ = storage.get();
+        const unsigned int     lane_id        = ::rocprim::lane_id();
+        const unsigned int     warp_id = ::rocprim::warp_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int     current_warp_size = get_current_warp_size();
+        const unsigned int     offset            = warp_id * items_per_warp;
+        storage_type_&         storage_          = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
@@ -326,10 +319,9 @@ public:
     ///
     /// \param [in] input - array that data is loaded from.
     /// \param [out] output - array that data is loaded to.
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void warp_striped_to_blocked(const T (&input)[ItemsPerThread],
-                                 U (&output)[ItemsPerThread])
+    template <class U>
+    ROCPRIM_DEVICE inline void warp_striped_to_blocked(const T (&input)[ItemsPerThread],
+                                                       U (&output)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         warp_striped_to_blocked(input, output, storage);
@@ -364,18 +356,17 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U>
-    ROCPRIM_DEVICE inline
-    void warp_striped_to_blocked(const T (&input)[ItemsPerThread],
-                                 U (&output)[ItemsPerThread],
-                                 storage_type& storage)
+    template <class U>
+    ROCPRIM_DEVICE inline void warp_striped_to_blocked(const T (&input)[ItemsPerThread],
+                                                       U (&output)[ItemsPerThread],
+                                                       storage_type& storage)
     {
         constexpr unsigned int items_per_warp = warp_size * ItemsPerThread;
-        const unsigned int lane_id = ::rocprim::lane_id();
-        const unsigned int warp_id = ::rocprim::warp_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
-        const unsigned int current_warp_size = get_current_warp_size();
-        const unsigned int offset = warp_id * items_per_warp;
-        storage_type_& storage_ = storage.get();
+        const unsigned int     lane_id        = ::rocprim::lane_id();
+        const unsigned int     warp_id = ::rocprim::warp_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int     current_warp_size = get_current_warp_size();
+        const unsigned int     offset            = warp_id * items_per_warp;
+        storage_type_&         storage_          = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
@@ -397,11 +388,10 @@ public:
     /// \param [in] input - array that data is loaded from.
     /// \param [out] output - array that data is loaded to.
     /// \param [out] ranks - array that has rank of data.
-    template<class U, class Offset>
-    ROCPRIM_DEVICE inline
-    void scatter_to_blocked(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread],
-                            const Offset (&ranks)[ItemsPerThread])
+    template <class U, class Offset>
+    ROCPRIM_DEVICE inline void scatter_to_blocked(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread],
+                                                  const Offset (&ranks)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         scatter_to_blocked(input, output, ranks, storage);
@@ -439,19 +429,19 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U, class Offset>
-    ROCPRIM_DEVICE inline
-    void scatter_to_blocked(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread],
-                            const Offset (&ranks)[ItemsPerThread],
-                            storage_type& storage)
+    template <class U, class Offset>
+    ROCPRIM_DEVICE inline void scatter_to_blocked(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread],
+                                                  const Offset (&ranks)[ItemsPerThread],
+                                                  storage_type& storage)
     {
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         storage_type_& storage_ = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            const Offset rank = ranks[i];
+            const Offset rank            = ranks[i];
             storage_.buffer[index(rank)] = input[i];
         }
         ::rocprim::syncthreads();
@@ -471,11 +461,10 @@ public:
     /// \param [in] input - array that data is loaded from.
     /// \param [out] output - array that data is loaded to.
     /// \param [out] ranks - array that has rank of data.
-    template<class U, class Offset>
-    ROCPRIM_DEVICE inline
-    void scatter_to_striped(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread],
-                            const Offset (&ranks)[ItemsPerThread])
+    template <class U, class Offset>
+    ROCPRIM_DEVICE inline void scatter_to_striped(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread],
+                                                  const Offset (&ranks)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         scatter_to_striped(input, output, ranks, storage);
@@ -513,19 +502,19 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U, class Offset>
-    ROCPRIM_DEVICE inline
-    void scatter_to_striped(const T (&input)[ItemsPerThread],
-                            U (&output)[ItemsPerThread],
-                            const Offset (&ranks)[ItemsPerThread],
-                            storage_type& storage)
+    template <class U, class Offset>
+    ROCPRIM_DEVICE inline void scatter_to_striped(const T (&input)[ItemsPerThread],
+                                                  U (&output)[ItemsPerThread],
+                                                  const Offset (&ranks)[ItemsPerThread],
+                                                  storage_type& storage)
     {
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         storage_type_& storage_ = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            const Offset rank = ranks[i];
+            const Offset rank     = ranks[i];
             storage_.buffer[rank] = input[i];
         }
         ::rocprim::syncthreads();
@@ -548,11 +537,10 @@ public:
     /// \param [in] input - array that data is loaded from.
     /// \param [out] output - array that data is loaded to.
     /// \param [in] ranks - array that has rank of data.
-    template<class U, class Offset>
-    ROCPRIM_DEVICE inline
-    void scatter_to_striped_guarded(const T (&input)[ItemsPerThread],
-                                    U (&output)[ItemsPerThread],
-                                    const Offset (&ranks)[ItemsPerThread])
+    template <class U, class Offset>
+    ROCPRIM_DEVICE inline void scatter_to_striped_guarded(const T (&input)[ItemsPerThread],
+                                                          U (&output)[ItemsPerThread],
+                                                          const Offset (&ranks)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         scatter_to_striped_guarded(input, output, ranks, storage);
@@ -593,14 +581,14 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U, class Offset>
-    ROCPRIM_DEVICE inline
-    void scatter_to_striped_guarded(const T (&input)[ItemsPerThread],
-                                    U (&output)[ItemsPerThread],
-                                    const Offset (&ranks)[ItemsPerThread],
-                                    storage_type& storage)
+    template <class U, class Offset>
+    ROCPRIM_DEVICE inline void scatter_to_striped_guarded(const T (&input)[ItemsPerThread],
+                                                          U (&output)[ItemsPerThread],
+                                                          const Offset (&ranks)[ItemsPerThread],
+                                                          storage_type& storage)
     {
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         storage_type_& storage_ = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
@@ -630,12 +618,12 @@ public:
     /// \param [out] output - array that data is loaded to.
     /// \param [in] ranks - array that has rank of data.
     /// \param [in] is_valid - array that has flags to denote validity.
-    template<class U, class Offset, class ValidFlag>
-    ROCPRIM_DEVICE inline
-    void scatter_to_striped_flagged(const T (&input)[ItemsPerThread],
-                                    U (&output)[ItemsPerThread],
-                                    const Offset (&ranks)[ItemsPerThread],
-                                    const ValidFlag (&is_valid)[ItemsPerThread])
+    template <class U, class Offset, class ValidFlag>
+    ROCPRIM_DEVICE inline void
+        scatter_to_striped_flagged(const T (&input)[ItemsPerThread],
+                                   U (&output)[ItemsPerThread],
+                                   const Offset (&ranks)[ItemsPerThread],
+                                   const ValidFlag (&is_valid)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         scatter_to_striped_flagged(input, output, ranks, is_valid, storage);
@@ -677,15 +665,16 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<class U, class Offset, class ValidFlag>
-    ROCPRIM_DEVICE inline
-    void scatter_to_striped_flagged(const T (&input)[ItemsPerThread],
-                                    U (&output)[ItemsPerThread],
-                                    const Offset (&ranks)[ItemsPerThread],
-                                    const ValidFlag (&is_valid)[ItemsPerThread],
-                                    storage_type& storage)
+    template <class U, class Offset, class ValidFlag>
+    ROCPRIM_DEVICE inline void
+        scatter_to_striped_flagged(const T (&input)[ItemsPerThread],
+                                   U (&output)[ItemsPerThread],
+                                   const Offset (&ranks)[ItemsPerThread],
+                                   const ValidFlag (&is_valid)[ItemsPerThread],
+                                   storage_type& storage)
     {
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         storage_type_& storage_ = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
@@ -705,19 +694,16 @@ public:
     }
 
 private:
-
-    ROCPRIM_DEVICE inline
-    unsigned int get_current_warp_size() const
+    ROCPRIM_DEVICE inline unsigned int get_current_warp_size() const
     {
         const unsigned int warp_id = ::rocprim::warp_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         return (warp_id == warps_no - 1)
-            ? (BlockSize % warp_size > 0 ? BlockSize % warp_size : warp_size)
-            : warp_size;
+                   ? (BlockSize % warp_size > 0 ? BlockSize % warp_size : warp_size)
+                   : warp_size;
     }
 
     // Change index to minimize LDS bank conflicts if necessary
-    ROCPRIM_DEVICE inline
-    unsigned int index(unsigned int n)
+    ROCPRIM_DEVICE inline unsigned int index(unsigned int n)
     {
         // Move every 32-bank wide "row" (32 banks * 4 bytes) by one item
         return has_bank_conflicts ? (n + n / banks_no) : n;

@@ -21,9 +21,9 @@
 #ifndef ROCPRIM_ITERATOR_CONSTANT_ITERATOR_HPP_
 #define ROCPRIM_ITERATOR_CONSTANT_ITERATOR_HPP_
 
-#include <iterator>
-#include <iostream>
 #include <cstddef>
+#include <iostream>
+#include <iterator>
 #include <type_traits>
 
 #include "../config.hpp"
@@ -44,10 +44,7 @@ BEGIN_ROCPRIM_NAMESPACE
 ///
 /// \tparam ValueType - type of value that can be obtained by dereferencing the iterator.
 /// \tparam Difference - a type used for identify distance between iterators
-template<
-    class ValueType,
-    class Difference = std::ptrdiff_t
->
+template <class ValueType, class Difference = std::ptrdiff_t>
 class constant_iterator
 {
 public:
@@ -73,85 +70,74 @@ public:
     ///
     /// \param value initial value
     /// \param index optional index for constant_iterator
-    ROCPRIM_HOST_DEVICE inline
-    explicit constant_iterator(const value_type value, const size_t index = 0)
-        : value_(value), index_(index)
+    ROCPRIM_HOST_DEVICE inline explicit constant_iterator(const value_type value,
+                                                          const size_t     index = 0)
+        : value_(value)
+        , index_(index)
     {
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    ~constant_iterator() = default;
+    ROCPRIM_HOST_DEVICE inline ~constant_iterator() = default;
 
-    ROCPRIM_HOST_DEVICE inline
-    value_type operator*() const
+    ROCPRIM_HOST_DEVICE inline value_type operator*() const
     {
         return value_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    pointer operator->() const
+    ROCPRIM_HOST_DEVICE inline pointer operator->() const
     {
         return &value_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator& operator++()
+    ROCPRIM_HOST_DEVICE inline constant_iterator& operator++()
     {
         index_++;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator operator++(int)
+    ROCPRIM_HOST_DEVICE inline constant_iterator operator++(int)
     {
         constant_iterator old_ci = *this;
         index_++;
         return old_ci;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator& operator--()
+    ROCPRIM_HOST_DEVICE inline constant_iterator& operator--()
     {
         index_--;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator operator--(int)
+    ROCPRIM_HOST_DEVICE inline constant_iterator operator--(int)
     {
         constant_iterator old_ci = *this;
         index_--;
         return old_ci;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator operator+(difference_type distance) const
+    ROCPRIM_HOST_DEVICE inline constant_iterator operator+(difference_type distance) const
     {
         return constant_iterator(value_, index_ + distance);
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator& operator+=(difference_type distance)
+    ROCPRIM_HOST_DEVICE inline constant_iterator& operator+=(difference_type distance)
     {
         index_ += distance;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator operator-(difference_type distance) const
+    ROCPRIM_HOST_DEVICE inline constant_iterator operator-(difference_type distance) const
     {
         return constant_iterator(value_, index_ - distance);
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    constant_iterator& operator-=(difference_type distance)
+    ROCPRIM_HOST_DEVICE inline constant_iterator& operator-=(difference_type distance)
     {
         index_ -= distance;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    difference_type operator-(constant_iterator other) const
+    ROCPRIM_HOST_DEVICE inline difference_type operator-(constant_iterator other) const
     {
         return static_cast<difference_type>(index_ - other.index_);
     }
@@ -159,44 +145,37 @@ public:
     // constant_iterator is not writable, so we don't return reference,
     // just something convertible to reference. That matches requirement
     // of RandomAccessIterator concept
-    ROCPRIM_HOST_DEVICE inline
-    value_type operator[](difference_type) const
+    ROCPRIM_HOST_DEVICE inline value_type operator[](difference_type) const
     {
         return value_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator==(constant_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator==(constant_iterator other) const
     {
         return value_ == other.value_ && index_ == other.index_;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator!=(constant_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator!=(constant_iterator other) const
     {
         return !(*this == other);
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator<(constant_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator<(constant_iterator other) const
     {
         return distance_to(other) > 0;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator<=(constant_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator<=(constant_iterator other) const
     {
         return distance_to(other) >= 0;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator>(constant_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator>(constant_iterator other) const
     {
         return distance_to(other) < 0;
     }
 
-    ROCPRIM_HOST_DEVICE inline
-    bool operator>=(constant_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator>=(constant_iterator other) const
     {
         return distance_to(other) <= 0;
     }
@@ -208,24 +187,19 @@ public:
     }
 
 private:
-    inline
-    difference_type distance_to(const constant_iterator& other) const
+    inline difference_type distance_to(const constant_iterator& other) const
     {
         return difference_type(other.index_) - difference_type(index_);
     }
 
     value_type value_;
-    size_t index_;
+    size_t     index_;
 };
 
-template<
-    class ValueType,
-    class Difference
->
-ROCPRIM_HOST_DEVICE inline
-constant_iterator<ValueType, Difference>
-operator+(typename constant_iterator<ValueType, Difference>::difference_type distance,
-          const constant_iterator<ValueType, Difference>& iter)
+template <class ValueType, class Difference>
+ROCPRIM_HOST_DEVICE inline constant_iterator<ValueType, Difference>
+    operator+(typename constant_iterator<ValueType, Difference>::difference_type distance,
+              const constant_iterator<ValueType, Difference>&                    iter)
 {
     return iter + distance;
 }
@@ -238,13 +212,9 @@ operator+(typename constant_iterator<ValueType, Difference>::difference_type dis
 ///
 /// \param value - initial value for constant_iterator.
 /// \param index - optional index for constant_iterator.
-template<
-    class ValueType,
-    class Difference = std::ptrdiff_t
->
-ROCPRIM_HOST_DEVICE inline
-constant_iterator<ValueType, Difference>
-make_constant_iterator(ValueType value, size_t index = 0)
+template <class ValueType, class Difference = std::ptrdiff_t>
+ROCPRIM_HOST_DEVICE inline constant_iterator<ValueType, Difference>
+    make_constant_iterator(ValueType value, size_t index = 0)
 {
     return constant_iterator<ValueType, Difference>(value, index);
 }

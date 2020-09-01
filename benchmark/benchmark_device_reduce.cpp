@@ -20,13 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
 #include <chrono>
+#include <codecvt>
+#include <iostream>
+#include <locale>
+#include <string>
 #include <thread>
 #include <vector>
-#include <locale>
-#include <codecvt>
-#include <string>
 
 // Google Benchmark
 #include "benchmark/benchmark.h"
@@ -38,73 +38,61 @@
 #include <rocprim/rocprim.hpp>
 
 // CmdParser
-#include "cmdparser.hpp"
 #include "benchmark_utils.hpp"
+#include "cmdparser.hpp"
 
-#define HIP_CHECK(condition)         \
-  {                                  \
-    hipError_t error = condition;    \
-    if(error != hipSuccess){         \
-        std::cout << "HIP error: " << error << " line: " << __LINE__ << std::endl; \
-        exit(error); \
-    } \
-  }
+#define HIP_CHECK(condition)                                                           \
+    {                                                                                  \
+        hipError_t error = condition;                                                  \
+        if(error != hipSuccess)                                                        \
+        {                                                                              \
+            std::cout << "HIP error: " << error << " line: " << __LINE__ << std::endl; \
+            exit(error);                                                               \
+        }                                                                              \
+    }
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 128;
 #endif
 
-const unsigned int batch_size = 10;
+const unsigned int batch_size  = 10;
 const unsigned int warmup_size = 5;
 
-template<
-    class T,
-    class BinaryFunction
->
+template <class T, class BinaryFunction>
 void run_benchmark(benchmark::State& state,
-                   size_t size,
+                   size_t            size,
                    const hipStream_t stream,
-                   BinaryFunction reduce_op)
+                   BinaryFunction    reduce_op)
 {
     std::vector<T> input = get_random_data<T>(size, T(0), T(1000));
 
-    T * d_input;
-    T * d_output;
+    T* d_input;
+    T* d_output;
     HIP_CHECK(hipMalloc(&d_input, size * sizeof(T)));
     HIP_CHECK(hipMalloc(&d_output, sizeof(T)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_input, input.data(),
-            size * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
+    HIP_CHECK(hipMemcpy(d_input, input.data(), size * sizeof(T), hipMemcpyHostToDevice));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Allocate temporary storage memory
     size_t temp_storage_size_bytes;
-    void * d_temp_storage = nullptr;
+    void*  d_temp_storage = nullptr;
     // Get size of d_temp_storage
-    HIP_CHECK(
-        rocprim::reduce(
-            d_temp_storage, temp_storage_size_bytes,
-            d_input, d_output, T(), size,
-            reduce_op, stream
-        )
-    );
-    HIP_CHECK(hipMalloc(&d_temp_storage,temp_storage_size_bytes));
+    HIP_CHECK(rocprim::reduce(
+        d_temp_storage, temp_storage_size_bytes, d_input, d_output, T(), size, reduce_op, stream));
+    HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Warm-up
     for(size_t i = 0; i < warmup_size; i++)
     {
-        HIP_CHECK(
-            rocprim::reduce(
-                d_temp_storage, temp_storage_size_bytes,
-                d_input, d_output, T(), size,
-                reduce_op, stream
-            )
-        );
+        HIP_CHECK(rocprim::reduce(d_temp_storage,
+                                  temp_storage_size_bytes,
+                                  d_input,
+                                  d_output,
+                                  T(),
+                                  size,
+                                  reduce_op,
+                                  stream));
     }
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -114,19 +102,20 @@ void run_benchmark(benchmark::State& state,
 
         for(size_t i = 0; i < batch_size; i++)
         {
-            HIP_CHECK(
-                rocprim::reduce(
-                    d_temp_storage, temp_storage_size_bytes,
-                    d_input, d_output, T(), size,
-                    reduce_op, stream
-                )
-            );
+            HIP_CHECK(rocprim::reduce(d_temp_storage,
+                                      temp_storage_size_bytes,
+                                      d_input,
+                                      d_output,
+                                      T(),
+                                      size,
+                                      reduce_op,
+                                      stream));
         }
         HIP_CHECK(hipStreamSynchronize(stream));
 
         auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+        auto elapsed_seconds
+            = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
         state.SetIterationTime(elapsed_seconds.count());
     }
     state.SetBytesProcessed(state.iterations() * batch_size * size * sizeof(T));
@@ -137,13 +126,14 @@ void run_benchmark(benchmark::State& state,
     HIP_CHECK(hipFree(d_temp_storage));
 }
 
-#define CREATE_BENCHMARK(T, REDUCE_OP) \
-benchmark::RegisterBenchmark( \
-    ("reduce<" #T ", " #REDUCE_OP ">"), \
-    run_benchmark<T, REDUCE_OP>, size, stream, REDUCE_OP() \
-)
+#define CREATE_BENCHMARK(T, REDUCE_OP)                               \
+    benchmark::RegisterBenchmark(("reduce<" #T ", " #REDUCE_OP ">"), \
+                                 run_benchmark<T, REDUCE_OP>,        \
+                                 size,                               \
+                                 stream,                             \
+                                 REDUCE_OP())
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     cli::Parser parser(argc, argv);
     parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
@@ -152,23 +142,22 @@ int main(int argc, char *argv[])
 
     // Parse argv
     benchmark::Initialize(&argc, argv);
-    const size_t size = parser.get<size_t>("size");
-    const int trials = parser.get<int>("trials");
+    const size_t size   = parser.get<size_t>("size");
+    const int    trials = parser.get<int>("trials");
 
     // HIP
-    hipStream_t stream = 0; // default
+    hipStream_t     stream = 0; // default
     hipDeviceProp_t devProp;
-    int device_id = 0;
+    int             device_id = 0;
     HIP_CHECK(hipGetDevice(&device_id));
     HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
     std::cout << "[HIP] Device name: " << devProp.name << std::endl;
 
-    using custom_float2 = custom_type<float, float>;
+    using custom_float2  = custom_type<float, float>;
     using custom_double2 = custom_type<double, double>;
 
     // Add benchmarks
-    std::vector<benchmark::internal::Benchmark*> benchmarks =
-    {
+    std::vector<benchmark::internal::Benchmark*> benchmarks = {
         CREATE_BENCHMARK(int, rocprim::plus<int>),
         CREATE_BENCHMARK(long long, rocprim::plus<long long>),
 

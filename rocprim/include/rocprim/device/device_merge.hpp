@@ -21,14 +21,14 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_MERGE_HPP_
 #define ROCPRIM_DEVICE_DEVICE_MERGE_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
-#include "device_merge_config.hpp"
 #include "detail/device_merge.hpp"
+#include "device_merge_config.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -38,161 +38,174 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    class IndexIterator,
-    class KeysInputIterator1,
-    class KeysInputIterator2,
-    class BinaryFunction
->
-__global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void partition_kernel(IndexIterator index,
-                      KeysInputIterator1 keys_input1,
-                      KeysInputIterator2 keys_input2,
-                      const size_t input1_size,
-                      const size_t input2_size,
-                      const unsigned int spacing,
-                      BinaryFunction compare_function)
-{
-    partition_kernel_impl(
-        index, keys_input1, keys_input2, input1_size, input2_size,
-        spacing, compare_function
-    );
-}
-
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class IndexIterator,
-    class KeysInputIterator1,
-    class KeysInputIterator2,
-    class KeysOutputIterator,
-    class ValuesInputIterator1,
-    class ValuesInputIterator2,
-    class ValuesOutputIterator,
-    class BinaryFunction
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void merge_kernel(IndexIterator index,
-                  KeysInputIterator1 keys_input1,
-                  KeysInputIterator2 keys_input2,
-                  KeysOutputIterator keys_output,
-                  ValuesInputIterator1 values_input1,
-                  ValuesInputIterator2 values_input2,
-                  ValuesOutputIterator values_output,
-                  const size_t input1_size,
-                  const size_t input2_size,
-                  BinaryFunction compare_function)
-{
-    merge_kernel_impl<BlockSize, ItemsPerThread>(
-        index, keys_input1, keys_input2, keys_output,
-        values_input1, values_input2, values_output,
-        input1_size, input2_size, compare_function
-    );
-}
-
-#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start) \
-    { \
-        auto error = hipPeekAtLastError(); \
-        if(error != hipSuccess) return error; \
-        if(debug_synchronous) \
-        { \
-            std::cout << name << "(" << size << ")"; \
-            auto error = hipStreamSynchronize(stream); \
-            if(error != hipSuccess) return error; \
-            auto end = std::chrono::high_resolution_clock::now(); \
-            auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-            std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-        } \
+    template <class IndexIterator,
+              class KeysInputIterator1,
+              class KeysInputIterator2,
+              class BinaryFunction>
+    __global__ __launch_bounds__(
+        ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
+        ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void partition_kernel(IndexIterator      index,
+                                                                KeysInputIterator1 keys_input1,
+                                                                KeysInputIterator2 keys_input2,
+                                                                const size_t       input1_size,
+                                                                const size_t       input2_size,
+                                                                const unsigned int spacing,
+                                                                BinaryFunction     compare_function)
+    {
+        partition_kernel_impl(
+            index, keys_input1, keys_input2, input1_size, input2_size, spacing, compare_function);
     }
 
-template<
-    class Config,
-    class KeysInputIterator1,
-    class KeysInputIterator2,
-    class KeysOutputIterator,
-    class ValuesInputIterator1,
-    class ValuesInputIterator2,
-    class ValuesOutputIterator,
-    class BinaryFunction
->
-inline
-hipError_t merge_impl(void * temporary_storage,
-                      size_t& storage_size,
-                      KeysInputIterator1 keys_input1,
-                      KeysInputIterator2 keys_input2,
-                      KeysOutputIterator keys_output,
-                      ValuesInputIterator1 values_input1,
-                      ValuesInputIterator2 values_input2,
-                      ValuesOutputIterator values_output,
-                      const size_t input1_size,
-                      const size_t input2_size,
-                      BinaryFunction compare_function,
-                      const hipStream_t stream,
-                      bool debug_synchronous)
-
-{
-    using key_type = typename std::iterator_traits<KeysInputIterator1>::value_type;
-    using value_type = typename std::iterator_traits<ValuesInputIterator1>::value_type;
-
-    // Get default config if Config is default_config
-    using config = detail::default_or_custom_config<
-        Config,
-        detail::default_merge_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
-    >;
-
-    constexpr unsigned int block_size = config::block_size;
-    constexpr unsigned int half_block = block_size / 2;
-    constexpr unsigned int items_per_thread = config::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
-
-    const unsigned int partitions = ((input1_size + input2_size) + items_per_block - 1) / items_per_block;
-    const size_t partition_bytes = (partitions + 1) * sizeof(unsigned int);
-
-    if(temporary_storage == nullptr)
+    template <unsigned int BlockSize,
+              unsigned int ItemsPerThread,
+              class IndexIterator,
+              class KeysInputIterator1,
+              class KeysInputIterator2,
+              class KeysOutputIterator,
+              class ValuesInputIterator1,
+              class ValuesInputIterator2,
+              class ValuesOutputIterator,
+              class BinaryFunction>
+    __global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void merge_kernel(
+        IndexIterator        index,
+        KeysInputIterator1   keys_input1,
+        KeysInputIterator2   keys_input2,
+        KeysOutputIterator   keys_output,
+        ValuesInputIterator1 values_input1,
+        ValuesInputIterator2 values_input2,
+        ValuesOutputIterator values_output,
+        const size_t         input1_size,
+        const size_t         input2_size,
+        BinaryFunction       compare_function)
     {
-        // storage_size is never zero
-        storage_size = partition_bytes;
+        merge_kernel_impl<BlockSize, ItemsPerThread>(index,
+                                                     keys_input1,
+                                                     keys_input2,
+                                                     keys_output,
+                                                     values_input1,
+                                                     values_input2,
+                                                     values_output,
+                                                     input1_size,
+                                                     input2_size,
+                                                     compare_function);
+    }
+
+#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                         \
+    {                                                                                          \
+        auto error = hipPeekAtLastError();                                                     \
+        if(error != hipSuccess)                                                                \
+            return error;                                                                      \
+        if(debug_synchronous)                                                                  \
+        {                                                                                      \
+            std::cout << name << "(" << size << ")";                                           \
+            auto error = hipStreamSynchronize(stream);                                         \
+            if(error != hipSuccess)                                                            \
+                return error;                                                                  \
+            auto end = std::chrono::high_resolution_clock::now();                              \
+            auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+            std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+        }                                                                                      \
+    }
+
+    template <class Config,
+              class KeysInputIterator1,
+              class KeysInputIterator2,
+              class KeysOutputIterator,
+              class ValuesInputIterator1,
+              class ValuesInputIterator2,
+              class ValuesOutputIterator,
+              class BinaryFunction>
+    inline hipError_t merge_impl(void*                temporary_storage,
+                                 size_t&              storage_size,
+                                 KeysInputIterator1   keys_input1,
+                                 KeysInputIterator2   keys_input2,
+                                 KeysOutputIterator   keys_output,
+                                 ValuesInputIterator1 values_input1,
+                                 ValuesInputIterator2 values_input2,
+                                 ValuesOutputIterator values_output,
+                                 const size_t         input1_size,
+                                 const size_t         input2_size,
+                                 BinaryFunction       compare_function,
+                                 const hipStream_t    stream,
+                                 bool                 debug_synchronous)
+
+    {
+        using key_type   = typename std::iterator_traits<KeysInputIterator1>::value_type;
+        using value_type = typename std::iterator_traits<ValuesInputIterator1>::value_type;
+
+        // Get default config if Config is default_config
+        using config = detail::default_or_custom_config<
+            Config,
+            detail::default_merge_config<ROCPRIM_TARGET_ARCH, key_type, value_type>>;
+
+        constexpr unsigned int block_size       = config::block_size;
+        constexpr unsigned int half_block       = block_size / 2;
+        constexpr unsigned int items_per_thread = config::items_per_thread;
+        constexpr auto         items_per_block  = block_size * items_per_thread;
+
+        const unsigned int partitions
+            = ((input1_size + input2_size) + items_per_block - 1) / items_per_block;
+        const size_t partition_bytes = (partitions + 1) * sizeof(unsigned int);
+
+        if(temporary_storage == nullptr)
+        {
+            // storage_size is never zero
+            storage_size = partition_bytes;
+            return hipSuccess;
+        }
+
+        // Start point for time measurements
+        std::chrono::high_resolution_clock::time_point start;
+
+        auto number_of_blocks = partitions;
+        if(debug_synchronous)
+        {
+            std::cout << "block_size " << block_size << '\n';
+            std::cout << "number of blocks " << number_of_blocks << '\n';
+            std::cout << "items_per_block " << items_per_block << '\n';
+        }
+
+        unsigned int* index = reinterpret_cast<unsigned int*>(temporary_storage);
+
+        const unsigned partition_blocks = ((partitions + 1) + half_block - 1) / half_block;
+
+        if(debug_synchronous)
+            start = std::chrono::high_resolution_clock::now();
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(detail::partition_kernel),
+                           dim3(partition_blocks),
+                           dim3(half_block),
+                           0,
+                           stream,
+                           index,
+                           keys_input1,
+                           keys_input2,
+                           input1_size,
+                           input2_size,
+                           items_per_block,
+                           compare_function);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", input1_size, start);
+
+        if(debug_synchronous)
+            start = std::chrono::high_resolution_clock::now();
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(detail::merge_kernel<block_size, items_per_thread>),
+                           dim3(number_of_blocks),
+                           dim3(block_size),
+                           0,
+                           stream,
+                           index,
+                           keys_input1,
+                           keys_input2,
+                           keys_output,
+                           values_input1,
+                           values_input2,
+                           values_output,
+                           input1_size,
+                           input2_size,
+                           compare_function);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("merge_kernel", input1_size, start);
+
         return hipSuccess;
     }
-
-    // Start point for time measurements
-    std::chrono::high_resolution_clock::time_point start;
-
-    auto number_of_blocks = partitions;
-    if(debug_synchronous)
-    {
-        std::cout << "block_size " << block_size << '\n';
-        std::cout << "number of blocks " << number_of_blocks << '\n';
-        std::cout << "items_per_block " << items_per_block << '\n';
-    }
-
-    unsigned int * index = reinterpret_cast<unsigned int *>(temporary_storage);
-
-    const unsigned partition_blocks = ((partitions + 1) + half_block - 1) / half_block;
-
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(detail::partition_kernel),
-        dim3(partition_blocks), dim3(half_block), 0, stream,
-        index, keys_input1, keys_input2, input1_size, input2_size,
-        items_per_block, compare_function
-    );
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", input1_size, start);
-
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(detail::merge_kernel<block_size, items_per_thread>),
-        dim3(number_of_blocks), dim3(block_size), 0, stream,
-        index, keys_input1, keys_input2, keys_output,
-        values_input1, values_input2, values_output,
-        input1_size, input2_size, compare_function
-    );
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("merge_kernel", input1_size, start);
-
-    return hipSuccess;
-}
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
 
@@ -273,33 +286,37 @@ hipError_t merge_impl(void * temporary_storage,
 /// // output: [0, 0, 1, 1, 2, 2, 3, 3]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator1,
-    class InputIterator2,
-    class OutputIterator,
-    class BinaryFunction = ::rocprim::less<typename std::iterator_traits<InputIterator1>::value_type>
->
-inline
-hipError_t merge(void * temporary_storage,
-                 size_t& storage_size,
-                 InputIterator1 input1,
-                 InputIterator2 input2,
-                 OutputIterator output,
-                 const size_t input1_size,
-                 const size_t input2_size,
-                 BinaryFunction compare_function = BinaryFunction(),
-                 const hipStream_t stream = 0,
-                 bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator1,
+          class InputIterator2,
+          class OutputIterator,
+          class BinaryFunction
+          = ::rocprim::less<typename std::iterator_traits<InputIterator1>::value_type>>
+inline hipError_t merge(void*             temporary_storage,
+                        size_t&           storage_size,
+                        InputIterator1    input1,
+                        InputIterator2    input2,
+                        OutputIterator    output,
+                        const size_t      input1_size,
+                        const size_t      input2_size,
+                        BinaryFunction    compare_function  = BinaryFunction(),
+                        const hipStream_t stream            = 0,
+                        bool              debug_synchronous = false)
 {
-    empty_type * values = nullptr;
-    return detail::merge_impl<Config>(
-        temporary_storage, storage_size,
-        input1, input2, output,
-        values, values, values,
-        input1_size, input2_size, compare_function,
-        stream, debug_synchronous
-    );
+    empty_type* values = nullptr;
+    return detail::merge_impl<Config>(temporary_storage,
+                                      storage_size,
+                                      input1,
+                                      input2,
+                                      output,
+                                      values,
+                                      values,
+                                      values,
+                                      input1_size,
+                                      input2_size,
+                                      compare_function,
+                                      stream,
+                                      debug_synchronous);
 }
 
 /// \brief Parallel merge primitive for device level.
@@ -395,38 +412,42 @@ hipError_t merge(void * temporary_storage,
 /// // values_output: [10, 20, 11, 21, 12, 22, 13, 23]
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class KeysInputIterator1,
-    class KeysInputIterator2,
-    class KeysOutputIterator,
-    class ValuesInputIterator1,
-    class ValuesInputIterator2,
-    class ValuesOutputIterator,
-    class BinaryFunction = ::rocprim::less<typename std::iterator_traits<KeysInputIterator1>::value_type>
->
-inline
-hipError_t merge(void * temporary_storage,
-                 size_t& storage_size,
-                 KeysInputIterator1 keys_input1,
-                 KeysInputIterator2 keys_input2,
-                 KeysOutputIterator keys_output,
-                 ValuesInputIterator1 values_input1,
-                 ValuesInputIterator2 values_input2,
-                 ValuesOutputIterator values_output,
-                 const size_t input1_size,
-                 const size_t input2_size,
-                 BinaryFunction compare_function = BinaryFunction(),
-                 const hipStream_t stream = 0,
-                 bool debug_synchronous = false)
+template <class Config = default_config,
+          class KeysInputIterator1,
+          class KeysInputIterator2,
+          class KeysOutputIterator,
+          class ValuesInputIterator1,
+          class ValuesInputIterator2,
+          class ValuesOutputIterator,
+          class BinaryFunction
+          = ::rocprim::less<typename std::iterator_traits<KeysInputIterator1>::value_type>>
+inline hipError_t merge(void*                temporary_storage,
+                        size_t&              storage_size,
+                        KeysInputIterator1   keys_input1,
+                        KeysInputIterator2   keys_input2,
+                        KeysOutputIterator   keys_output,
+                        ValuesInputIterator1 values_input1,
+                        ValuesInputIterator2 values_input2,
+                        ValuesOutputIterator values_output,
+                        const size_t         input1_size,
+                        const size_t         input2_size,
+                        BinaryFunction       compare_function  = BinaryFunction(),
+                        const hipStream_t    stream            = 0,
+                        bool                 debug_synchronous = false)
 {
-    return detail::merge_impl<Config>(
-        temporary_storage, storage_size,
-        keys_input1, keys_input2, keys_output,
-        values_input1, values_input2, values_output,
-        input1_size, input2_size, compare_function,
-        stream, debug_synchronous
-    );
+    return detail::merge_impl<Config>(temporary_storage,
+                                      storage_size,
+                                      keys_input1,
+                                      keys_input2,
+                                      keys_output,
+                                      values_input1,
+                                      values_input2,
+                                      values_output,
+                                      input1_size,
+                                      input2_size,
+                                      compare_function,
+                                      stream,
+                                      debug_synchronous);
 }
 
 /// @}

@@ -23,21 +23,22 @@
 #include "common_test_header.hpp"
 
 // required rocprim headers
-#include <rocprim/config.hpp>
 #include <rocprim/block/block_discontinuity.hpp>
 #include <rocprim/block/block_load.hpp>
 #include <rocprim/block/block_store.hpp>
+#include <rocprim/config.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
 
-template<class Params>
-class RocprimBlockDiscontinuity : public ::testing::Test {
+template <class Params>
+class RocprimBlockDiscontinuity : public ::testing::Test
+{
 public:
     using params = Params;
 };
 
-template<class T>
+template <class T>
 struct custom_flag_op1
 {
     ROCPRIM_HOST_DEVICE
@@ -49,25 +50,24 @@ struct custom_flag_op1
 
 struct custom_flag_op2
 {
-    template<class T>
-    ROCPRIM_HOST_DEVICE
-    bool operator()(const T& a, const T& b) const
+    template <class T>
+    ROCPRIM_HOST_DEVICE bool operator()(const T& a, const T& b) const
     {
         return (a - b > 5);
     }
 };
 
 // Host (CPU) implementaions of the wrapping function that allows to pass 3 args
-template<class T, class FlagOp>
+template <class T, class FlagOp>
 typename std::enable_if<rocprim::detail::with_b_index_arg<T, FlagOp>::value, bool>::type
-apply(FlagOp flag_op, const T& a, const T& b, unsigned int b_index)
+    apply(FlagOp flag_op, const T& a, const T& b, unsigned int b_index)
 {
     return flag_op(a, b, b_index);
 }
 
-template<class T, class FlagOp>
+template <class T, class FlagOp>
 typename std::enable_if<!rocprim::detail::with_b_index_arg<T, FlagOp>::value, bool>::type
-apply(FlagOp flag_op, const T& a, const T& b, unsigned int)
+    apply(FlagOp flag_op, const T& a, const T& b, unsigned int)
 {
     return flag_op(a, b);
 }
@@ -78,7 +78,9 @@ TEST(RocprimBlockDiscontinuity, Traits)
     ASSERT_FALSE((rocprim::detail::with_b_index_arg<int, custom_flag_op2>::value));
     ASSERT_TRUE((rocprim::detail::with_b_index_arg<int, custom_flag_op1<int>>::value));
 
-    auto f1 = [](const int& a, const int& b, unsigned int b_index) { return (a == b) || (b_index % 10 == 0); };
+    auto f1 = [](const int& a, const int& b, unsigned int b_index) {
+        return (a == b) || (b_index % 10 == 0);
+    };
     auto f2 = [](const int& a, const int& b) { return (a == b); };
     ASSERT_TRUE((rocprim::detail::with_b_index_arg<int, decltype(f1)>::value));
     ASSERT_FALSE((rocprim::detail::with_b_index_arg<int, decltype(f2)>::value));
@@ -89,31 +91,27 @@ TEST(RocprimBlockDiscontinuity, Traits)
     ASSERT_FALSE((rocprim::detail::with_b_index_arg<int, decltype(f4)>::value));
 }
 
-typedef ::testing::Types<
-    block_param_type(test_utils::custom_test_type<int>, int),
-    block_param_type(float, char),
-    block_param_type(double, unsigned int),
-    block_param_type(uint8_t, bool),
-    block_param_type(int8_t, bool),
-    block_param_type(rocprim::half, int)
-> BlockDiscParams;
+typedef ::testing::Types<block_param_type(test_utils::custom_test_type<int>, int),
+                         block_param_type(float, char),
+                         block_param_type(double, unsigned int),
+                         block_param_type(uint8_t, bool),
+                         block_param_type(int8_t, bool),
+                         block_param_type(rocprim::half, int)>
+    BlockDiscParams;
 
 TYPED_TEST_CASE(RocprimBlockDiscontinuity, BlockDiscParams);
 
-template<
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void flag_heads_kernel(Type* device_input, long long* device_heads)
+template <class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+__global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void flag_heads_kernel(
+    Type* device_input, long long* device_heads)
 {
-    const unsigned int lid = hipThreadIdx_x;
+    const unsigned int lid             = hipThreadIdx_x;
     const unsigned int items_per_block = BlockSize * ItemsPerThread;
-    const unsigned int block_offset = hipBlockIdx_x * items_per_block;
+    const unsigned int block_offset    = hipBlockIdx_x * items_per_block;
 
     Type input[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_input + block_offset, input);
@@ -134,20 +132,17 @@ void flag_heads_kernel(Type* device_input, long long* device_heads)
     rocprim::block_store_direct_blocked(lid, device_heads + block_offset, head_flags);
 }
 
-template<
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-__global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void flag_tails_kernel(Type* device_input, long long* device_tails)
+template <class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+__global__ __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void flag_tails_kernel(
+    Type* device_input, long long* device_tails)
 {
-    const unsigned int lid = hipThreadIdx_x;
+    const unsigned int lid             = hipThreadIdx_x;
     const unsigned int items_per_block = BlockSize * ItemsPerThread;
-    const unsigned int block_offset = hipBlockIdx_x * items_per_block;
+    const unsigned int block_offset    = hipBlockIdx_x * items_per_block;
 
     Type input[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_input + block_offset, input);
@@ -168,20 +163,18 @@ void flag_tails_kernel(Type* device_input, long long* device_tails)
     rocprim::block_store_direct_blocked(lid, device_tails + block_offset, tail_flags);
 }
 
-template<
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
+template <class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
 __global__
-__launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void flag_heads_and_tails_kernel(Type* device_input, long long* device_heads, long long* device_tails)
+    __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void flag_heads_and_tails_kernel(
+        Type* device_input, long long* device_heads, long long* device_tails)
 {
-    const unsigned int lid = hipThreadIdx_x;
+    const unsigned int lid             = hipThreadIdx_x;
     const unsigned int items_per_block = BlockSize * ItemsPerThread;
-    const unsigned int block_offset = hipBlockIdx_x * items_per_block;
+    const unsigned int block_offset    = hipBlockIdx_x * items_per_block;
 
     Type input[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_input + block_offset, input);
@@ -193,18 +186,25 @@ void flag_heads_and_tails_kernel(Type* device_input, long long* device_heads, lo
     if(hipBlockIdx_x % 4 == 0)
     {
         const Type tile_successor_item = device_input[block_offset + items_per_block];
-        bdiscontinuity.flag_heads_and_tails(head_flags, tail_flags, tile_successor_item, input, FlagOpType());
+        bdiscontinuity.flag_heads_and_tails(
+            head_flags, tail_flags, tile_successor_item, input, FlagOpType());
     }
     else if(hipBlockIdx_x % 4 == 1)
     {
         const Type tile_predecessor_item = device_input[block_offset - 1];
-        const Type tile_successor_item = device_input[block_offset + items_per_block];
-        bdiscontinuity.flag_heads_and_tails(head_flags, tile_predecessor_item, tail_flags, tile_successor_item, input, FlagOpType());
+        const Type tile_successor_item   = device_input[block_offset + items_per_block];
+        bdiscontinuity.flag_heads_and_tails(head_flags,
+                                            tile_predecessor_item,
+                                            tail_flags,
+                                            tile_successor_item,
+                                            input,
+                                            FlagOpType());
     }
     else if(hipBlockIdx_x % 4 == 2)
     {
         const Type tile_predecessor_item = device_input[block_offset - 1];
-        bdiscontinuity.flag_heads_and_tails(head_flags, tile_predecessor_item, tail_flags, input, FlagOpType());
+        bdiscontinuity.flag_heads_and_tails(
+            head_flags, tile_predecessor_item, tail_flags, input, FlagOpType());
     }
     else if(hipBlockIdx_x % 4 == 3)
     {
@@ -215,32 +215,26 @@ void flag_heads_and_tails_kernel(Type* device_input, long long* device_heads, lo
     rocprim::block_store_direct_blocked(lid, device_tails + block_offset, tail_flags);
 }
 
-template<
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-auto test_block_discontinuity()
--> typename std::enable_if<Method == 0>::type
+template <class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int Method,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+auto test_block_discontinuity() -> typename std::enable_if<Method == 0>::type
 {
     using type = Type;
     // std::vector<bool> is a special case that will cause an error in hipMemcpy
     // http://en.cppreference.com/w/cpp/container/vector_bool
-    using stored_flag_type = typename std::conditional<
-                               std::is_same<bool, FlagType>::value,
-                               int,
-                               FlagType
-                           >::type;
-    using flag_type = FlagType;
-    using flag_op_type = FlagOpType;
-    constexpr size_t block_size = BlockSize;
+    using stored_flag_type =
+        typename std::conditional<std::is_same<bool, FlagType>::value, int, FlagType>::type;
+    using flag_type                   = FlagType;
+    using flag_op_type                = FlagOpType;
+    constexpr size_t block_size       = BlockSize;
     constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 20;
-    constexpr size_t grid_size = size / items_per_block;
+    constexpr size_t items_per_block  = block_size * items_per_thread;
+    const size_t     size             = items_per_block * 20;
+    constexpr size_t grid_size        = size / items_per_block;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -248,18 +242,19 @@ auto test_block_discontinuity()
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type>      input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
         std::vector<long long> heads(size);
 
         // Calculate expected results on host
         std::vector<stored_flag_type> expected_heads(size);
-        flag_op_type flag_op;
+        flag_op_type                  flag_op;
         for(size_t bi = 0; bi < size / items_per_block; bi++)
         {
             for(size_t ii = 0; ii < items_per_block; ii++)
@@ -267,9 +262,8 @@ auto test_block_discontinuity()
                 const size_t i = bi * items_per_block + ii;
                 if(ii == 0)
                 {
-                    expected_heads[i] = bi % 2 == 1
-                        ? apply(flag_op, input[i - 1], input[i], ii)
-                        : flag_type(true);
+                    expected_heads[i] = bi % 2 == 1 ? apply(flag_op, input[i - 1], input[i], ii)
+                                                    : flag_type(true);
                 }
                 else
                 {
@@ -280,40 +274,33 @@ auto test_block_discontinuity()
 
         // Preparing Device
         type* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        long long* device_heads;
-        HIP_CHECK(hipMalloc(&device_heads, heads.size() * sizeof(typename decltype(heads)::value_type)));
-
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(type),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        long long* device_heads;
+        HIP_CHECK(
+            hipMalloc(&device_heads, heads.size() * sizeof(typename decltype(heads)::value_type)));
+
+        HIP_CHECK(hipMemcpy(
+            device_input, input.data(), input.size() * sizeof(type), hipMemcpyHostToDevice));
 
         // Running kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(
-                flag_heads_kernel<
-                    type, flag_type, flag_op_type,
-                    block_size, items_per_thread
-                >
-            ),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_heads
-        );
+                flag_heads_kernel<type, flag_type, flag_op_type, block_size, items_per_thread>),
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_input,
+            device_heads);
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Reading results
-        HIP_CHECK(
-            hipMemcpy(
-                heads.data(), device_heads,
-                heads.size() * sizeof(typename decltype(heads)::value_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(heads.data(),
+                            device_heads,
+                            heads.size() * sizeof(typename decltype(heads)::value_type),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
         for(size_t i = 0; i < size; i++)
@@ -324,35 +311,28 @@ auto test_block_discontinuity()
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_heads));
     }
-
 }
 
-template<
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-auto test_block_discontinuity()
--> typename std::enable_if<Method == 1>::type
+template <class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int Method,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+auto test_block_discontinuity() -> typename std::enable_if<Method == 1>::type
 {
     using type = Type;
     // std::vector<bool> is a special case that will cause an error in hipMemcpy
     // http://en.cppreference.com/w/cpp/container/vector_bool
-    using stored_flag_type = typename std::conditional<
-                               std::is_same<bool, FlagType>::value,
-                               int,
-                               FlagType
-                           >::type;
-    using flag_type = FlagType;
-    using flag_op_type = FlagOpType;
-    constexpr size_t block_size = BlockSize;
+    using stored_flag_type =
+        typename std::conditional<std::is_same<bool, FlagType>::value, int, FlagType>::type;
+    using flag_type                   = FlagType;
+    using flag_op_type                = FlagOpType;
+    constexpr size_t block_size       = BlockSize;
     constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 20;
-    constexpr size_t grid_size = size / items_per_block;
+    constexpr size_t items_per_block  = block_size * items_per_thread;
+    const size_t     size             = items_per_block * 20;
+    constexpr size_t grid_size        = size / items_per_block;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -360,18 +340,19 @@ auto test_block_discontinuity()
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type>      input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
         std::vector<long long> tails(size);
 
         // Calculate expected results on host
         std::vector<stored_flag_type> expected_tails(size);
-        flag_op_type flag_op;
+        flag_op_type                  flag_op;
         for(size_t bi = 0; bi < size / items_per_block; bi++)
         {
             for(size_t ii = 0; ii < items_per_block; ii++)
@@ -379,9 +360,8 @@ auto test_block_discontinuity()
                 const size_t i = bi * items_per_block + ii;
                 if(ii == items_per_block - 1)
                 {
-                    expected_tails[i] = bi % 2 == 0
-                        ? apply(flag_op, input[i], input[i + 1], ii + 1)
-                        : flag_type(true);
+                    expected_tails[i] = bi % 2 == 0 ? apply(flag_op, input[i], input[i + 1], ii + 1)
+                                                    : flag_type(true);
                 }
                 else
                 {
@@ -392,40 +372,33 @@ auto test_block_discontinuity()
 
         // Preparing Device
         type* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        long long* device_tails;
-        HIP_CHECK(hipMalloc(&device_tails, tails.size() * sizeof(typename decltype(tails)::value_type)));
-
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(type),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        long long* device_tails;
+        HIP_CHECK(
+            hipMalloc(&device_tails, tails.size() * sizeof(typename decltype(tails)::value_type)));
+
+        HIP_CHECK(hipMemcpy(
+            device_input, input.data(), input.size() * sizeof(type), hipMemcpyHostToDevice));
 
         // Running kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(
-                flag_tails_kernel<
-                    type, flag_type, flag_op_type,
-                    block_size, items_per_thread
-                >
-            ),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_tails
-        );
+                flag_tails_kernel<type, flag_type, flag_op_type, block_size, items_per_thread>),
+            dim3(grid_size),
+            dim3(block_size),
+            0,
+            0,
+            device_input,
+            device_tails);
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Reading results
-        HIP_CHECK(
-            hipMemcpy(
-                tails.data(), device_tails,
-                tails.size() * sizeof(typename decltype(tails)::value_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(tails.data(),
+                            device_tails,
+                            tails.size() * sizeof(typename decltype(tails)::value_type),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
         for(size_t i = 0; i < size; i++)
@@ -436,35 +409,28 @@ auto test_block_discontinuity()
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_tails));
     }
-
 }
 
-template<
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-auto test_block_discontinuity()
--> typename std::enable_if<Method == 2>::type
+template <class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int Method,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+auto test_block_discontinuity() -> typename std::enable_if<Method == 2>::type
 {
     using type = Type;
     // std::vector<bool> is a special case that will cause an error in hipMemcpy
     // http://en.cppreference.com/w/cpp/container/vector_bool
-    using stored_flag_type = typename std::conditional<
-                               std::is_same<bool, FlagType>::value,
-                               int,
-                               FlagType
-                           >::type;
-    using flag_type = FlagType;
-    using flag_op_type = FlagOpType;
-    constexpr size_t block_size = BlockSize;
+    using stored_flag_type =
+        typename std::conditional<std::is_same<bool, FlagType>::value, int, FlagType>::type;
+    using flag_type                   = FlagType;
+    using flag_op_type                = FlagOpType;
+    constexpr size_t block_size       = BlockSize;
     constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 20;
-    constexpr size_t grid_size = size / items_per_block;
+    constexpr size_t items_per_block  = block_size * items_per_thread;
+    const size_t     size             = items_per_block * 20;
+    constexpr size_t grid_size        = size / items_per_block;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -472,20 +438,21 @@ auto test_block_discontinuity()
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type>      input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
         std::vector<long long> heads(size);
         std::vector<long long> tails(size);
 
         // Calculate expected results on host
         std::vector<stored_flag_type> expected_heads(size);
         std::vector<stored_flag_type> expected_tails(size);
-        flag_op_type flag_op;
+        flag_op_type                  flag_op;
         for(size_t bi = 0; bi < size / items_per_block; bi++)
         {
             for(size_t ii = 0; ii < items_per_block; ii++)
@@ -494,8 +461,8 @@ auto test_block_discontinuity()
                 if(ii == 0)
                 {
                     expected_heads[i] = (bi % 4 == 1 || bi % 4 == 2)
-                        ? apply(flag_op, input[i - 1], input[i], ii)
-                        : flag_type(true);
+                                            ? apply(flag_op, input[i - 1], input[i], ii)
+                                            : flag_type(true);
                 }
                 else
                 {
@@ -504,8 +471,8 @@ auto test_block_discontinuity()
                 if(ii == items_per_block - 1)
                 {
                     expected_tails[i] = (bi % 4 == 0 || bi % 4 == 1)
-                        ? apply(flag_op, input[i], input[i + 1], ii + 1)
-                        : flag_type(true);
+                                            ? apply(flag_op, input[i], input[i + 1], ii + 1)
+                                            : flag_type(true);
                 }
                 else
                 {
@@ -516,50 +483,44 @@ auto test_block_discontinuity()
 
         // Preparing Device
         type* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
-        long long* device_heads;
-        HIP_CHECK(hipMalloc(&device_heads, tails.size() * sizeof(typename decltype(heads)::value_type)));
-        long long* device_tails;
-        HIP_CHECK(hipMalloc(&device_tails, tails.size() * sizeof(typename decltype(tails)::value_type)));
-
         HIP_CHECK(
-            hipMemcpy(
-                device_input, input.data(),
-                input.size() * sizeof(type),
-                hipMemcpyHostToDevice
-            )
-        );
+            hipMalloc(&device_input, input.size() * sizeof(typename decltype(input)::value_type)));
+        long long* device_heads;
+        HIP_CHECK(
+            hipMalloc(&device_heads, tails.size() * sizeof(typename decltype(heads)::value_type)));
+        long long* device_tails;
+        HIP_CHECK(
+            hipMalloc(&device_tails, tails.size() * sizeof(typename decltype(tails)::value_type)));
+
+        HIP_CHECK(hipMemcpy(
+            device_input, input.data(), input.size() * sizeof(type), hipMemcpyHostToDevice));
 
         // Running kernel
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(
-                flag_heads_and_tails_kernel<
-                    type, flag_type, flag_op_type,
-                    block_size, items_per_thread
-                >
-            ),
-            dim3(grid_size), dim3(block_size), 0, 0,
-            device_input, device_heads, device_tails
-        );
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(flag_heads_and_tails_kernel<type,
+                                                                       flag_type,
+                                                                       flag_op_type,
+                                                                       block_size,
+                                                                       items_per_thread>),
+                           dim3(grid_size),
+                           dim3(block_size),
+                           0,
+                           0,
+                           device_input,
+                           device_heads,
+                           device_tails);
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
         // Reading results
-        HIP_CHECK(
-            hipMemcpy(
-                heads.data(), device_heads,
-                heads.size() * sizeof(typename decltype(heads)::value_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(heads.data(),
+                            device_heads,
+                            heads.size() * sizeof(typename decltype(heads)::value_type),
+                            hipMemcpyDeviceToHost));
 
-        HIP_CHECK(
-            hipMemcpy(
-                tails.data(), device_tails,
-                tails.size() * sizeof(typename decltype(tails)::value_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(tails.data(),
+                            device_tails,
+                            tails.size() * sizeof(typename decltype(tails)::value_type),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
         for(size_t i = 0; i < size; i++)
@@ -572,19 +533,16 @@ auto test_block_discontinuity()
         HIP_CHECK(hipFree(device_heads));
         HIP_CHECK(hipFree(device_tails));
     }
-
 }
 
 // Static for-loop
-template <
-    unsigned int First,
-    unsigned int Last,
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int Method,
-    unsigned int BlockSize = 256U
->
+template <unsigned int First,
+          unsigned int Last,
+          class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int Method,
+          unsigned int BlockSize = 256U>
 struct static_for
 {
     static void run()
@@ -598,29 +556,33 @@ struct static_for
     }
 };
 
-template <
-    unsigned int N,
-    class Type,
-    class FlagType,
-    class FlagOpType,
-    unsigned int Method,
-    unsigned int BlockSize
->
+template <unsigned int N,
+          class Type,
+          class FlagType,
+          class FlagOpType,
+          unsigned int Method,
+          unsigned int BlockSize>
 struct static_for<N, N, Type, FlagType, FlagOpType, Method, BlockSize>
 {
-    static void run()
-    {
-    }
+    static void run() { }
 };
 
 TYPED_TEST(RocprimBlockDiscontinuity, FlagHeads)
 {
-    using type = typename TestFixture::params::input_type;
-    using flag_type = typename TestFixture::params::output_type;
-    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_less, rocprim::less<type>>::type;
-    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<type>>::type;
-    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_greater, rocprim::greater<type>>::type;
-    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_not_equal_to, rocprim::not_equal_to<type>>::type;
+    using type           = typename TestFixture::params::input_type;
+    using flag_type      = typename TestFixture::params::output_type;
+    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_less,
+                                                     rocprim::less<type>>::type;
+    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_equal_to,
+                                                     rocprim::equal_to<type>>::type;
+    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_greater,
+                                                     rocprim::greater<type>>::type;
+    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_not_equal_to,
+                                                     rocprim::not_equal_to<type>>::type;
     constexpr size_t block_size = TestFixture::params::block_size;
 
     static_for<0, 2, type, flag_type, flag_op_type_1, 0, block_size>::run();
@@ -631,12 +593,20 @@ TYPED_TEST(RocprimBlockDiscontinuity, FlagHeads)
 
 TYPED_TEST(RocprimBlockDiscontinuity, FlagTails)
 {
-    using type = typename TestFixture::params::input_type;
-    using flag_type = typename TestFixture::params::output_type;
-    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_less, rocprim::less<type>>::type;
-    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<type>>::type;
-    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_greater, rocprim::greater<type>>::type;
-    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_not_equal_to, rocprim::not_equal_to<type>>::type;
+    using type           = typename TestFixture::params::input_type;
+    using flag_type      = typename TestFixture::params::output_type;
+    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_less,
+                                                     rocprim::less<type>>::type;
+    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_equal_to,
+                                                     rocprim::equal_to<type>>::type;
+    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_greater,
+                                                     rocprim::greater<type>>::type;
+    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_not_equal_to,
+                                                     rocprim::not_equal_to<type>>::type;
     constexpr size_t block_size = TestFixture::params::block_size;
 
     static_for<0, 2, type, flag_type, flag_op_type_1, 1, block_size>::run();
@@ -647,12 +617,20 @@ TYPED_TEST(RocprimBlockDiscontinuity, FlagTails)
 
 TYPED_TEST(RocprimBlockDiscontinuity, FlagHeadsAndTails)
 {
-    using type = typename TestFixture::params::input_type;
-    using flag_type = typename TestFixture::params::output_type;
-    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_less, rocprim::less<type>>::type;
-    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<type>>::type;
-    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_greater, rocprim::greater<type>>::type;
-    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_not_equal_to, rocprim::not_equal_to<type>>::type;
+    using type           = typename TestFixture::params::input_type;
+    using flag_type      = typename TestFixture::params::output_type;
+    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_less,
+                                                     rocprim::less<type>>::type;
+    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_equal_to,
+                                                     rocprim::equal_to<type>>::type;
+    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_greater,
+                                                     rocprim::greater<type>>::type;
+    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value,
+                                                     test_utils::half_not_equal_to,
+                                                     rocprim::not_equal_to<type>>::type;
     constexpr size_t block_size = TestFixture::params::block_size;
 
     static_for<0, 2, type, flag_type, flag_op_type_1, 2, block_size>::run();

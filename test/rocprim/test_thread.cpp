@@ -27,11 +27,7 @@
 
 #include "test_utils.hpp"
 
-template<
-    unsigned int BlockSizeX,
-    unsigned int BlockSizeY,
-    unsigned int BlockSizeZ
->
+template <unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 struct params
 {
     static constexpr unsigned int block_size_x = BlockSizeX;
@@ -39,57 +35,52 @@ struct params
     static constexpr unsigned int block_size_z = BlockSizeZ;
 };
 
-template<class Params>
-class RocprimThreadTests : public ::testing::Test {
+template <class Params>
+class RocprimThreadTests : public ::testing::Test
+{
 public:
     using params = Params;
 };
 
-typedef ::testing::Types<
-    params<32, 1, 1>,
-    params<64, 1, 1>,
-    params<128, 1, 1>,
-    params<256, 1, 1>,
-    params<512, 1, 1>,
-    params<1024, 1, 1>,
+typedef ::testing::Types<params<32, 1, 1>,
+                         params<64, 1, 1>,
+                         params<128, 1, 1>,
+                         params<256, 1, 1>,
+                         params<512, 1, 1>,
+                         params<1024, 1, 1>,
 
-    params<16, 2, 1>,
-    params<32, 2, 1>,
-    params<64, 2, 1>,
-    params<128, 2, 1>,
-    params<256, 2, 1>,
-    params<512, 2, 1>,
+                         params<16, 2, 1>,
+                         params<32, 2, 1>,
+                         params<64, 2, 1>,
+                         params<128, 2, 1>,
+                         params<256, 2, 1>,
+                         params<512, 2, 1>,
 
-    params<8, 2, 2>,
-    params<16, 2, 2>,
-    params<32, 2, 2>,
-    params<64, 2, 2>,
-    params<128, 2, 2>,
-    params<256, 2, 2>
-> Params;
+                         params<8, 2, 2>,
+                         params<16, 2, 2>,
+                         params<32, 2, 2>,
+                         params<64, 2, 2>,
+                         params<128, 2, 2>,
+                         params<256, 2, 2>>
+    Params;
 
 TYPED_TEST_CASE(RocprimThreadTests, Params);
 
-template<
-    unsigned int BlockSizeX,
-    unsigned int BlockSizeY,
-    unsigned int BlockSizeZ
->
-__global__
-__launch_bounds__(1024, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void flat_id_kernel(unsigned int* device_output)
+template <unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
+__global__ __launch_bounds__(1024, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void flat_id_kernel(
+    unsigned int* device_output)
 {
-    unsigned int thread_id = rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+    unsigned int thread_id   = rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
     device_output[thread_id] = thread_id;
 }
 
 TYPED_TEST(RocprimThreadTests, FlatBlockThreadID)
 {
-    using Type = unsigned int;
+    using Type                    = unsigned int;
     constexpr size_t block_size_x = TestFixture::params::block_size_x;
     constexpr size_t block_size_y = TestFixture::params::block_size_y;
     constexpr size_t block_size_z = TestFixture::params::block_size_z;
-    constexpr size_t block_size = block_size_x * block_size_y * block_size_z;
+    constexpr size_t block_size   = block_size_x * block_size_y * block_size_z;
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size() || (block_size & (block_size - 1)) != 0)
     {
@@ -98,7 +89,8 @@ TYPED_TEST(RocprimThreadTests, FlatBlockThreadID)
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -113,27 +105,23 @@ TYPED_TEST(RocprimThreadTests, FlatBlockThreadID)
 
         // Preparing device
         Type* device_output;
-        HIP_CHECK(hipMalloc(&device_output, block_size * sizeof(typename decltype(output)::value_type)));
+        HIP_CHECK(
+            hipMalloc(&device_output, block_size * sizeof(typename decltype(output)::value_type)));
 
         // Running kernel
         hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(
-                flat_id_kernel<
-                    block_size_x, block_size_y, block_size_z
-                >
-            ),
-            dim3(1), dim3(block_size_x, block_size_y, block_size_z), 0, 0,
-            device_output
-        );
+            HIP_KERNEL_NAME(flat_id_kernel<block_size_x, block_size_y, block_size_z>),
+            dim3(1),
+            dim3(block_size_x, block_size_y, block_size_z),
+            0,
+            0,
+            device_output);
 
         // Reading results from device
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(typename decltype(output)::value_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output.data(),
+                            device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected));
@@ -141,14 +129,9 @@ TYPED_TEST(RocprimThreadTests, FlatBlockThreadID)
     }
 }
 
-template<
-    unsigned int BlockSizeX,
-    unsigned int BlockSizeY,
-    unsigned int BlockSizeZ
->
-__global__
-__launch_bounds__(1024, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void block_id_kernel(unsigned int* device_output)
+template <unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
+__global__ __launch_bounds__(1024, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void block_id_kernel(
+    unsigned int* device_output)
 {
     unsigned int block_id = rocprim::flat_block_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
     if(hipThreadIdx_x)
@@ -159,13 +142,13 @@ void block_id_kernel(unsigned int* device_output)
 
 TYPED_TEST(RocprimThreadTests, FlatBlockID)
 {
-    using Type = unsigned int;
+    using Type                    = unsigned int;
     constexpr size_t block_size_x = TestFixture::params::block_size_x;
     constexpr size_t block_size_y = TestFixture::params::block_size_y;
     constexpr size_t block_size_z = TestFixture::params::block_size_z;
-    constexpr size_t block_size = block_size_x * block_size_y * block_size_z;
-    const size_t size = block_size * block_size;
-    const auto grid_size = size / block_size;
+    constexpr size_t block_size   = block_size_x * block_size_y * block_size_z;
+    const size_t     size         = block_size * block_size;
+    const auto       grid_size    = size / block_size;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size() || (block_size & (block_size - 1)) != 0)
@@ -175,7 +158,8 @@ TYPED_TEST(RocprimThreadTests, FlatBlockID)
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
@@ -190,27 +174,23 @@ TYPED_TEST(RocprimThreadTests, FlatBlockID)
 
         // Preparing device
         Type* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(typename decltype(output)::value_type)));
+        HIP_CHECK(hipMalloc(&device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type)));
 
         // Running kernel
         hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(
-                block_id_kernel<
-                    block_size_x, block_size_y, block_size_z
-                >
-            ),
-            dim3(block_size_x, block_size_y, block_size_z), dim3(block_size_x, block_size_y, block_size_z), 0, 0,
-            device_output
-        );
+            HIP_KERNEL_NAME(block_id_kernel<block_size_x, block_size_y, block_size_z>),
+            dim3(block_size_x, block_size_y, block_size_z),
+            dim3(block_size_x, block_size_y, block_size_z),
+            0,
+            0,
+            device_output);
 
         // Reading results from device
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), device_output,
-                output.size() * sizeof(typename decltype(output)::value_type),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(output.data(),
+                            device_output,
+                            output.size() * sizeof(typename decltype(output)::value_type),
+                            hipMemcpyDeviceToHost));
 
         // Validating results
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected));

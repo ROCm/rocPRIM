@@ -21,16 +21,16 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_PARTITION_HPP_
 #define ROCPRIM_DEVICE_DEVICE_PARTITION_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "../config.hpp"
+#include "../detail/various.hpp"
 #include "../functional.hpp"
 #include "../type_traits.hpp"
-#include "../detail/various.hpp"
 
-#include "device_select_config.hpp"
 #include "detail/device_partition.hpp"
+#include "device_select_config.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -40,221 +40,264 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    select_method SelectMethod,
-    bool OnlySelected,
-    class Config,
-    class InputIterator,
-    class FlagIterator,
-    class OutputIterator,
-    class SelectedCountOutputIterator,
-    class UnaryPredicate,
-    class InequalityOp,
-    class OffsetLookbackScanState
->
-__global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void partition_kernel(InputIterator input,
-                      FlagIterator flags,
-                      OutputIterator output,
-                      SelectedCountOutputIterator selected_count_output,
-                      const size_t size,
-                      UnaryPredicate predicate,
-                      InequalityOp inequality_op,
-                      OffsetLookbackScanState offset_scan_state,
-                      const unsigned int number_of_blocks,
-                      ordered_block_id<unsigned int> ordered_bid)
-{
-    partition_kernel_impl<SelectMethod, OnlySelected, Config>(
-        input, flags, output, selected_count_output, size, predicate,
-        inequality_op, offset_scan_state, number_of_blocks, ordered_bid
-    );
-}
-
-template<class OffsetLookBackScanState>
-__global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
-void init_offset_scan_state_kernel(OffsetLookBackScanState offset_scan_state,
-                                   const unsigned int number_of_blocks,
-                                   ordered_block_id<unsigned int> ordered_bid)
-{
-    init_lookback_scan_state_kernel_impl(
-        offset_scan_state, number_of_blocks, ordered_bid
-    );
-}
-
-#define ROCPRIM_DETAIL_HIP_SYNC(name, size, start) \
-    if(debug_synchronous) \
-    { \
-        std::cout << name << "(" << size << ")"; \
-        auto error = hipStreamSynchronize(stream); \
-        if(error != hipSuccess) return error; \
-        auto end = std::chrono::high_resolution_clock::now(); \
-        auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-        std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-    }
-
-#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start) \
-    { \
-        auto error = hipPeekAtLastError(); \
-        if(error != hipSuccess) return error; \
-        if(debug_synchronous) \
-        { \
-            std::cout << name << "(" << size << ")"; \
-            auto error = hipStreamSynchronize(stream); \
-            if(error != hipSuccess) return error; \
-            auto end = std::chrono::high_resolution_clock::now(); \
-            auto d = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
-            std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
-        } \
-    }
-
-template<
-    // Method of selection: flag, predicate, unique
-    select_method SelectMethod,
-     // if true, it doesn't copy rejected values to output
-    bool OnlySelected,
-    class Config,
-    class InputIterator,
-    class FlagIterator,
-    class OutputIterator,
-    class UnaryPredicate,
-    class InequalityOp,
-    class SelectedCountOutputIterator
->
-inline
-hipError_t partition_impl(void * temporary_storage,
-                          size_t& storage_size,
-                          InputIterator input,
-                          FlagIterator flags,
-                          OutputIterator output,
-                          SelectedCountOutputIterator selected_count_output,
-                          const size_t size,
-                          UnaryPredicate predicate,
-                          InequalityOp inequality_op,
-                          const hipStream_t stream,
-                          bool debug_synchronous)
-{
-    using offset_type = unsigned int;
-    using input_type = typename std::iterator_traits<InputIterator>::value_type;
-
-    // Get default config if Config is default_config
-    using config = default_or_custom_config<
-        Config,
-        default_select_config<ROCPRIM_TARGET_ARCH, input_type>
-    >;
-
-    using offset_scan_state_type = detail::lookback_scan_state<offset_type>;
-    using offset_scan_state_with_sleep_type = detail::lookback_scan_state<offset_type, true>;
-    using ordered_block_id_type = detail::ordered_block_id<unsigned int>;
-
-
-    constexpr unsigned int block_size = config::block_size;
-    constexpr unsigned int items_per_thread = config::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
-    const unsigned int number_of_blocks =
-        std::max(1u, static_cast<unsigned int>((size + items_per_block - 1)/items_per_block));
-
-    // Calculate required temporary storage
-    size_t offset_scan_state_bytes = ::rocprim::detail::align_size(
-        // This is valid even with offset_scan_state_with_sleep_type
-        offset_scan_state_type::get_storage_size(number_of_blocks)
-    );
-    size_t ordered_block_id_bytes = ordered_block_id_type::get_storage_size();
-    if(temporary_storage == nullptr)
+    template <select_method SelectMethod,
+              bool          OnlySelected,
+              class Config,
+              class InputIterator,
+              class FlagIterator,
+              class OutputIterator,
+              class SelectedCountOutputIterator,
+              class UnaryPredicate,
+              class InequalityOp,
+              class OffsetLookbackScanState>
+    __global__ __launch_bounds__(
+        ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
+        ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void partition_kernel(InputIterator  input,
+                                                                FlagIterator   flags,
+                                                                OutputIterator output,
+                                                                SelectedCountOutputIterator
+                                                                               selected_count_output,
+                                                                const size_t   size,
+                                                                UnaryPredicate predicate,
+                                                                InequalityOp   inequality_op,
+                                                                OffsetLookbackScanState
+                                                                                   offset_scan_state,
+                                                                const unsigned int number_of_blocks,
+                                                                ordered_block_id<unsigned int>
+                                                                    ordered_bid)
     {
-        // storage_size is never zero
-        storage_size = offset_scan_state_bytes + ordered_block_id_bytes;
-        return hipSuccess;
+        partition_kernel_impl<SelectMethod, OnlySelected, Config>(input,
+                                                                  flags,
+                                                                  output,
+                                                                  selected_count_output,
+                                                                  size,
+                                                                  predicate,
+                                                                  inequality_op,
+                                                                  offset_scan_state,
+                                                                  number_of_blocks,
+                                                                  ordered_bid);
     }
 
-    // Start point for time measurements
-    std::chrono::high_resolution_clock::time_point start;
-    if(debug_synchronous)
+    template <class OffsetLookBackScanState>
+    __global__ __launch_bounds__(
+        ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
+        ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void init_offset_scan_state_kernel(OffsetLookBackScanState
+                                                                                 offset_scan_state,
+                                                                             const unsigned int
+                                                                                 number_of_blocks,
+                                                                             ordered_block_id<
+                                                                                 unsigned int>
+                                                                                 ordered_bid)
     {
-        std::cout << "size " << size << '\n';
-        std::cout << "block_size " << block_size << '\n';
-        std::cout << "number of blocks " << number_of_blocks << '\n';
-        std::cout << "items_per_block " << items_per_block << '\n';
+        init_lookback_scan_state_kernel_impl(offset_scan_state, number_of_blocks, ordered_bid);
     }
 
-    // Create and initialize lookback_scan_state obj
-    auto offset_scan_state = offset_scan_state_type::create(
-        temporary_storage, number_of_blocks
-    );
-    auto offset_scan_state_with_sleep = offset_scan_state_with_sleep_type::create(
-        temporary_storage, number_of_blocks
-    );
-    // Create ad initialize ordered_block_id obj
-    auto ptr = reinterpret_cast<char*>(temporary_storage);
-    auto ordered_bid = ordered_block_id_type::create(
-        reinterpret_cast<ordered_block_id_type::id_type*>(ptr + offset_scan_state_bytes)
-    );
+#define ROCPRIM_DETAIL_HIP_SYNC(name, size, start)                                         \
+    if(debug_synchronous)                                                                  \
+    {                                                                                      \
+        std::cout << name << "(" << size << ")";                                           \
+        auto error = hipStreamSynchronize(stream);                                         \
+        if(error != hipSuccess)                                                            \
+            return error;                                                                  \
+        auto end = std::chrono::high_resolution_clock::now();                              \
+        auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+        std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+    }
 
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-    auto grid_size = (number_of_blocks + block_size - 1)/block_size;
+#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                         \
+    {                                                                                          \
+        auto error = hipPeekAtLastError();                                                     \
+        if(error != hipSuccess)                                                                \
+            return error;                                                                      \
+        if(debug_synchronous)                                                                  \
+        {                                                                                      \
+            std::cout << name << "(" << size << ")";                                           \
+            auto error = hipStreamSynchronize(stream);                                         \
+            if(error != hipSuccess)                                                            \
+                return error;                                                                  \
+            auto end = std::chrono::high_resolution_clock::now();                              \
+            auto d   = std::chrono::duration_cast<std::chrono::duration<double>>(end - start); \
+            std::cout << " " << d.count() * 1000 << " ms" << '\n';                             \
+        }                                                                                      \
+    }
 
-    hipDeviceProp_t prop;
-    int deviceId;
-    static_cast<void>(hipGetDevice(&deviceId));
-    static_cast<void>(hipGetDeviceProperties(&prop, deviceId));
+    template <
+        // Method of selection: flag, predicate, unique
+        select_method SelectMethod,
+        // if true, it doesn't copy rejected values to output
+        bool OnlySelected,
+        class Config,
+        class InputIterator,
+        class FlagIterator,
+        class OutputIterator,
+        class UnaryPredicate,
+        class InequalityOp,
+        class SelectedCountOutputIterator>
+    inline hipError_t partition_impl(void*                       temporary_storage,
+                                     size_t&                     storage_size,
+                                     InputIterator               input,
+                                     FlagIterator                flags,
+                                     OutputIterator              output,
+                                     SelectedCountOutputIterator selected_count_output,
+                                     const size_t                size,
+                                     UnaryPredicate              predicate,
+                                     InequalityOp                inequality_op,
+                                     const hipStream_t           stream,
+                                     bool                        debug_synchronous)
+    {
+        using offset_type = unsigned int;
+        using input_type  = typename std::iterator_traits<InputIterator>::value_type;
+
+        // Get default config if Config is default_config
+        using config
+            = default_or_custom_config<Config,
+                                       default_select_config<ROCPRIM_TARGET_ARCH, input_type>>;
+
+        using offset_scan_state_type            = detail::lookback_scan_state<offset_type>;
+        using offset_scan_state_with_sleep_type = detail::lookback_scan_state<offset_type, true>;
+        using ordered_block_id_type             = detail::ordered_block_id<unsigned int>;
+
+        constexpr unsigned int block_size       = config::block_size;
+        constexpr unsigned int items_per_thread = config::items_per_thread;
+        constexpr auto         items_per_block  = block_size * items_per_thread;
+        const unsigned int     number_of_blocks = std::max(
+            1u, static_cast<unsigned int>((size + items_per_block - 1) / items_per_block));
+
+        // Calculate required temporary storage
+        size_t offset_scan_state_bytes = ::rocprim::detail::align_size(
+            // This is valid even with offset_scan_state_with_sleep_type
+            offset_scan_state_type::get_storage_size(number_of_blocks));
+        size_t ordered_block_id_bytes = ordered_block_id_type::get_storage_size();
+        if(temporary_storage == nullptr)
+        {
+            // storage_size is never zero
+            storage_size = offset_scan_state_bytes + ordered_block_id_bytes;
+            return hipSuccess;
+        }
+
+        // Start point for time measurements
+        std::chrono::high_resolution_clock::time_point start;
+        if(debug_synchronous)
+        {
+            std::cout << "size " << size << '\n';
+            std::cout << "block_size " << block_size << '\n';
+            std::cout << "number of blocks " << number_of_blocks << '\n';
+            std::cout << "items_per_block " << items_per_block << '\n';
+        }
+
+        // Create and initialize lookback_scan_state obj
+        auto offset_scan_state
+            = offset_scan_state_type::create(temporary_storage, number_of_blocks);
+        auto offset_scan_state_with_sleep
+            = offset_scan_state_with_sleep_type::create(temporary_storage, number_of_blocks);
+        // Create ad initialize ordered_block_id obj
+        auto ptr         = reinterpret_cast<char*>(temporary_storage);
+        auto ordered_bid = ordered_block_id_type::create(
+            reinterpret_cast<ordered_block_id_type::id_type*>(ptr + offset_scan_state_bytes));
+
+        if(debug_synchronous)
+            start = std::chrono::high_resolution_clock::now();
+        auto grid_size = (number_of_blocks + block_size - 1) / block_size;
+
+        hipDeviceProp_t prop;
+        int             deviceId;
+        static_cast<void>(hipGetDevice(&deviceId));
+        static_cast<void>(hipGetDeviceProperties(&prop, deviceId));
 
 #if HIP_VERSION >= 307
-    int asicRevision = prop.asicRevision;
+        int asicRevision = prop.asicRevision;
 #else
-    int asicRevision = 0;
+        int asicRevision = 0;
 #endif
 
-    if (prop.gcnArch == 908 && asicRevision < 2)
-    {
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(init_offset_scan_state_kernel<offset_scan_state_with_sleep_type>),
-            dim3(grid_size), dim3(block_size), 0, stream,
-            offset_scan_state_with_sleep, number_of_blocks, ordered_bid
-        );
-    } else
-    {
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(init_offset_scan_state_kernel<offset_scan_state_type>),
-            dim3(grid_size), dim3(block_size), 0, stream,
-            offset_scan_state, number_of_blocks, ordered_bid
-        );
+        if(prop.gcnArch == 908 && asicRevision < 2)
+        {
+            hipLaunchKernelGGL(
+                HIP_KERNEL_NAME(init_offset_scan_state_kernel<offset_scan_state_with_sleep_type>),
+                dim3(grid_size),
+                dim3(block_size),
+                0,
+                stream,
+                offset_scan_state_with_sleep,
+                number_of_blocks,
+                ordered_bid);
+        }
+        else
+        {
+            hipLaunchKernelGGL(
+                HIP_KERNEL_NAME(init_offset_scan_state_kernel<offset_scan_state_type>),
+                dim3(grid_size),
+                dim3(block_size),
+                0,
+                stream,
+                offset_scan_state,
+                number_of_blocks,
+                ordered_bid);
+        }
+
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_offset_scan_state_kernel", size, start)
+
+        if(debug_synchronous)
+            start = std::chrono::high_resolution_clock::now();
+        grid_size = number_of_blocks;
+        if(prop.gcnArch == 908 && asicRevision < 2)
+        {
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(partition_kernel<SelectMethod,
+                                                                OnlySelected,
+                                                                config,
+                                                                InputIterator,
+                                                                FlagIterator,
+                                                                OutputIterator,
+                                                                SelectedCountOutputIterator,
+                                                                UnaryPredicate,
+                                                                decltype(inequality_op),
+                                                                offset_scan_state_with_sleep_type>),
+                               dim3(grid_size),
+                               dim3(block_size),
+                               0,
+                               stream,
+                               input,
+                               flags,
+                               output,
+                               selected_count_output,
+                               size,
+                               predicate,
+                               inequality_op,
+                               offset_scan_state_with_sleep,
+                               number_of_blocks,
+                               ordered_bid);
+        }
+        else
+        {
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(partition_kernel<SelectMethod,
+                                                                OnlySelected,
+                                                                config,
+                                                                InputIterator,
+                                                                FlagIterator,
+                                                                OutputIterator,
+                                                                SelectedCountOutputIterator,
+                                                                UnaryPredicate,
+                                                                decltype(inequality_op),
+                                                                offset_scan_state_type>),
+                               dim3(grid_size),
+                               dim3(block_size),
+                               0,
+                               stream,
+                               input,
+                               flags,
+                               output,
+                               selected_count_output,
+                               size,
+                               predicate,
+                               inequality_op,
+                               offset_scan_state,
+                               number_of_blocks,
+                               ordered_bid);
+        }
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", size, start)
+
+        return hipSuccess;
     }
-
-
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_offset_scan_state_kernel", size, start)
-
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-    grid_size = number_of_blocks;
-    if (prop.gcnArch == 908 && asicRevision < 2)
-    {
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(partition_kernel<
-                SelectMethod, OnlySelected, config,
-                InputIterator, FlagIterator, OutputIterator, SelectedCountOutputIterator,
-                UnaryPredicate, decltype(inequality_op), offset_scan_state_with_sleep_type
-            >),
-            dim3(grid_size), dim3(block_size), 0, stream,
-            input, flags, output, selected_count_output, size, predicate,
-            inequality_op, offset_scan_state_with_sleep, number_of_blocks, ordered_bid
-        );
-    } else
-    {
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(partition_kernel<
-                SelectMethod, OnlySelected, config,
-                InputIterator, FlagIterator, OutputIterator, SelectedCountOutputIterator,
-                UnaryPredicate, decltype(inequality_op), offset_scan_state_type
-            >),
-            dim3(grid_size), dim3(block_size), 0, stream,
-            input, flags, output, selected_count_output, size, predicate,
-            inequality_op, offset_scan_state, number_of_blocks, ordered_bid
-        );
-    }
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", size, start)
-
-    return hipSuccess;
-}
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
 #undef ROCPRIM_DETAIL_HIP_SYNC
@@ -340,23 +383,20 @@ hipError_t partition_impl(void * temporary_storage,
 /// // output_count: 4
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class FlagIterator,
-    class OutputIterator,
-    class SelectedCountOutputIterator
->
-inline
-hipError_t partition(void * temporary_storage,
-                     size_t& storage_size,
-                     InputIterator input,
-                     FlagIterator flags,
-                     OutputIterator output,
-                     SelectedCountOutputIterator selected_count_output,
-                     const size_t size,
-                     const hipStream_t stream = 0,
-                     const bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class FlagIterator,
+          class OutputIterator,
+          class SelectedCountOutputIterator>
+inline hipError_t partition(void*                       temporary_storage,
+                            size_t&                     storage_size,
+                            InputIterator               input,
+                            FlagIterator                flags,
+                            OutputIterator              output,
+                            SelectedCountOutputIterator selected_count_output,
+                            const size_t                size,
+                            const hipStream_t           stream            = 0,
+                            const bool                  debug_synchronous = false)
 {
     // Dummy unary predicate
     using unary_predicate_type = ::rocprim::empty_type;
@@ -364,9 +404,17 @@ hipError_t partition(void * temporary_storage,
     using inequality_op_type = ::rocprim::empty_type;
 
     return detail::partition_impl<detail::select_method::flag, false, Config>(
-        temporary_storage, storage_size, input, flags, output, selected_count_output,
-        size, unary_predicate_type(), inequality_op_type(), stream, debug_synchronous
-    );
+        temporary_storage,
+        storage_size,
+        input,
+        flags,
+        output,
+        selected_count_output,
+        size,
+        unary_predicate_type(),
+        inequality_op_type(),
+        stream,
+        debug_synchronous);
 }
 
 /// \brief Parallel select primitive for device level using selection predicate.
@@ -456,34 +504,39 @@ hipError_t partition(void * temporary_storage,
 /// // output_count: 4
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class OutputIterator,
-    class SelectedCountOutputIterator,
-    class UnaryPredicate
->
-inline
-hipError_t partition(void * temporary_storage,
-                     size_t& storage_size,
-                     InputIterator input,
-                     OutputIterator output,
-                     SelectedCountOutputIterator selected_count_output,
-                     const size_t size,
-                     UnaryPredicate predicate,
-                     const hipStream_t stream = 0,
-                     const bool debug_synchronous = false)
+template <class Config = default_config,
+          class InputIterator,
+          class OutputIterator,
+          class SelectedCountOutputIterator,
+          class UnaryPredicate>
+inline hipError_t partition(void*                       temporary_storage,
+                            size_t&                     storage_size,
+                            InputIterator               input,
+                            OutputIterator              output,
+                            SelectedCountOutputIterator selected_count_output,
+                            const size_t                size,
+                            UnaryPredicate              predicate,
+                            const hipStream_t           stream            = 0,
+                            const bool                  debug_synchronous = false)
 {
     // Dummy flag type
-    using flag_type = ::rocprim::empty_type;
-    flag_type * flags = nullptr;
+    using flag_type  = ::rocprim::empty_type;
+    flag_type* flags = nullptr;
     // Dummy inequality operation
     using inequality_op_type = ::rocprim::empty_type;
 
     return detail::partition_impl<detail::select_method::predicate, false, Config>(
-        temporary_storage, storage_size, input, flags, output, selected_count_output,
-        size, predicate, inequality_op_type(), stream, debug_synchronous
-    );
+        temporary_storage,
+        storage_size,
+        input,
+        flags,
+        output,
+        selected_count_output,
+        size,
+        predicate,
+        inequality_op_type(),
+        stream,
+        debug_synchronous);
 }
 
 /// @}

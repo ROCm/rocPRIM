@@ -24,164 +24,160 @@
 namespace test_utils
 {
 
-// Output iterator checking out of bounds situations
-template<class T>
-class bounds_checking_iterator
-{
-public:
-    // Iterator traits
-    using difference_type = std::ptrdiff_t;
-    using value_type = void;
-    using pointer = void;
-    using reference = T&;
-
-    using iterator_category = std::random_access_iterator_tag;
-
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator(T * ptr, T * start_ptr, bool * out_of_bounds_flag, size_t size)
-        : ptr_(ptr), start_ptr_(start_ptr), out_of_bounds_flag_(out_of_bounds_flag), size_(size)
-    { }
-
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator(T * ptr, bool * out_of_bounds_flag, size_t size)
-        : bounds_checking_iterator(ptr, ptr, out_of_bounds_flag, size)
-    { }
-
-    ROCPRIM_HOST_DEVICE inline
-    ~bounds_checking_iterator() = default;
-
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator& operator++()
+    // Output iterator checking out of bounds situations
+    template <class T>
+    class bounds_checking_iterator
     {
-        ptr_++;
-        return *this;
-    }
+    public:
+        // Iterator traits
+        using difference_type = std::ptrdiff_t;
+        using value_type      = void;
+        using pointer         = void;
+        using reference       = T&;
 
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator operator++(int)
-    {
-        bounds_checking_iterator old = *this;
-        ptr_++;
-        return old;
-    }
+        using iterator_category = std::random_access_iterator_tag;
 
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator& operator--()
-    {
-        ptr_--;
-        return *this;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator operator--(int)
-    {
-        bounds_checking_iterator old = *this;
-        ptr_--;
-        return old;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    reference operator*() const
-    {
-        if((ptr_ < start_ptr_) || (ptr_ >= start_ptr_ + size_))
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator(T*     ptr,
+                                                            T*     start_ptr,
+                                                            bool*  out_of_bounds_flag,
+                                                            size_t size)
+            : ptr_(ptr)
+            , start_ptr_(start_ptr)
+            , out_of_bounds_flag_(out_of_bounds_flag)
+            , size_(size)
         {
-            *out_of_bounds_flag_ = true;
         }
-        return *ptr_;
-    }
 
-    ROCPRIM_HOST_DEVICE inline
-    reference operator[](difference_type n) const
-    {
-        if(((ptr_ + n) < start_ptr_) || ((ptr_ + n) >= start_ptr_ + size_))
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator(T*     ptr,
+                                                            bool*  out_of_bounds_flag,
+                                                            size_t size)
+            : bounds_checking_iterator(ptr, ptr, out_of_bounds_flag, size)
         {
-            *out_of_bounds_flag_ = true;
         }
-        return *(ptr_ + n);
-    }
 
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator operator+(difference_type distance) const
+        ROCPRIM_HOST_DEVICE inline ~bounds_checking_iterator() = default;
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator& operator++()
+        {
+            ptr_++;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator operator++(int)
+        {
+            bounds_checking_iterator old = *this;
+            ptr_++;
+            return old;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator& operator--()
+        {
+            ptr_--;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator operator--(int)
+        {
+            bounds_checking_iterator old = *this;
+            ptr_--;
+            return old;
+        }
+
+        ROCPRIM_HOST_DEVICE inline reference operator*() const
+        {
+            if((ptr_ < start_ptr_) || (ptr_ >= start_ptr_ + size_))
+            {
+                *out_of_bounds_flag_ = true;
+            }
+            return *ptr_;
+        }
+
+        ROCPRIM_HOST_DEVICE inline reference operator[](difference_type n) const
+        {
+            if(((ptr_ + n) < start_ptr_) || ((ptr_ + n) >= start_ptr_ + size_))
+            {
+                *out_of_bounds_flag_ = true;
+            }
+            return *(ptr_ + n);
+        }
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator
+            operator+(difference_type distance) const
+        {
+            auto i = ptr_ + distance;
+            return bounds_checking_iterator(i, start_ptr_, out_of_bounds_flag_, size_);
+        }
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator& operator+=(difference_type distance)
+        {
+            ptr_ += distance;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator
+            operator-(difference_type distance) const
+        {
+            auto i = ptr_ - distance;
+            return bounds_checking_iterator(i, start_ptr_, out_of_bounds_flag_, size_);
+        }
+
+        ROCPRIM_HOST_DEVICE inline bounds_checking_iterator& operator-=(difference_type distance)
+        {
+            ptr_ -= distance;
+            return *this;
+        }
+
+        ROCPRIM_HOST_DEVICE inline difference_type operator-(bounds_checking_iterator other) const
+        {
+            return ptr_ - other.ptr_;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bool operator==(bounds_checking_iterator other) const
+        {
+            return ptr_ == other.ptr_;
+        }
+
+        ROCPRIM_HOST_DEVICE inline bool operator!=(bounds_checking_iterator other) const
+        {
+            return ptr_ != other.ptr_;
+        }
+
+    private:
+        T*     ptr_;
+        T*     start_ptr_;
+        bool*  out_of_bounds_flag_;
+        size_t size_;
+    };
+
+    class out_of_bounds_flag
     {
-        auto i = ptr_ + distance;
-        return bounds_checking_iterator(i, start_ptr_, out_of_bounds_flag_, size_);
-    }
+    public:
+        out_of_bounds_flag()
+        {
+            hipMalloc(&device_pointer_, sizeof(bool));
+            hipMemset(device_pointer_, 0, sizeof(bool));
+        }
 
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator& operator+=(difference_type distance)
-    {
-        ptr_ += distance;
-        return *this;
-    }
+        ~out_of_bounds_flag()
+        {
+            hipFree(device_pointer_);
+        }
 
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator operator-(difference_type distance) const
-    {
-        auto i = ptr_ - distance;
-        return bounds_checking_iterator(i, start_ptr_, out_of_bounds_flag_, size_);
-    }
+        bool get() const
+        {
+            bool value;
+            hipMemcpy(&value, device_pointer_, sizeof(bool), hipMemcpyDeviceToHost);
+            return value;
+        }
 
-    ROCPRIM_HOST_DEVICE inline
-    bounds_checking_iterator& operator-=(difference_type distance)
-    {
-        ptr_ -= distance;
-        return *this;
-    }
+        bool* device_pointer() const
+        {
+            return device_pointer_;
+        }
 
-    ROCPRIM_HOST_DEVICE inline
-    difference_type operator-(bounds_checking_iterator other) const
-    {
-        return ptr_ - other.ptr_;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    bool operator==(bounds_checking_iterator other) const
-    {
-        return ptr_ == other.ptr_;
-    }
-
-    ROCPRIM_HOST_DEVICE inline
-    bool operator!=(bounds_checking_iterator other) const
-    {
-        return ptr_ != other.ptr_;
-    }
-
-private:
-    T * ptr_;
-    T * start_ptr_;
-    bool * out_of_bounds_flag_;
-    size_t size_;
-};
-
-class out_of_bounds_flag
-{
-public:
-    out_of_bounds_flag()
-    {
-        hipMalloc(&device_pointer_, sizeof(bool));
-        hipMemset(device_pointer_, 0, sizeof(bool));
-    }
-
-    ~out_of_bounds_flag()
-    {
-        hipFree(device_pointer_);
-    }
-
-    bool get() const
-    {
-        bool value;
-        hipMemcpy(&value, device_pointer_, sizeof(bool), hipMemcpyDeviceToHost);
-        return value;
-    }
-
-    bool * device_pointer() const
-    {
-        return device_pointer_;
-    }
-
-private:
-    bool * device_pointer_;
-};
+    private:
+        bool* device_pointer_;
+    };
 
 } // end test_utils namespace
 
