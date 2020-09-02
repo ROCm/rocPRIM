@@ -43,7 +43,7 @@ def runPackageCommand(platform, project)
     def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/release")
 
     platform.runCommand(this, packageHelper[0])
-        platform.archiveArtifacts(this, packageHelper[1])
+    platform.archiveArtifacts(this, packageHelper[1])
 }
 
 return this
