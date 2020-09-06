@@ -159,7 +159,7 @@ namespace detail
             Key                        next_key = storage_.key[next_id];
             bool compare = (next_id < flat_tid) ? compare_function(key, next_key)
                                                 : compare_function(next_key, key);
-            bool swap = compare ^ dir;
+            bool swap    = compare ^ dir;
             if(swap)
             {
                 key = next_key;
@@ -180,7 +180,7 @@ namespace detail
             Value                      next_value = storage_.value[next_id];
             bool compare = (next_id < flat_tid) ? compare_function(key, next_key)
                                                 : compare_function(next_key, key);
-            bool swap = compare ^ dir;
+            bool swap    = compare ^ dir;
             if(swap)
             {
                 key   = next_key;
@@ -265,7 +265,7 @@ namespace detail
 
             bool         is_even = (flat_tid % 2) == 0;
             unsigned int odd_id  = (is_even) ? ::rocprim::max(flat_tid, 1u) - 1
-                                            : ::rocprim::min(flat_tid + 1, Size - 1);
+                                             : ::rocprim::min(flat_tid + 1, Size - 1);
             unsigned int even_id = (is_even) ? ::rocprim::min(flat_tid + 1, Size - 1)
                                              : ::rocprim::max(flat_tid, 1u) - 1;
 
@@ -299,7 +299,7 @@ namespace detail
 
             bool         is_even = (flat_tid % 2 == 0);
             unsigned int odd_id  = (is_even) ? ::rocprim::max(flat_tid, 1u) - 1
-                                            : ::rocprim::min(flat_tid + 1, size - 1);
+                                             : ::rocprim::min(flat_tid + 1, size - 1);
             unsigned int even_id = (is_even) ? ::rocprim::min(flat_tid + 1, size - 1)
                                              : ::rocprim::max(flat_tid, 1u) - 1;
 

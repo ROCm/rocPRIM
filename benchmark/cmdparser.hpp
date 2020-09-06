@@ -66,7 +66,7 @@ namespace cli
             {
             }
 
-            virtual ~CmdBase() { }
+            virtual ~CmdBase() {}
 
             std::string              name;
             std::string              command;
@@ -121,7 +121,7 @@ namespace cli
             {
                 try
                 {
-                    CallbackArgs args {arguments, output, error};
+                    CallbackArgs args{arguments, output, error};
                     value = callback(args);
                     return true;
                 }
@@ -256,7 +256,7 @@ namespace cli
         static std::vector<T> parse(const std::vector<std::string>& elements, const std::vector<T>&)
         {
             const T                  defval = T();
-            std::vector<T>           values {};
+            std::vector<T>           values{};
             std::vector<std::string> buffer(1);
 
             for(const auto& element : elements)
@@ -277,7 +277,7 @@ namespace cli
         template <class T>
         static std::string stringify(const std::vector<T>& values)
         {
-            std::stringstream ss {};
+            std::stringstream ss{};
             ss << "[ ";
 
             for(const auto& value : values)
@@ -364,7 +364,7 @@ namespace cli
         template <typename T>
         void set_default(bool is_required, const std::string& description = "")
         {
-            auto command = new CmdArgument<T> {"", "", description, is_required, false};
+            auto command = new CmdArgument<T>{"", "", description, is_required, false};
             _commands.push_back(command);
         }
 
@@ -374,7 +374,7 @@ namespace cli
                           const std::string& description = "",
                           bool               dominant    = false)
         {
-            auto command = new CmdArgument<T> {name, alternative, description, true, dominant};
+            auto command = new CmdArgument<T>{name, alternative, description, true, dominant};
             _commands.push_back(command);
         }
 
@@ -385,7 +385,7 @@ namespace cli
                           const std::string& description = "",
                           bool               dominant    = false)
         {
-            auto command   = new CmdArgument<T> {name, alternative, description, false, dominant};
+            auto command   = new CmdArgument<T>{name, alternative, description, false, dominant};
             command->value = defaultValue;
             _commands.push_back(command);
         }
@@ -397,7 +397,7 @@ namespace cli
                           const std::string&              description = "",
                           bool                            dominant    = false)
         {
-            auto command = new CmdFunction<T> {name, alternative, description, false, dominant};
+            auto command      = new CmdFunction<T>{name, alternative, description, false, dominant};
             command->callback = callback;
             _commands.push_back(command);
         }
@@ -575,7 +575,7 @@ namespace cli
 
         std::string usage() const
         {
-            std::stringstream ss {};
+            std::stringstream ss{};
             ss << "Available parameters:\n\n";
 
             for(const auto& command : _commands)
@@ -613,7 +613,7 @@ namespace cli
 
         std::string howto_required(CmdBase* command) const
         {
-            std::stringstream ss {};
+            std::stringstream ss{};
             ss << "The parameter " << command->name << " is required.\n";
             ss << command->description << '\n';
             print_help(ss);
@@ -622,7 +622,7 @@ namespace cli
 
         std::string howto_use(CmdBase* command) const
         {
-            std::stringstream ss {};
+            std::stringstream ss{};
             ss << "The parameter " << command->name << " has invalid arguments.\n";
             ss << command->description << '\n';
             print_help(ss);
@@ -631,7 +631,7 @@ namespace cli
 
         std::string no_default() const
         {
-            std::stringstream ss {};
+            std::stringstream ss{};
             ss << "No default parameter has been specified.\n";
             ss << "The given argument must be used with a parameter.\n";
             print_help(ss);

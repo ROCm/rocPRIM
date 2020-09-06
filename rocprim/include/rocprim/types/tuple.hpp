@@ -493,7 +493,7 @@ public:
                   check_constructor<Dummy>::template enable_default<Types...>()>::type>
 #endif
     ROCPRIM_HOST_DEVICE inline constexpr tuple() noexcept
-        : base() {};
+        : base(){};
 
     /// \brief Implicitly-defined copy constructor.
     ROCPRIM_HOST_DEVICE inline tuple(const tuple&) = default;
@@ -636,11 +636,11 @@ template <>
 class tuple<>
 {
 public:
-    ROCPRIM_HOST_DEVICE inline constexpr tuple() noexcept { }
+    ROCPRIM_HOST_DEVICE inline constexpr tuple() noexcept {}
 
     ROCPRIM_HOST_DEVICE inline ~tuple() = default;
 
-    ROCPRIM_HOST_DEVICE inline void swap(tuple&) noexcept { }
+    ROCPRIM_HOST_DEVICE inline void swap(tuple&) noexcept {}
 };
 #endif
 

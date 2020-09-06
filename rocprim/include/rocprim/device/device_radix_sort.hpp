@@ -57,12 +57,12 @@ namespace detail
                                                                                      keys_input,
                                                                         unsigned int size,
                                                                         unsigned int*
-                                                                                     batch_digit_counts,
+                                                                            batch_digit_counts,
                                                                         unsigned int bit,
                                                                         unsigned int
                                                                             current_radix_bits,
                                                                         unsigned int
-                                                                                     blocks_per_full_batch,
+                                                                            blocks_per_full_batch,
                                                                         unsigned int full_batches)
     {
         fill_digit_counts<BlockSize, ItemsPerThread, RadixBits, Descending>(keys_input,

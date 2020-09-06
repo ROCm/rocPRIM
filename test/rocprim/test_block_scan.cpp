@@ -1513,7 +1513,7 @@ struct static_for_input_array
 template <unsigned int N, class T, int Method, unsigned int BlockSize>
 struct static_for_input_array<N, N, T, Method, BlockSize>
 {
-    static void run() { }
+    static void run() {}
 };
 
 TYPED_TEST(RocprimBlockScanInputArrayTests, InclusiveScan)

@@ -111,7 +111,7 @@ namespace detail
         dereference_iterator_tuple_impl(const ::rocprim::tuple<Types...>& t,
                                         ::rocprim::index_sequence<Indices...>)
     {
-        ReferenceTuple rt {*::rocprim::get<Indices>(t)...};
+        ReferenceTuple rt{*::rocprim::get<Indices>(t)...};
         return rt;
     }
 

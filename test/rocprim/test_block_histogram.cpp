@@ -218,7 +218,7 @@ template <unsigned int N,
           rocprim::block_histogram_algorithm Algorithm>
 struct static_for_input_array<N, N, T, BinType, BlockSize, Algorithm>
 {
-    static void run() { }
+    static void run() {}
 };
 
 TYPED_TEST(RocprimBlockHistogramAtomicInputArrayTests, Histogram)

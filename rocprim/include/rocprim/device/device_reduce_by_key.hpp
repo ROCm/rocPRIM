@@ -55,7 +55,7 @@ namespace detail
                                                                          KeyCompareFunction
                                                                              key_compare_op,
                                                                          unsigned int
-                                                                                      blocks_per_full_batch,
+                                                                             blocks_per_full_batch,
                                                                          unsigned int full_batches)
     {
         fill_unique_counts<BlockSize, ItemsPerThread>(
@@ -68,7 +68,7 @@ namespace detail
         ROCPRIM_DEFAULT_MIN_WARPS_PER_EU) void scan_unique_counts_kernel(unsigned int*
                                                                              unique_counts,
                                                                          UniqueCountOutputIterator
-                                                                                      unique_count_output,
+                                                                             unique_count_output,
                                                                          unsigned int batches)
     {
         scan_unique_counts<BlockSize, ItemsPerThread>(unique_counts, unique_count_output, batches);

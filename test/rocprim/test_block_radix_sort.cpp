@@ -430,7 +430,7 @@ struct static_for
 template <unsigned int N, class T, class U, int Method, unsigned int BlockSize>
 struct static_for<N, N, T, U, Method, BlockSize>
 {
-    static void run() { }
+    static void run() {}
 };
 
 TYPED_TEST(RocprimBlockRadixSort, SortKeys)

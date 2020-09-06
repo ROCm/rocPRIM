@@ -537,7 +537,7 @@ auto test_block_exchange() -> typename std::enable_if<Method == 4>::type
         auto block_ranks = ranks.begin() + bi * items_per_block;
         std::iota(block_ranks, block_ranks + items_per_block, 0);
         std::shuffle(
-            block_ranks, block_ranks + items_per_block, std::mt19937 {std::random_device {}()});
+            block_ranks, block_ranks + items_per_block, std::mt19937{std::random_device{}()});
     }
     std::vector<type> values(size);
     std::iota(values.begin(), values.end(), 0);
@@ -632,7 +632,7 @@ auto test_block_exchange() -> typename std::enable_if<Method == 5>::type
         auto block_ranks = ranks.begin() + bi * items_per_block;
         std::iota(block_ranks, block_ranks + items_per_block, 0);
         std::shuffle(
-            block_ranks, block_ranks + items_per_block, std::mt19937 {std::random_device {}()});
+            block_ranks, block_ranks + items_per_block, std::mt19937{std::random_device{}()});
     }
     std::vector<type> values(size);
     std::iota(values.begin(), values.end(), 0);
@@ -720,7 +720,7 @@ struct static_for
 template <unsigned int N, class T, class U, int Method, unsigned int BlockSize>
 struct static_for<N, N, T, U, Method, BlockSize>
 {
-    static void run() { }
+    static void run() {}
 };
 
 TYPED_TEST(RocprimBlockExchangeTests, BlockedToStriped)

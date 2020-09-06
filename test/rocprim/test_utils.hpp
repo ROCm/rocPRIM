@@ -468,7 +468,7 @@ namespace test_utils
             y = other.y;
         }
 
-        ROCPRIM_HOST_DEVICE inline ~custom_test_type() { }
+        ROCPRIM_HOST_DEVICE inline ~custom_test_type() {}
 
         ROCPRIM_HOST_DEVICE inline custom_test_type& operator=(const custom_test_type& other)
         {
@@ -544,7 +544,7 @@ namespace test_utils
             y = other.y;
         }
 
-        ROCPRIM_HOST_DEVICE inline ~custom_test_type() { }
+        ROCPRIM_HOST_DEVICE inline ~custom_test_type() {}
 
         ROCPRIM_HOST_DEVICE inline custom_test_type& operator=(const custom_test_type& other)
         {
@@ -620,7 +620,7 @@ namespace test_utils
             }
         }
 
-        ROCPRIM_HOST_DEVICE inline ~custom_test_array_type() { }
+        ROCPRIM_HOST_DEVICE inline ~custom_test_array_type() {}
 
         ROCPRIM_HOST_DEVICE inline custom_test_array_type&
             operator=(const custom_test_array_type& other)

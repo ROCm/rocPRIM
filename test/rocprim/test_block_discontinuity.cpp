@@ -564,7 +564,7 @@ template <unsigned int N,
           unsigned int BlockSize>
 struct static_for<N, N, Type, FlagType, FlagOpType, Method, BlockSize>
 {
-    static void run() { }
+    static void run() {}
 };
 
 TYPED_TEST(RocprimBlockDiscontinuity, FlagHeads)

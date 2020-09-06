@@ -38,9 +38,9 @@ struct custom_notaligned
     unsigned int u;
 
     ROCPRIM_HOST_DEVICE
-    custom_notaligned() {};
+    custom_notaligned(){};
     ROCPRIM_HOST_DEVICE
-    ~custom_notaligned() {};
+    ~custom_notaligned(){};
 };
 
 ROCPRIM_HOST_DEVICE
@@ -57,9 +57,9 @@ struct custom_16aligned
     float        f;
 
     ROCPRIM_HOST_DEVICE
-    custom_16aligned() {};
+    custom_16aligned(){};
     ROCPRIM_HOST_DEVICE
-    ~custom_16aligned() {};
+    ~custom_16aligned(){};
 } __attribute__((aligned(16)));
 
 inline ROCPRIM_HOST_DEVICE bool operator==(const custom_16aligned& lhs, const custom_16aligned& rhs)

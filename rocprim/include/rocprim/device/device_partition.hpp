@@ -56,12 +56,12 @@ namespace detail
                                                                 FlagIterator   flags,
                                                                 OutputIterator output,
                                                                 SelectedCountOutputIterator
-                                                                               selected_count_output,
-                                                                const size_t   size,
+                                                                             selected_count_output,
+                                                                const size_t size,
                                                                 UnaryPredicate predicate,
                                                                 InequalityOp   inequality_op,
                                                                 OffsetLookbackScanState
-                                                                                   offset_scan_state,
+                                                                    offset_scan_state,
                                                                 const unsigned int number_of_blocks,
                                                                 ordered_block_id<unsigned int>
                                                                     ordered_bid)

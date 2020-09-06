@@ -66,7 +66,7 @@ namespace detail
         unsigned int diag1 = id * spacing;
         unsigned int diag2 = min(size1 + size2, diag1 + spacing);
 
-        return range_t {p1, p2, diag1 - p1, diag2 - p2};
+        return range_t{p1, p2, diag1 - p1, diag2 - p2};
     }
 
     template <class KeysInputIterator1, class KeysInputIterator2, class BinaryFunction>
@@ -215,7 +215,7 @@ namespace detail
                                         range.count2());
 
         range_t range_local
-            = range_t {0, range.count1(), range.count1(), (range.count1() + range.count2())};
+            = range_t{0, range.count1(), range.count1(), (range.count1() + range.count2())};
 
         unsigned int diag      = ItemsPerThread * flat_id;
         unsigned int partition = merge_path(keys_shared + range_local.begin1,
@@ -225,10 +225,10 @@ namespace detail
                                             diag,
                                             compare_function);
 
-        range_t range_partition = range_t {range_local.begin1 + partition,
-                                           range_local.end1,
-                                           range_local.begin2 + diag - partition,
-                                           range_local.end2};
+        range_t range_partition = range_t{range_local.begin1 + partition,
+                                          range_local.end1,
+                                          range_local.begin2 + diag - partition,
+                                          range_local.end2};
 
         serial_merge(keys_shared, key_inputs, index, range_partition, compare_function);
     }

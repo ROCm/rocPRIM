@@ -549,7 +549,7 @@ template <unsigned int N,
           rocprim::block_reduce_algorithm Algorithm>
 struct static_for_input_array<N, N, T, BlockSize, Algorithm>
 {
-    static void run() { }
+    static void run() {}
 };
 
 TYPED_TEST(RocprimBlockReduceInputArrayTests, Reduce)

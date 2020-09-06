@@ -48,7 +48,7 @@ public:
         ROCPRIM_HOST_DEVICE inline discard_value() = default;
 
         template <class T>
-        ROCPRIM_HOST_DEVICE inline discard_value(T) {};
+        ROCPRIM_HOST_DEVICE inline discard_value(T){};
 
         ROCPRIM_HOST_DEVICE inline ~discard_value() = default;
 
