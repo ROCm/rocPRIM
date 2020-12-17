@@ -28,6 +28,15 @@
 
 #include <rocprim/rocprim.hpp>
 
+#define HIP_CHECK(condition)         \
+  {                                  \
+    hipError_t error = condition;    \
+    if(error != hipSuccess){         \
+        std::cout << "HIP error: " << error << " line: " << __LINE__ << std::endl; \
+        exit(error); \
+    } \
+  }
+
 // Support half operators on host side
 
 ROCPRIM_HOST inline
@@ -226,6 +235,18 @@ inline auto get_random_data(size_t size, T min, T max, size_t max_random_size = 
         data[i] = T(field_data[i]);
     }
     return data;
+}
+
+bool supports_hmm()
+{
+    hipDeviceProp_t device_prop;
+    int device_id;
+    HIP_CHECK(hipGetDevice(&device_id));
+    HIP_CHECK(hipGetDeviceProperties(&device_prop, device_id));
+
+    if (device_prop.managedMemory == 1) return true;
+
+    return false;
 }
 
 #endif // ROCPRIM_BENCHMARK_UTILS_HPP_

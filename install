@@ -31,7 +31,7 @@ build_release=true
 build_type=Release
 build_hip_clang=false
 run_tests=false
-build_benchmark=false
+build_benchmark=true
 rocm_path=/opt/rocm
 build_relocatable=false
 
