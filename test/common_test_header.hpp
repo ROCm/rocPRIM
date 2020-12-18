@@ -71,6 +71,18 @@ int obtain_device_from_ctest()
         return 0;
 }
 
+bool supports_hmm()
+{
+    hipDeviceProp_t device_prop;
+    int device_id;
+    HIP_CHECK(hipGetDevice(&device_id));
+    HIP_CHECK(hipGetDeviceProperties(&device_prop, device_id));
+    printf("managed memory support: %d\n", device_prop.managedMemory);
+    if (device_prop.managedMemory == 1) return true;
+
+    return false;
+}
+
 }
 
 #endif
