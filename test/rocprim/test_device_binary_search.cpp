@@ -118,9 +118,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
             haystack_type * d_haystack;
             needle_type * d_needles;
             output_type * d_output;
-            HIP_CHECK(hipMalloc(&d_haystack, haystack_size * sizeof(haystack_type)));
-            HIP_CHECK(hipMalloc(&d_needles, needles_size * sizeof(needle_type)));
-            HIP_CHECK(hipMalloc(&d_output, needles_size * sizeof(output_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_haystack, haystack_size * sizeof(haystack_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_needles, needles_size * sizeof(needle_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, needles_size * sizeof(output_type)));
             HIP_CHECK(
                 hipMemcpy(
                     d_haystack, haystack.data(),
@@ -159,7 +159,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
             HIP_CHECK(
                 rocprim::lower_bound(
@@ -236,9 +236,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
             haystack_type * d_haystack;
             needle_type * d_needles;
             output_type * d_output;
-            HIP_CHECK(hipMalloc(&d_haystack, haystack_size * sizeof(haystack_type)));
-            HIP_CHECK(hipMalloc(&d_needles, needles_size * sizeof(needle_type)));
-            HIP_CHECK(hipMalloc(&d_output, needles_size * sizeof(output_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_haystack, haystack_size * sizeof(haystack_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_needles, needles_size * sizeof(needle_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, needles_size * sizeof(output_type)));
             HIP_CHECK(
                 hipMemcpy(
                     d_haystack, haystack.data(),
@@ -277,7 +277,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
             HIP_CHECK(
                 rocprim::upper_bound(
@@ -354,9 +354,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
             haystack_type * d_haystack;
             needle_type * d_needles;
             output_type * d_output;
-            HIP_CHECK(hipMalloc(&d_haystack, haystack_size * sizeof(haystack_type)));
-            HIP_CHECK(hipMalloc(&d_needles, needles_size * sizeof(needle_type)));
-            HIP_CHECK(hipMalloc(&d_output, needles_size * sizeof(output_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_haystack, haystack_size * sizeof(haystack_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_needles, needles_size * sizeof(needle_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, needles_size * sizeof(output_type)));
             HIP_CHECK(
                 hipMemcpy(
                     d_haystack, haystack.data(),
@@ -393,7 +393,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
             HIP_CHECK(
                 rocprim::binary_search(

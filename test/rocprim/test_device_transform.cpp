@@ -140,8 +140,8 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
 
             T * d_input;
             U * d_output;
-            HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
-            HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(U)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(T)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, output.size() * sizeof(U)));
             HIP_CHECK(
                 hipMemcpy(
                     d_input, input.data(),
@@ -242,9 +242,9 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
             T1 * d_input1;
             T2 * d_input2;
             U * d_output;
-            HIP_CHECK(hipMalloc(&d_input1, input1.size() * sizeof(T1)));
-            HIP_CHECK(hipMalloc(&d_input2, input2.size() * sizeof(T2)));
-            HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(U)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input1, input1.size() * sizeof(T1)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input2, input2.size() * sizeof(T2)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, output.size() * sizeof(U)));
             HIP_CHECK(
                 hipMemcpy(
                     d_input1, input1.data(),

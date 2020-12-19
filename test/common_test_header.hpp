@@ -83,6 +83,27 @@ bool supports_hmm()
     return false;
 }
 
+bool use_hmm()
+{
+    return std::getenv("ROCPRIM_USE_HMM");
+}
+
+// Helper for HMM allocations: if device supports managedMemory, and HMM is requested through
+// ROCPRIM_USE_HMM environment variable
+template <class T>
+hipError_t hipMallocHelper(T** devPtr, size_t size)
+{
+    if (supports_hmm() && use_hmm())
+    {
+        return hipMallocManaged((void**)devPtr, size);
+    }
+    else
+    {
+        return hipMalloc((void**)devPtr, size);
+    }
+    return hipSuccess;
+}
+
 }
 
 #endif

@@ -158,7 +158,7 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             offsets.push_back(size);
 
             input_type * d_values_input;
-            HIP_CHECK(hipMalloc(&d_values_input, size * sizeof(input_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_input, size * sizeof(input_type)));
             HIP_CHECK(
                 hipMemcpy(
                     d_values_input, values_input.data(),
@@ -168,7 +168,7 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             );
 
             offset_type * d_offsets;
-            HIP_CHECK(hipMalloc(&d_offsets, (segments_count + 1) * sizeof(offset_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_offsets, (segments_count + 1) * sizeof(offset_type)));
             HIP_CHECK(
                 hipMemcpy(
                     d_offsets, offsets.data(),
@@ -178,7 +178,7 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             );
 
             output_type * d_aggregates_output;
-            HIP_CHECK(hipMalloc(&d_aggregates_output, segments_count * sizeof(output_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_aggregates_output, segments_count * sizeof(output_type)));
 
             size_t temporary_storage_bytes;
 
@@ -196,7 +196,7 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             ASSERT_GT(temporary_storage_bytes, 0);
 
             void * d_temporary_storage;
-            HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
             HIP_CHECK(
                 rocprim::segmented_reduce(

@@ -119,14 +119,14 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
 
             key_type * d_input;
             key_type * d_output;
-            HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(key_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(key_type)));
             if(in_place)
             {
                 d_output = d_input;
             }
             else
             {
-                HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(key_type)));
+                HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, output.size() * sizeof(key_type)));
             }
             HIP_CHECK(
                 hipMemcpy(
@@ -164,7 +164,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
             HIP_CHECK(hipDeviceSynchronize());
 
             // Run
@@ -239,14 +239,14 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
 
             key_type * d_keys_input;
             key_type * d_keys_output;
-            HIP_CHECK(hipMalloc(&d_keys_input, keys_input.size() * sizeof(key_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input, keys_input.size() * sizeof(key_type)));
             if(in_place)
             {
                 d_keys_output = d_keys_input;
             }
             else
             {
-                HIP_CHECK(hipMalloc(&d_keys_output, keys_output.size() * sizeof(key_type)));
+                HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_output, keys_output.size() * sizeof(key_type)));
             }
             HIP_CHECK(
                 hipMemcpy(
@@ -259,14 +259,14 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
 
             value_type * d_values_input;
             value_type * d_values_output;
-            HIP_CHECK(hipMalloc(&d_values_input, values_input.size() * sizeof(value_type)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_input, values_input.size() * sizeof(value_type)));
             if(in_place)
             {
                 d_values_output = d_values_input;
             }
             else
             {
-                HIP_CHECK(hipMalloc(&d_values_output, values_output.size() * sizeof(value_type)));
+                HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_output, values_output.size() * sizeof(value_type)));
             }
             HIP_CHECK(
                 hipMemcpy(
@@ -310,7 +310,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
             HIP_CHECK(hipDeviceSynchronize());
 
             // Run
