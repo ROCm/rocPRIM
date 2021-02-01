@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [Unreleased rocPRIM-2.10.8 for ROCm 4.1.0]
+## [rocPRIM-2.10.8 for ROCm 4.1.0]
 ### Fixed
 - Texture cache iteration support has been re-enabled.
 - Benchmark builds have been re-enabled.
