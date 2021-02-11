@@ -84,7 +84,7 @@ unsigned int lane_id()
 
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional block (tile).
 ROCPRIM_DEVICE inline
-unsigned int flat_block_thread_id()
+size_t flat_block_thread_id()
 {
     return (hipThreadIdx_z * hipBlockDim_y * hipBlockDim_x)
         + (hipThreadIdx_y * hipBlockDim_x)
@@ -95,7 +95,7 @@ unsigned int flat_block_thread_id()
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE inline
 auto flat_block_thread_id()
-    -> typename std::enable_if<(BlockSizeY == 1 && BlockSizeZ == 1), unsigned int>::type
+    -> typename std::enable_if<(BlockSizeY == 1 && BlockSizeZ == 1), size_t>::type
 {
     return hipThreadIdx_x;
 }
@@ -103,18 +103,18 @@ auto flat_block_thread_id()
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE inline
 auto flat_block_thread_id()
-    -> typename std::enable_if<(BlockSizeY > 1 && BlockSizeZ == 1), unsigned int>::type
+    -> typename std::enable_if<(BlockSizeY > 1 && BlockSizeZ == 1), size_t>::type
 {
-    return hipThreadIdx_x + (hipThreadIdx_y * hipBlockDim_x);
+    return hipThreadIdx_x + ((size_t)hipThreadIdx_y * hipBlockDim_x);
 }
 
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE inline
 auto flat_block_thread_id()
-    -> typename std::enable_if<(BlockSizeY > 1 && BlockSizeZ > 1), unsigned int>::type
+    -> typename std::enable_if<(BlockSizeY > 1 && BlockSizeZ > 1), size_t>::type
 {
-    return hipThreadIdx_x + (hipThreadIdx_y * hipBlockDim_x) +
-           (hipThreadIdx_z * hipBlockDim_y * hipBlockDim_x);
+    return hipThreadIdx_x + ((size_t)hipThreadIdx_y * hipBlockDim_x) +
+           ((size_t)hipThreadIdx_z * hipBlockDim_y * hipBlockDim_x);
 }
 
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional tile (block).

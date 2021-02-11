@@ -151,7 +151,7 @@ hipError_t partition_impl(void * temporary_storage,
 
     constexpr unsigned int block_size = config::block_size;
     constexpr unsigned int items_per_thread = config::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
+    constexpr auto items_per_block = (size_t)block_size * items_per_thread;
     const unsigned int number_of_blocks =
         std::max(1u, static_cast<unsigned int>((size + items_per_block - 1)/items_per_block));
 
