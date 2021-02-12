@@ -165,7 +165,7 @@ hipError_t reduce_by_key_impl(void * temporary_storage,
                               size_t& storage_size,
                               KeysInputIterator keys_input,
                               ValuesInputIterator values_input,
-                              const unsigned int size,
+                              const size_t size,
                               UniqueOutputIterator unique_output,
                               AggregatesOutputIterator aggregates_output,
                               UniqueCountOutputIterator unique_count_output,
@@ -189,7 +189,7 @@ hipError_t reduce_by_key_impl(void * temporary_storage,
     constexpr unsigned int items_per_block = config::reduce::block_size * config::reduce::items_per_thread;
     constexpr unsigned int scan_items_per_block = config::scan::block_size * config::scan::items_per_thread;
 
-    const unsigned int blocks = std::max(1u, ::rocprim::detail::ceiling_div(size, items_per_block));
+    const unsigned int blocks = std::max(1ul, ::rocprim::detail::ceiling_div(size, (size_t)items_per_block));
     const unsigned int blocks_per_full_batch = ::rocprim::detail::ceiling_div(blocks, scan_items_per_block);
     const unsigned int full_batches = blocks % scan_items_per_block != 0
         ? blocks % scan_items_per_block

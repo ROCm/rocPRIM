@@ -56,7 +56,7 @@ template<
 __global__
 __launch_bounds__(BlockSize)
 void fill_digit_counts_kernel(KeysInputIterator keys_input,
-                              unsigned int size,
+                              size_t size,
                               unsigned int * batch_digit_counts,
                               unsigned int bit,
                               unsigned int current_radix_bits,
