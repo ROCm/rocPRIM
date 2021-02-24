@@ -71,7 +71,6 @@ typedef ::testing::Types<
 std::vector<std::tuple<size_t, size_t>> get_sizes()
 {
     std::vector<std::tuple<size_t, size_t>> sizes = {
-        std::make_tuple(0, 0),
         std::make_tuple(2, 1),
         std::make_tuple(10, 10),
         std::make_tuple(111, 111),
