@@ -110,7 +110,7 @@ public:
     ROCPRIM_HOST static inline
     size_t get_storage_size(const unsigned int number_of_blocks)
     {
-        return sizeof(prefix_underlying_type) * (::rocprim::host_warp_size(); + number_of_blocks);
+        return sizeof(prefix_underlying_type) * (::rocprim::host_warp_size() + number_of_blocks);
     }
 
     ROCPRIM_DEVICE inline
@@ -200,8 +200,6 @@ private:
 template<class T, bool UseSleep>
 struct lookback_scan_state<T, UseSleep, false>
 {
-private:
-    //static constexpr unsigned int padding = ::rocprim::warp_size();
 
 public:
     using flag_type = char;
@@ -275,7 +273,7 @@ public:
     void get(const unsigned int block_id, flag_type& flag, T& value)
     {
         static constexpr unsigned int padding = ::rocprim::warp_size();
-        
+
         const uint SLEEP_MAX = 32;
         uint times_through = 1;
 
