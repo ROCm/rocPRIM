@@ -31,6 +31,16 @@ list( APPEND CMAKE_PREFIX_PATH /opt/rocm/llvm /opt/rocm )
 # rocPRIM project
 project(rocprim LANGUAGES CXX)
 
+# Build options
+# Disable -Werror
+option(DISABLE_WERROR "Disable building with Werror" ON)
+option(BUILD_TEST "Build tests (requires googletest)" OFF)
+option(BUILD_BENCHMARK "Build benchmarks" OFF)
+option(BUILD_EXAMPLE "Build examples" OFF)
+option(USE_HIP_CPU "Prefer HIP-CPU runtime instead of HW acceleration" OFF)
+# Disables building tests, benchmarks, examples
+option(ONLY_INSTALL "Only install" OFF)
+
 # CMake modules
 list(APPEND CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
