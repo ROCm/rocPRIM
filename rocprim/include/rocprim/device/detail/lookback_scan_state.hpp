@@ -81,8 +81,6 @@ private:
             unsigned int
         >::type;
 
-    //static constexpr unsigned int padding = ::rocprim::warp_size();
-
     // Helper struct
     struct prefix_type
     {
@@ -117,7 +115,8 @@ public:
     void initialize_prefix(const unsigned int block_id,
                            const unsigned int number_of_blocks)
     {
-        static constexpr unsigned int padding = ::rocprim::warp_size();
+        constexpr unsigned int padding = ::rocprim::warp_size();
+
         if(block_id < number_of_blocks)
         {
             prefix_type prefix;
@@ -152,7 +151,7 @@ public:
     ROCPRIM_DEVICE inline
     void get(const unsigned int block_id, flag_type& flag, T& value)
     {
-        static constexpr unsigned int padding = ::rocprim::warp_size();
+        constexpr unsigned int padding = ::rocprim::warp_size();
 
         prefix_type prefix;
 
@@ -184,7 +183,7 @@ private:
     ROCPRIM_DEVICE inline
     void set(const unsigned int block_id, const flag_type flag, const T value)
     {
-        static constexpr unsigned int padding = ::rocprim::warp_size();
+        constexpr unsigned int padding = ::rocprim::warp_size();
 
         prefix_type prefix = { flag, value };
         prefix_underlying_type p;
@@ -237,7 +236,7 @@ public:
     void initialize_prefix(const unsigned int block_id,
                            const unsigned int number_of_blocks)
     {
-        static constexpr unsigned int padding = ::rocprim::warp_size();
+        constexpr unsigned int padding = ::rocprim::warp_size();
         if(block_id < number_of_blocks)
         {
             prefixes_flags[padding + block_id] = PREFIX_EMPTY;
@@ -251,7 +250,7 @@ public:
     ROCPRIM_DEVICE inline
     void set_partial(const unsigned int block_id, const T value)
     {
-        static constexpr unsigned int padding = ::rocprim::warp_size();
+        constexpr unsigned int padding = ::rocprim::warp_size();
 
         store_volatile(&prefixes_partial_values[padding + block_id], value);
         ::rocprim::detail::memory_fence_device();
@@ -261,7 +260,7 @@ public:
     ROCPRIM_DEVICE inline
     void set_complete(const unsigned int block_id, const T value)
     {
-        static constexpr unsigned int padding = ::rocprim::warp_size();
+        constexpr unsigned int padding = ::rocprim::warp_size();
 
         store_volatile(&prefixes_complete_values[padding + block_id], value);
         ::rocprim::detail::memory_fence_device();
@@ -272,7 +271,7 @@ public:
     ROCPRIM_DEVICE inline
     void get(const unsigned int block_id, flag_type& flag, T& value)
     {
-        static constexpr unsigned int padding = ::rocprim::warp_size();
+        constexpr unsigned int padding = ::rocprim::warp_size();
 
         const uint SLEEP_MAX = 32;
         uint times_through = 1;
