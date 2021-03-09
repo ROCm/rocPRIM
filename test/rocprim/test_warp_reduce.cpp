@@ -74,7 +74,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
     constexpr size_t block_size =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+            : rocprim::max<size_t>((rocprim::warp_size()/logical_warp_size) * logical_warp_size, 1);
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -182,7 +182,7 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
     constexpr size_t block_size =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+            : rocprim::max<size_t>((rocprim::warp_size()/logical_warp_size) * logical_warp_size, 1);
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -297,7 +297,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
     constexpr size_t block_size =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+            : rocprim::max<size_t>((rocprim::warp_size()/logical_warp_size) * logical_warp_size, 1);
     const size_t size = block_size * 4;
     const size_t valid = logical_warp_size - 1;
 
@@ -406,7 +406,7 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
     constexpr size_t block_size =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+            : rocprim::max<size_t>((rocprim::warp_size()/logical_warp_size) * logical_warp_size, 1);
     const size_t size = block_size * 4;
     const size_t valid = logical_warp_size - 1;
 
@@ -498,7 +498,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
     constexpr size_t block_size =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+            : rocprim::max<size_t>((rocprim::warp_size()/logical_warp_size) * logical_warp_size, 1);
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -617,7 +617,7 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
     constexpr size_t block_size =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+            : rocprim::max<size_t>((rocprim::warp_size()/logical_warp_size) * logical_warp_size, 1);
     const size_t size = block_size * 4;
 
     // Given warp size not supported
@@ -761,7 +761,7 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
     constexpr size_t block_size =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(rocprim::warp_size(), logical_warp_size * 4)
-            : (rocprim::warp_size()/logical_warp_size) * logical_warp_size;
+            : rocprim::max<size_t>((rocprim::warp_size()/logical_warp_size) * logical_warp_size, 1);
     const size_t size = block_size * 4;
 
     // Given warp size not supported
