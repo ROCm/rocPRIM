@@ -403,10 +403,10 @@ public:
 
     ROCPRIM_DEVICE inline
     void load(T* block_input,
-              T (&items)[ItemsPerThread])
+              T (&_items)[ItemsPerThread])
     {
         const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
-        block_load_direct_blocked_vectorized(flat_id, block_input, items);
+        block_load_direct_blocked_vectorized(flat_id, block_input, _items);
     }
 
     template<class InputIterator, class U>

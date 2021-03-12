@@ -248,11 +248,12 @@ __global__
 __launch_bounds__(BlockSize)
 void load_store_kernel(Type* device_input, Type* device_output)
 {
+    Type _items[ItemsPerThread];
     auto offset = blockIdx.x * BlockSize * ItemsPerThread;
     rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
     rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
-    load.load(device_input + offset, items);
-    store.store(device_output + offset, items);
+    load.load(device_input + offset, _items);
+    store.store(device_output + offset, _items);
 }
 
 TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClass)
@@ -350,11 +351,12 @@ __global__
 __launch_bounds__(BlockSize)
 void load_store_valid_kernel(Type* device_input, Type* device_output, size_t valid)
 {
+    Type _items[ItemsPerThread];
     auto offset = blockIdx.x * BlockSize * ItemsPerThread;
     rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
     rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
-    load.load(device_input + offset, items, valid);
-    store.store(device_output + offset, items, valid);
+    load.load(device_input + offset, _items, (unsigned int)valid);
+    store.store(device_output + offset, _items, (unsigned int)valid);
 }
 
 TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClassValid)
@@ -464,13 +466,14 @@ template<
 >
 __global__
 __launch_bounds__(BlockSize)
-void load_store_valid_default_kernel(Type* device_input, Type* device_output, size_t valid, int _default)
+void load_store_valid_default_kernel(Type* device_input, Type* device_output, size_t valid, Def _default)
 {
+    Type _items[ItemsPerThread];
     auto offset = blockIdx.x * BlockSize * ItemsPerThread;
     rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
     rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
-    load.load(device_input + offset, items, valid, _default);
-    store.store(device_output + offset, items);
+    load.load(device_input + offset, _items, (unsigned int)valid, _default);
+    store.store(device_output + offset, _items);
 }
 
 TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClassDefault)

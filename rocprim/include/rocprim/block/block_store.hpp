@@ -300,10 +300,10 @@ public:
 
     ROCPRIM_DEVICE inline
     void store(T* block_output,
-               T (&items)[ItemsPerThread])
+               T (&_items)[ItemsPerThread])
     {
         const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
-        block_store_direct_blocked_vectorized(flat_id, block_output, items);
+        block_store_direct_blocked_vectorized(flat_id, block_output, _items);
     }
 
     template<class OutputIterator, class U>
