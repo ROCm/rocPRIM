@@ -236,11 +236,11 @@ auto test_block_adjacent_difference()
                            >::type;
     using flag_type = FlagType;
     using flag_op_type = FlagOpType;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 20;
-    constexpr size_t grid_size = size / items_per_block;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t size = items_per_block * 20;
+    static constexpr size_t grid_size = size / items_per_block;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -348,11 +348,11 @@ auto test_block_adjacent_difference()
                            >::type;
     using flag_type = FlagType;
     using flag_op_type = FlagOpType;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 20;
-    constexpr size_t grid_size = size / items_per_block;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t size = items_per_block * 20;
+    static constexpr size_t grid_size = size / items_per_block;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -460,11 +460,11 @@ auto test_block_adjacent_difference()
                            >::type;
     using flag_type = FlagType;
     using flag_op_type = FlagOpType;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
-    const size_t size = items_per_block * 20;
-    constexpr size_t grid_size = size / items_per_block;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t size = items_per_block * 20;
+    static constexpr size_t grid_size = size / items_per_block;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())

@@ -199,9 +199,9 @@ auto test_block_exchange()
 {
     using type = T;
     using output_type = U;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
     {
@@ -283,9 +283,9 @@ auto test_block_exchange()
 {
     using type = T;
     using output_type = U;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
     {
@@ -367,9 +367,9 @@ auto test_block_exchange()
 {
     using type = T;
     using output_type = U;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
     {
@@ -463,9 +463,9 @@ auto test_block_exchange()
 {
     using type = T;
     using output_type = U;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
     {
@@ -557,9 +557,9 @@ auto test_block_exchange()
 {
     using type = T;
     using output_type = U;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
     {
@@ -659,9 +659,9 @@ auto test_block_exchange()
 {
     using type = T;
     using output_type = U;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
     {

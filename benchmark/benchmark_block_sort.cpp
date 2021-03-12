@@ -115,7 +115,7 @@ template<
 >
 void run_benchmark(benchmark::State& state, benchmark_kinds benchmark_kind, hipStream_t stream, size_t N)
 {
-    constexpr auto block_size = BlockSize;
+    static constexpr auto block_size = BlockSize;
     const auto size = block_size * ((N + block_size - 1)/block_size);
 
     std::vector<T> input;
@@ -151,16 +151,16 @@ void run_benchmark(benchmark::State& state, benchmark_kinds benchmark_kind, hipS
         if(benchmark_kind == benchmark_kinds::sort_keys)
         {
             hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(sort_keys_kernel<T, BlockSize, Trials>),
-                dim3(size/block_size), dim3(BlockSize), 0, stream,
+                HIP_KERNEL_NAME(sort_keys_kernel<T, block_size, Trials>),
+                dim3(size/block_size), dim3(block_size), 0, stream,
                 d_input, d_output
             );
         }
         else if(benchmark_kind == benchmark_kinds::sort_pairs)
         {
             hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(sort_pairs_kernel<T, BlockSize, Trials>),
-                dim3(size/block_size), dim3(BlockSize), 0, stream,
+                HIP_KERNEL_NAME(sort_pairs_kernel<T, block_size, Trials>),
+                dim3(size/block_size), dim3(block_size), 0, stream,
                 d_input, d_output
             );
         }

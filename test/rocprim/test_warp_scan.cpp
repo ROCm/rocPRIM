@@ -217,20 +217,20 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanReduce)
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -375,20 +375,20 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -523,20 +523,20 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -693,20 +693,20 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -871,20 +871,20 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -1038,20 +1038,20 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
     using base_type = typename TestFixture::params::type;
     using T = test_utils::custom_test_type<base_type>;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);

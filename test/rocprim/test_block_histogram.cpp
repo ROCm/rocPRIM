@@ -121,10 +121,10 @@ template<
 >
 void test_block_histogram_input_arrays()
 {
-    constexpr auto algorithm = Algorithm;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr size_t bin = BlockSize;
+    static constexpr auto algorithm = Algorithm;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr size_t bin = BlockSize;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())

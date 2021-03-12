@@ -158,9 +158,9 @@ hipError_t transform(InputIterator input,
         detail::default_transform_config<ROCPRIM_TARGET_ARCH, result_type>
     >;
 
-    constexpr unsigned int block_size = config::block_size;
-    constexpr unsigned int items_per_thread = config::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
+    static constexpr unsigned int block_size = config::block_size;
+    static constexpr unsigned int items_per_thread = config::items_per_thread;
+    static constexpr auto items_per_block = block_size * items_per_thread;
 
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;

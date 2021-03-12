@@ -263,11 +263,11 @@ TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClass)
     HIP_CHECK(hipSetDevice(device_id));
 
     using Type = typename TestFixture::params::type;
-    constexpr size_t block_size = TestFixture::params::block_size;
-    constexpr rocprim::block_load_method load_method = TestFixture::params::load_method;
-    constexpr rocprim::block_store_method store_method = TestFixture::params::store_method;
-    const size_t items_per_thread = TestFixture::params::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = TestFixture::params::block_size;
+    static constexpr rocprim::block_load_method load_method = TestFixture::params::load_method;
+    static constexpr rocprim::block_store_method store_method = TestFixture::params::store_method;
+    static constexpr size_t items_per_thread = TestFixture::params::items_per_thread;
+    static constexpr auto items_per_block = block_size * items_per_thread;
     const size_t size = items_per_block * 113;
     const auto grid_size = size / items_per_block;
     // Given block size not supported
@@ -366,11 +366,11 @@ TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClassValid)
     HIP_CHECK(hipSetDevice(device_id));
 
     using Type = typename TestFixture::params::type;
-    constexpr size_t block_size = TestFixture::params::block_size;
-    constexpr rocprim::block_load_method load_method = TestFixture::params::load_method;
-    constexpr rocprim::block_store_method store_method = TestFixture::params::store_method;
-    const size_t items_per_thread = TestFixture::params::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = TestFixture::params::block_size;
+    static constexpr rocprim::block_load_method load_method = TestFixture::params::load_method;
+    static constexpr rocprim::block_store_method store_method = TestFixture::params::store_method;
+    static constexpr size_t items_per_thread = TestFixture::params::items_per_thread;
+    static constexpr auto items_per_block = block_size * items_per_thread;
     const size_t size = items_per_block * 113;
     const auto grid_size = size / items_per_block;
     // Given block size not supported
@@ -483,11 +483,11 @@ TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClassDefault)
     HIP_CHECK(hipSetDevice(device_id));
 
     using Type = typename TestFixture::params::type;
-    constexpr size_t block_size = TestFixture::params::block_size;
-    constexpr rocprim::block_load_method load_method = TestFixture::params::load_method;
-    constexpr rocprim::block_store_method store_method = TestFixture::params::store_method;
-    const size_t items_per_thread = TestFixture::params::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = TestFixture::params::block_size;
+    static constexpr rocprim::block_load_method load_method = TestFixture::params::load_method;
+    static constexpr rocprim::block_store_method store_method = TestFixture::params::store_method;
+    static constexpr size_t items_per_thread = TestFixture::params::items_per_thread;
+    static constexpr auto items_per_block = block_size * items_per_thread;
     const size_t size = items_per_block * 113;
     const auto grid_size = size / items_per_block;
     // Given block size not supported

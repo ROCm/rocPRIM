@@ -142,7 +142,7 @@ hipError_t merge_sort_impl(void * temporary_storage,
     >;
 
     // Block size
-    constexpr unsigned int block_size = config::block_size;
+    static constexpr unsigned int block_size = config::block_size;
 
     const size_t keys_bytes = ::rocprim::detail::align_size(size * sizeof(key_type));
     const size_t values_bytes =

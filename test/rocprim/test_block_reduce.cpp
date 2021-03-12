@@ -438,9 +438,9 @@ template<
 void test_block_reduce_input_arrays()
 {
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
-    constexpr auto algorithm = Algorithm;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr auto algorithm = Algorithm;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())

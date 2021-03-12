@@ -142,10 +142,10 @@ hipError_t merge_impl(void * temporary_storage,
         detail::default_merge_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
     >;
 
-    constexpr unsigned int block_size = config::block_size;
-    constexpr unsigned int half_block = block_size / 2;
-    constexpr unsigned int items_per_thread = config::items_per_thread;
-    constexpr auto items_per_block = block_size * items_per_thread;
+    static constexpr unsigned int block_size = config::block_size;
+    static constexpr unsigned int half_block = block_size / 2;
+    static constexpr unsigned int items_per_thread = config::items_per_thread;
+    static constexpr auto items_per_block = block_size * items_per_thread;
 
     const unsigned int partitions = ((input1_size + input2_size) + items_per_block - 1) / items_per_block;
     const size_t partition_bytes = (partitions + 1) * sizeof(unsigned int);

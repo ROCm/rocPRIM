@@ -60,9 +60,9 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockOffset)
     HIP_CHECK(hipSetDevice(device_id));
 
     using type = typename TestFixture::type;
-    const size_t block_size = TestFixture::block_size;
-    const size_t size = block_size * 11;
-    const size_t grid_size = size / block_size;
+    static constexpr size_t block_size = TestFixture::block_size;
+    static constexpr size_t size = block_size * 11;
+    static constexpr size_t grid_size = size / block_size;
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
@@ -144,9 +144,9 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockRotate)
     HIP_CHECK(hipSetDevice(device_id));
 
     using type = typename TestFixture::type;
-    const size_t block_size = TestFixture::block_size;
-    const size_t size = block_size * 11;
-    const size_t grid_size = size / block_size;
+    static constexpr size_t block_size = TestFixture::block_size;
+    static constexpr size_t size = block_size * 11;
+    static constexpr size_t grid_size = size / block_size;
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
@@ -228,10 +228,10 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockUp)
     HIP_CHECK(hipSetDevice(device_id));
 
     using type = typename TestFixture::type;
-    const size_t block_size = TestFixture::block_size;
-    const size_t size = block_size * 11;
-    const size_t grid_size = size / block_size;
-    constexpr unsigned int ItemsPerThread = 128;
+    static constexpr size_t block_size = TestFixture::block_size;
+    static constexpr size_t size = block_size * 11;
+    static constexpr size_t grid_size = size / block_size;
+    static constexpr unsigned int ItemsPerThread = 128;
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
@@ -322,10 +322,10 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockDown)
     HIP_CHECK(hipSetDevice(device_id));
 
     using type = typename TestFixture::type;
-    const size_t block_size = TestFixture::block_size;
-    const size_t size = block_size * 11;
-    const size_t grid_size = size / block_size;
-    constexpr unsigned int ItemsPerThread = 128;
+    static constexpr size_t block_size = TestFixture::block_size;
+    static constexpr size_t size = block_size * 11;
+    static constexpr size_t grid_size = size / block_size;
+    static constexpr unsigned int ItemsPerThread = 128;
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];

@@ -205,13 +205,13 @@ auto test_block_radix_sort()
 -> typename std::enable_if<Method == 0>::type
 {
     using key_type = Key;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr bool descending = Descending;
-    constexpr bool to_striped = ToStriped;
-    constexpr unsigned int start_bit = (rocprim::is_unsigned<Key>::value == false) ? 0 : StartBit;
-    constexpr unsigned int end_bit = (rocprim::is_unsigned<Key>::value == false) ? sizeof(Key) * 8 : EndBit;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr bool descending = Descending;
+    static constexpr bool to_striped = ToStriped;
+    static constexpr unsigned int start_bit = (rocprim::is_unsigned<Key>::value == false) ? 0 : StartBit;
+    static constexpr unsigned int end_bit = (rocprim::is_unsigned<Key>::value == false) ? sizeof(Key) * 8 : EndBit;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -306,13 +306,13 @@ auto test_block_radix_sort()
 {
     using key_type = Key;
     using value_type = Value;
-    constexpr size_t block_size = BlockSize;
-    constexpr size_t items_per_thread = ItemsPerThread;
-    constexpr bool descending = Descending;
-    constexpr bool to_striped = ToStriped;
-    constexpr unsigned int start_bit = (rocprim::is_unsigned<Key>::value == false) ? 0 : StartBit;
-    constexpr unsigned int end_bit = (rocprim::is_unsigned<Key>::value == false) ? sizeof(Key) * 8 : EndBit;
-    constexpr size_t items_per_block = block_size * items_per_thread;
+    static constexpr size_t block_size = BlockSize;
+    static constexpr size_t items_per_thread = ItemsPerThread;
+    static constexpr bool descending = Descending;
+    static constexpr bool to_striped = ToStriped;
+    static constexpr unsigned int start_bit = (rocprim::is_unsigned<Key>::value == false) ? 0 : StartBit;
+    static constexpr unsigned int end_bit = (rocprim::is_unsigned<Key>::value == false) ? sizeof(Key) * 8 : EndBit;
+    static constexpr size_t items_per_block = block_size * items_per_thread;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())

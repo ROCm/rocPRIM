@@ -146,9 +146,9 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortKeys)
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::params::key_type;
-    constexpr bool descending = TestFixture::params::descending;
-    constexpr unsigned int start_bit = TestFixture::params::start_bit;
-    constexpr unsigned int end_bit = TestFixture::params::end_bit;
+    static constexpr bool descending = TestFixture::params::descending;
+    static constexpr unsigned int start_bit = TestFixture::params::start_bit;
+    static constexpr unsigned int end_bit = TestFixture::params::end_bit;
 
     using offset_type = unsigned int;
 

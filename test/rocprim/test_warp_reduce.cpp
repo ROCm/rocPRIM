@@ -70,20 +70,20 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -91,7 +91,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
-    constexpr unsigned int grid_size = 4;
+    static constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
@@ -207,20 +207,20 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -228,7 +228,7 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
-    constexpr unsigned int grid_size = 4;
+    static constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
@@ -351,20 +351,20 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -372,7 +372,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
-    constexpr unsigned int grid_size = 4;
+    static constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
     const size_t valid = logical_warp_size - 1;
 
@@ -489,20 +489,20 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -510,7 +510,7 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
-    constexpr unsigned int grid_size = 4;
+    static constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
     const size_t valid = logical_warp_size - 1;
 
@@ -610,20 +610,20 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
     using T = test_utils::custom_test_type<base_type>;
 
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -631,7 +631,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
-    constexpr unsigned int grid_size = 4;
+    static constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
@@ -759,20 +759,20 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
     using flag_type = unsigned char;
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -780,7 +780,7 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
-    constexpr unsigned int grid_size = 4;
+    static constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
@@ -932,20 +932,20 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
     using T = typename TestFixture::params::type;
     using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
     using flag_type = unsigned char;
-    constexpr size_t logical_warp_size = TestFixture::params::warp_size;
+    static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
-    constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
+    static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
+    static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
     // Block size of warp size 32
-    constexpr size_t block_size_ws32 =
+    static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
             : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
 
     // Block size of warp size 64
-    constexpr size_t block_size_ws64 =
+    static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
@@ -953,7 +953,7 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
-    constexpr unsigned int grid_size = 4;
+    static constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported

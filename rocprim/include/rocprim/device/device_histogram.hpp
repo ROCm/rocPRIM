@@ -151,9 +151,9 @@ hipError_t histogram_impl(void * temporary_storage,
         default_histogram_config<ROCPRIM_TARGET_ARCH, sample_type, Channels, ActiveChannels>
     >;
 
-    constexpr unsigned int block_size = config::histogram::block_size;
-    constexpr unsigned int items_per_thread = config::histogram::items_per_thread;
-    constexpr unsigned int items_per_block = block_size * items_per_thread;
+    static constexpr unsigned int block_size = config::histogram::block_size;
+    static constexpr unsigned int items_per_thread = config::histogram::items_per_thread;
+    static constexpr unsigned int items_per_block = block_size * items_per_thread;
 
     if(row_stride_bytes % sizeof(sample_type) != 0)
     {
