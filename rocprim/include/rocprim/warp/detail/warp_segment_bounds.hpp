@@ -66,11 +66,8 @@ ROCPRIM_DEVICE inline
 auto last_in_warp_segment(Flag)
     -> typename std::enable_if<(WarpSize>__AMDGCN_WAVEFRONT_SIZE), unsigned int>::type
 {
-    if( WarpSize > ::rocprim::warp_size() )
-    {
-        ROCPRIM_PRINT_ERROR_ONCE("Specified warp size exceeds current hardware supported warp size . Aborting warp sort.");
-        return 0;
-    }
+    ROCPRIM_PRINT_ERROR_ONCE("Specified warp size exceeds current hardware supported warp size . Aborting warp sort.");
+    return 0;
 }
 
 } // end namespace detail
