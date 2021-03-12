@@ -46,7 +46,6 @@
 
 enum memory_operation_method
 {
-    memcpy,
     block_primitives_transpose,
     striped,
     vectorized,
