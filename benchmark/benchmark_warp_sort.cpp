@@ -126,8 +126,8 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t size)
     if(SortByKey) input_value = get_random_data(size, Value(0), get_max_value<Value>());
     Key * d_input_key = nullptr;
     Value * d_input_value = nullptr;
-    HIP_CHECK(hipMalloc(&d_input_key, size * sizeof(Key)));
-    if(SortByKey) HIP_CHECK(hipMalloc(&d_input_value, size * sizeof(Value)));
+    HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input_key), size * sizeof(Key)));
+    if(SortByKey) HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input_value), size * sizeof(Value)));
     HIP_CHECK(
         hipMemcpy(
             d_input_key, input_key.data(),

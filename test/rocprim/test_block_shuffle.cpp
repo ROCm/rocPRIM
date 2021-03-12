@@ -76,8 +76,8 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockOffset)
         type * device_input;
         type * device_output;
 
-        HIP_CHECK(hipMalloc(&device_input, input_data.size() * sizeof(type)));
-        HIP_CHECK(hipMalloc(&device_output, input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), input_data.size() * sizeof(type)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -160,8 +160,8 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockRotate)
         type * device_input;
         type * device_output;
 
-        HIP_CHECK(hipMalloc(&device_input, input_data.size() * sizeof(type)));
-        HIP_CHECK(hipMalloc(&device_output, input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), input_data.size() * sizeof(type)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -248,8 +248,8 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockUp)
         type * device_output;
 
 
-        HIP_CHECK(hipMalloc(&device_input, input_data.size() * sizeof(type)));
-        HIP_CHECK(hipMalloc(&device_output, input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), input_data.size() * sizeof(type)));
 
 
 
@@ -343,8 +343,8 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockDown)
         type * device_output;
 
 
-        HIP_CHECK(hipMalloc(&device_input, input_data.size() * sizeof(type)));
-        HIP_CHECK(hipMalloc(&device_output, input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input_data.size() * sizeof(type)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), input_data.size() * sizeof(type)));
 
 
 

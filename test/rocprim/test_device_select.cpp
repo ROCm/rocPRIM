@@ -658,10 +658,10 @@ TEST(RocprimDeviceSelectTests, UniqueGuardedOperator)
                 F * d_flag;
                 U * d_output;
                 unsigned int * d_selected_count_output;
-                HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
-                HIP_CHECK(hipMalloc(&d_flag, input_flag.size() * sizeof(F)));
-                HIP_CHECK(hipMalloc(&d_output, input.size() * sizeof(U)));
-                HIP_CHECK(hipMalloc(&d_selected_count_output, sizeof(unsigned int)));
+                HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input), input.size() * sizeof(T)));
+                HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_flag), input_flag.size() * sizeof(F)));
+                HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_output), input.size() * sizeof(U)));
+                HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_selected_count_output), sizeof(unsigned int)));
                 HIP_CHECK(
                     hipMemcpy(
                         d_input, input.data(),

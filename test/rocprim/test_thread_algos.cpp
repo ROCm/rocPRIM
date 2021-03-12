@@ -90,9 +90,9 @@ TYPED_TEST(RocprimThreadOperationTests, Load)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -157,9 +157,9 @@ TYPED_TEST(RocprimThreadOperationTests, Store)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -251,9 +251,9 @@ TYPED_TEST(RocprimThreadOperationTests, Reduction)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -339,9 +339,9 @@ TYPED_TEST(RocprimThreadOperationTests, Scan)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(&device_input, input.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(&device_output, output.size() * sizeof(T)));
+        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(

@@ -93,11 +93,11 @@ hipError_t hipMallocHelper(T** devPtr, size_t size)
 {
     if (use_hmm())
     {
-        return hipMallocManaged((void**)devPtr, size);
+        return hipMallocManaged(reinterpret_cast<void**>(devPtr), size);
     }
     else
     {
-        return hipMalloc((void**)devPtr, size);
+        return hipMalloc(reinterpret_cast<void**>(devPtr), size);
     }
     return hipSuccess;
 }
