@@ -96,11 +96,11 @@ struct operation<custom_operation, T, ItemsPerThread, BlockSize>
         (void) shared_storage;
         (void) shared_storage_size;
         (void) global_mem_output;
-        #pragma unroll
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
             input[i] = input[i] + 666;
-            #pragma unroll
+            ROCPRIM_UNROLL
             for(unsigned int j = 0; j < repeats; j++)
             {
                 input[i] = input[i] * (input[j % ItemsPerThread]);
@@ -155,6 +155,7 @@ struct operation<atomics_no_collision, T, ItemsPerThread, BlockSize>
         (void) input;
         unsigned int index = threadIdx.x * ItemsPerThread +
                              blockIdx.x * blockDim.x * ItemsPerThread;
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
             atomicAdd(&global_mem_output[index + i], T(666));
@@ -176,6 +177,7 @@ struct operation<atomics_inter_warp_collision, T, ItemsPerThread, BlockSize>
         (void) input;
         unsigned int index = (threadIdx.x % warpSize) * ItemsPerThread +
                              blockIdx.x * blockDim.x * ItemsPerThread;
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
             atomicAdd(&global_mem_output[index + i], T(666));
@@ -196,6 +198,7 @@ struct operation<atomics_inter_block_collision, T, ItemsPerThread, BlockSize>
         (void) shared_storage_size;
         (void) input;
         unsigned int index = threadIdx.x * ItemsPerThread;
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
             atomicAdd(&global_mem_output[index + i], T(666));

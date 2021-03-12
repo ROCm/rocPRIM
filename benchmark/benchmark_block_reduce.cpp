@@ -93,7 +93,7 @@ struct reduce
         using breduce_t = rp::block_reduce<T, BlockSize, algorithm>;
         __shared__ typename breduce_t::storage_type storage;
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             breduce_t().reduce(values, reduced_value, storage);

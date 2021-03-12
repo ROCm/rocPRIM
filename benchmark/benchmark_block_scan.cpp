@@ -92,7 +92,7 @@ struct inclusive_scan
         using bscan_t = rp::block_scan<T, BlockSize, algorithm>;
         __shared__ typename bscan_t::storage_type storage;
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             bscan_t().inclusive_scan(values, values, storage);
@@ -132,7 +132,7 @@ struct exclusive_scan
         using bscan_t = rp::block_scan<T, BlockSize, algorithm>;
         __shared__ typename bscan_t::storage_type storage;
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             bscan_t().exclusive_scan(values, values, init, storage);

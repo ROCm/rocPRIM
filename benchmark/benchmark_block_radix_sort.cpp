@@ -77,7 +77,7 @@ void sort_keys_kernel(const T * input, T * output)
     T keys[ItemsPerThread];
     rp::block_load_direct_striped<BlockSize>(lid, input + block_offset, keys);
 
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         rp::block_radix_sort<T, BlockSize, ItemsPerThread> sort;
@@ -108,7 +108,7 @@ void sort_pairs_kernel(const T * input, T * output)
         values[i] = keys[i] + T(1);
     }
 
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         rp::block_radix_sort<T, BlockSize, ItemsPerThread, T> sort;

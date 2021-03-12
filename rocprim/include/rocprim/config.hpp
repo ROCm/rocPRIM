@@ -93,4 +93,12 @@
 #define ROCPRIM_WARP_SIZE_64 64u
 #define ROCPRIM_MAX_WARP_SIZE ROCPRIM_WARP_SIZE_64
 
+#ifdef _MSC_VER
+#define ROCPRIM_UNROLL
+#define ROCPRIM_NO_UNROLL
+#else
+#define ROCPRIM_UNROLL #pragma unroll
+#define ROCPRIM_NO_UNROLL #pragma nounroll
+#endif
+
 #endif // ROCPRIM_CONFIG_HPP_

@@ -97,13 +97,13 @@ struct histogram
         __shared__ T histogram[BinSize];
         __shared__ typename bhistogram_t::storage_type storage;
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             bhistogram_t().histogram(values, histogram, storage);
         }
 
-        #pragma unroll
+        ROCPRIM_UNROLL
         for (unsigned int offset = 0; offset < BinSize; offset += BlockSize)
         {
             if(offset + threadIdx.x < BinSize)

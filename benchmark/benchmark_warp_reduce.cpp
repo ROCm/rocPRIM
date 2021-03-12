@@ -69,7 +69,7 @@ void warp_reduce_kernel(const T * d_input, T * d_output)
 
     using wreduce_t = rocprim::warp_reduce<T, WarpSize, AllReduce>;
     __shared__ typename wreduce_t::storage_type storage;
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         wreduce_t().reduce(value, value, storage);
@@ -95,7 +95,7 @@ void segmented_warp_reduce_kernel(const T* d_input, Flag* d_flags, T* d_output)
 
     using wreduce_t = rocprim::warp_reduce<T, WarpSize>;
     __shared__ typename wreduce_t::storage_type storage;
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         wreduce_t().head_segmented_reduce(value, value, flag, storage);

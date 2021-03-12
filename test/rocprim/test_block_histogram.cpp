@@ -100,7 +100,7 @@ void histogram_kernel(T* device_output, T* device_output_bin)
     rocprim::block_histogram<T, BlockSize, ItemsPerThread, BinSize, Algorithm> bhist;
     bhist.histogram(in_out, hist);
 
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int offset = 0; offset < BinSize; offset += BlockSize)
     {
         if(offset + threadIdx.x < BinSize)

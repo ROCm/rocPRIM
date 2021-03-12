@@ -64,7 +64,7 @@ void warp_inclusive_scan_kernel(const T* input, T* output)
 
     using wscan_t = rp::warp_scan<T, WarpSize>;
     __shared__ typename wscan_t::storage_type storage;
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         wscan_t().inclusive_scan(value, value, storage);
@@ -83,7 +83,7 @@ void warp_exclusive_scan_kernel(const T* input, T* output, const T init)
 
     using wscan_t = rp::warp_scan<T, WarpSize>;
     __shared__ typename wscan_t::storage_type storage;
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         wscan_t().exclusive_scan(value, value, init, storage);

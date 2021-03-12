@@ -182,7 +182,7 @@ auto store_volatile(T * output, T value)
     auto input_ptr = reinterpret_cast<volatile fundamental_type*>(&value);
     auto output_ptr = reinterpret_cast<volatile fundamental_type*>(output);
 
-    #pragma unroll
+    ROCPRIM_UNROLL
     for(unsigned int i = 0; i < n; i++)
     {
         output_ptr[i] = input_ptr[i];
@@ -210,7 +210,7 @@ auto load_volatile(T * input)
     auto output_ptr = reinterpret_cast<volatile fundamental_type*>(&retval);
     auto input_ptr = reinterpret_cast<volatile fundamental_type*>(input);
 
-    #pragma unroll
+    ROCPRIM_UNROLL
     for(unsigned int i = 0; i < n; i++)
     {
         output_ptr[i] = input_ptr[i];

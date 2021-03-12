@@ -74,7 +74,7 @@ void sort_keys_kernel(const T * input, T * output)
 
     T key = input[index];
 
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         rp::block_sort<T, BlockSize> bsort;
@@ -98,7 +98,7 @@ void sort_pairs_kernel(const T * input, T * output)
     T key = input[index];
     T value = key + T(1);
 
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         rp::block_sort<T, BlockSize, T> bsort;

@@ -63,7 +63,7 @@ void warp_sort_kernel(K* input_key)
 
     auto key = input_key[i];
     rp::warp_sort<K, WarpSize> wsort;
-    #pragma nounroll
+    ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         wsort.sort(key);
@@ -81,7 +81,7 @@ void warp_sort_by_key_kernel(K* input_key, V* input_value)
     auto key = input_key[i];
     auto value = input_value[i];
     rp::warp_sort<K, WarpSize, V> wsort;
-     #pragma nounroll
+     ROCPRIM_NO_UNROLL
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         wsort.sort(key, value);

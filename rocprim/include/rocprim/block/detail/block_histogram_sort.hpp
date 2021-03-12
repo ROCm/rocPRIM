@@ -99,7 +99,7 @@ public:
         radix_sort().sort(input, storage_.sort);
         ::rocprim::syncthreads(); // Fix race condition that appeared on Vega10 hardware, storage LDS is reused below.
 
-        #pragma unroll
+        ROCPRIM_UNROLL
         for(unsigned int offset = 0; offset < Bins; offset += BlockSize)
         {
             const unsigned int offset_tid = offset + flat_tid;
@@ -121,7 +121,7 @@ public:
         }
         ::rocprim::syncthreads();
 
-        #pragma unroll
+        ROCPRIM_UNROLL
         for(unsigned int offset = 0; offset < Bins; offset += BlockSize)
         {
             const unsigned int offset_tid = offset + flat_tid;

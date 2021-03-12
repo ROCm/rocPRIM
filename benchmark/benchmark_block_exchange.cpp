@@ -86,7 +86,7 @@ struct blocked_to_striped
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_exchange<T, BlockSize, ItemsPerThread> exchange;
@@ -115,7 +115,7 @@ struct striped_to_blocked
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_exchange<T, BlockSize, ItemsPerThread> exchange;
@@ -144,7 +144,7 @@ struct blocked_to_warp_striped
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_exchange<T, BlockSize, ItemsPerThread> exchange;
@@ -173,7 +173,7 @@ struct warp_striped_to_blocked
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_exchange<T, BlockSize, ItemsPerThread> exchange;
@@ -204,7 +204,7 @@ struct scatter_to_blocked
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
         rp::block_load_direct_striped<BlockSize>(lid, d_ranks + block_offset, ranks);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_exchange<T, BlockSize, ItemsPerThread> exchange;
@@ -235,7 +235,7 @@ struct scatter_to_striped
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
         rp::block_load_direct_striped<BlockSize>(lid, d_ranks + block_offset, ranks);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_exchange<T, BlockSize, ItemsPerThread> exchange;

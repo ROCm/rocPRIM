@@ -88,7 +88,7 @@ struct flag_heads
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_discontinuity<T, BlockSize> bdiscontinuity;
@@ -131,7 +131,7 @@ struct flag_tails
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_discontinuity<T, BlockSize> bdiscontinuity;
@@ -174,7 +174,7 @@ struct flag_heads_and_tails
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
 
-        #pragma nounroll
+        ROCPRIM_NO_UNROLL
         for(unsigned int trial = 0; trial < Trials; trial++)
         {
             rp::block_discontinuity<T, BlockSize> bdiscontinuity;

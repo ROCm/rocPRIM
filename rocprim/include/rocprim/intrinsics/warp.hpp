@@ -96,7 +96,7 @@ unsigned int MatchAny(unsigned int label)
     unsigned int retval;
 
     // Extract masks of common threads for each bit
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (int BIT = 0; BIT < LABEL_BITS; ++BIT)
     {
         unsigned long long  mask;

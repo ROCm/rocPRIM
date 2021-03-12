@@ -65,7 +65,7 @@ void block_store_direct_blocked(unsigned int flat_id,
 
     unsigned int offset = flat_id * ItemsPerThread;
     OutputIterator thread_iter = block_output + offset;
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
         thread_iter[item] = items[item];
@@ -106,7 +106,7 @@ void block_store_direct_blocked(unsigned int flat_id,
 
     unsigned int offset = flat_id * ItemsPerThread;
     OutputIterator thread_iter = block_output + offset;
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
         if (item + offset < valid)
@@ -162,7 +162,7 @@ block_store_direct_blocked_vectorized(unsigned int flat_id,
     vector_type raw_vector_items[vectors_per_thread];
     T *raw_items = reinterpret_cast<T*>(raw_vector_items);
 
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
         raw_items[item] = items[item];
@@ -218,7 +218,7 @@ void block_store_direct_striped(unsigned int flat_id,
                   "can be dereferenced and assigned a value of type T.");
 
     OutputIterator thread_iter = block_output + flat_id;
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
          thread_iter[item * BlockSize] = items[item];
@@ -260,7 +260,7 @@ void block_store_direct_striped(unsigned int flat_id,
                   "can be dereferenced and assigned a value of type T.");
 
     OutputIterator thread_iter = block_output + flat_id;
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
         unsigned int offset = item * BlockSize;
@@ -318,7 +318,7 @@ void block_store_direct_warp_striped(unsigned int flat_id,
     unsigned int warp_offset = warp_id * WarpSize * ItemsPerThread;
 
     OutputIterator thread_iter = block_output + thread_id + warp_offset;
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
         thread_iter[item * WarpSize] = items[item];
@@ -374,7 +374,7 @@ void block_store_direct_warp_striped(unsigned int flat_id,
     unsigned int warp_offset = warp_id * WarpSize * ItemsPerThread;
 
     OutputIterator thread_iter = block_output + thread_id + warp_offset;
-    #pragma unroll
+    ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
         unsigned int offset = item * WarpSize;
