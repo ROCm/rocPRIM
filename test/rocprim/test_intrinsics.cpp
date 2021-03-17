@@ -436,10 +436,10 @@ TEST(RocprimIntrinsicsTests, ShuffleUpCustomStruct)
         std::vector<T> output(input.size());
         for(size_t i = 0; i < 4 * input.size(); i+=4)
         {
-            input[i/4].i = random_data[i];
+            input[i/4].i = (short)random_data[i];
             input[i/4].d = random_data[i+1];
-            input[i/4].f = random_data[i+2];
-            input[i/4].u = random_data[i+3];
+            input[i/4].f = (float)random_data[i+2];
+            input[i/4].u = (unsigned int)random_data[i+3];
         }
 
         T* device_data;
@@ -536,9 +536,9 @@ TEST(RocprimIntrinsicsTests, ShuffleUpCustomAlignedStruct)
         std::vector<T> output(input.size());
         for(size_t i = 0; i < 3 * input.size(); i+=3)
         {
-            input[i/3].i = random_data[i];
-            input[i/3].u = random_data[i+1];
-            input[i/3].f = random_data[i+2];
+            input[i/3].i = (int)random_data[i];
+            input[i/3].u = (unsigned int)random_data[i+1];
+            input[i/3].f = (float)random_data[i+2];
         }
 
         T* device_data;
