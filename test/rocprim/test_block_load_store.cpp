@@ -462,7 +462,8 @@ template<
     rocprim::block_load_method LoadMethod,
     rocprim::block_store_method StoreMethod,
     unsigned int BlockSize,
-    unsigned int ItemsPerThread
+    unsigned int ItemsPerThread,
+    class Def
 >
 __global__
 __launch_bounds__(BlockSize)
