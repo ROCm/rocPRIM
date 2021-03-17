@@ -109,6 +109,14 @@ public:
             warp_scan_prefix_type().inclusive_scan(prefix, prefix, ::rocprim::plus<unsigned int>());
             storage_.warp_prefixes[flat_id] = prefix;
         }
+#ifdef __HIP_CPU_RT__
+        else
+        {
+            // HIP-CPU doesn't implement lockstep behavior. Need to invoke the same number sync ops in divergent branch.
+            empty_type empty;
+            ::rocprim::detail::warp_scan_crosslane<empty_type, detail::next_power_of_two(warps_no)>().inclusive_scan(empty, empty, empty_binary_op{});
+        }
+#endif
         ::rocprim::syncthreads();
 
         // Perform exclusive warp scan of bit values

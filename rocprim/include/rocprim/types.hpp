@@ -131,9 +131,13 @@ DEFINE_MAKE_VECTOR_TYPE(longlong, long long);
 
 /// \brief Empty type used as a placeholder, usually used to flag that given
 /// template parameter should not be used.
-struct empty_type
-{
+struct empty_type {};
 
+/// \brief Binary operator that takes two instances of empty_type, usually used
+/// as nop replacement for the HIP-CPU back-end
+struct empty_binary_op
+{
+    constexpr empty_type operator()(const empty_type&, const empty_type&) const { return empty_type{}; }
 };
 
 /// \brief Half-precision floating point type
