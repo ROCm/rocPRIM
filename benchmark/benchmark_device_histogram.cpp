@@ -62,7 +62,7 @@ std::vector<T> generate(size_t size, int entropy_reduction, int lower_level, int
 {
     if(entropy_reduction >= 5)
     {
-        return std::vector<T>(size, (lower_level + upper_level) / 2);
+        return std::vector<T>(size, (T)((lower_level + upper_level) / 2));
     }
 
     const size_t max_random_size = 1024 * 1024;

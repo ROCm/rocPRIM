@@ -140,15 +140,15 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, Reduce)
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output = test_utils::get_random_data<T>(size, (T)2, (T)50, seed_value);
         std::vector<T> output_reductions(size / block_size);
 
         // Calculate expected results on host
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
-            T value = 0;
+            T value = (T)0;
             for(size_t j = 0; j < block_size; j++)
             {
                 auto idx = i * block_size + j;

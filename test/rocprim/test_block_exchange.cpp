@@ -212,7 +212,7 @@ auto test_block_exchange()
     // Generate data
     std::vector<type> input(size);
     std::vector<output_type> expected(size);
-    std::vector<output_type> output(size, 0);
+    std::vector<output_type> output(size, (output_type)0);
 
     // Calculate input and expected results on host
     std::vector<type> values(size);
@@ -227,7 +227,7 @@ auto test_block_exchange()
                 const size_t i0 = offset + ti * items_per_thread + ii;
                 const size_t i1 = offset + ii * block_size + ti;
                 input[i1] = values[i1];
-                expected[i0] = values[i1];
+                expected[i0] = static_cast<output_type>(values[i1]);
             }
         }
     }

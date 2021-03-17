@@ -104,7 +104,7 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t size)
     // Make sure size is a multiple of BlockSize
     size = BlockSize * ((size + BlockSize - 1)/BlockSize);
     // Allocate and fill memory
-    std::vector<T> input(size, 1.0f);
+    std::vector<T> input(size, (T)1);
     T * d_input;
     T * d_output;
     HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input), size * sizeof(T)));

@@ -287,7 +287,7 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScan)
         std::vector<T> output2 = output;
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
@@ -347,8 +347,8 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScanReduce)
         std::vector<T> output_reductions(size / block_size);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
@@ -418,8 +418,8 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScanPrefixCallback)
         T block_prefix = test_utils::get_random_value<T>(0, 5, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
@@ -489,7 +489,7 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScan)
         const T init = test_utils::get_random_value<T>(0, 5, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
@@ -552,8 +552,8 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScanReduce)
         std::vector<T> output_reductions(size / block_size);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
@@ -630,8 +630,8 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScanPrefixCallback)
         T block_prefix = test_utils::get_random_value<T>(0, 5, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
@@ -946,7 +946,7 @@ auto test_block_scan_input_arrays()
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / items_per_block; i++)
         {
@@ -1029,11 +1029,11 @@ auto test_block_scan_input_arrays()
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
 
         // Output reduce results
-        std::vector<T> output_reductions(size / block_size, 0);
+        std::vector<T> output_reductions(size / block_size, (T)0);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / items_per_block; i++)
         {
@@ -1140,13 +1140,11 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
-        std::vector<T> output_block_prefixes(size / items_per_block, 0);
-        T block_prefix = test_utils::get_random_value<T>(0, 100, seed_value);
+        std::vector<T> output_block_prefixes(size / items_per_block, (T)0);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / items_per_block; i++)
         {
@@ -1260,7 +1258,7 @@ auto test_block_scan_input_arrays()
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / items_per_block; i++)
         {
@@ -1349,8 +1347,8 @@ auto test_block_scan_input_arrays()
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / items_per_block; i++)
         {
@@ -1458,8 +1456,8 @@ auto test_block_scan_input_arrays()
         T block_prefix = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / items_per_block; i++)
         {

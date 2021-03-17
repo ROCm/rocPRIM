@@ -272,7 +272,7 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
         {
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
-                T repeated_value = distribution(gen);
+                T repeated_value = static_cast<T>(distribution(gen));
                 std::fill(
                     data.begin() + segment_size * segment_index,
                     data.begin() + segment_size * (segment_index + 1),
@@ -284,13 +284,13 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
                 std::generate(
                     data.begin() + segment_size * segment_index,
                     data.begin() + segment_size * (segment_index + 1),
-                    [&]() { return distribution(gen); });
+                    [&]() { return static_cast<T>(distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(), data.end(), [&]() { return distribution(gen); });
+        std::generate(data.begin(), data.end(), [&]() { return static_cast<T>(distribution(gen)); });
 
     }
     return data;

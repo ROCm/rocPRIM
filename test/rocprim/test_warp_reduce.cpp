@@ -109,15 +109,14 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size() / logical_warp_size, 0);
+        std::vector<T> output(input.size() / logical_warp_size, (T)0);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 1);
+        std::vector<T> expected(output.size(), (T)1);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size(); i++)
         {
-            T value = 0;
+            T value = (T)0;
             for(size_t j = 0; j < logical_warp_size; j++)
             {
                 auto idx = i * logical_warp_size + j;
@@ -247,15 +246,14 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size(), 0);
+        std::vector<T> output(input.size(), (T)0);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / logical_warp_size; i++)
         {
-            T value = 0;
+            T value = (T)0;
             for(size_t j = 0; j < logical_warp_size; j++)
             {
                 auto idx = i * logical_warp_size + j;
@@ -393,15 +391,14 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size() / logical_warp_size, 0);
+        std::vector<T> output(input.size() / logical_warp_size, (T)0);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 1);
+        std::vector<T> expected(output.size(), (T)1);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size(); i++)
         {
-            T value = 0;
+            T value = (T)0;
             for(size_t j = 0; j < valid; j++)
             {
                 auto idx = i * logical_warp_size + j;
@@ -532,15 +529,14 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value); // used for input
-        std::vector<T> output(input.size(), 0);
+        std::vector<T> output(input.size(), (T)0);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / logical_warp_size; i++)
         {
-            T value = 0;
+            T value = (T)0;
             for(size_t j = 0; j < valid; j++)
             {
                 auto idx = i * logical_warp_size + j;
@@ -669,7 +665,7 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
         std::vector<T> expected(output.size());
         for(size_t i = 0; i < output.size(); i++)
         {
-            T value(0, 0);
+            T value{(base_type)0, (base_type)0};
             for(size_t j = 0; j < logical_warp_size; j++)
             {
                 auto idx = i * logical_warp_size + j;
@@ -883,8 +879,8 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
         );
         HIP_CHECK(hipDeviceSynchronize());
 
-        std::vector<T> output_segment(output.size(), 0);
-        std::vector<T> expected_segment(output.size(), 0);
+        std::vector<T> output_segment(output.size(), (T)0);
+        std::vector<T> expected_segment(output.size(), (T)0);
         for(size_t i = 0; i < output.size(); i++)
         {
             if(flags[i])

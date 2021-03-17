@@ -405,7 +405,7 @@ TYPED_TEST(RocprimDeviceSelectTests, UniqueEmptyInput)
         rocprim::unique(
             nullptr,
             temp_storage_size_bytes,
-            rocprim::make_constant_iterator<T>(123),
+            rocprim::make_constant_iterator<T>((T)123),
             rocprim::make_discard_iterator(),
             d_selected_count_output,
             0,
@@ -423,7 +423,7 @@ TYPED_TEST(RocprimDeviceSelectTests, UniqueEmptyInput)
         rocprim::unique(
             d_temp_storage,
             temp_storage_size_bytes,
-            rocprim::make_constant_iterator<T>(123),
+            rocprim::make_constant_iterator<T>((T)123),
             rocprim::make_discard_iterator(),
             d_selected_count_output,
             0,

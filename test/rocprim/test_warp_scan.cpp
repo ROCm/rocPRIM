@@ -112,7 +112,7 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScan)
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
-        std::vector<T> expected(output.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -259,8 +259,8 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanReduce)
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> output_reductions(size / logical_warp_size);
-        std::vector<T> expected(output.size(), 0);
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -416,8 +416,7 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
-        std::vector<T> expected(input.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        std::vector<T> expected(input.size(), (T)0);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -566,9 +565,8 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> output_reductions(size / logical_warp_size);
-        std::vector<T> expected(input.size(), 0);
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        std::vector<T> expected(input.size(), (T)0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -737,9 +735,8 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output_inclusive(size);
         std::vector<T> output_exclusive(size);
-        std::vector<T> expected_inclusive(output_inclusive.size(), 0);
-        std::vector<T> expected_exclusive(output_exclusive.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        std::vector<T> expected_inclusive(output_inclusive.size(), (T)0);
+        std::vector<T> expected_exclusive(output_exclusive.size(), (T)0);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -917,10 +914,9 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
         std::vector<T> output_inclusive(size);
         std::vector<T> output_exclusive(size);
         std::vector<T> output_reductions(size / logical_warp_size);
-        std::vector<T> expected_inclusive(output_inclusive.size(), 0);
-        std::vector<T> expected_exclusive(output_exclusive.size(), 0);
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
-        const T init = test_utils::get_random_value(0, 100, seed_value);
+        std::vector<T> expected_inclusive(output_inclusive.size(), (T)0);
+        std::vector<T> expected_exclusive(output_exclusive.size(), (T)0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -1083,7 +1079,7 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
         // Generate data
         std::vector<T> input(size);
         std::vector<T> output(size);
-        std::vector<T> expected(output.size(), T(0));
+        std::vector<T> expected(output.size(), (base_type)0);
         // Initializing input data
         {
             auto random_values =
