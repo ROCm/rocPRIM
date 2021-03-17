@@ -83,7 +83,7 @@ TYPED_TEST(RocprimWarpSortShuffleBasedTests, Sort)
     constexpr size_t ws64 = 64;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
-    const size_t block_size = std::max<size_t>(ws32, logical_warp_size * 4);
+    const size_t block_size = std::max<size_t>(current_device_warp_size, logical_warp_size * 4);
 
     constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
@@ -190,7 +190,7 @@ TYPED_TEST(RocprimWarpSortShuffleBasedTests, SortKeyInt)
     constexpr size_t ws64 = 64;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
-    const size_t block_size = std::max<size_t>(ws32, logical_warp_size * 4);
+    const size_t block_size = std::max<size_t>(current_device_warp_size, logical_warp_size * 4);
 
     constexpr unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
