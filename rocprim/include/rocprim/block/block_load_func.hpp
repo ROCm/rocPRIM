@@ -144,7 +144,7 @@ void block_load_direct_blocked(unsigned int flat_id,
     ROCPRIM_UNROLL
     for (unsigned int item = 0; item < ItemsPerThread; item++)
     {
-        items[item] = out_of_bounds;
+        items[item] = static_cast<T>(out_of_bounds);
     }
 
     block_load_direct_blocked(flat_id, block_input, items, valid);
