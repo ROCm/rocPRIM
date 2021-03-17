@@ -234,6 +234,7 @@ template<class T>
 inline auto get_random_data(size_t size, T min, T max, int seed_value)
     -> typename std::enable_if<rocprim::is_integral<T>::value, std::vector<T>>::type
 {
+    engine_type gen{seed_value};
     using dis_type = typename std::conditional<
         is_valid_for_int_distribution<T>::value,
         T,
@@ -243,7 +244,7 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
         >::type;
     std::uniform_int_distribution<dis_type> distribution(min, max);
     std::vector<T> data(size);
-    uint32_t segment_size = size / random_data_generation_segments;
+    size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
         for(uint32_t segment_index = 0; segment_index < random_data_generation_segments; segment_index++)
@@ -277,14 +278,12 @@ template<class T>
 inline auto get_random_data(size_t size, T min, T max, int seed_value)
     -> typename std::enable_if<rocprim::is_floating_point<T>::value, std::vector<T>>::type
 {
-    std::random_device rd;
-    std::default_random_engine gen(rd());
-    gen.seed(seed_value);
+    engine_type gen{seed_value};
     // Generate floats when T is half
     using dis_type = typename std::conditional<std::is_same<rocprim::half, T>::value, float, T>::type;
     std::uniform_real_distribution<dis_type> distribution(min, max);
     std::vector<T> data(size);
-    uint32_t segment_size = size / random_data_generation_segments;
+    size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
         for(uint32_t segment_index = 0; segment_index < random_data_generation_segments; segment_index++)
@@ -316,12 +315,10 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
 }
 
 template<class T>
-inline std::vector<T> get_random_data01(size_t size, float p, int seed_value)
+inline std::vector<T> get_random_data01(size_t size, float p, seed_type seed_value)
 {
     const size_t max_random_size = 1024 * 1024;
-    std::random_device rd;
-    std::default_random_engine gen(rd());
-    gen.seed(seed_value);
+    engine_type gen{seed_value};
     std::bernoulli_distribution distribution(p);
     std::vector<T> data(size);
     std::generate(
@@ -336,7 +333,7 @@ inline std::vector<T> get_random_data01(size_t size, float p, int seed_value)
 }
 
 template<class T>
-inline auto get_random_value(T min, T max, int seed_value)
+inline auto get_random_value(T min, T max, seed_type seed_value)
     -> typename std::enable_if<rocprim::is_arithmetic<T>::value, T>::type
 {
     return get_random_data(random_data_generation_segments, min, max, seed_value)[0];
@@ -791,18 +788,16 @@ struct numeric_limits : public std::conditional<
 };
 
 template<class T>
-inline auto get_random_data(size_t size, typename T::value_type min, typename T::value_type max, int seed_value)
+inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
     -> typename std::enable_if<
            is_custom_test_type<T>::value && std::is_integral<typename T::value_type>::value,
            std::vector<T>
        >::type
 {
-    std::random_device rd;
-    std::default_random_engine gen(rd());
-    gen.seed(seed_value);
-    std::uniform_int_distribution<typename T::value_type> distribution(min, max);
+    engine_type gen(seed_value);
+    std::uniform_int_distribution<typename T::value_type> distribution(min.x, max.x);
     std::vector<T> data(size);
-    uint32_t segment_size = size / random_data_generation_segments;
+    size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
         for(uint32_t segment_index = 0; segment_index < random_data_generation_segments; segment_index++)
@@ -833,18 +828,16 @@ inline auto get_random_data(size_t size, typename T::value_type min, typename T:
 }
 
 template<class T>
-inline auto get_random_data(size_t size, typename T::value_type min, typename T::value_type max, int seed_value)
+inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
     -> typename std::enable_if<
            is_custom_test_type<T>::value && std::is_floating_point<typename T::value_type>::value,
            std::vector<T>
        >::type
 {
-    std::random_device rd;
-    std::default_random_engine gen(rd());
-    gen.seed(seed_value);
-    std::uniform_real_distribution<typename T::value_type> distribution(min, max);
+    engine_type gen(seed_value);
+    std::uniform_real_distribution<typename T::value_type> distribution(min.x, max.x);
     std::vector<T> data(size);
-    uint32_t segment_size = size / random_data_generation_segments;
+    size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
         for(uint32_t segment_index = 0; segment_index < random_data_generation_segments; segment_index++)
@@ -875,15 +868,13 @@ inline auto get_random_data(size_t size, typename T::value_type min, typename T:
 }
 
 template<class T>
-inline auto get_random_data(size_t size, typename T::value_type min, typename T::value_type max, int seed_value)
+inline auto get_random_data(size_t size, typename T::value_type min, typename T::value_type max, seed_type seed_value)
     -> typename std::enable_if<
            is_custom_test_array_type<T>::value && std::is_integral<typename T::value_type>::value,
            std::vector<T>
        >::type
 {
-    std::random_device rd;
-    std::default_random_engine gen(rd());
-    gen.seed(seed_value);
+    engine_type gen(seed_value);
     std::uniform_int_distribution<typename T::value_type> distribution(min, max);
     std::vector<T> data(size);
     std::generate(
@@ -902,7 +893,7 @@ inline auto get_random_data(size_t size, typename T::value_type min, typename T:
 }
 
 template<class T>
-inline auto get_random_value(typename T::value_type min, typename T::value_type max, int seed_value)
+inline auto get_random_value(typename T::value_type min, typename T::value_type max, seed_type seed_value)
     -> typename std::enable_if<is_custom_test_type<T>::value || is_custom_test_array_type<T>::value, T>::type
 {
     return get_random_data(random_data_generation_segments, min, max, seed_value)[0];
