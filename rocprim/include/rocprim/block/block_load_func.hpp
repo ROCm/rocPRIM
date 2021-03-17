@@ -182,10 +182,10 @@ template<
     unsigned int ItemsPerThread
 >
 ROCPRIM_DEVICE inline
-typename std::enable_if<detail::is_vectorizable<T, ItemsPerThread>()>::type
+auto
 block_load_direct_blocked_vectorized(unsigned int flat_id,
                                      T* block_input,
-                                     U (&items)[ItemsPerThread])
+                                     U (&items)[ItemsPerThread]) -> typename std::enable_if<detail::is_vectorizable<T, ItemsPerThread>::value>::type
 {
     typedef typename detail::match_vector_type<T, ItemsPerThread>::type vector_type;
     constexpr unsigned int vectors_per_thread = (sizeof(T) * ItemsPerThread) / sizeof(vector_type);
@@ -213,10 +213,10 @@ template<
     unsigned int ItemsPerThread
 >
 ROCPRIM_DEVICE inline
-typename std::enable_if<!detail::is_vectorizable<T, ItemsPerThread>()>::type
+auto
 block_load_direct_blocked_vectorized(unsigned int flat_id,
                                      T* block_input,
-                                     U (&items)[ItemsPerThread])
+                                     U (&items)[ItemsPerThread]) -> typename std::enable_if<!detail::is_vectorizable<T, ItemsPerThread>::value>::type
 {
     block_load_direct_blocked(flat_id, block_input, items);
 }

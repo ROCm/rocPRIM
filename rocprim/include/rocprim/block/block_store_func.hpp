@@ -147,10 +147,10 @@ template<
     unsigned int ItemsPerThread
 >
 ROCPRIM_DEVICE inline
-typename std::enable_if<detail::is_vectorizable<T, ItemsPerThread>()>::type
+auto
 block_store_direct_blocked_vectorized(unsigned int flat_id,
                                       T* block_output,
-                                      U (&items)[ItemsPerThread])
+                                      U (&items)[ItemsPerThread]) -> typename std::enable_if<detail::is_vectorizable<T, ItemsPerThread>::value>::type
 {
     static_assert(std::is_convertible<U, T>::value,
                   "The type U must be such that it can be implicitly converted to T.");
@@ -177,10 +177,10 @@ template<
     unsigned int ItemsPerThread
 >
 ROCPRIM_DEVICE inline
-typename std::enable_if<!detail::is_vectorizable<T, ItemsPerThread>()>::type
+auto
 block_store_direct_blocked_vectorized(unsigned int flat_id,
                                       T* block_output,
-                                      U (&items)[ItemsPerThread])
+                                      U (&items)[ItemsPerThread]) -> typename std::enable_if<!detail::is_vectorizable<T, ItemsPerThread>::value>::type
 {
     block_store_direct_blocked(flat_id, block_output, items);
 }
