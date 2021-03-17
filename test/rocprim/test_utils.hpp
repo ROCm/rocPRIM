@@ -215,14 +215,33 @@ struct half_minimum
     }
 };
 
+// std::uniform_int_distribution is undefined for anything other than listed
+// https://en.cppreference.com/w/cpp/numeric/random/uniform_int_distribution
+template <typename T>
+struct is_valid_for_int_distribution :
+    std::disjunction<
+        std::is_same<short, T>,
+        std::is_same<unsigned short, T>,
+        std::is_same<int, T>,
+        std::is_same<unsigned int, T>,
+        std::is_same<long, T>,
+        std::is_same<unsigned long, T>,
+        std::is_same<long long, T>,
+        std::is_same<unsigned long long, T>
+    > {};
+
 template<class T>
 inline auto get_random_data(size_t size, T min, T max, int seed_value)
     -> typename std::enable_if<rocprim::is_integral<T>::value, std::vector<T>>::type
 {
-    std::random_device rd;
-    std::default_random_engine gen(rd());
-    gen.seed(seed_value);
-    std::uniform_int_distribution<T> distribution(min, max);
+    using dis_type = typename std::conditional<
+        is_valid_for_int_distribution<T>::value,
+        T,
+        typename std::conditional<std::is_signed<T>::value,
+            int,
+            unsigned int>::type
+        >::type;
+    std::uniform_int_distribution<dis_type> distribution(min, max);
     std::vector<T> data(size);
     uint32_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
@@ -231,7 +250,7 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
         {
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
-                T repeated_value = distribution(gen);
+                T repeated_value = static_cast<T>(distribution(gen));
                 std::fill(
                     data.begin() + segment_size * segment_index,
                     data.begin() + segment_size * (segment_index + 1),
@@ -243,13 +262,13 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
                 std::generate(
                     data.begin() + segment_size * segment_index,
                     data.begin() + segment_size * (segment_index + 1),
-                    [&]() { return distribution(gen); });
+                    [&]() { return static_cast<T>(distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(), data.end(), [&]() { return distribution(gen); });
+        std::generate(data.begin(), data.end(), [&]() { return static_cast<T>(distribution(gen)); });
     }
     return data;
 }
