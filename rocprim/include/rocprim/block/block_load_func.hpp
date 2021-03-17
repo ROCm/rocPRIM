@@ -146,6 +146,7 @@ void block_load_direct_blocked(unsigned int flat_id,
     {
         items[item] = static_cast<T>(out_of_bounds);
     }
+    // TODO: Consider using std::fill for HIP-CPU, as uses memset() where appropriate
 
     block_load_direct_blocked(flat_id, block_input, items, valid);
 }
