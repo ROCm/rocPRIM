@@ -166,7 +166,7 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
 
                 unique_expected.push_back(current_key);
                 runs_count_expected++;
-                counts_expected.push_back(key_count);
+                counts_expected.push_back(static_cast<count_type>(key_count));
 
                 offset += key_count;
             }
@@ -347,9 +347,9 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
 
                 if(key_count > 1)
                 {
-                    offsets_expected.push_back(offset);
+                    offsets_expected.push_back(static_cast<offset_type>(offset));
                     runs_count_expected++;
-                    counts_expected.push_back(key_count);
+                    counts_expected.push_back(static_cast<count_type>(key_count));
                 }
 
                 offset += key_count;

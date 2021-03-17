@@ -230,8 +230,8 @@ struct is_valid_for_int_distribution :
         std::is_same<unsigned long long, T>
     > {};
 
-template<class T>
-inline auto get_random_data(size_t size, T min, T max, int seed_value)
+template<class T, class U, class V>
+inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
     -> typename std::enable_if<rocprim::is_integral<T>::value, std::vector<T>>::type
 {
     engine_type gen{seed_value};
@@ -242,7 +242,7 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
             int,
             unsigned int>::type
         >::type;
-    std::uniform_int_distribution<dis_type> distribution(min, max);
+    std::uniform_int_distribution<dis_type> distribution((dis_type)min, (dis_type)max);
     std::vector<T> data(size);
     size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
@@ -274,14 +274,14 @@ inline auto get_random_data(size_t size, T min, T max, int seed_value)
     return data;
 }
 
-template<class T>
-inline auto get_random_data(size_t size, T min, T max, int seed_value)
+template<class T, class U, class V>
+inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
     -> typename std::enable_if<rocprim::is_floating_point<T>::value, std::vector<T>>::type
 {
     engine_type gen{seed_value};
     // Generate floats when T is half
     using dis_type = typename std::conditional<std::is_same<rocprim::half, T>::value, float, T>::type;
-    std::uniform_real_distribution<dis_type> distribution(min, max);
+    std::uniform_real_distribution<dis_type> distribution((dis_type)min, (dis_type)max);
     std::vector<T> data(size);
     size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
@@ -332,11 +332,11 @@ inline std::vector<T> get_random_data01(size_t size, float p, seed_type seed_val
     return data;
 }
 
-template<class T>
-inline auto get_random_value(T min, T max, seed_type seed_value)
+template<class T, class U, class V>
+inline auto get_random_value(U min, V max, seed_type seed_value)
     -> typename std::enable_if<rocprim::is_arithmetic<T>::value, T>::type
 {
-    return get_random_data(random_data_generation_segments, min, max, seed_value)[0];
+    return get_random_data<T>(random_data_generation_segments, min, max, seed_value)[0];
 }
 
 // Can't use std::prefix_sum for inclusive/exclusive scan, because
@@ -896,7 +896,7 @@ template<class T>
 inline auto get_random_value(typename T::value_type min, typename T::value_type max, seed_type seed_value)
     -> typename std::enable_if<is_custom_test_type<T>::value || is_custom_test_array_type<T>::value, T>::type
 {
-    return get_random_data(random_data_generation_segments, min, max, seed_value)[0];
+    return get_random_data<typename T::value_type>(random_data_generation_segments, min, max, seed_value)[0];
 }
 
 template<class T>

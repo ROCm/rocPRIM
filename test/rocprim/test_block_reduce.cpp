@@ -207,7 +207,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceMultiplies)
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        std::vector<T> output(size, 1);
+        std::vector<T> output(size, (T)1);
         auto two_places = test_utils::get_random_data<unsigned int>(size/32, 0, size-1, seed_value);
         for(auto i : two_places)
         {
@@ -216,11 +216,11 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceMultiplies)
         std::vector<T> output_reductions(size / block_size);
 
         // Calculate expected results on host
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
-            T value = 1;
+            T value = (T)1;
             for(size_t j = 0; j < block_size; j++)
             {
                 auto idx = i * block_size + j;
@@ -335,7 +335,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceValid)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const unsigned int valid_items = test_utils::get_random_value(block_size - 10, block_size, seed_value);
+        const size_t valid_items = test_utils::get_random_value<size_t>(block_size - 10, block_size, seed_value);
 
         // Given block size not supported
         if(block_size > test_utils::get_max_block_size())
@@ -350,11 +350,11 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceValid)
         std::vector<T> output_reductions(size / block_size);
 
         // Calculate expected results on host
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
-            T value = 0;
+            T value = static_cast<T>(0);
             for(size_t j = 0; j < valid_items; j++)
             {
                 auto idx = i * block_size + j;
@@ -461,14 +461,14 @@ void test_block_reduce_input_arrays()
         std::vector<T> output = test_utils::get_random_data<T>(size, 0, 100, seed_value);
 
         // Output reduce results
-        std::vector<T> output_reductions(size / block_size, 0);
+        std::vector<T> output_reductions(size / block_size, (T)0);
 
         // Calculate expected results on host
-        std::vector<T> expected_reductions(output_reductions.size(), 0);
+        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
         binary_op_type binary_op;
         for(size_t i = 0; i < output.size() / items_per_block; i++)
         {
-            T value = 0;
+            T value = (T)0;
             for(size_t j = 0; j < items_per_block; j++)
             {
                 auto idx = i * items_per_block + j;

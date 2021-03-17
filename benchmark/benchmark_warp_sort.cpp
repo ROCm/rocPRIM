@@ -121,9 +121,9 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t size)
     // Make sure size is a multiple of BlockSize
     size = BlockSize * ((size + BlockSize - 1)/BlockSize);
     // Allocate and fill memory
-    std::vector<Key> input_key = get_random_data(size, Key(0), get_max_value<Key>());
+    std::vector<Key> input_key = get_random_data<Key>(size, 0, 10000);
     std::vector<Value> input_value(size_t(1));
-    if(SortByKey) input_value = get_random_data(size, Value(0), get_max_value<Value>());
+    if(SortByKey) input_value = get_random_data<Value>(size, 0, 10000);
     Key * d_input_key = nullptr;
     Value * d_input_value = nullptr;
     HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input_key), size * sizeof(Key)));

@@ -1140,7 +1140,9 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
+        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
         std::vector<T> output_block_prefixes(size / items_per_block, (T)0);
+        T block_prefix = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
         std::vector<T> expected(output.size(), (T)0);

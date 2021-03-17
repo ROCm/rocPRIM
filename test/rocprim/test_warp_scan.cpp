@@ -417,6 +417,7 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> expected(input.size(), (T)0);
+        const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -567,6 +568,7 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
         std::vector<T> output_reductions(size / logical_warp_size);
         std::vector<T> expected(input.size(), (T)0);
         std::vector<T> expected_reductions(output_reductions.size(), (T)0);
+        const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -737,6 +739,7 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
         std::vector<T> output_exclusive(size);
         std::vector<T> expected_inclusive(output_inclusive.size(), (T)0);
         std::vector<T> expected_exclusive(output_exclusive.size(), (T)0);
+        const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;
@@ -917,6 +920,7 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
         std::vector<T> expected_inclusive(output_inclusive.size(), (T)0);
         std::vector<T> expected_exclusive(output_exclusive.size(), (T)0);
         std::vector<T> expected_reductions(output_reductions.size(), (T)0);
+        const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
         binary_op_type binary_op;

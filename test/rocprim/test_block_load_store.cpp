@@ -283,10 +283,10 @@ TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClass)
 
         // Generate data
         std::vector<Type> input = test_utils::get_random_data<Type>(size, -100, 100, seed_value);
-        std::vector<Type> output(input.size(), 0);
+        std::vector<Type> output(input.size(), (Type)0);
 
         // Calculate expected results on host
-        std::vector<Type> expected(input.size(), 0);
+        std::vector<Type> expected(input.size(), (Type)0);
         for (size_t i = 0; i < 113; i++)
         {
             size_t block_offset = i * items_per_block;
@@ -388,10 +388,10 @@ TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClassValid)
 
         // Generate data
         std::vector<Type> input = test_utils::get_random_data<Type>(size, -100, 100, seed_value);
-        std::vector<Type> output(input.size(), 0);
+        std::vector<Type> output(input.size(), (Type)0);
 
         // Calculate expected results on host
-        std::vector<Type> expected(input.size(), 0);
+        std::vector<Type> expected(input.size(), (Type)0);
         for (size_t i = 0; i < 113; i++)
         {
             size_t block_offset = i * items_per_block;
@@ -497,7 +497,7 @@ TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClassDefault)
     }
 
     const size_t valid = items_per_thread + 1;
-    int _default = -1;
+    Type _default = (Type)-1;
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -506,7 +506,7 @@ TYPED_TEST(RocprimBlockLoadStoreClassTests, LoadStoreClassDefault)
 
         // Generate data
         std::vector<Type> input = test_utils::get_random_data<Type>(size, -100, 100, seed_value);
-        std::vector<Type> output(input.size(), 0);
+        std::vector<Type> output(input.size(), (Type)0);
 
         // Calculate expected results on host
         std::vector<Type> expected(input.size(), _default);

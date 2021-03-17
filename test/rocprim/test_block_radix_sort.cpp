@@ -231,7 +231,7 @@ auto test_block_radix_sort()
         std::vector<key_type> keys_output;
         if(rocprim::is_floating_point<key_type>::value)
         {
-            keys_output = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value);
+            keys_output = test_utils::get_random_data<key_type>(size, -100, +100, seed_value);
         }
         else
         {
@@ -325,14 +325,14 @@ auto test_block_radix_sort()
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
-        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        seed_type seed_value = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
         std::vector<key_type> keys_output;
         if(rocprim::is_floating_point<key_type>::value)
         {
-            keys_output = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value);
+            keys_output = test_utils::get_random_data<key_type>(size, -100, +100, seed_value);
         }
         else
         {
@@ -340,7 +340,7 @@ auto test_block_radix_sort()
                 size,
                 std::numeric_limits<key_type>::min(),
                 std::numeric_limits<key_type>::max(),
-                seed_index
+                seed_value
             );
         }
 

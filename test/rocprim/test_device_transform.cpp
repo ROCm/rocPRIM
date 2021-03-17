@@ -140,6 +140,7 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
+            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
             std::vector<U> output(input.size(), (U)0);
 
             T * d_input;
@@ -244,6 +245,8 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
+            std::vector<T1> input1 = test_utils::get_random_data<T1>(size, 1, 100, seed_value);
+            std::vector<T2> input2 = test_utils::get_random_data<T2>(size, 1, 100, seed_value);
             std::vector<U> output(input1.size(), (U)0);
 
             T1 * d_input1;
