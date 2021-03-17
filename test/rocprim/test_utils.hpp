@@ -61,13 +61,13 @@ struct precision_threshold<rocprim::half>
 // Support half operators on host side
 
 ROCPRIM_HOST inline
-_Float16 half_to_native(const rocprim::half& x)
+rocprim::native_half half_to_native(const rocprim::half& x)
 {
-    return *reinterpret_cast<const _Float16 *>(&x);
+    return *reinterpret_cast<const rocprim::native_half *>(&x);
 }
 
 ROCPRIM_HOST inline
-rocprim::half native_to_half(const _Float16& x)
+rocprim::half native_to_half(const rocprim::native_half& x)
 {
     return *reinterpret_cast<const rocprim::half *>(&x);
 }
