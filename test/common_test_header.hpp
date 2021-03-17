@@ -39,7 +39,9 @@
 // HIP API
 #include <hip/hip_runtime.h>
 #include <hip/hip_vector_types.h>
+#ifndef __HIP_CPU_RT__
 #include <hip/hip_ext.h>
+#endif
 
 #ifndef HIP_CHECK
 #define HIP_CHECK(condition)         \
