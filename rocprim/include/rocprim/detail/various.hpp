@@ -127,12 +127,7 @@ struct match_vector_type
 
 // Checks if Items is odd and ensures that size of T is smaller than vector_type.
 template<class T, unsigned int Items>
-ROCPRIM_HOST_DEVICE
-constexpr bool is_vectorizable()
-{
-    return (Items % 2 == 0) &&
-           (sizeof(T) < sizeof(typename match_vector_type<T, Items>::type));
-}
+struct is_vectorizable : std::integral_constant<bool, (Items % 2 == 0) &&(sizeof(T) < sizeof(typename match_vector_type<T, Items>::type))> {};
 
 // Returns the number of LDS (local data share) banks.
 ROCPRIM_HOST_DEVICE
