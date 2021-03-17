@@ -34,6 +34,29 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+#ifdef __HIP_CPU_RT__
+// Taken from the notes of https://en.cppreference.com/w/cpp/numeric/bit_cast
+//
+// TODO: consider adding macro checks relaying to std::bit_cast when compiled
+//       using C++20.
+template <class To, class From>
+typename std::enable_if_t<
+    sizeof(To) == sizeof(From) &&
+    std::is_trivially_copyable_v<From> &&
+    std::is_trivially_copyable_v<To>,
+    To>
+// constexpr support needs compiler magic
+bit_cast(const From& src) noexcept
+{
+    static_assert(std::is_trivially_constructible_v<To>,
+        "This implementation additionally requires destination type to be trivially constructible");
+ 
+    To dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return dst;
+}
+#endif
+
 template<class T, class ShuffleOp>
 ROCPRIM_DEVICE inline
 typename std::enable_if<std::is_trivially_copyable<T>::value && (sizeof(T) % sizeof(int) == 0), T>::type
@@ -42,7 +65,11 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
     constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
 
     struct V { int words[words_no]; };
+#ifdef __HIP_CPU_RT__
+    V a = bit_cast<V>(input);
+#else
     V a = __builtin_bit_cast(V, input);
+#endif
 
     ROCPRIM_UNROLL
     for(int i = 0; i < words_no; i++)
@@ -50,7 +77,11 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
         a.words[i] = op(a.words[i]);
     }
 
+#ifdef __HIP_CPU_RT__
+    return bit_cast<T>(a);
+#else
     return __builtin_bit_cast(T, a);
+#endif
 }
 
 template<class T, class ShuffleOp>
@@ -66,12 +97,21 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
     {
         const size_t s = std::min(sizeof(int), sizeof(T) - i * sizeof(int));
         int word;
+#ifdef __HIP_CPU_RT__
+        std::memcpy(&word, reinterpret_cast<const char*>(&input) + i * sizeof(int), s);
+#else
         __builtin_memcpy(&word, reinterpret_cast<const char*>(&input) + i * sizeof(int), s);
+#endif
         word = op(word);
+#ifdef __HIP_CPU_RT__
+        std::memcpy(reinterpret_cast<char*>(&output) + i * sizeof(int), &word, s);
+#else
         __builtin_memcpy(reinterpret_cast<char*>(&output) + i * sizeof(int), &word, s);
+#endif
     }
 
     return output;
+
 }
 
 template<class T, int dpp_ctrl, int row_mask = 0xf, int bank_mask = 0xf, bool bound_ctrl = false>

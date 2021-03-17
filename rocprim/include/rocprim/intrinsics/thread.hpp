@@ -92,7 +92,12 @@ unsigned int flat_tile_size()
 ROCPRIM_DEVICE inline
 unsigned int lane_id()
 {
+#ifndef __HIP_CPU_RT__
     return ::__lane_id();
+#else
+    using namespace hip::detail;
+    return id(Fiber::this_fiber()) % warpSize;
+#endif
 }
 
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional block (tile).
