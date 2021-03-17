@@ -232,7 +232,7 @@ hipError_t partition_impl(void * temporary_storage,
             HIP_KERNEL_NAME(partition_kernel<
                 SelectMethod, OnlySelected, config,
                 InputIterator, FlagIterator, OutputIterator, SelectedCountOutputIterator,
-                UnaryPredicate, decltype(inequality_op), offset_scan_state_with_sleep_type
+                UnaryPredicate, InequalityOp, offset_scan_state_with_sleep_type
             >),
             dim3(grid_size), dim3(block_size), 0, stream,
             input, flags, output, selected_count_output, size, predicate,
@@ -244,7 +244,7 @@ hipError_t partition_impl(void * temporary_storage,
             HIP_KERNEL_NAME(partition_kernel<
                 SelectMethod, OnlySelected, config,
                 InputIterator, FlagIterator, OutputIterator, SelectedCountOutputIterator,
-                UnaryPredicate, decltype(inequality_op), offset_scan_state_type
+                UnaryPredicate, InequalityOp, offset_scan_state_type
             >),
             dim3(grid_size), dim3(block_size), 0, stream,
             input, flags, output, selected_count_output, size, predicate,
