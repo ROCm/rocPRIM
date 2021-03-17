@@ -901,6 +901,11 @@ private:
             }
 
             unsigned int ranks[ItemsPerThread];
+#ifdef __HIP_CPU_RT__
+            // TODO: Check if really necessary
+            // Initialize contents, as non-hipcc compilers don't unconditionally zero out allocated memory
+            std::memset(ranks, 0, ItemsPerThread * sizeof(decltype(ranks[0])));
+#endif
             unsigned int count;
             bit_block_scan().exclusive_scan(bits, ranks, count, storage_.bit_block_scan);
 
