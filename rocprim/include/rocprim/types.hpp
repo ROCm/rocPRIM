@@ -38,35 +38,62 @@ BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
-
 // Define vector types that will be used by rocPRIM internally.
 // We don't use HIP vector types because they don't generate correct
 // load/store operations, see https://github.com/RadeonOpenCompute/ROCm/issues/341
+#ifndef _MSC_VER
 #define DEFINE_VECTOR_TYPE(name, base) \
 \
-struct name##2 \
+struct alignas(sizeof(base) * 2) name##2 \
 { \
     typedef base vector_value_type __attribute__((ext_vector_type(2))); \
     union { \
         vector_value_type data; \
         struct { base x, y; }; \
     }; \
-} __attribute__((aligned(sizeof(base) * 2))); \
+}; \
 \
-struct name##4 \
+struct alignas(sizeof(base) * 4) name##4 \
 { \
     typedef base vector_value_type __attribute__((ext_vector_type(4))); \
     union { \
         vector_value_type data; \
         struct { base x, y, w, z; }; \
     }; \
-} __attribute__((aligned(sizeof(base) * 4)));
+};
+#else
+#define DEFINE_VECTOR_TYPE(name, base) \
+\
+struct alignas(sizeof(base) * 2) name##2 \
+{ \
+    typedef base vector_value_type; \
+    union { \
+        vector_value_type data; \
+        struct { base x, y; }; \
+    }; \
+}; \
+\
+struct alignas(sizeof(base) * 4) name##4 \
+{ \
+    typedef base vector_value_type; \
+    union { \
+        vector_value_type data; \
+        struct { base x, y, w, z; }; \
+    }; \
+};
+#endif
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4201 ) // nonstandard extension used: nameless struct/union
+#endif
 DEFINE_VECTOR_TYPE(char, char);
 DEFINE_VECTOR_TYPE(short, short);
 DEFINE_VECTOR_TYPE(int, int);
 DEFINE_VECTOR_TYPE(longlong, long long);
-
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 // Takes a scalar type T and matches to a vector type based on NumElements.
 template <class T, unsigned int NumElements>
 struct make_vector_type

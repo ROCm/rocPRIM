@@ -52,7 +52,7 @@ inline bool operator==(const custom_notaligned& lhs,
 }
 
 // Custom structure aligned to 16 bytes
-struct custom_16aligned
+struct alignas(16) custom_16aligned
 {
     int i;
     unsigned int u;
@@ -62,7 +62,7 @@ struct custom_16aligned
     custom_16aligned() {};
     ROCPRIM_HOST_DEVICE
     ~custom_16aligned() {};
-} __attribute__((aligned(16)));
+};
 
 inline ROCPRIM_HOST_DEVICE
 bool operator==(const custom_16aligned& lhs, const custom_16aligned& rhs)
