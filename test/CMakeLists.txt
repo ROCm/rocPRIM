@@ -68,6 +68,13 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
     endif()
   endif()
 
+  target_compile_options(${TEST_TARGET}
+    PRIVATE
+      $<$<CXX_COMPILER_ID:MSVC>:
+        /bigobj # number of sections exceeded object file format limit: compile with /bigobj
+      >
+  )
+
   set_target_properties(${TEST_TARGET}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/test"

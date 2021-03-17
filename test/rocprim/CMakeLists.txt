@@ -64,6 +64,13 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
     endif()
   endif()
 
+  target_compile_options(${TEST_TARGET}
+    PRIVATE
+      $<$<CXX_COMPILER_ID:MSVC>:
+        /bigobj # number of sections exceeded object file format limit: compile with /bigobj
+      >
+  )
+
   set_target_properties(${TEST_TARGET}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/test/rocprim"
@@ -122,7 +129,9 @@ add_rocprim_test("rocprim.device_segmented_scan" test_device_segmented_scan.cpp)
 add_rocprim_test("rocprim.device_select" test_device_select.cpp)
 add_rocprim_test("rocprim.device_transform" test_device_transform.cpp)
 add_rocprim_test("rocprim.discard_iterator" test_discard_iterator.cpp)
-add_rocprim_test("rocprim.texture_cache_iterator" test_texture_cache_iterator.cpp)
+if(NOT USE_HIP_CPU)
+  add_rocprim_test("rocprim.texture_cache_iterator" test_texture_cache_iterator.cpp)
+endif()
 add_rocprim_test("rocprim.thread" test_thread.cpp)
 add_rocprim_test("rocprim.thread_algos" test_thread_algos.cpp)
 add_rocprim_test("rocprim.transform_iterator" test_transform_iterator.cpp)

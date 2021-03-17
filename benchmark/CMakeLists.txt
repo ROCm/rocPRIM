@@ -51,6 +51,13 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
     endif()
   endif()
 
+  target_compile_options(${BENCHMARK_TARGET}
+    PRIVATE
+      $<$<CXX_COMPILER_ID:MSVC>:
+        /bigobj # number of sections exceeded object file format limit: compile with /bigobj
+      >
+  )
+
   set_target_properties(${BENCHMARK_TARGET}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmark"
