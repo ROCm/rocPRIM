@@ -70,10 +70,7 @@ typedef ::testing::Types<
 > BlockHistSortParams;
 
 TYPED_TEST_SUITE(RocprimBlockHistogramAtomicInputArrayTests, BlockHistAtomicParams);
-// TODO: revisit why it fails
-#ifndef __HIP_CPU_RT__
 TYPED_TEST_SUITE(RocprimBlockHistogramSortInputArrayTests, BlockHistSortParams);
-#endif
 
 template<
     unsigned int BlockSize,
