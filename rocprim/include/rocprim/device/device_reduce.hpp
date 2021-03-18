@@ -146,6 +146,7 @@ hipError_t reduce_impl(void * temporary_storage,
         // Pointer to array with block_prefixes
         result_type * block_prefixes = static_cast<result_type*>(temporary_storage);
 
+        kernel_constraints_check(dim3(number_of_blocks), dim3(block_size));
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(detail::block_reduce_kernel<false, config, result_type>),
@@ -174,6 +175,7 @@ hipError_t reduce_impl(void * temporary_storage,
     }
     else
     {
+        kernel_constraints_check(dim3(1), dim3(block_size));
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(detail::block_reduce_kernel<WithInitialValue, config, result_type>),

@@ -226,6 +226,7 @@ hipError_t reduce_by_key_impl(void * temporary_storage,
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
+    kernel_constraints_check(dim3(batches), dim3(config::reduce::block_size));
     if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
     hipLaunchKernelGGL(
         HIP_KERNEL_NAME(fill_unique_counts_kernel<config::reduce::block_size, config::reduce::items_per_thread>),
@@ -235,6 +236,7 @@ hipError_t reduce_by_key_impl(void * temporary_storage,
     );
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("fill_unique_counts", size, start)
 
+    kernel_constraints_check(dim3(1), dim3(config::scan::block_size));
     if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
     hipLaunchKernelGGL(
         HIP_KERNEL_NAME(scan_unique_counts_kernel<config::scan::block_size, config::scan::items_per_thread>),
