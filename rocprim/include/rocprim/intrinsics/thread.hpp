@@ -248,7 +248,7 @@ namespace detail
         return 0;
     }
 
-    #define ROCPRIM_DETAIL_CONCAT(A, B) A ## B
+    #define ROCPRIM_DETAIL_CONCAT(A, B) A B
     #define ROCPRIM_DETAIL_DEFINE_HIP_API_ID_FUNC(name, prefix, dim, suffix) \
         template<> \
         ROCPRIM_DEVICE inline \
