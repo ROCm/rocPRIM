@@ -219,15 +219,15 @@ struct half_minimum
 // https://en.cppreference.com/w/cpp/numeric/random/uniform_int_distribution
 template <typename T>
 struct is_valid_for_int_distribution :
-    std::disjunction<
-        std::is_same<short, T>,
-        std::is_same<unsigned short, T>,
-        std::is_same<int, T>,
-        std::is_same<unsigned int, T>,
-        std::is_same<long, T>,
-        std::is_same<unsigned long, T>,
-        std::is_same<long long, T>,
-        std::is_same<unsigned long long, T>
+    std::integral_constant<bool,
+        std::is_same<short, T>::value ||
+        std::is_same<unsigned short, T>::value ||
+        std::is_same<int, T>::value ||
+        std::is_same<unsigned int, T>::value ||
+        std::is_same<long, T>::value ||
+        std::is_same<unsigned long, T>::value ||
+        std::is_same<long long, T>::value ||
+        std::is_same<unsigned long long, T>::value
     > {};
 
 template<class T, class U, class V>
