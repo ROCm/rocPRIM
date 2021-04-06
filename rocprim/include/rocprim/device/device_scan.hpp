@@ -52,7 +52,7 @@ template<
     class ResultType
 >
 __global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
+__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void single_scan_kernel(InputIterator input,
                         const size_t size,
                         ResultType initial_value,
@@ -75,7 +75,7 @@ template<
     class ResultType
 >
 __global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
+__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void block_reduce_kernel(InputIterator input,
                          BinaryFunction scan_op,
                          ResultType * block_prefixes)
@@ -94,7 +94,7 @@ template<
     class ResultType
 >
 __global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
+__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void final_scan_kernel(InputIterator input,
                        const size_t size,
                        OutputIterator output,
@@ -119,7 +119,7 @@ template<
     class LookBackScanState
 >
 __global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
+__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void lookback_scan_kernel(InputIterator input,
                           OutputIterator output,
                           const size_t size,
@@ -137,7 +137,7 @@ void lookback_scan_kernel(InputIterator input,
 
 template<class LookBackScanState>
 __global__
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
+__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void init_lookback_scan_state_kernel(LookBackScanState lookback_scan_state,
                                      const unsigned int number_of_blocks,
                                      ordered_block_id<unsigned int> ordered_bid)
@@ -326,8 +326,10 @@ auto scan_impl(void * temporary_storage,
     -> typename std::enable_if<Config::use_lookback, hipError_t>::type
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryFunction
+    using result_type = typename std::remove_reference<
+        typename ::rocprim::detail::match_result_type<
+            input_type, BinaryFunction
+        >::type
     >::type;
 
     using config = Config;
@@ -566,7 +568,7 @@ hipError_t inclusive_scan(void * temporary_storage,
     return detail::scan_impl<false, config>(
         temporary_storage, storage_size,
         // result_type() is a dummy initial value (not used)
-        input, output, result_type(), size,
+        input, output, result_type{}, size,
         scan_op, stream, debug_synchronous
     );
 }
