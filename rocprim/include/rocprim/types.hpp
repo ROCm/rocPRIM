@@ -146,7 +146,7 @@ using half = ::__half;
 // The lane_mask_type only exist at device side
 #if __AMDGCN_WAVEFRONT_SIZE == 32
 using lane_mask_type = unsigned int;
-#elif __AMDGCN_WAVEFRONT_SIZE == 64
+#elif __AMDGCN_WAVEFRONT_SIZE == 64 || defined(__HIP_CPU_RT__)
 using lane_mask_type = unsigned long long int;
 #endif
 
