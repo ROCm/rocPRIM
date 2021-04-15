@@ -86,8 +86,8 @@ if(USE_HIP_CPU)
     set(HIP_CPU_ROOT "${CMAKE_CURRENT_BINARY_DIR}/deps/hip-cpu" CACHE PATH "")
     download_project(
       PROJ                hip-cpu
-      GIT_REPOSITORY      https://github.com/ROCm-Developer-Tools/HIP-CPU.git
-      GIT_TAG             master
+      GIT_REPOSITORY      https://github.com/MathiasMagnus/HIP-CPU.git
+      GIT_TAG             cmake-fixes
       INSTALL_DIR         "${HIP_CPU_ROOT}"
       CMAKE_ARGS          -Dhip_cpu_rt_BUILD_EXAMPLES=OFF -Dhip_cpu_rt_BUILD_TESTING=OFF -DCMAKE_PREFIX_PATH=${ROCRAND_ROOT} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
       LOG_DOWNLOAD        TRUE
