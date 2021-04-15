@@ -215,7 +215,7 @@ class block_radix_sort
             typename bit_keys_exchange_type::storage_type bit_keys_exchange;
             typename values_exchange_type::storage_type values_exchange;
         };
-        typename bit_block_scan::storage_type bit_block_scan;
+        typename block_radix_sort<Key,BlockSizeX,ItemsPerThread,Value,BlockSizeY,BlockSizeZ>::bit_block_scan::storage_type bit_block_scan;
     };
 
 public:
