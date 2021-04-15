@@ -150,7 +150,6 @@ using lane_mask_type = unsigned int;
 using lane_mask_type = unsigned long long int;
 #endif
 
-#ifdef _MSC_VER
 #if defined(_MSC_VER) || defined(__GNUC__)
 using native_half = half;
 #else
