@@ -109,6 +109,7 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
         __builtin_memcpy(reinterpret_cast<char*>(&output) + i * sizeof(int), &word, s);
 #endif
     }
+#endif
 
     return output;
 
@@ -122,7 +123,17 @@ T warp_move_dpp(const T& input)
         input,
         [=](int v) -> int
         {
+            // TODO: clean-up, this function activates based ROCPRIM_DETAIL_USE_DPP, however inclusion and
+            //       parsing of the template happens unconditionally. The condition causing compilation to
+            //       fail is ordinary host-compilers looking at the headers. Non-hipcc compilers don't define
+            //       __builtin_amdgcn_update_dpp, hence fail to parse the template altogether. (Except MSVC
+            //       because even using /permissive- they somehow still do delayed parsing of the body of
+            //       function templates, even though they pinky-swear they don't.)
+#if !defined(__HIP_CPU_RT__)
             return ::__builtin_amdgcn_update_dpp(0, v, dpp_ctrl, row_mask, bank_mask, bound_ctrl);
+#else
+            return v;
+#endif
         }
     );
 }
