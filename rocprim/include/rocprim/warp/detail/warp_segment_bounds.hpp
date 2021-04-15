@@ -65,6 +65,8 @@ auto last_in_warp_segment(Flag flag)
     unsigned long tmp = 0;
     _BitScanReverse64(&tmp, warp_flags);
     return 1u << tmp;
+#elif __GNUC__
+    return __builtin_ctzl(warp_flags);
 #else
     static_assert(false, "Look for GCC/Clang implementation");
 #endif
