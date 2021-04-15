@@ -81,6 +81,25 @@ variables:
     paths:
       - $CMAKE_LATEST_PATH
 
+.deps-cpu:cmake-latest:
+  stage: build:cmake_latest
+  before_script:
+    - $SUDO_CMD apt update -qq
+    - $SUDO_CMD apt install -y -qq apt-transport-https software-properties-common
+    - $SUDO_CMD add-apt-repository ppa:ubuntu-toolchain-r/test
+    # | Used in the script    | Build tools | Fetch from https:// | rocminfo calls lsmod
+    - $SUDO_CMD apt install -y -qq wget tar xz-utils bzip2 libnuma-dev libunwind-dev git build-essential pkg-config ninja-build ca-certificates kmod g++-9
+    # Fetch CMake only if the cache has not been restored
+    - if [ ! -d $CMAKE_LATEST_PATH ]; then mkdir -p $CMAKE_LATEST_PATH; wget --no-check-certificate --quiet -O - $CMAKE_LATEST_URL | tar --strip-components=1 -xz -C $CMAKE_LATEST_PATH;
+    - fi;
+    - export PATH=$CMAKE_LATEST_PATH/bin:$PATH
+    # Debug printing of environment for context when errors occur
+    - hipconfig
+  cache:
+    key: $CMAKE_LATEST_VERSION
+    paths:
+      - $CMAKE_LATEST_PATH
+
 build:cmake-latest:
   extends:
     - .deps:cmake-latest
@@ -111,6 +130,27 @@ build:cmake-latest:
     - $BUILD_LATEST_DIR/CMakeCache.txt
     - $BUILD_LATEST_DIR/CTestTestfile.cmake
     expire_in: 2 weeks
+
+build-cpu:cmake-latest:
+  extends:
+    - .deps-cpu:cmake-latest
+  tags:
+    - rocm
+  script:
+    - mkdir -p $BUILD_LATEST_DIR
+    - cd $BUILD_LATEST_DIR
+    - cmake
+      -G Ninja
+      -D CMAKE_CXX_COMPILER=g++-9
+      -D CMAKE_BUILD_TYPE=Release
+      -D BUILD_TEST=ON
+      -D BUILD_EXAMPLE=OFF
+      -D BUILD_BENCHMARK=OFF
+      -D USE_HIP_CPU=ON
+      -S $CI_PROJECT_DIR
+      -B $BUILD_LATEST_DIR
+    - cmake
+      --build $BUILD_LATEST_DIR
 
 build:cmake-minimum:
   extends:
