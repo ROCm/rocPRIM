@@ -144,9 +144,14 @@ struct empty_binary_op
 using half = ::__half;
 
 // The lane_mask_type only exist at device side
+#ifndef __AMDGCN_WAVEFRONT_SIZE
+// When not compiling with hipcc, we're compiling with HIP-CPU
+// TODO: introduce a ROCPRIM-specific macro to query this
+#define __AMDGCN_WAVEFRONT_SIZE 64
+#endif
 #if __AMDGCN_WAVEFRONT_SIZE == 32
 using lane_mask_type = unsigned int;
-#elif __AMDGCN_WAVEFRONT_SIZE == 64 || defined(__HIP_CPU_RT__)
+#elif __AMDGCN_WAVEFRONT_SIZE == 64
 using lane_mask_type = unsigned long long int;
 #endif
 
