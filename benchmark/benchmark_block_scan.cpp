@@ -81,7 +81,7 @@ struct inclusive_scan
     __device__
     static void run(const T* input, T* output)
     {
-        const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+        const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
         T values[ItemsPerThread];
         for(unsigned int k = 0; k < ItemsPerThread; k++)
@@ -118,7 +118,7 @@ struct exclusive_scan
     __device__
     static void run(const T* input, T* output)
     {
-        const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+        const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
         using U = typename std::remove_reference<T>::type;
 
         T values[ItemsPerThread];

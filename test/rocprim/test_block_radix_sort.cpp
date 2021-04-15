@@ -113,8 +113,8 @@ void sort_key_kernel(
     unsigned int end_bit)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * items_per_block;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * items_per_block;
 
     key_type keys[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_keys_output + block_offset, keys);
@@ -158,8 +158,8 @@ void sort_key_value_kernel(
     unsigned int end_bit)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * items_per_block;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * items_per_block;
 
     key_type keys[ItemsPerThread];
     value_type values[ItemsPerThread];

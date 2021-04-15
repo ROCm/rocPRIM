@@ -70,7 +70,7 @@ __global__
 __launch_bounds__(BlockSize)
 void sort_keys_kernel(const T * input, T * output)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
 
     T key = input[index];
 
@@ -93,7 +93,7 @@ __global__
 __launch_bounds__(BlockSize)
 void sort_pairs_kernel(const T * input, T * output)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
 
     T key = input[index];
     T value = key + T(1);

@@ -80,8 +80,8 @@ struct blocked_to_striped
     __device__
     static void run(const T * d_input, const unsigned int *, T * d_output)
     {
-        const unsigned int lid = hipThreadIdx_x;
-        const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+        const unsigned int lid = threadIdx.x;
+        const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
@@ -109,8 +109,8 @@ struct striped_to_blocked
     __device__
     static void run(const T * d_input, const unsigned int *, T * d_output)
     {
-        const unsigned int lid = hipThreadIdx_x;
-        const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+        const unsigned int lid = threadIdx.x;
+        const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
@@ -138,8 +138,8 @@ struct blocked_to_warp_striped
     __device__
     static void run(const T * d_input, const unsigned int *, T * d_output)
     {
-        const unsigned int lid = hipThreadIdx_x;
-        const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+        const unsigned int lid = threadIdx.x;
+        const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
@@ -167,8 +167,8 @@ struct warp_striped_to_blocked
     __device__
     static void run(const T * d_input, const unsigned int *, T * d_output)
     {
-        const unsigned int lid = hipThreadIdx_x;
-        const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+        const unsigned int lid = threadIdx.x;
+        const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
         T input[ItemsPerThread];
         rp::block_load_direct_striped<BlockSize>(lid, d_input + block_offset, input);
@@ -196,8 +196,8 @@ struct scatter_to_blocked
     __device__
     static void run(const T * d_input, const unsigned int * d_ranks, T * d_output)
     {
-        const unsigned int lid = hipThreadIdx_x;
-        const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+        const unsigned int lid = threadIdx.x;
+        const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
         T input[ItemsPerThread];
         unsigned int ranks[ItemsPerThread];
@@ -227,8 +227,8 @@ struct scatter_to_striped
     __device__
     static void run(const T * d_input, const unsigned int * d_ranks, T * d_output)
     {
-        const unsigned int lid = hipThreadIdx_x;
-        const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+        const unsigned int lid = threadIdx.x;
+        const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
         T input[ItemsPerThread];
         unsigned int ranks[ItemsPerThread];

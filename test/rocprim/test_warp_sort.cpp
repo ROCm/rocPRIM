@@ -60,7 +60,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void test_hip_warp_sort(T* d_output)
 {
-    unsigned int i = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int i = threadIdx.x + (blockIdx.x * blockDim.x);
     T value = d_output[i];
     rocprim::warp_sort<T, LogicalWarpSize> wsort;
     wsort.sort(value);
@@ -163,7 +163,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void test_hip_sort_key_value_kernel(KeyType* d_output_key, ValueType* d_output_value)
 {
-    unsigned int i = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int i = threadIdx.x + (blockIdx.x * blockDim.x);
     KeyType key = d_output_key[i];
     ValueType value = d_output_value[i];
     rocprim::warp_sort<KeyType, LogicalWarpSize, ValueType> wsort;

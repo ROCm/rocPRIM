@@ -151,7 +151,7 @@ __launch_bounds__(1024)
 void block_id_kernel(unsigned int* device_output)
 {
     unsigned int block_id = rocprim::flat_block_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
-    if(hipThreadIdx_x)
+    if(threadIdx.x)
     {
         device_output[block_id] = block_id;
     }

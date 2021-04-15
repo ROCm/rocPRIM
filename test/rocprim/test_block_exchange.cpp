@@ -49,8 +49,8 @@ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void blocked_to_striped_kernel(Type* device_input, OutputType* device_output)
 {
     constexpr unsigned int block_size = (ItemsPerBlock / ItemsPerThread);
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerBlock;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerBlock;
 
     Type input[ItemsPerThread];
     OutputType output[ItemsPerThread];
@@ -73,8 +73,8 @@ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void striped_to_blocked_kernel(Type* device_input, OutputType* device_output)
 {
     constexpr unsigned int block_size = (ItemsPerBlock / ItemsPerThread);
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerBlock;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerBlock;
 
     Type input[ItemsPerThread];
     OutputType output[ItemsPerThread];
@@ -97,8 +97,8 @@ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void blocked_to_warp_striped_kernel(Type* device_input, OutputType* device_output)
 {
     constexpr unsigned int block_size = (ItemsPerBlock / ItemsPerThread);
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerBlock;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerBlock;
 
     Type input[ItemsPerThread];
     OutputType output[ItemsPerThread];
@@ -121,8 +121,8 @@ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void warp_striped_to_blocked_kernel(Type* device_input, OutputType* device_output)
 {
     constexpr unsigned int block_size = (ItemsPerBlock / ItemsPerThread);
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerBlock;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerBlock;
 
     Type input[ItemsPerThread];
     OutputType output[ItemsPerThread];
@@ -145,8 +145,8 @@ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void scatter_to_blocked_kernel(Type* device_input, OutputType* device_output, unsigned int* device_ranks)
 {
     constexpr unsigned int block_size = (ItemsPerBlock / ItemsPerThread);
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerBlock;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerBlock;
 
     Type input[ItemsPerThread];
     OutputType output[ItemsPerThread];
@@ -171,8 +171,8 @@ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void scatter_to_striped_kernel(Type* device_input, OutputType* device_output, unsigned int* device_ranks)
 {
     constexpr unsigned int block_size = (ItemsPerBlock / ItemsPerThread);
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerBlock;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerBlock;
 
     Type input[ItemsPerThread];
     OutputType output[ItemsPerThread];

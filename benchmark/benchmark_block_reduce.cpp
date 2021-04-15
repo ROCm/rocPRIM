@@ -81,7 +81,7 @@ struct reduce
     __device__
     static void run(const T* input, T* output)
     {
-        const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+        const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
         T values[ItemsPerThread];
         T reduced_value;
@@ -100,9 +100,9 @@ struct reduce
             values[0] = reduced_value;
         }
 
-        if(hipThreadIdx_x == 0)
+        if(threadIdx.x == 0)
         {
-            output[hipBlockIdx_x] = reduced_value;
+            output[blockIdx.x] = reduced_value;
         }
     }
 };

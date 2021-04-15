@@ -32,7 +32,7 @@ template <class T>
 __global__
 void saxpy_kernel(const T * x, T * y, const T a, const size_t size)
 {
-    const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(i < size)
     {
         y[i] += ax(a, x[i]);

@@ -98,7 +98,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void shuffle_up_kernel(T* data, unsigned int delta, unsigned int width)
 {
-    const unsigned int index = (hipBlockIdx_x * hipBlockDim_x) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     T value = data[index];
     value = rocprim::warp_shuffle_up(value, delta, width);
     data[index] = value;
@@ -201,7 +201,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void shuffle_down_kernel(T* data, unsigned int delta, unsigned int width)
 {
-    const unsigned int index = (hipBlockIdx_x * hipBlockDim_x) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     T value = data[index];
     value = rocprim::warp_shuffle_down(value, delta, width);
     data[index] = value;
@@ -304,10 +304,10 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void shuffle_index_kernel(T* data, int* src_lanes, unsigned int width)
 {
-    const unsigned int index = (hipBlockIdx_x * hipBlockDim_x) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     T value = data[index];
     value = rocprim::warp_shuffle(
-        value, src_lanes[hipThreadIdx_x/width], width
+        value, src_lanes[threadIdx.x/width], width
     );
     data[index] = value;
 }

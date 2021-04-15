@@ -110,7 +110,7 @@ enum class block_load_method
 /// \code{.cpp}
 /// __global__ void example_kernel(int * input, ...)
 /// {
-///     const int offset = hipBlockIdx_x * 128 * 8;
+///     const int offset = blockIdx.x * 128 * 8;
 ///     int items[8];
 ///     rocprim::block_load<int, 128, 8, load_method> blockload;
 ///     blockload.load(input + offset, items);

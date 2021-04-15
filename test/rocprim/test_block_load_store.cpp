@@ -248,8 +248,7 @@ __global__
 __launch_bounds__(BlockSize)
 void load_store_kernel(Type* device_input, Type* device_output)
 {
-    Type items[ItemsPerThread];
-    unsigned int offset = hipBlockIdx_x * BlockSize * ItemsPerThread;
+    auto offset = blockIdx.x * BlockSize * ItemsPerThread;
     rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
     rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
     load.load(device_input + offset, items);
@@ -351,8 +350,7 @@ __global__
 __launch_bounds__(BlockSize)
 void load_store_valid_kernel(Type* device_input, Type* device_output, size_t valid)
 {
-    Type items[ItemsPerThread];
-    unsigned int offset = hipBlockIdx_x * BlockSize * ItemsPerThread;
+    auto offset = blockIdx.x * BlockSize * ItemsPerThread;
     rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
     rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
     load.load(device_input + offset, items, valid);
@@ -468,8 +466,7 @@ __global__
 __launch_bounds__(BlockSize)
 void load_store_valid_default_kernel(Type* device_input, Type* device_output, size_t valid, int _default)
 {
-    Type items[ItemsPerThread];
-    unsigned int offset = hipBlockIdx_x * BlockSize * ItemsPerThread;
+    auto offset = blockIdx.x * BlockSize * ItemsPerThread;
     rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
     rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
     load.load(device_input + offset, items, valid, _default);

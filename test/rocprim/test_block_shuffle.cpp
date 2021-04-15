@@ -48,7 +48,7 @@ __global__
 __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
 void shuffle_offset_kernel(T* device_input, T* device_output, int distance)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     rocprim::block_shuffle<T,BlockSize> b_shuffle;
     b_shuffle.offset(device_input[index],device_output[index],distance);
 }
@@ -132,7 +132,7 @@ __global__
 __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
 void shuffle_rotate_kernel(T* device_input, T* device_output, int distance)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     rocprim::block_shuffle<T,BlockSize> b_shuffle;
     b_shuffle.rotate(device_input[index],device_output[index],distance);
 }
@@ -216,7 +216,7 @@ __global__
 __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
 void shuffle_up_kernel(T (*device_input), T (*device_output))
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     rocprim::block_shuffle<T,BlockSize> b_shuffle;
     b_shuffle.template up<ItemsPerThread>(reinterpret_cast<T(&)[ItemsPerThread]>(device_input[index*ItemsPerThread]),reinterpret_cast<T(&)[ItemsPerThread]>(device_output[index*ItemsPerThread]));
 }
@@ -310,7 +310,7 @@ __global__
 __launch_bounds__(BlockSize, ROCPRIM_DEFAULT_MIN_WARPS_PER_EU)
 void shuffle_down_kernel(T (*device_input), T (*device_output))
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     rocprim::block_shuffle<T,BlockSize> b_shuffle;
     b_shuffle.template down<ItemsPerThread>(reinterpret_cast<T(&)[ItemsPerThread]>(device_input[index*ItemsPerThread]),reinterpret_cast<T(&)[ItemsPerThread]>(device_output[index*ItemsPerThread]));
 }

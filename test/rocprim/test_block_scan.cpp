@@ -58,7 +58,7 @@ void scan_kernel(T* device_output, T* device_output_b, T init)
 {
     (void)init;
     (void)device_output_b;
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T value = device_output[index];
     rocprim::block_scan<T, BlockSize, Algorithm> bscan;
     bscan.inclusive_scan(value, value);
@@ -77,15 +77,15 @@ __launch_bounds__(BlockSize)
 void scan_kernel(T* device_output, T* device_output_b, T init)
 {
     (void)init;
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T value = device_output[index];
     T reduction;
     rocprim::block_scan<T, BlockSize, Algorithm> bscan;
     bscan.inclusive_scan(value, value, reduction);
     device_output[index] = value;
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_b[hipBlockIdx_x] = reduction;
+        device_output_b[blockIdx.x] = reduction;
     }
 }
 
@@ -100,7 +100,7 @@ __global__
 __launch_bounds__(BlockSize)
 void scan_kernel(T* device_output, T* device_output_b, T init)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T prefix_value = init;
     auto prefix_callback = [&prefix_value](T reduction)
     {
@@ -116,9 +116,9 @@ void scan_kernel(T* device_output, T* device_output_b, T init)
     bscan_t().inclusive_scan(value, value, storage, prefix_callback, rocprim::plus<T>());
 
     device_output[index] = value;
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_b[hipBlockIdx_x] = prefix_value;
+        device_output_b[blockIdx.x] = prefix_value;
     }
 }
 
@@ -134,7 +134,7 @@ __launch_bounds__(BlockSize)
 void scan_kernel(T* device_output, T* device_output_b, T init)
 {
     (void)device_output_b;
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T value = device_output[index];
     rocprim::block_scan<T, BlockSize, Algorithm> bscan;
     bscan.exclusive_scan(value, value, init);
@@ -152,15 +152,15 @@ __global__
 __launch_bounds__(BlockSize)
 void scan_kernel(T* device_output, T* device_output_b, T init)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T value = device_output[index];
     T reduction;
     rocprim::block_scan<T, BlockSize, Algorithm> bscan;
     bscan.exclusive_scan(value, value, init, reduction);
     device_output[index] = value;
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_b[hipBlockIdx_x] = reduction;
+        device_output_b[blockIdx.x] = reduction;
     }
 }
 
@@ -175,7 +175,7 @@ __global__
 __launch_bounds__(BlockSize)
 void scan_kernel(T* device_output, T* device_output_b, T init)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T prefix_value = init;
     auto prefix_callback = [&prefix_value](T reduction)
     {
@@ -191,9 +191,9 @@ void scan_kernel(T* device_output, T* device_output_b, T init)
     bscan_t().exclusive_scan(value, value, storage, prefix_callback, rocprim::plus<T>());
 
     device_output[index] = value;
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_b[hipBlockIdx_x] = prefix_value;
+        device_output_b[blockIdx.x] = prefix_value;
     }
 }
 
@@ -702,7 +702,7 @@ __global__
 __launch_bounds__(BlockSize)
 void inclusive_scan_array_kernel(T* device_output)
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize ) + hipThreadIdx_x) * ItemsPerThread;
+    const unsigned int index = ((blockIdx.x * BlockSize ) + threadIdx.x) * ItemsPerThread;
 
     // load
     T in_out[ItemsPerThread];
@@ -732,7 +732,7 @@ __global__
 __launch_bounds__(BlockSize)
 void inclusive_scan_reduce_array_kernel(T* device_output, T* device_output_reductions)
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize ) + hipThreadIdx_x) * ItemsPerThread;
+    const unsigned int index = ((blockIdx.x * BlockSize ) + threadIdx.x) * ItemsPerThread;
 
     // load
     T in_out[ItemsPerThread];
@@ -751,9 +751,9 @@ void inclusive_scan_reduce_array_kernel(T* device_output, T* device_output_reduc
         device_output[index + j] = in_out[j];
     }
 
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_reductions[hipBlockIdx_x] = reduction;
+        device_output_reductions[blockIdx.x] = reduction;
     }
 }
 
@@ -768,7 +768,7 @@ __global__
 __launch_bounds__(BlockSize)
 void inclusive_scan_array_prefix_callback_kernel(T* device_output, T* device_output_bp, T block_prefix)
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
+    const unsigned int index = ((blockIdx.x * BlockSize) + threadIdx.x) * ItemsPerThread;
     T prefix_value = block_prefix;
     auto prefix_callback = [&prefix_value](T reduction)
     {
@@ -794,9 +794,9 @@ void inclusive_scan_array_prefix_callback_kernel(T* device_output, T* device_out
         device_output[index + j] = in_out[j];
     }
 
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_bp[hipBlockIdx_x] = prefix_value;
+        device_output_bp[blockIdx.x] = prefix_value;
     }
 }
 
@@ -811,7 +811,7 @@ __global__
 __launch_bounds__(BlockSize)
 void exclusive_scan_array_kernel(T* device_output, T init)
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
+    const unsigned int index = ((blockIdx.x * BlockSize) + threadIdx.x) * ItemsPerThread;
     // load
     T in_out[ItemsPerThread];
     for(unsigned int j = 0; j < ItemsPerThread; j++)
@@ -840,7 +840,7 @@ __global__
 __launch_bounds__(BlockSize)
 void exclusive_scan_reduce_array_kernel(T* device_output, T* device_output_reductions, T init)
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
+    const unsigned int index = ((blockIdx.x * BlockSize) + threadIdx.x) * ItemsPerThread;
     // load
     T in_out[ItemsPerThread];
     for(unsigned int j = 0; j < ItemsPerThread; j++)
@@ -858,9 +858,9 @@ void exclusive_scan_reduce_array_kernel(T* device_output, T* device_output_reduc
         device_output[index + j] = in_out[j];
     }
 
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_reductions[hipBlockIdx_x] = reduction;
+        device_output_reductions[blockIdx.x] = reduction;
     }
 }
 
@@ -879,7 +879,7 @@ void exclusive_scan_prefix_callback_array_kernel(
     T block_prefix
 )
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
+    const unsigned int index = ((blockIdx.x * BlockSize) + threadIdx.x) * ItemsPerThread;
     T prefix_value = block_prefix;
     auto prefix_callback = [&prefix_value](T reduction)
     {
@@ -905,9 +905,9 @@ void exclusive_scan_prefix_callback_array_kernel(
         device_output[index + j] = in_out[j];
     }
 
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_bp[hipBlockIdx_x] = prefix_value;
+        device_output_bp[blockIdx.x] = prefix_value;
     }
 }
 

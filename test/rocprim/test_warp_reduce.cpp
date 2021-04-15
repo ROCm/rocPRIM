@@ -47,7 +47,7 @@ void warp_reduce_sum_kernel(T* device_input, T* device_output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = device_input[index];
 
@@ -55,7 +55,7 @@ void warp_reduce_sum_kernel(T* device_input, T* device_output)
     __shared__ typename wreduce_t::storage_type storage[warps_no];
     wreduce_t().reduce(value, value, storage[warp_id]);
 
-    if(hipThreadIdx_x%LogicalWarpSize == 0)
+    if(threadIdx.x%LogicalWarpSize == 0)
     {
         device_output[index/LogicalWarpSize] = value;
     }
@@ -188,7 +188,7 @@ void warp_allreduce_sum_kernel(T* device_input, T* device_output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = device_input[index];
 
@@ -330,7 +330,7 @@ void warp_reduce_sum_kernel(T* device_input, T* device_output, size_t valid)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = device_input[index];
 
@@ -338,7 +338,7 @@ void warp_reduce_sum_kernel(T* device_input, T* device_output, size_t valid)
     __shared__ typename wreduce_t::storage_type storage[warps_no];
     wreduce_t().reduce(value, value, valid, storage[warp_id]);
 
-    if(hipThreadIdx_x%LogicalWarpSize == 0)
+    if(threadIdx.x%LogicalWarpSize == 0)
     {
         device_output[index/LogicalWarpSize] = value;
     }
@@ -472,7 +472,7 @@ void warp_allreduce_sum_kernel(T* device_input, T* device_output, size_t valid)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = device_input[index];
 
@@ -741,7 +741,7 @@ void head_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = input[index];
     auto flag = flags[index];
@@ -914,7 +914,7 @@ void tail_segmented_warp_reduce_kernel(T* input, Flag* flags, T* output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = input[index];
     auto flag = flags[index];

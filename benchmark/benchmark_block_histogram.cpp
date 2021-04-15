@@ -83,8 +83,9 @@ struct histogram
     __device__
     static void run(const T* input, T* output)
     {
-        const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
-        unsigned int global_offset = hipBlockIdx_x * BinSize;
+        // TODO: Move global_offset into final loop
+        const unsigned int index = ((blockIdx.x * BlockSize) + threadIdx.x) * ItemsPerThread;
+        unsigned int global_offset = blockIdx.x * BinSize;
 
         T values[ItemsPerThread];
         for(unsigned int k = 0; k < ItemsPerThread; k++)
@@ -105,9 +106,9 @@ struct histogram
         #pragma unroll
         for (unsigned int offset = 0; offset < BinSize; offset += BlockSize)
         {
-            if(offset + hipThreadIdx_x < BinSize)
+            if(offset + threadIdx.x < BinSize)
             {
-                output[global_offset + hipThreadIdx_x] = histogram[offset + hipThreadIdx_x];
+                output[global_offset + threadIdx.x] = histogram[offset + threadIdx.x];
                 global_offset += BlockSize;
             }
         }

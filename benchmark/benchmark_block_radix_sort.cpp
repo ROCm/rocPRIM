@@ -71,8 +71,8 @@ __global__
 __launch_bounds__(BlockSize)
 void sort_keys_kernel(const T * input, T * output)
 {
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
     T keys[ItemsPerThread];
     rp::block_load_direct_striped<BlockSize>(lid, input + block_offset, keys);
@@ -97,8 +97,8 @@ __global__
 __launch_bounds__(BlockSize)
 void sort_pairs_kernel(const T * input, T * output)
 {
-    const unsigned int lid = hipThreadIdx_x;
-    const unsigned int block_offset = hipBlockIdx_x * ItemsPerThread * BlockSize;
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
     T keys[ItemsPerThread];
     T values[ItemsPerThread];

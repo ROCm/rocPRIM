@@ -65,7 +65,7 @@ template<class Type>
 __global__
 void thread_load_kernel(Type* volatile const device_input, Type* device_output)
 {
-    size_t index = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
     device_output[index] = rocprim::thread_load<rocprim::load_cg>(device_input + index);
 }
 
@@ -102,7 +102,11 @@ TYPED_TEST(RocprimThreadOperationTests, Load)
             )
         );
 
-        thread_load_kernel<T><<<grid_size, block_size>>>(device_input, device_output);
+        hipLaunchKernelGGL(
+            HIP_KERNEL_NAME(thread_load_kernel<T>),
+            grid_size, block_size, 0, 0,
+            device_input, device_output
+        );
 
         // Reading results back
         HIP_CHECK(
@@ -128,7 +132,7 @@ template<class Type>
 __global__
 void thread_store_kernel(Type* const device_input, Type* device_output)
 {
-    size_t index = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
     rocprim::thread_store<rocprim::store_wb>(device_output + index, device_input[index]);
 }
 
@@ -165,7 +169,11 @@ TYPED_TEST(RocprimThreadOperationTests, Store)
             )
         );
 
-        thread_store_kernel<T><<<grid_size, block_size>>>(device_input, device_output);
+        hipLaunchKernelGGL(
+            HIP_KERNEL_NAME(thread_store_kernel<T>),
+            grid_size, block_size, 0, 0,
+            device_input, device_output
+        );
 
         // Reading results back
         HIP_CHECK(
@@ -201,8 +209,8 @@ template<class Type, int32_t Length>
 __global__
 void thread_reduce_kernel(Type* const device_input, Type* device_output)
 {
-    size_t input_index = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x) * Length;
-    size_t output_index = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x) * Length;
+    size_t input_index = (blockIdx.x * blockDim.x + threadIdx.x) * Length;
+    size_t output_index = (blockIdx.x * blockDim.x + threadIdx.x) * Length;
     device_output[output_index] = rocprim::thread_reduce<Length>(&device_input[input_index], sum_op());
 }
 
@@ -255,7 +263,11 @@ TYPED_TEST(RocprimThreadOperationTests, Reduction)
             )
         );
 
-        thread_reduce_kernel<T, length><<<grid_size, block_size>>>(device_input, device_output);
+        hipLaunchKernelGGL(
+            HIP_KERNEL_NAME(thread_reduce_kernel<T, length>),
+            grid_size, block_size, 0, 0,
+            device_input, device_output
+        );
 
         // Reading results back
         HIP_CHECK(
@@ -282,8 +294,8 @@ template<class Type, int32_t Length>
 __global__
 void thread_scan_kernel(Type* const device_input, Type* device_output)
 {
-    size_t input_index = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x) * Length;
-    size_t output_index = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x) * Length;
+    size_t input_index = (blockIdx.x * blockDim.x + threadIdx.x) * Length;
+    size_t output_index = (blockIdx.x * blockDim.x + threadIdx.x) * Length;
 
     rocprim::thread_scan_inclusive<Length>(&device_input[input_index],
                                                   &device_output[output_index],
@@ -339,7 +351,11 @@ TYPED_TEST(RocprimThreadOperationTests, Scan)
             )
         );
 
-        thread_scan_kernel<T, length><<<grid_size, block_size>>>(device_input, device_output);
+        hipLaunchKernelGGL(
+            HIP_KERNEL_NAME(thread_scan_kernel<T, length>),
+            grid_size, block_size, 0, 0,
+            device_input, device_output
+        );
 
         // Reading results back
         HIP_CHECK(

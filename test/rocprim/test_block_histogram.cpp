@@ -84,8 +84,8 @@ __global__
 __launch_bounds__(BlockSize)
 void histogram_kernel(T* device_output, T* device_output_bin)
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
-    unsigned int global_offset = hipBlockIdx_x * BinSize;
+    const unsigned int index = ((blockIdx.x * BlockSize) + threadIdx.x) * ItemsPerThread;
+    unsigned int global_offset = blockIdx.x * BinSize;
     __shared__ BinType hist[BinSize];
     // load
     T in_out[ItemsPerThread];
@@ -100,9 +100,9 @@ void histogram_kernel(T* device_output, T* device_output_bin)
     #pragma unroll
     for (unsigned int offset = 0; offset < BinSize; offset += BlockSize)
     {
-        if(offset + hipThreadIdx_x < BinSize)
+        if(offset + threadIdx.x < BinSize)
         {
-            device_output_bin[global_offset + hipThreadIdx_x] = hist[offset + hipThreadIdx_x];
+            device_output_bin[global_offset + threadIdx.x] = hist[offset + threadIdx.x];
             global_offset += BlockSize;
         }
     }

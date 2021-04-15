@@ -59,7 +59,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void warp_sort_kernel(K* input_key)
 {
-    const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     auto key = input_key[i];
     rp::warp_sort<K, WarpSize> wsort;
@@ -76,7 +76,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void warp_sort_by_key_kernel(K* input_key, V* input_value)
 {
-    const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     auto key = input_key[i];
     auto value = input_value[i];

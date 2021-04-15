@@ -63,7 +63,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void warp_reduce_kernel(const T * d_input, T * d_output)
 {
-    const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     auto value = d_input[i];
 
@@ -88,7 +88,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void segmented_warp_reduce_kernel(const T* d_input, Flag* d_flags, T* d_output)
 {
-    const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     auto value = d_input[i];
     auto flag = d_flags[i];

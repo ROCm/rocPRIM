@@ -59,7 +59,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void warp_inclusive_scan_kernel(const T* input, T* output)
 {
-    const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     auto value = input[i];
 
     using wscan_t = rp::warp_scan<T, WarpSize>;
@@ -78,7 +78,7 @@ __global__
 __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
 void warp_exclusive_scan_kernel(const T* input, T* output, const T init)
 {
-    const unsigned int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     auto value = input[i];
 
     using wscan_t = rp::warp_scan<T, WarpSize>;

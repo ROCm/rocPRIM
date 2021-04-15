@@ -48,7 +48,7 @@ __global__
 __launch_bounds__(BlockSize)
 void sort_key_kernel(key_type * device_key_output)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     key_type key = device_key_output[index];
     rocprim::block_sort<key_type, BlockSize> bsort;
     bsort.sort(key);
@@ -144,7 +144,7 @@ __global__
 __launch_bounds__(BlockSize)
 void sort_key_value_kernel(key_type * device_key_output, value_type * device_value_output)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     key_type key = device_key_output[index];
     value_type value = device_value_output[index];
     rocprim::block_sort<key_type, BlockSize, value_type> bsort;
@@ -288,7 +288,7 @@ __global__
 __launch_bounds__(BlockSize)
 void custom_sort_key_value_kernel(key_type * device_key_output, value_type * device_value_output)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     key_type key = device_key_output[index];
     value_type value = device_value_output[index];
     rocprim::block_sort<key_type, BlockSize, value_type> bsort;

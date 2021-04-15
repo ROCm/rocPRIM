@@ -53,13 +53,13 @@ __global__
 __launch_bounds__(BlockSize)
 void reduce_kernel(T* device_output, T* device_output_reductions)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T value = device_output[index];
     rocprim::block_reduce<T, BlockSize, Algorithm> breduce;
     breduce.reduce(value, value, BinaryOp());
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_reductions[hipBlockIdx_x] = value;
+        device_output_reductions[blockIdx.x] = value;
     }
 }
 
@@ -265,13 +265,13 @@ __global__
 __launch_bounds__(BlockSize)
 void reduce_valid_kernel(T* device_output, T* device_output_reductions, const unsigned int valid_items)
 {
-    const unsigned int index = (hipBlockIdx_x * BlockSize) + hipThreadIdx_x;
+    const unsigned int index = (blockIdx.x * BlockSize) + threadIdx.x;
     T value = device_output[index];
     rocprim::block_reduce<T, BlockSize, Algorithm> breduce;
     breduce.reduce(value, value, valid_items, BinaryOp());
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_reductions[hipBlockIdx_x] = value;
+        device_output_reductions[blockIdx.x] = value;
     }
 }
 
@@ -410,7 +410,7 @@ __global__
 __launch_bounds__(BlockSize)
 void reduce_array_kernel(T* device_output, T* device_output_reductions)
 {
-    const unsigned int index = ((hipBlockIdx_x * BlockSize) + hipThreadIdx_x) * ItemsPerThread;
+    const unsigned int index = ((blockIdx.x * BlockSize) + threadIdx.x) * ItemsPerThread;
     // load
     T in_out[ItemsPerThread];
     for(unsigned int j = 0; j < ItemsPerThread; j++)
@@ -422,9 +422,9 @@ void reduce_array_kernel(T* device_output, T* device_output_reductions)
     T reduction;
     breduce.reduce(in_out, reduction, BinaryOp());
 
-    if(hipThreadIdx_x == 0)
+    if(threadIdx.x == 0)
     {
-        device_output_reductions[hipBlockIdx_x] = reduction;
+        device_output_reductions[blockIdx.x] = reduction;
     }
 }
 

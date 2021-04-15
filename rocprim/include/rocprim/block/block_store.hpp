@@ -110,7 +110,7 @@ enum class block_store_method
 /// \code{.cpp}
 /// __global__ void kernel(int * output)
 /// {
-///     const int offset = hipBlockIdx_x * 128 * 8;
+///     const int offset = blockIdx.x * 128 * 8;
 ///     int items[8];
 ///     rocprim::block_store<int, 128, 8, store_method> blockstore;
 ///     blockstore.store(output + offset, items);

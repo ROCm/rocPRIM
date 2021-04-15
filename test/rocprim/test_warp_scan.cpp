@@ -51,7 +51,7 @@ void warp_inclusive_scan_kernel(T* device_input, T* device_output)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = device_input[index];
 
@@ -192,7 +192,7 @@ void warp_inclusive_scan_reduce_kernel(
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + ( hipBlockIdx_x * BlockSize );
+    unsigned int index = threadIdx.x + ( blockIdx.x * BlockSize );
 
     T value = device_input[index];
     T reduction;
@@ -202,7 +202,7 @@ void warp_inclusive_scan_reduce_kernel(
     wscan_t().inclusive_scan(value, value, reduction, storage[warp_id]);
 
     device_output[index] = value;
-    if((hipThreadIdx_x % LogicalWarpSize) == 0)
+    if((threadIdx.x % LogicalWarpSize) == 0)
     {
         device_output_reductions[index / LogicalWarpSize] = reduction;
     }
@@ -355,7 +355,7 @@ void warp_exclusive_scan_kernel(T* device_input, T* device_output, T init)
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = device_input[index];
 
@@ -499,7 +499,7 @@ void warp_exclusive_scan_reduce_kernel(
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T value = device_input[index];
     T reduction;
@@ -509,7 +509,7 @@ void warp_exclusive_scan_reduce_kernel(
     wscan_t().exclusive_scan(value, value, init, reduction, storage[warp_id]);
 
     device_output[index] = value;
-    if((hipThreadIdx_x % LogicalWarpSize) == 0)
+    if((threadIdx.x % LogicalWarpSize) == 0)
     {
         device_output_reductions[index / LogicalWarpSize] = reduction;
     }
@@ -673,7 +673,7 @@ void warp_scan_kernel(
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T input = device_input[index];
     T inclusive_output, exclusive_output;
@@ -848,7 +848,7 @@ void warp_scan_reduce_kernel(
 {
     constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
-    unsigned int index = hipThreadIdx_x + (hipBlockIdx_x * hipBlockDim_x);
+    unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     T input = device_input[index];
     T inclusive_output, exclusive_output, reduction;
@@ -859,7 +859,7 @@ void warp_scan_reduce_kernel(
 
     device_inclusive_output[index] = inclusive_output;
     device_exclusive_output[index] = exclusive_output;
-    if((hipThreadIdx_x % LogicalWarpSize) == 0)
+    if((threadIdx.x % LogicalWarpSize) == 0)
     {
         device_output_reductions[index / LogicalWarpSize] = reduction;
     }
