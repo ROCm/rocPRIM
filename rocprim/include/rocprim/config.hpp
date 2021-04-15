@@ -93,7 +93,7 @@
 #define ROCPRIM_WARP_SIZE_64 64u
 #define ROCPRIM_MAX_WARP_SIZE ROCPRIM_WARP_SIZE_64
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#if (defined(_MSC_VER) && !defined(__clang__)) || defined(__GNUC__)
 #define ROCPRIM_UNROLL
 #define ROCPRIM_NO_UNROLL
 #else

@@ -23,7 +23,7 @@
 #include "common_test_header.hpp"
 
 template<class T>
-T ax(const T a, const T x) __device__
+__device__ T ax(const T a, const T x)
 {
     return x * a;
 }
