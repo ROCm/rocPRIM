@@ -46,6 +46,9 @@ endif()
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE CACHE BOOL "Add paths to linker search and installed rpath")
 
+# Get dependencies
+include(cmake/Dependencies.cmake)
+
 # Set the AMDGPU_TARGETS with backward compatiblity
 # Use target ID syntax if supported for AMDGPU_TARGETS
 if(COMMAND rocm_check_target_ids)
@@ -93,9 +96,6 @@ if(DISABLE_WERROR)
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 endif()
-
-# Get dependencies
-include(cmake/Dependencies.cmake)
 
 # Setup VERSION
 set(VERSION_STRING "2.10.9")
