@@ -297,8 +297,8 @@ public:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-        const uint SLEEP_MAX = 32;
-        uint times_through = 1;
+        const unsigned int SLEEP_MAX = 32;
+        unsigned int times_through = 1;
 
         flag = load_volatile(&prefixes_flags[padding + block_id]);
         ::rocprim::detail::memory_fence_device();
