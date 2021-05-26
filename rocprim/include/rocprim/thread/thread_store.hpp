@@ -131,7 +131,11 @@ ROCPRIM_DEVICE inline void thread_store(
     T *ptr,
     T val)
 {
+#ifndef __HIP_CPU_RT__
     detail::AsmThreadStore<MODIFIER, T>(ptr, val);
+#else
+    std::memcpy(ptr, &val, sizeof(T));
+#endif
 }
 
 END_ROCPRIM_NAMESPACE

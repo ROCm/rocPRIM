@@ -129,7 +129,13 @@ template <
 ROCPRIM_DEVICE inline
 T thread_load(T* ptr)
 {
+#ifndef __HIP_CPU_RT__
     return detail::AsmThreadLoad<MODIFIER, T>(ptr);
+#else
+    T retval;
+    std::memcpy(&retval, ptr, sizeof(T));
+    return retval;
+#endif
 }
 
 END_ROCPRIM_NAMESPACE
