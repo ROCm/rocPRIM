@@ -66,7 +66,7 @@ TYPED_TEST(RocprimBlockShuffleTests, BlockOffset)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        int distance = (rand()%min(10,block_size/2))-min(10,block_size/2);
+        int distance = (rand()%(std::min)(10,block_size/2))-min(10,block_size/2);
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value <<" & distance = "<<distance);
         // Generate data
         std::vector<type> input_data = test_utils::get_random_data<type>(size, -100, 100, seed_value);
