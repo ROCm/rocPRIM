@@ -163,7 +163,13 @@ ROCPRIM_DEVICE inline
 auto store_volatile(T * output, T value)
     -> typename std::enable_if<std::is_fundamental<T>::value>::type
 {
+    // TODO: check GCC
+    // error: binding reference of type ‘const half_float::half&’ to ‘volatile half_float::half’ discards qualifiers
+#if !(defined(__HIP_CPU_RT__ ) && defined(__GNUC__))
     *const_cast<volatile T*>(output) = value;
+#else
+    *output = value;
+#endif
 }
 
 template<class T>
@@ -189,8 +195,14 @@ ROCPRIM_DEVICE inline
 auto load_volatile(T * input)
     -> typename std::enable_if<std::is_fundamental<T>::value, T>::type
 {
+    // TODO: check GCC
+    // error: binding reference of type ‘const half_float::half&’ to ‘volatile half_float::half’ discards qualifiers
+#if !(defined(__HIP_CPU_RT__ ) && defined(__GNUC__))
     T retval = *const_cast<volatile T*>(input);
     return retval;
+#else
+    return *input;
+#endif
 }
 
 template<class T>
