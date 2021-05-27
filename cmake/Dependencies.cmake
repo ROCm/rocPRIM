@@ -65,18 +65,19 @@ if(USE_HIP_CPU)
       download_project(
         PROJ                tbb
         GIT_REPOSITORY      https://github.com/oneapi-src/oneTBB.git
-        GIT_TAG             v2021.1.1
-        INSTALL_DIR         ${TBB_ROOT}
-        CMAKE_ARGS          -DTBB_TEST=OFF -DTBB_STRICT=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-        LOG_DOWNLOAD        TRUE
-        LOG_CONFIGURE       TRUE
-        LOG_BUILD           TRUE
-        LOG_INSTALL         TRUE
-        BUILD_PROJECT       TRUE
+        GIT_TAG             v2020.3
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
         UPDATE_DISCONNECTED TRUE # Never update automatically from the remote repository
       )
+      #ExternalProject_Get_Property(tbb SOURCE_DIR)
+      set(TBB_SOURCE_DIR "${CMAKE_BINARY_DIR}/tbb-src")
+      list(APPEND CMAKE_MODULE_PATH "${TBB_SOURCE_DIR}/cmake")
+      include(TBBBuild)
+      tbb_build(TBB_ROOT "${TBB_SOURCE_DIR}" CONFIG_DIR TBB_CONFIG_DIR MAKE_ARGS tbb_build_dir=${TBB_ROOT})
     endif()
-    find_package(TBB REQUIRED CONFIG PATHS ${TBB_ROOT} NO_DEFAULT_PATH)
+    find_package(TBB REQUIRED CONFIG PATHS ${TBB_CONFIG_DIR} NO_DEFAULT_PATH)
   endif(STL_DEPENDS_ON_TBB)
 
   if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
@@ -92,7 +93,7 @@ if(USE_HIP_CPU)
       GIT_REPOSITORY      https://github.com/MathiasMagnus/HIP-CPU.git
       GIT_TAG             cmake-fixes
       INSTALL_DIR         "${HIP_CPU_ROOT}"
-      CMAKE_ARGS          -Dhip_cpu_rt_BUILD_EXAMPLES=OFF -Dhip_cpu_rt_BUILD_TESTING=OFF -DCMAKE_PREFIX_PATH=${ROCRAND_ROOT} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+      CMAKE_ARGS          -Dhip_cpu_rt_BUILD_EXAMPLES=OFF -Dhip_cpu_rt_BUILD_TESTING=OFF -DCMAKE_PREFIX_PATH=${TBB_CONFIG_DIR} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
       LOG_DOWNLOAD        TRUE
       LOG_CONFIGURE       TRUE
       LOG_BUILD           TRUE
