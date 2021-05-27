@@ -81,13 +81,13 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScan)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -227,13 +227,13 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanReduce)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -385,13 +385,13 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -534,13 +534,13 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -705,13 +705,13 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -884,13 +884,13 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -1052,13 +1052,13 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanCustomType)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 

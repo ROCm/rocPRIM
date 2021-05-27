@@ -45,7 +45,7 @@ __global__
 __launch_bounds__(BlockSize)
 void warp_reduce_sum_kernel(T* device_input, T* device_output)
 {
-    constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
+    static constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
     unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -80,13 +80,13 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSum)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -186,7 +186,7 @@ __global__
 __launch_bounds__(BlockSize)
 void warp_allreduce_sum_kernel(T* device_input, T* device_output)
 {
-    constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
+    static constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
     unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -218,13 +218,13 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSum)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -328,7 +328,7 @@ __global__
 __launch_bounds__(BlockSize)
 void warp_reduce_sum_kernel(T* device_input, T* device_output, size_t valid)
 {
-    constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
+    static constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
     const unsigned int warp_id = rocprim::detail::logical_warp_id<LogicalWarpSize>();
     unsigned int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -363,13 +363,13 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumValid)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -502,13 +502,13 @@ TYPED_TEST(RocprimWarpReduceTests, AllReduceSumValid)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -624,13 +624,13 @@ TYPED_TEST(RocprimWarpReduceTests, ReduceSumCustomStruct)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -773,13 +773,13 @@ TYPED_TEST(RocprimWarpReduceTests, HeadSegmentedReduceSum)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
@@ -946,13 +946,13 @@ TYPED_TEST(RocprimWarpReduceTests, TailSegmentedReduceSum)
     static constexpr size_t block_size_ws32 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws32, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws32/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws32/logical_warp_size), 1) * logical_warp_size;
 
     // Block size of warp size 64
     static constexpr size_t block_size_ws64 =
         rocprim::detail::is_power_of_two(logical_warp_size)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
-            : rocprim::max<size_t>((ws64/logical_warp_size) * logical_warp_size, 1);
+            : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     const unsigned int current_device_warp_size = rocprim::host_warp_size();
 
