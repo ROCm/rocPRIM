@@ -58,6 +58,9 @@ if(USE_HIP_CPU)
 
     if(NOT TBB_FOUND)
       message(STATUS "TBB not found or force download TBB on. Downloading and building TBB.")
+      if(CMAKE_CONFIGURATION_TYPES)
+        message(FATAL_ERROR "DownloadProject.cmake doesn't support multi-configuration generators.")
+      endif()
       set(TBB_ROOT ${CMAKE_CURRENT_BINARY_DIR}/deps/tbb CACHE PATH "")
       download_project(
         PROJ                tbb
@@ -118,6 +121,9 @@ if(BUILD_TEST)
 
   if(NOT TARGET GTest::GTest AND NOT TARGET GTest::gtest)
     message(STATUS "GTest not found or force download GTest on. Downloading and building GTest.")
+    if(CMAKE_CONFIGURATION_TYPES)
+      message(FATAL_ERROR "DownloadProject.cmake doesn't support multi-configuration generators.")
+    endif()
     set(GTEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/deps/gtest CACHE PATH "")
     download_project(
       PROJ                googletest
@@ -145,6 +151,9 @@ if(BUILD_BENCHMARK)
 
   if(NOT benchmark_FOUND)
     message(STATUS "Google Benchmark not found or force download Google Benchmark on. Downloading and building Google Benchmark.")
+    if(CMAKE_CONFIGURATION_TYPES)
+      message(FATAL_ERROR "DownloadProject.cmake doesn't support multi-configuration generators.")
+    endif()
     set(GOOGLEBENCHMARK_ROOT ${CMAKE_CURRENT_BINARY_DIR}/deps/googlebenchmark CACHE PATH "")
     if(CMAKE_CXX_COMPILER MATCHES ".*/hipcc$")
       # hip-clang cannot compile googlebenchmark for some reason
