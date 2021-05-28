@@ -111,6 +111,7 @@ build:cmake-latest:
     - cmake
       -G Ninja
       -D CMAKE_CXX_COMPILER=hipcc
+      -D CMAKE_CXX_FLAGS="-Wall -Wextra -Werror"
       -D CMAKE_BUILD_TYPE=Release
       -D BUILD_TEST=ON
       -D BUILD_EXAMPLE=ON
@@ -142,6 +143,7 @@ build-cpu:cmake-latest:
     - cmake
       -G Ninja
       -D CMAKE_CXX_COMPILER=g++-9
+      -D CMAKE_CXX_FLAGS="-Wall -Wextra"
       -D CMAKE_BUILD_TYPE=Release
       -D BUILD_TEST=ON
       -D BUILD_EXAMPLE=OFF
@@ -166,6 +168,7 @@ build:cmake-minimum:
     - cmake
       -G Ninja
       -D CMAKE_CXX_COMPILER=hipcc
+      -D CMAKE_CXX_FLAGS="-Wall -Wextra -Werror"
       -D CMAKE_BUILD_TYPE=Release
       -D BUILD_TEST=ON
       -D BUILD_EXAMPLE=ON
