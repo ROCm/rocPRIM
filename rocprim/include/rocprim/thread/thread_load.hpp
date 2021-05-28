@@ -87,6 +87,8 @@ ROCPRIM_DEVICE __forceinline__ T AsmThreadLoad(void * ptr)
     ROCPRIM_ASM_THREAD_LOAD(cache_modifier, llvm_cache_modifier, uint64_t, uint64_t, flat_load_dwordx2, v, wait_cmd); \
     ROCPRIM_ASM_THREAD_LOAD(cache_modifier, llvm_cache_modifier, double, uint64_t, flat_load_dwordx2, v, wait_cmd);
 
+// [HIP-CPU] MSVC: erronous inline assembly specification (Triggers error C2059: syntax error: 'volatile')
+#ifndef __HIP_CPU_RT__
 ROCPRIM_ASM_THREAD_LOAD_GROUP(load_ca, "glc", "");
 ROCPRIM_ASM_THREAD_LOAD_GROUP(load_cg, "glc slc", "");
 ROCPRIM_ASM_THREAD_LOAD_GROUP(load_cv, "glc", "vmcnt");
@@ -95,6 +97,7 @@ ROCPRIM_ASM_THREAD_LOAD_GROUP(load_volatile, "glc", "vmcnt");
 // TODO find correct modifiers to match these
 ROCPRIM_ASM_THREAD_LOAD_GROUP(load_ldg, "", "");
 ROCPRIM_ASM_THREAD_LOAD_GROUP(load_cs, "", "");
+#endif // __HIP_CPU_RT__
 
 #endif
 
