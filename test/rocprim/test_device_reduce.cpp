@@ -396,7 +396,6 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
 
     using T = typename TestFixture::input_type;
     using key_value = rocprim::key_value_pair<int, T>;
-    using value_type = typename key_value::value_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
 
@@ -414,11 +413,6 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
 
             // Generate data
             std::vector<key_value> input(size);
-            using minmax_type = typename std::conditional<
-                std::is_same<value_type, rocprim::half>::value,
-                float,
-                value_type
-            >::type;
             for (size_t i = 0; i < size; i++)
             {
                 input[i].key = (int)i;
