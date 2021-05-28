@@ -155,7 +155,7 @@ using lane_mask_type = unsigned int;
 using lane_mask_type = unsigned long long int;
 #endif
 
-#if defined(_MSC_VER) || defined(__GNUC__)
+#ifdef __HIP_CPU_RT__
 using native_half = half;
 #else
 using native_half = _Float16;
