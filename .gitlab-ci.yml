@@ -132,29 +132,30 @@ build:cmake-latest:
     - $BUILD_LATEST_DIR/CTestTestfile.cmake
     expire_in: 2 weeks
 
-build-cpu:cmake-latest:
-  extends:
-    - .deps-cpu:cmake-latest
-  tags:
-    - s9300
-    - rocm
-  script:
-    - mkdir -p $BUILD_LATEST_DIR
-    - cd $BUILD_LATEST_DIR
-    - cmake
-      -G Ninja
-      -D CMAKE_CXX_COMPILER=g++-9
-      -D CMAKE_CXX_FLAGS="-Wall -Wextra"
-      -D CMAKE_BUILD_TYPE=Release
-      -D BUILD_TEST=ON
-      -D BUILD_EXAMPLE=OFF
-      -D BUILD_BENCHMARK=OFF
-      -D USE_HIP_CPU=ON
-      -S $CI_PROJECT_DIR
-      -B $BUILD_LATEST_DIR
-    - cmake
-      --build $BUILD_LATEST_DIR
-      --parallel 3
+# TODO: Enable the hip-cpu CI step
+#build-cpu:cmake-latest:
+#  extends:
+#    - .deps-cpu:cmake-latest
+#  tags:
+#    - s9300
+#    - rocm
+#  script:
+#    - mkdir -p $BUILD_LATEST_DIR
+#    - cd $BUILD_LATEST_DIR
+#    - cmake
+#      -G Ninja
+#      -D CMAKE_CXX_COMPILER=g++-9
+#      -D CMAKE_CXX_FLAGS="-Wall -Wextra"
+#      -D CMAKE_BUILD_TYPE=Release
+#      -D BUILD_TEST=ON
+#      -D BUILD_EXAMPLE=OFF
+#      -D BUILD_BENCHMARK=OFF
+#      -D USE_HIP_CPU=ON
+#      -S $CI_PROJECT_DIR
+#      -B $BUILD_LATEST_DIR
+#    - cmake
+#      --build $BUILD_LATEST_DIR
+#      --parallel 3
 
 build:cmake-minimum:
   extends:
