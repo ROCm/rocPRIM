@@ -136,6 +136,7 @@ build-cpu:cmake-latest:
   extends:
     - .deps-cpu:cmake-latest
   tags:
+    - s9300
     - rocm
   script:
     - mkdir -p $BUILD_LATEST_DIR
@@ -153,6 +154,7 @@ build-cpu:cmake-latest:
       -B $BUILD_LATEST_DIR
     - cmake
       --build $BUILD_LATEST_DIR
+      --parallel 3
 
 build:cmake-minimum:
   extends:
