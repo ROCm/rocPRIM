@@ -61,60 +61,107 @@
 //        }
 //    }
 //};
+
+// Faulty C++14 backported logic (consider fixing)
 //
-// C++14 backported logic
+//template<class Key, bool Descending>
+//bool generic_key_compare(const Key& lhs, const Key& rhs) { return Descending ? (rhs < lhs) : (lhs < rhs); }
+//
+//template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
+//auto discriminate_bits(const Key& lhs, const Key& rhs) -> typename std::enable_if<StartBit == 0 && EndBit == sizeof(Key) * 8, bool>::type
+//{
+//    // TODO: pick adequately sized integral type (instead of 1ull) based on Key.
+//    //       Needed to safely silence "'argument': conversion from 'unsigned __int64' to 'const Key', possible loss of data"
+//    auto mask = (1ull << (EndBit - StartBit)) - 1;
+//    auto l = (static_cast<unsigned long long>(lhs) >> StartBit) & mask;
+//    auto r = (static_cast<unsigned long long>(rhs) >> StartBit) & mask;
+//    return generic_key_compare<Key, Descending>(l, r);
+//}
+//
+//template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
+//auto discriminate_bits(const Key& lhs, const Key& rhs) -> typename std::enable_if<!(StartBit == 0 && EndBit == sizeof(Key) * 8), bool>::type
+//{
+//    return generic_key_compare<Key, Descending>(lhs, rhs);
+//}
+//
+//template<class Key, bool Descending>
+//auto discriminate_half(const Key& lhs, const Key& rhs) -> typename std::enable_if<std::is_same<Key, rocprim::half>::value, bool>::type
+//{
+//    // HIP's half doesn't have __host__ comparison operators, use floats instead
+//    return generic_key_compare<float, Descending>((float)lhs, (float)rhs);
+//}
+//
+//template<class Key, bool Descending>
+//auto discriminate_half(const Key& lhs, const Key& rhs) -> typename std::enable_if<!std::is_same<Key, rocprim::half>::value, bool>::type
+//{
+//    return generic_key_compare<Key, Descending>(lhs, rhs);
+//}
+//
+//template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
+//auto discriminate_unsigned(const Key& lhs, const Key& rhs) -> typename std::enable_if<rocprim::is_unsigned<Key>::value, bool>::type
+//{
+//    return discriminate_bits<Key, Descending, StartBit, EndBit>(lhs, rhs);
+//}
+//
+//template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
+//auto discriminate_unsigned(const Key& lhs, const Key& rhs) -> typename std::enable_if<!rocprim::is_unsigned<Key>::value, bool>::type
+//{
+//    return discriminate_half<Key, Descending>(lhs, rhs);
+//}
+//
+//template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
+//struct key_comparator
+//{
+//    bool operator()(const Key& lhs, const Key& rhs)
+//    {
+//        return discriminate_unsigned<Key, Descending, StartBit, EndBit>(lhs, rhs);
+//    }
+//};
+//
+//template<class Key, class Value, bool Descending, unsigned int StartBit, unsigned int EndBit>
+//struct key_value_comparator
+//{
+//    bool operator()(const std::pair<Key, Value>& lhs, const std::pair<Key, Value>& rhs)
+//    {
+//        return key_comparator<Key, Descending, StartBit, EndBit>()(lhs.first, rhs.first);
+//    }
+//};
 
-template<class Key, bool Descending>
-bool generic_key_compare(const Key& lhs, const Key& rhs) { return Descending ? (rhs < lhs) : (lhs < rhs); }
+// Original code with ISO-conforming overload control
+//
+// NOTE: ShiftLess helper is needed, because partial specializations cannot refer to the free template args.
+//       See: https://stackoverflow.com/questions/2615905/c-template-nontype-parameter-arithmetic
 
-template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
-auto discriminate_bits(const Key& lhs, const Key& rhs) -> typename std::enable_if<StartBit == 0 && EndBit == sizeof(Key) * 8, bool>::type
-{
-    // TODO: pick adequately sized integral type (instead of 1ull) based on Key.
-    //       Needed to safely silence "'argument': conversion from 'unsigned __int64' to 'const Key', possible loss of data"
-    auto mask = (1ull << (EndBit - StartBit)) - 1;
-    auto l = (static_cast<unsigned long long>(lhs) >> StartBit) & mask;
-    auto r = (static_cast<unsigned long long>(rhs) >> StartBit) & mask;
-    return generic_key_compare<Key, Descending>(l, r);
-}
-
-template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
-auto discriminate_bits(const Key& lhs, const Key& rhs) -> typename std::enable_if<!(StartBit == 0 && EndBit == sizeof(Key) * 8), bool>::type
-{
-    return generic_key_compare<Key, Descending>(lhs, rhs);
-}
-
-template<class Key, bool Descending>
-auto discriminate_half(const Key& lhs, const Key& rhs) -> typename std::enable_if<std::is_same<Key, rocprim::half>::value, bool>::type
-{
-    // HIP's half doesn't have __host__ comparison operators, use floats instead
-    return generic_key_compare<float, Descending>((float)lhs, (float)rhs);
-}
-
-template<class Key, bool Descending>
-auto discriminate_half(const Key& lhs, const Key& rhs) -> typename std::enable_if<!std::is_same<Key, rocprim::half>::value, bool>::type
-{
-    return generic_key_compare<Key, Descending>(lhs, rhs);
-}
-
-template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
-auto discriminate_unsigned(const Key& lhs, const Key& rhs) -> typename std::enable_if<rocprim::is_unsigned<Key>::value, bool>::type
-{
-    return discriminate_bits<Key, Descending, StartBit, EndBit>(lhs, rhs);
-}
-
-template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
-auto discriminate_unsigned(const Key& lhs, const Key& rhs) -> typename std::enable_if<!rocprim::is_unsigned<Key>::value, bool>::type
-{
-    return discriminate_half<Key, Descending>(lhs, rhs);
-}
-
-template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
+template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit, bool ShiftLess = (StartBit == 0 && EndBit == sizeof(Key) * 8)>
 struct key_comparator
+{
+    static_assert(rocprim::is_unsigned<Key>::value, "Test supports start and end bits only for unsigned integers");
+
+    bool operator()(const Key& lhs, const Key& rhs)
+    {
+        auto mask = (1ull << (EndBit - StartBit)) - 1;
+        auto l = (static_cast<unsigned long long>(lhs) >> StartBit) & mask;
+        auto r = (static_cast<unsigned long long>(rhs) >> StartBit) & mask;
+        return Descending ? (r < l) : (l < r);
+    }
+};
+
+template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
+struct key_comparator<Key, Descending, StartBit, EndBit, true>
 {
     bool operator()(const Key& lhs, const Key& rhs)
     {
-        return discriminate_unsigned<Key, Descending, StartBit, EndBit>(lhs, rhs);
+        return Descending ? (rhs < lhs) : (lhs < rhs);
+    }
+};
+
+template<bool Descending>
+struct key_comparator<rocprim::half, Descending, 0, sizeof(rocprim::half) * 8>
+{
+    bool operator()(const rocprim::half& lhs, const rocprim::half& rhs)
+    {
+        // HIP's half doesn't have __host__ comparison operators, use floats instead
+        return key_comparator<float, Descending, 0, sizeof(float) * 8>()(lhs, rhs);
     }
 };
 
