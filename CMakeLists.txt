@@ -61,7 +61,6 @@ if(TARGET_ID_SUPPORT)
 else()
   set(AMDGPU_TARGETS gfx803;gfx900;gfx906;gfx908 CACHE STRING "List of specific machine types for library to target")
 endif()
-
 set(AMDGPU_TEST_TARGETS "" CACHE STRING "List of specific device types to test for") # Leave empty for default system device
 
 # Verify that hcc compiler is used on ROCM platform
