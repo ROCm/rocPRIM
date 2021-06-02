@@ -75,7 +75,7 @@ typedef ::testing::Types<
 std::vector<size_t> get_sizes(int seed_value)
 {
     std::vector<size_t> sizes = {
-        1, 10, 53, 211,
+        0, 1, 10, 53, 211,
         128, 256, 512,
         1024, 2048, 5000,
         34567, (1 << 17) - 1220, (1 << 20) - 123

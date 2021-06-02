@@ -83,7 +83,7 @@ std::vector<size_t> get_sizes(int seed_value)
 {
     std::vector<size_t> sizes = {
         1024, 2048, 4096, 1792,
-        1, 10, 53, 211, 500,
+        0, 1, 10, 53, 211, 500,
         2345, 11001, 34567,
         (1 << 16) - 1220
     };
