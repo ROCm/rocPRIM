@@ -80,16 +80,9 @@ void run_sort_keys_benchmark(benchmark::State& state,
 
     key_type * d_keys_input;
     key_type * d_keys_output;
-    if (supports_hmm())
-    {
-        HIP_CHECK(hipMallocManaged(&d_keys_input, size * sizeof(key_type)));
-        HIP_CHECK(hipMallocManaged(&d_keys_output, size * sizeof(key_type)));
-    }
-    else
-    {
-        HIP_CHECK(hipMalloc(&d_keys_input, size * sizeof(key_type)));
-        HIP_CHECK(hipMalloc(&d_keys_output, size * sizeof(key_type)));
-    }
+
+    HIP_CHECK(hipMalloc(&d_keys_input, size * sizeof(key_type)));
+    HIP_CHECK(hipMalloc(&d_keys_output, size * sizeof(key_type)));
 
     HIP_CHECK(
         hipMemcpy(
@@ -110,14 +103,7 @@ void run_sort_keys_benchmark(benchmark::State& state,
         )
     );
 
-    if (supports_hmm())
-    {
-        HIP_CHECK(hipMallocManaged(&d_temporary_storage, temporary_storage_bytes));
-    }
-    else
-    {
-        HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
-    }
+    HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
     HIP_CHECK(hipDeviceSynchronize());
 
     // Warm-up
@@ -182,16 +168,8 @@ void run_sort_pairs_benchmark(benchmark::State& state,
     key_type * d_keys_input;
     key_type * d_keys_output;
 
-    if (supports_hmm())
-    {
-        HIP_CHECK(hipMallocManaged(&d_keys_input, size * sizeof(key_type)));
-        HIP_CHECK(hipMallocManaged(&d_keys_output, size * sizeof(key_type)));
-    }
-    else
-    {
-        HIP_CHECK(hipMalloc(&d_keys_input, size * sizeof(key_type)));
-        HIP_CHECK(hipMalloc(&d_keys_output, size * sizeof(key_type)));
-    }
+    HIP_CHECK(hipMalloc(&d_keys_input, size * sizeof(key_type)));
+    HIP_CHECK(hipMalloc(&d_keys_output, size * sizeof(key_type)));
 
     HIP_CHECK(
         hipMemcpy(
@@ -204,16 +182,8 @@ void run_sort_pairs_benchmark(benchmark::State& state,
     value_type * d_values_input;
     value_type * d_values_output;
 
-    if (supports_hmm())
-    {
-        HIP_CHECK(hipMallocManaged(&d_values_input, size * sizeof(value_type)));
-        HIP_CHECK(hipMallocManaged(&d_values_output, size * sizeof(value_type)));
-    }
-    else
-    {
-        HIP_CHECK(hipMalloc(&d_values_input, size * sizeof(value_type)));
-        HIP_CHECK(hipMalloc(&d_values_output, size * sizeof(value_type)));
-    }
+    HIP_CHECK(hipMalloc(&d_values_input, size * sizeof(value_type)));
+    HIP_CHECK(hipMalloc(&d_values_output, size * sizeof(value_type)));
 
     HIP_CHECK(
         hipMemcpy(
@@ -234,14 +204,8 @@ void run_sort_pairs_benchmark(benchmark::State& state,
         )
     );
 
-    if (supports_hmm())
-    {
-        HIP_CHECK(hipMallocManaged(&d_temporary_storage, temporary_storage_bytes));
-    }
-    else
-    {
-        HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
-    }
+    HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
+
     HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
     HIP_CHECK(hipDeviceSynchronize());
 

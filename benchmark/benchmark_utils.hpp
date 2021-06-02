@@ -237,16 +237,4 @@ inline auto get_random_data(size_t size, T min, T max, size_t max_random_size = 
     return data;
 }
 
-bool supports_hmm()
-{
-    hipDeviceProp_t device_prop;
-    int device_id;
-    HIP_CHECK(hipGetDevice(&device_id));
-    HIP_CHECK(hipGetDeviceProperties(&device_prop, device_id));
-
-    if (device_prop.managedMemory == 1) return true;
-
-    return false;
-}
-
 #endif // ROCPRIM_BENCHMARK_UTILS_HPP_

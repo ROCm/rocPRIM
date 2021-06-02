@@ -41,6 +41,7 @@
 #include <hip/hip_vector_types.h>
 #include <hip/hip_ext.h>
 
+#ifndef HIP_CHECK
 #define HIP_CHECK(condition)         \
 {                                    \
     hipError_t error = condition;    \
@@ -49,6 +50,7 @@
         exit(error); \
     } \
 }
+#endif
 
 #include <cstdlib>
 #include <string>
@@ -71,25 +73,12 @@ int obtain_device_from_ctest()
         return 0;
 }
 
-bool supports_hmm()
-{
-    hipDeviceProp_t device_prop;
-    int device_id;
-    HIP_CHECK(hipGetDevice(&device_id));
-    HIP_CHECK(hipGetDeviceProperties(&device_prop, device_id));
-    printf("managed memory support: %d\n", device_prop.managedMemory);
-    if (device_prop.managedMemory == 1) return true;
-
-    return false;
-}
-
 bool use_hmm()
 {
     return std::getenv("ROCPRIM_USE_HMM");
 }
 
-// Helper for HMM allocations: if device supports managedMemory, and HMM is requested through
-// ROCPRIM_USE_HMM environment variable
+// Helper for HMM allocations: HMM is requested through ROCPRIM_USE_HMM environment variable
 template <class T>
 hipError_t hipMallocHelper(T** devPtr, size_t size)
 {
