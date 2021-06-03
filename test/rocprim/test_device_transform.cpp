@@ -130,6 +130,11 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
@@ -230,6 +235,11 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);

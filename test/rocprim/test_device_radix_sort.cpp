@@ -160,6 +160,11 @@ TYPED_TEST(RocprimDeviceRadixSort, SortKeys)
         for(size_t size : get_sizes(seed_value))
         {
             if(size > (1 << 20) && !check_huge_sizes) continue;
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -294,6 +299,11 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairs)
         for(size_t size : get_sizes(seed_value))
         {
             if(size > (1 << 20) && !check_huge_sizes) continue;
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -473,6 +483,11 @@ TYPED_TEST(RocprimDeviceRadixSort, SortKeysDoubleBuffer)
         for(size_t size : sizes)
         {
             if(size > (1 << 20) && !check_huge_sizes) continue;
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -593,6 +608,11 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairsDoubleBuffer)
         for(size_t size : sizes)
         {
             if(size > (1 << 20) && !check_huge_sizes) continue;
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 

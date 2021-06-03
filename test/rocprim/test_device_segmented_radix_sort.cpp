@@ -172,6 +172,12 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortKeys)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(size_t size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -329,6 +335,12 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortPairs)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(size_t size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -525,6 +537,12 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortKeysDoubleBuffer)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(size_t size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -687,6 +705,12 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortPairsDoubleBuffer)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(size_t size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data

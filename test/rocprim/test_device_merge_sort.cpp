@@ -107,6 +107,11 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
 
         for(size_t size : get_sizes(seed_value))
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
@@ -222,6 +227,11 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
 
         for(size_t size : get_sizes(seed_value))
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);

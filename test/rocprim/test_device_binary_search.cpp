@@ -98,6 +98,11 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
 
         for(size_t size : get_sizes(seed_value))
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             const size_t haystack_size = size;
@@ -216,8 +221,12 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
 
         for(size_t size : get_sizes(seed_value))
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             SCOPED_TRACE(testing::Message() << "with size = " << size);
-
             const size_t haystack_size = size;
             const size_t needles_size = std::sqrt(size);
             const size_t d = haystack_size / 100;
@@ -334,6 +343,11 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
 
         for(size_t size : get_sizes(seed_value))
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             const size_t haystack_size = size;

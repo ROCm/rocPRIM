@@ -75,10 +75,19 @@ int obtain_device_from_ctest()
 
 bool use_hmm()
 {
-    return std::getenv("ROCPRIM_USE_HMM");
+    if (getenv("ROCPRIM_USE_HMM") == nullptr)
+    {
+        return false;
+    }
+
+    if (strcmp(getenv("ROCPRIM_USE_HMM"), "1") == 0)
+    {
+        return true;
+    }
+    return false;
 }
 
-// Helper for HMM allocations: HMM is requested through ROCPRIM_USE_HMM environment variable
+// Helper for HMM allocations: HMM is requested through ROCPRIM_USE_HMM=1 environment variable
 template <class T>
 hipError_t hipMallocHelper(T** devPtr, size_t size)
 {

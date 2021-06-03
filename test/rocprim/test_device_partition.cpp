@@ -104,6 +104,11 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -357,6 +362,11 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data

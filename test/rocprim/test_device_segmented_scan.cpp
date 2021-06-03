@@ -127,6 +127,12 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(size_t size : get_sizes(seed_value))
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data and calculate expected results
@@ -264,6 +270,12 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(size_t size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data and calculate expected results
@@ -389,6 +401,12 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -533,6 +551,12 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
+
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data

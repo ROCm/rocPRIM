@@ -189,6 +189,11 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
@@ -293,6 +298,11 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
@@ -400,6 +410,11 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
@@ -547,6 +562,11 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
         const std::vector<size_t> sizes = get_sizes(seed_value);
         for(auto size : sizes)
         {
+            if (size == 0 && test_common_utils::use_hmm())
+            {
+                // hipMallocManaged() currently doesnt support zero byte allocation
+                continue;
+            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);

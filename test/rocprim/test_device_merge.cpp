@@ -104,6 +104,11 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 
     for(auto sizes : get_sizes())
     {
+        if ((std::get<0>(sizes) == 0 || std::get<1>(sizes) == 0) && test_common_utils::use_hmm())
+        {
+            // hipMallocManaged() currently doesnt support zero byte allocation
+            continue;
+        }
         SCOPED_TRACE(
             testing::Message() << "with sizes = {" <<
             std::get<0>(sizes) << ", " << std::get<1>(sizes) << "}"
@@ -241,6 +246,11 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 
     for(auto sizes : get_sizes())
     {
+        if ((std::get<0>(sizes) == 0 || std::get<1>(sizes) == 0) && test_common_utils::use_hmm())
+        {
+            // hipMallocManaged() currently doesnt support zero byte allocation
+            continue;
+        }
         SCOPED_TRACE(
             testing::Message() << "with sizes = {" <<
             std::get<0>(sizes) << ", " << std::get<1>(sizes) << "}"
