@@ -490,13 +490,13 @@ void add_range_benchmarks(std::vector<benchmark::internal::Benchmark*>& benchmar
 int main(int argc, char *argv[])
 {
     cli::Parser parser(argc, argv);
-    parser.set_optional<int>("size", "size", (int)DEFAULT_N, "number of values");
+    parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
     parser.set_optional<int>("trials", "trials", -1, "number of iterations");
     parser.run_and_exit_if_error();
 
     // Parse argv
     benchmark::Initialize(&argc, argv);
-    const size_t size = parser.get<int>("size");
+    const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
 
     // HIP
