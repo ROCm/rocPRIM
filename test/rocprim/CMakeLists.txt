@@ -60,6 +60,11 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
               LABELS "hip"
       )
   endif()
+  install(
+    TARGETS ${TEST_TARGET}
+    DESTINATION "rocprim/bin/"
+    COMPONENT "tests"
+  )
 endfunction()
 
 # ****************************************************************************

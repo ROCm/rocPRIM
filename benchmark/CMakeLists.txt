@@ -43,6 +43,11 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
   if(BENCHMARK_CONFIG_TUNING)
     target_compile_definitions(${BENCHMARK_TARGET} PRIVATE BENCHMARK_CONFIG_TUNING)
   endif()
+  install(
+    TARGETS ${BENCHMARK_TARGET}
+    DESTINATION "rocprim/bin"
+    COMPONENT "benchmarks"
+  )
 endfunction()
 
 # ****************************************************************************
@@ -74,3 +79,5 @@ add_rocprim_benchmark(benchmark_warp_reduce.cpp)
 add_rocprim_benchmark(benchmark_warp_scan.cpp)
 add_rocprim_benchmark(benchmark_warp_sort.cpp)
 add_rocprim_benchmark(benchmark_device_memory.cpp)
+
+set(CPACK_COMPONENT_BENCHMARKS_GROUP "clients")

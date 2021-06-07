@@ -56,6 +56,12 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
   )
 
   add_test(${TEST_NAME} ${TEST_TARGET})
+
+  install(
+    TARGETS ${TEST_TARGET}
+    DESTINATION "rocprim/bin"
+    COMPONENT "tests"
+  )
 endfunction()
 
 # ****************************************************************************
@@ -67,3 +73,5 @@ add_hip_test("hip.device_api" test_hip_api.cpp)
 
 # rocPRIM test
 add_subdirectory(rocprim)
+
+set(CPACK_COMPONENT_TESTS_GROUP "clients")
