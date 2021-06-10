@@ -79,7 +79,7 @@ while true; do
             shift ;;
         -c|--clients)
             build_clients=true
-	    build_benchmarks=true
+	    build_benchmark=true
             shift ;;
         -g|--debug)
             build_release=false
