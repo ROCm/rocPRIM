@@ -90,8 +90,8 @@ if(USE_HIP_CPU)
     set(HIP_CPU_ROOT "${CMAKE_CURRENT_BINARY_DIR}/deps/hip-cpu" CACHE PATH "")
     download_project(
       PROJ                hip-cpu
-      GIT_REPOSITORY      https://github.com/MathiasMagnus/HIP-CPU.git
-      GIT_TAG             cmake-fixes
+      GIT_REPOSITORY      https://github.com/ROCm-Developer-Tools/HIP-CPU.git
+      GIT_TAG             master
       INSTALL_DIR         "${HIP_CPU_ROOT}"
       CMAKE_ARGS          -Dhip_cpu_rt_BUILD_EXAMPLES=OFF -Dhip_cpu_rt_BUILD_TESTING=OFF -DCMAKE_PREFIX_PATH=${TBB_CONFIG_DIR} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
       LOG_DOWNLOAD        TRUE
@@ -114,7 +114,7 @@ if(BUILD_TEST)
   # GTestConfig.cmake defines: GTest::gtest, GTest::gtest_main, GTest::gmock, GTest::gmock_main
   #
   # NOTE2: Finding GTest in MODULE mode, one cannot invoke find_package in CONFIG mode, because targets
-  #        will be duplicately defined. 
+  #        will be duplicately defined.
   if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
     # Google Test (https://github.com/google/googletest)
     find_package(GTest QUIET)
