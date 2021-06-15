@@ -115,18 +115,24 @@ if(BUILD_TEST AND NOT ONLY_INSTALL)
   enable_testing()
   add_subdirectory(test)
   list(APPEND ROCM_COMPONENTS tests)
+  set(CPACK_DEBIAN_TESTS_PACKAGE_DEPENDS "rocprim (>= ${VERSION_STRING})")
+  set(CPACK_RPM_TESTS_PACKAGE_REQUIRES "rocprim >= ${VERSION_STRING}")
 endif()
 
 # Benchmarks
 if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
   add_subdirectory(benchmark)
   list(APPEND ROCM_COMPONENTS benchmarks)
+  set(CPACK_DEBIAN_BENCHMARKS_PACKAGE_DEPENDS "rocprim (>= ${VERSION_STRING})")
+  set(CPACK_RPM_BENCHMARKS_PACKAGE_REQUIRES "rocprim >= ${VERSION_STRING}")
 endif()
 
 # Examples
 if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
   add_subdirectory(example)
   list(APPEND ROCM_COMPONENTS examples)
+  set(CPACK_DEBIAN_EXAMPLES_PACKAGE_DEPENDS "rocprim (>= ${VERSION_STRING})")
+  set(CPACK_RPM_EXAMPLES_PACKAGE_REQUIRES "rocprim >= ${VERSION_STRING}")
 endif()
 
 # Package
