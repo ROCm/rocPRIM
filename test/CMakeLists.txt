@@ -73,5 +73,3 @@ add_hip_test("hip.device_api" test_hip_api.cpp)
 
 # rocPRIM test
 add_subdirectory(rocprim)
-
-set(CPACK_COMPONENT_TESTS_GROUP "clients")

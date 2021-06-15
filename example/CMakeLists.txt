@@ -49,5 +49,3 @@ endfunction()
 # ****************************************************************************
 
 add_rocprim_example(example_temporary_storage.cpp)
-
-set(CPACK_COMPONENT_EXAMPLES_GROUP "clients")

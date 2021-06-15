@@ -79,5 +79,3 @@ add_rocprim_benchmark(benchmark_warp_reduce.cpp)
 add_rocprim_benchmark(benchmark_warp_scan.cpp)
 add_rocprim_benchmark(benchmark_warp_sort.cpp)
 add_rocprim_benchmark(benchmark_device_memory.cpp)
-
-set(CPACK_COMPONENT_BENCHMARKS_GROUP "clients")
