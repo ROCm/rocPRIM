@@ -44,6 +44,7 @@ def runTestCommand (platform, project)
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
                 ${testCommand}
+                ${hmmTestCommand}
             """
 
     platform.runCommand(this, command)
