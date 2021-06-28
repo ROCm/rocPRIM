@@ -77,6 +77,8 @@ typedef ::testing::Types<
     // hip-clang does not allow to convert half to float
     DeviceScanParams<rocprim::half, float>,
 #endif
+    DeviceScanParams<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_maximum>,
+    DeviceScanParams<rocprim::bfloat16, float>,
     // Large
     DeviceScanParams<int, double, rocprim::plus<int> >,
     DeviceScanParams<int, double, rocprim::plus<double> >,

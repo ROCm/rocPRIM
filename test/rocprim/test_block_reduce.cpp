@@ -122,7 +122,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, Reduce)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     // Given block size not supported
@@ -327,7 +327,7 @@ TYPED_TEST(RocprimBlockReduceSingleValueTests, ReduceValid)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)

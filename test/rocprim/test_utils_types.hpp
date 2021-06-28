@@ -82,10 +82,24 @@ struct block_params
 typedef ::testing::Types<
     warp_param_type(int),
     warp_param_type(float),
-    warp_param_type(uint8_t),
-    warp_param_type(int8_t),
-    warp_param_type(rocprim::half)
+    warp_param_type(uint8_t)
 > WarpParams;
+
+typedef ::testing::Types<
+    warp_param_type(int8_t),
+    warp_param_type(rocprim::half),
+    warp_param_type(rocprim::bfloat16)
+> WarpParamsSecond;
+
+typedef ::testing::Types<
+    block_param_type(int, test_utils::custom_test_type<int>),
+    block_param_type(float, long),
+    block_param_type(double, test_utils::custom_test_type<double>),
+    block_param_type(uint8_t, short),
+    block_param_type(int8_t, float),
+    block_param_type(rocprim::half, rocprim::half),
+    block_param_type(rocprim::bfloat16, rocprim::bfloat16)
+> BlockParams;
 
 typedef ::testing::Types<
     block_param_type(int, test_utils::custom_test_type<int>),
@@ -94,7 +108,7 @@ typedef ::testing::Types<
     block_param_type(uint8_t, short),
     block_param_type(int8_t, float),
     block_param_type(rocprim::half, rocprim::half)
-> BlockParams;
+> BlockParamsReduced;
 
 static constexpr size_t n_items = 7;
 static constexpr unsigned int items[n_items] = {

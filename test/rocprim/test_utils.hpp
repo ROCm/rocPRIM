@@ -436,7 +436,7 @@ struct select_greater_operator<::rocprim::bfloat16>
     typedef bfloat16_greater type;
 };
 
-// Greator to operator selector
+// Not equeal to operator selector
 template<typename T>
 struct select_not_equal_to_operator
 {
@@ -453,6 +453,63 @@ template<>
 struct select_not_equal_to_operator<::rocprim::bfloat16>
 {
     typedef bfloat16_not_equal_to type;
+};
+
+// Plus to operator selector
+template<typename T>
+struct select_plus_operator
+{
+    typedef ::rocprim::plus<T> type;
+};
+
+template<>
+struct select_plus_operator<::rocprim::half>
+{
+    typedef half_plus type;
+};
+
+template<>
+struct select_plus_operator<::rocprim::bfloat16>
+{
+    typedef bfloat16_plus type;
+};
+
+// Minimum to operator selector
+template<typename T>
+struct select_minimum_operator
+{
+    typedef ::rocprim::minimum<T> type;
+};
+
+template<>
+struct select_minimum_operator<::rocprim::half>
+{
+    typedef half_minimum type;
+};
+
+template<>
+struct select_minimum_operator<::rocprim::bfloat16>
+{
+    typedef bfloat16_minimum type;
+};
+
+// Maximum to operator selector
+template<typename T>
+struct select_maximum_operator
+{
+    typedef ::rocprim::maximum<T> type;
+};
+
+template<>
+struct select_maximum_operator<::rocprim::half>
+{
+    typedef half_maximum type;
+};
+
+template<>
+struct select_maximum_operator<::rocprim::bfloat16>
+{
+    typedef bfloat16_maximum type;
 };
 
 // std::uniform_int_distribution is undefined for anything other than listed

@@ -78,6 +78,8 @@ typedef ::testing::Types<
                  rocprim::block_store_method::block_store_direct, 64U, 1>,
     class_params<rocprim::half, rocprim::block_load_method::block_load_direct,
                  rocprim::block_store_method::block_store_direct, 64U, 7>,
+    class_params<rocprim::bfloat16, rocprim::block_load_method::block_load_direct,
+                 rocprim::block_store_method::block_store_direct, 64U, 7>,
     class_params<int, rocprim::block_load_method::block_load_direct,
                  rocprim::block_store_method::block_store_direct, 256U, 1>,
     class_params<char, rocprim::block_load_method::block_load_direct,
@@ -94,6 +96,8 @@ typedef ::testing::Types<
     class_params<double, rocprim::block_load_method::block_load_direct,
                  rocprim::block_store_method::block_store_direct, 256U, 1>,
     class_params<rocprim::half, rocprim::block_load_method::block_load_direct,
+                 rocprim::block_store_method::block_store_direct, 256U, 3>,
+    class_params<rocprim::bfloat16, rocprim::block_load_method::block_load_direct,
                  rocprim::block_store_method::block_store_direct, 256U, 3>,
     class_params<double, rocprim::block_load_method::block_load_direct,
                  rocprim::block_store_method::block_store_direct, 512U, 1>,
@@ -116,12 +120,18 @@ typedef ::testing::Types<
                  rocprim::block_store_method::block_store_vectorize, 64U, 8>,
     class_params<rocprim::half, rocprim::block_load_method::block_load_vectorize,
                  rocprim::block_store_method::block_store_vectorize, 256U, 1>,
+    class_params<rocprim::bfloat16, rocprim::block_load_method::block_load_vectorize,
+                 rocprim::block_store_method::block_store_vectorize, 256U, 1>,
     class_params<int, rocprim::block_load_method::block_load_vectorize,
                  rocprim::block_store_method::block_store_vectorize, 256U, 4>,
     class_params<unsigned char, rocprim::block_load_method::block_load_vectorize,
                  rocprim::block_store_method::block_store_vectorize, 512U, 1>,
     class_params<int, rocprim::block_load_method::block_load_vectorize,
-                 rocprim::block_store_method::block_store_vectorize, 512U, 4>,
+                 rocprim::block_store_method::block_store_vectorize, 512U, 4>
+
+> ClassParams;
+
+typedef ::testing::Types<
 
     class_params<double, rocprim::block_load_method::block_load_vectorize,
                  rocprim::block_store_method::block_store_vectorize, 64U, 1>,
@@ -158,6 +168,8 @@ typedef ::testing::Types<
                  rocprim::block_store_method::block_store_transpose, 512U, 1>,
     class_params<rocprim::half, rocprim::block_load_method::block_load_transpose,
                  rocprim::block_store_method::block_store_transpose, 512U, 4>,
+    class_params<rocprim::bfloat16, rocprim::block_load_method::block_load_transpose,
+                 rocprim::block_store_method::block_store_transpose, 512U, 4>,
 
     class_params<double, rocprim::block_load_method::block_load_transpose,
                  rocprim::block_store_method::block_store_transpose, 64U, 1>,
@@ -181,7 +193,7 @@ typedef ::testing::Types<
     class_params<test_utils::custom_test_type<double>, rocprim::block_load_method::block_load_transpose,
                  rocprim::block_store_method::block_store_transpose, 256U, 4>
 
-> ClassParams;
+> ClassParamsSecondPart;
 
 typedef ::testing::Types<
     params<int, int, 3, false>,
@@ -235,6 +247,7 @@ typedef ::testing::Types<
 > Params;
 
 TYPED_TEST_SUITE(RocprimBlockLoadStoreClassTests, ClassParams);
+TYPED_TEST_SUITE(RocprimBlockLoadStoreSecondPartClassTests, ClassParamsSecondPart);
 TYPED_TEST_SUITE(RocprimVectorizationTests, Params);
 
 template<

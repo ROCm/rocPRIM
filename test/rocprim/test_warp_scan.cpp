@@ -69,7 +69,7 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScan)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
@@ -215,7 +215,7 @@ TYPED_TEST(RocprimWarpScanTests, InclusiveScanReduce)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
@@ -373,7 +373,7 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveScan)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
@@ -522,7 +522,7 @@ TYPED_TEST(RocprimWarpScanTests, ExclusiveReduceScan)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
@@ -693,7 +693,7 @@ TYPED_TEST(RocprimWarpScanTests, Scan)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
@@ -872,7 +872,7 @@ TYPED_TEST(RocprimWarpScanTests, ScanReduce)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 

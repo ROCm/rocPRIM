@@ -62,7 +62,7 @@ TYPED_TEST(RocprimBlockSortTests, SortKey)
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
-    using binary_op_type = typename std::conditional<std::is_same<key_type, rocprim::half>::value, test_utils::half_less, rocprim::less<key_type>>::type;
+    using binary_op_type = typename test_utils::select_less_operator<key_type>::type;
     static constexpr size_t block_size = TestFixture::block_size;
     const size_t size = block_size * 1134;
     const size_t grid_size = size / block_size;
@@ -125,9 +125,9 @@ TYPED_TEST(RocprimBlockSortTests, SortKey)
 template<class Key, class Value>
 struct pair_comparator
 {
-    using less_key = typename std::conditional<std::is_same<Key, rocprim::half>::value, test_utils::half_less, rocprim::less<Key>>::type;
-    using eq_key = typename std::conditional<std::is_same<Key, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<Key>>::type;
-    using less_value = typename std::conditional<std::is_same<Value, rocprim::half>::value, test_utils::half_less, rocprim::less<Value>>::type;
+    using less_key = typename test_utils::select_less_operator<Key>::type;
+    using eq_key = typename test_utils::select_equal_to_operator<Key>::type;
+    using less_value = typename test_utils::select_less_operator<Value>::type;
 
     bool operator()(const std::pair<Key, Value>& lhs, const std::pair<Key, Value>& rhs)
     {
@@ -161,8 +161,8 @@ TYPED_TEST(RocprimBlockSortTests, SortKeyValue)
 
     using key_type = typename TestFixture::key_type;
     using value_type = typename TestFixture::value_type;
-    using value_op_type = typename std::conditional<std::is_same<value_type, rocprim::half>::value, test_utils::half_less, rocprim::less<value_type>>::type;
-    using eq_op_type = typename std::conditional<std::is_same<key_type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<key_type>>::type;
+    using value_op_type = typename test_utils::select_less_operator<value_type>::type;
+    using eq_op_type = typename test_utils::select_equal_to_operator<key_type>::type;;
     static constexpr size_t block_size = TestFixture::block_size;
     static constexpr size_t size = block_size * 1134;
     static constexpr size_t grid_size = size / block_size;
@@ -272,7 +272,7 @@ TYPED_TEST(RocprimBlockSortTests, SortKeyValue)
 template<class Key, class Value>
 struct key_value_comparator
 {
-    using greater_key = typename std::conditional<std::is_same<Key, rocprim::half>::value, test_utils::half_greater, rocprim::greater<Key>>::type;
+    using greater_key = typename test_utils::select_greater_operator<Key>::type;
     bool operator()(const std::pair<Key, Value>& lhs, const std::pair<Key, Value>& rhs)
     {
         return greater_key()(lhs.first, rhs.first);
@@ -305,8 +305,8 @@ TYPED_TEST(RocprimBlockSortTests, CustomSortKeyValue)
 
     using key_type = typename TestFixture::key_type;
     using value_type = typename TestFixture::value_type;
-    using value_op_type = typename std::conditional<std::is_same<value_type, rocprim::half>::value, test_utils::half_less, rocprim::less<value_type>>::type;
-    using eq_op_type = typename std::conditional<std::is_same<key_type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<key_type>>::type;
+    using value_op_type = typename test_utils::select_less_operator<value_type>::type;
+    using eq_op_type = typename test_utils::select_equal_to_operator<key_type>::type;;
     static constexpr size_t block_size = TestFixture::block_size;
     static constexpr size_t size = block_size * 1134;
     static constexpr size_t grid_size = size / block_size;

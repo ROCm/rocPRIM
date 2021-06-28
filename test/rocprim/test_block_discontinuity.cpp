@@ -95,7 +95,8 @@ typedef ::testing::Types<
     block_param_type(double, unsigned int),
     block_param_type(uint8_t, bool),
     block_param_type(int8_t, bool),
-    block_param_type(rocprim::half, int)
+    block_param_type(rocprim::half, int),
+    block_param_type(rocprim::bfloat16, int)
 > BlockDiscParams;
 
 TYPED_TEST_SUITE(RocprimBlockDiscontinuity, BlockDiscParams);
@@ -617,10 +618,10 @@ TYPED_TEST(RocprimBlockDiscontinuity, FlagHeads)
 {
     using type = typename TestFixture::params::input_type;
     using flag_type = typename TestFixture::params::output_type;
-    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_less, rocprim::less<type>>::type;
-    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<type>>::type;
-    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_greater, rocprim::greater<type>>::type;
-    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_not_equal_to, rocprim::not_equal_to<type>>::type;
+    using flag_op_type_1 = typename test_utils::select_less_operator<type>::type;
+    using flag_op_type_2 = typename test_utils::select_equal_to_operator<type>::type;
+    using flag_op_type_3 = typename test_utils::select_greater_operator<type>::type;
+    using flag_op_type_4 = typename test_utils::select_not_equal_to_operator<type>::type;
     constexpr size_t block_size = TestFixture::params::block_size;
 
     static_for<0, 2, type, flag_type, flag_op_type_1, 0, block_size>::run();
@@ -633,10 +634,10 @@ TYPED_TEST(RocprimBlockDiscontinuity, FlagTails)
 {
     using type = typename TestFixture::params::input_type;
     using flag_type = typename TestFixture::params::output_type;
-    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_less, rocprim::less<type>>::type;
-    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<type>>::type;
-    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_greater, rocprim::greater<type>>::type;
-    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_not_equal_to, rocprim::not_equal_to<type>>::type;
+    using flag_op_type_1 = typename test_utils::select_less_operator<type>::type;
+    using flag_op_type_2 = typename test_utils::select_equal_to_operator<type>::type;;
+    using flag_op_type_3 = typename test_utils::select_greater_operator<type>::type;
+    using flag_op_type_4 = typename test_utils::select_not_equal_to_operator<type>::type;
     constexpr size_t block_size = TestFixture::params::block_size;
 
     static_for<0, 2, type, flag_type, flag_op_type_1, 1, block_size>::run();
@@ -649,10 +650,10 @@ TYPED_TEST(RocprimBlockDiscontinuity, FlagHeadsAndTails)
 {
     using type = typename TestFixture::params::input_type;
     using flag_type = typename TestFixture::params::output_type;
-    using flag_op_type_1 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_less, rocprim::less<type>>::type;
-    using flag_op_type_2 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_equal_to, rocprim::equal_to<type>>::type;
-    using flag_op_type_3 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_greater, rocprim::greater<type>>::type;
-    using flag_op_type_4 = typename std::conditional<std::is_same<type, rocprim::half>::value, test_utils::half_not_equal_to, rocprim::not_equal_to<type>>::type;
+    using flag_op_type_1 = typename test_utils::select_less_operator<type>::type;
+    using flag_op_type_2 = typename test_utils::select_equal_to_operator<type>::type;;
+    using flag_op_type_3 = typename test_utils::select_greater_operator<type>::type;
+    using flag_op_type_4 = typename test_utils::select_not_equal_to_operator<type>::type;
     constexpr size_t block_size = TestFixture::params::block_size;
 
     static_for<0, 2, type, flag_type, flag_op_type_1, 2, block_size>::run();

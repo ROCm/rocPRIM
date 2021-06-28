@@ -261,7 +261,7 @@ struct static_run_algo
 TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScan)
 {
     using T = typename TestFixture::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -320,7 +320,7 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScan)
 TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScanReduce)
 {
     using T = typename TestFixture::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -390,7 +390,7 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScanReduce)
 TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScanPrefixCallback)
 {
     using T = typename TestFixture::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -462,7 +462,7 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, InclusiveScanPrefixCallback)
 TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScan)
 {
     using T = typename TestFixture::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -523,7 +523,7 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScan)
 TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScanReduce)
 {
     using T = typename TestFixture::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -602,7 +602,7 @@ TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScanReduce)
 TYPED_TEST(RocprimBlockScanSingleValueTests, ExclusiveScanPrefixCallback)
 {
     using T = typename TestFixture::type;
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_plus, rocprim::plus<T>>::type;
+    using binary_op_type = typename test_utils::select_plus_operator<T>::type;
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -922,7 +922,7 @@ template<
 auto test_block_scan_input_arrays()
 -> typename std::enable_if<Method == 0>::type
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;
@@ -1005,7 +1005,7 @@ template<
 auto test_block_scan_input_arrays()
 -> typename std::enable_if<Method == 1>::type
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;
@@ -1119,7 +1119,7 @@ template<
 auto test_block_scan_input_arrays()
 -> typename std::enable_if<Method == 2>::type
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;
@@ -1235,7 +1235,7 @@ template<
 auto test_block_scan_input_arrays()
 -> typename std::enable_if<Method == 3>::type
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;
@@ -1321,7 +1321,7 @@ template<
 auto test_block_scan_input_arrays()
 -> typename std::enable_if<Method == 4>::type
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;
@@ -1432,7 +1432,7 @@ template<
 auto test_block_scan_input_arrays()
 -> typename std::enable_if<Method == 5>::type
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;

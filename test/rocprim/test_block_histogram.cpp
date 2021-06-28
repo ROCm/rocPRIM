@@ -66,7 +66,9 @@ typedef ::testing::Types<
     block_param_type(uint8_t, short),
     block_param_type(uint8_t, int8_t),
     block_param_type(unsigned short, rocprim::half),
-    block_param_type(unsigned int, rocprim::half)
+    block_param_type(unsigned int, rocprim::half),
+    block_param_type(unsigned short, rocprim::bfloat16),
+    block_param_type(unsigned int, rocprim::bfloat16)
 > BlockHistSortParams;
 
 TYPED_TEST_SUITE(RocprimBlockHistogramAtomicInputArrayTests, BlockHistAtomicParams);

@@ -68,6 +68,8 @@ typedef ::testing::Types<
     params<custom_int2, custom_short2, rocprim::maximum<custom_int2>, 10, 1000, 10000>,
     params<float, double, rocprim::maximum<double>, 50, 2, 10>,
     params<float, float, rocprim::plus<float>, 123, 100, 200, true>,
+    params<rocprim::bfloat16, float, rocprim::plus<float>, 0, 10, 300, true>,
+    params<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_minimum, 0, 1000, 30000>,
 #ifndef __HIP__
     // hip-clang does not allow to convert half to float
     params<rocprim::half, float, rocprim::plus<float>, 0, 10, 300, true>,

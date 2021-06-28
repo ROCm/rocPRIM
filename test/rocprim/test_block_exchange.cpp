@@ -36,7 +36,7 @@ public:
     using params = Params;
 };
 
-TYPED_TEST_SUITE(RocprimBlockExchangeTests, BlockParams);
+TYPED_TEST_SUITE(RocprimBlockExchangeTests, BlockParamsReduced);
 
 template<
     class Type,
