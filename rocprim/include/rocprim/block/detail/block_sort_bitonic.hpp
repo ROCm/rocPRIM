@@ -221,12 +221,11 @@ private:
     void warp_swap(Key& k, Value& v, int mask, bool dir, BinaryFunction compare_function)
     {
         Key k1    = warp_shuffle_xor(k, mask);
-        Value v1  = warp_shuffle_xor(v, mask);
         bool swap = compare_function(dir ? k : k1, dir ? k1 : k);
         if (swap)
         {
             k = k1;
-            v = v1;
+            v = warp_shuffle_xor(v, mask);
         }
     }
 
