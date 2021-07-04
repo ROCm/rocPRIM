@@ -346,6 +346,7 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
 }
 
 template<
+    unsigned int BlockSize,
     class KeysInputIterator,
     class KeysOutputIterator,
     class ValuesInputIterator,
@@ -367,8 +368,7 @@ void block_merge_kernel_impl(KeysInputIterator keys_input,
 
     const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
     const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
-    const unsigned int flat_block_size = ::rocprim::detail::block_size<0>();
-    unsigned int id = (flat_block_id * flat_block_size) + flat_id;
+    unsigned int id = (flat_block_id * BlockSize) + flat_id;
 
     if (id >= input_size)
     {
