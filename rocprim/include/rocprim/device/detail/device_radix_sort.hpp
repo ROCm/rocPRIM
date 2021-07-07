@@ -863,7 +863,7 @@ void radix_block_merge_impl(KeysInputIterator keys_input,
 
     auto compare_function = [radix_mask](const key_type& a, const key_type& b) mutable -> bool
     {
-        /*const bit_key_type encoded_key_a = key_codec::encode(a);
+        const bit_key_type encoded_key_a = key_codec::encode(a);
         const bit_key_type masked_key_a  = encoded_key_a & radix_mask;
 
         const bit_key_type encoded_key_b = key_codec::encode(b);
@@ -872,11 +872,7 @@ void radix_block_merge_impl(KeysInputIterator keys_input,
         if(Descending)
             return masked_key_a > masked_key_b;
         else
-            return masked_key_a < masked_key_b;*/
-        if(Descending)
-            return a > b;
-        else
-            return a < b;
+            return masked_key_a < masked_key_b;
     };
 
     key_type keys[ItemsPerThread];
