@@ -628,8 +628,6 @@ void sort_single(KeysInputIterator keys_input,
                  unsigned int bit,
                  unsigned int current_radix_bits)
 {
-    constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
-
     using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
     using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
 
