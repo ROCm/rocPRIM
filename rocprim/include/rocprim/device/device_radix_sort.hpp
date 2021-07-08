@@ -659,7 +659,7 @@ hipError_t radix_sort_impl(void * temporary_storage,
     >;
 
     constexpr unsigned int single_sort_limit = config::sort_single::block_size * config::sort_single::items_per_thread;
-    constexpr unsigned int merge_sort_limit = config::sort_single::block_size * config::sort_single::items_per_thread * 128U;
+    constexpr unsigned int merge_sort_limit = config::sort_merge::block_size * config::sort_merge::items_per_thread * config::merge_size_limit_blocks;
 
     if( size <= single_sort_limit )
     {

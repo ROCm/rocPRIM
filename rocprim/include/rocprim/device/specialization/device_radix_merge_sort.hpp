@@ -81,8 +81,8 @@ namespace detail
 
         constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
 
-        constexpr unsigned int items_per_thread = Config::sort_single::items_per_thread;
-        constexpr unsigned int block_size = Config::sort_single::block_size;
+        constexpr unsigned int items_per_thread = Config::sort_merge::items_per_thread;
+        constexpr unsigned int block_size = Config::sort_merge::block_size;
         constexpr unsigned int items_per_block = block_size * items_per_thread;
 
         const unsigned int current_radix_bits = end_bit - bit;
