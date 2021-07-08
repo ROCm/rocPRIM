@@ -43,14 +43,15 @@ namespace detail
                                 KeysOutputIterator   keys_output,
                                 ValuesInputIterator  values_input,
                                 ValuesOutputIterator values_output,
-                                unsigned int         current_radix_bits,
+                                const unsigned int   bit,
+                                const unsigned int   current_radix_bits,
                                 const size_t         input_size,
                                 const unsigned int   merge_items_per_block_size)
    {
        radix_block_merge_impl<BlockSize, ItemsPerThread, Descending>(
            keys_input, keys_output,
            values_input, values_output,
-           current_radix_bits, input_size, merge_items_per_block_size
+           bit, current_radix_bits, input_size, merge_items_per_block_size
        );
    }
 
@@ -120,7 +121,7 @@ namespace detail
                     HIP_KERNEL_NAME(radix_block_merge_kernel<block_size, items_per_thread, Descending>),
                     dim3(number_of_blocks), dim3(block_size), 0, stream,
                     keys_output, keys_buffer, values_output, values_buffer,
-                    current_radix_bits, size, block
+                    bit, current_radix_bits, size, block
                 );
                 ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("radix_block_merge_kernel", size, start);
             }
@@ -131,7 +132,7 @@ namespace detail
                     HIP_KERNEL_NAME(radix_block_merge_kernel<block_size, items_per_thread, Descending>),
                     dim3(number_of_blocks), dim3(block_size), 0, stream,
                     keys_buffer, keys_output, values_buffer, values_output,
-                    current_radix_bits, size, block
+                    bit, current_radix_bits, size, block
                 );
                 ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("radix_block_merge_kernel", size, start);
             }
