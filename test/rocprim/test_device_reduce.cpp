@@ -267,7 +267,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
 
     using T = typename TestFixture::input_type;
     using U = typename TestFixture::output_type;
-    using binary_op_type = typename select_maximum_operator<U>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<U>::type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
 

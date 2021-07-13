@@ -203,7 +203,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
-            std::vector<U> output(input.size(), 0);
+            std::vector<U> output(input.size(), U{0});
 
             T * d_input;
             U * d_output;
@@ -436,7 +436,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
             {
                 keys = test_utils::get_random_data<K>(size, 0, 3, seed_value);
             }
-            std::vector<U> output(input.size(), 0);
+            std::vector<U> output(input.size(), U{0});
 
             T * d_input;
             K * d_keys;
@@ -589,7 +589,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             {
                 keys = test_utils::get_random_data<K>(size, 0, 3, seed_value);
             }
-            std::vector<U> output(input.size(), 0);
+            std::vector<U> output(input.size(), U{0});
 
             T * d_input;
             K * d_keys;

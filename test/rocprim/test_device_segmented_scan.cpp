@@ -250,7 +250,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
     using result_type = output_type;
     using offset_type = unsigned int;
 
-    const input_type init = TestFixture::params::init;
+    const input_type init = input_type{TestFixture::params::init};
     const bool debug_synchronous = false;
     scan_op_type scan_op;
 
@@ -540,7 +540,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
     using flag_type = unsigned int;
     using output_type = typename TestFixture::params::output_type;
     using scan_op_type = typename TestFixture::params::scan_op_type;
-    const input_type init = TestFixture::params::init;
+    const input_type init = input_type{TestFixture::params::init};
     const bool debug_synchronous = false;
 
     hipStream_t stream = 0; // default stream

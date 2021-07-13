@@ -123,7 +123,7 @@ struct hip_bfloat16
     #if !defined(__HIP_NO_HALF_CONVERSIONS__)
     template<
         typename T, Enable_if_t<std::is_integral<T>{}>* = nullptr>
-    __device__
+    __host__ __device__
     hip_bfloat16& operator=(T x)
     {
         data = static_cast<_Float16>(x);
