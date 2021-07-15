@@ -36,12 +36,14 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
   )
 
   if(TARGET GTest::GTest)
+    message(STATUS "Gtest 1")
     target_link_libraries(${TEST_TARGET}
       PRIVATE
         GTest::GTest
         GTest::Main
     )
   else()
+    message(STATUS "Gtest 2")
     target_link_libraries(${TEST_TARGET}
       PRIVATE
         GTest::gtest
