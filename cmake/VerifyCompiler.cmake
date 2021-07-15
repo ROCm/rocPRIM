@@ -20,11 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-list(APPEND CMAKE_PREFIX_PATH /opt/rocm /opt/rocm/hip)
-find_package(hip REQUIRED CONFIG PATHS /opt/rocm)
 
-if(HIP_COMPILER STREQUAL "hcc" OR HIP_COMPILER STREQUAL "clang")
-    if(NOT (CMAKE_CXX_COMPILER MATCHES ".*/hcc$" OR CMAKE_CXX_COMPILER MATCHES ".*/hipcc$"))
+list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm /opt/rocm/llvm /opt/rocm/hip)
+find_package(hip REQUIRED CONFIG PATHS ${HIP_DIR} ${ROCM_PATH} /opt/rocm)
+message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER} HIP_COMPILER: ${HIP_COMPILER}")
+if(HIP_COMPILER STREQUAL "hcc" OR HIP_COMPILER STREQUAL "clang" OR HIP_COMPILER STREQUAL "clang++")
+    if(NOT (CMAKE_CXX_COMPILER MATCHES ".*/hcc$" OR CMAKE_CXX_COMPILER MATCHES ".*/hipcc$" OR CMAKE_CXX_COMPILER MATCHES ".*\\clang\+\+\.exe$"))
         message(FATAL_ERROR "On ROCm platform 'hcc' or 'clang' must be used as C++ compiler.")
     elseif(NOT CXX_VERSION_STRING MATCHES "clang")
         list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hcc)

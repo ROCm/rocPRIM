@@ -22,6 +22,10 @@
 
 #include "common_test_header.hpp"
 
+#ifdef WIN32
+#include <numeric>
+#endif
+
 // required rocprim headers
 #include <rocprim/device/device_reduce.hpp>
 #include <rocprim/device/device_transform.hpp>
@@ -152,7 +156,7 @@ TEST(RocprimZipIteratorTests, Transform)
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
-    
+
     using T1 = int;
     using T2 = double;
     using T3 = unsigned char;
