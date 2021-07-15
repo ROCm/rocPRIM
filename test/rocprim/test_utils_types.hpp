@@ -81,15 +81,15 @@ struct block_params
 
 typedef ::testing::Types<
     warp_param_type(int),
-    warp_param_type(float),
+    warp_param_type(int8_t),
     warp_param_type(uint8_t)
-> WarpParams;
+> WarpParamsIntegral;
 
 typedef ::testing::Types<
-    warp_param_type(int8_t),
+    warp_param_type(float),
     warp_param_type(rocprim::half),
     warp_param_type(rocprim::bfloat16)
-> WarpParamsSecond;
+> WarpParamsFloating;
 
 typedef ::testing::Types<
     block_param_type(int, test_utils::custom_test_type<int>),
@@ -120,5 +120,23 @@ T apply(BinaryOp binary_op, const T& a, const T& b)
 {
     return binary_op(a, b);
 }
+
+// Global utility defines
+#define test_suite_type_def_helper(name, suffix) \
+    template<class Params> \
+    class name ## suffix : public ::testing::Test { \
+    public: \
+        using params = Params; \
+    };
+
+#define test_suite_type_def(name, suffix) test_suite_type_def_helper(name, suffix)
+
+#define typed_test_suite_def_helper(name, suffix, params) TYPED_TEST_SUITE(name ## suffix, params)
+
+#define typed_test_suite_def(name, suffix, params) typed_test_suite_def_helper(name, suffix, params)
+
+#define typed_test_def_helper(suite, suffix, name) TYPED_TEST(suite ## suffix, name)
+
+#define typed_test_def(suite, suffix, name) typed_test_def_helper(suite, suffix, name)
 
 #endif // TEST_TEST_UTILS_TYPES_HPP_
