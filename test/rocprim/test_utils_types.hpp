@@ -91,6 +91,27 @@ typedef ::testing::Types<
     warp_param_type(rocprim::bfloat16)
 > WarpParamsFloating;
 
+// Separate sort params (only power of two warp sizes)
+#define warp_sort_param_type(type) \
+   warp_params<type, 2U>, \
+   warp_params<type, 4U>, \
+   warp_params<type, 8U>, \
+   warp_params<type, 16U>, \
+   warp_params<type, 32U>, \
+   warp_params<type, 64U>
+
+typedef ::testing::Types<
+    warp_sort_param_type(int),
+    warp_sort_param_type(test_utils::custom_test_type<int>),
+    warp_sort_param_type(uint8_t),
+    warp_sort_param_type(int8_t)
+> WarpSortParamsIntegral;
+
+typedef ::testing::Types<
+    warp_sort_param_type(rocprim::half),
+    warp_sort_param_type(rocprim::bfloat16)
+> WarpSortParamsFloating;
+
 typedef ::testing::Types<
     block_param_type(int, test_utils::custom_test_type<int>),
     block_param_type(float, long),

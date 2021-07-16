@@ -20,34 +20,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "common_test_header.hpp"
+#ifndef TEST_WARP_SORT_KERNELS_HPP_
+#define TEST_WARP_SORT_KERNELS_HPP_
 
-// required rocprim headers
-#include <rocprim/warp/warp_sort.hpp>
+template<
+    class T,
+    unsigned int LogicalWarpSize
+>
+__global__
+__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
+void test_hip_warp_sort(T* d_output)
+{
+    unsigned int i = threadIdx.x + (blockIdx.x * blockDim.x);
+    T value = d_output[i];
+    rocprim::warp_sort<T, LogicalWarpSize> wsort;
+    wsort.sort(value);
+    d_output[i] = value;
+}
 
-// required test headers
-#include "test_utils_types.hpp"
+template<
+    class KeyType,
+    class ValueType,
+    unsigned int LogicalWarpSize
+>
+__global__
+__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
+void test_hip_sort_key_value_kernel(KeyType* d_output_key, ValueType* d_output_value)
+{
+    unsigned int i = threadIdx.x + (blockIdx.x * blockDim.x);
+    KeyType key = d_output_key[i];
+    ValueType value = d_output_value[i];
+    rocprim::warp_sort<KeyType, LogicalWarpSize, ValueType> wsort;
+    wsort.sort(key, value);
+    d_output_key[i] = key;
+    d_output_value[i] = value;
+}
 
-// kernel definitions
-#include "test_warp_sort.kernels.hpp"
-
-// Start stamping out tests
-struct RocprimWarpSortTests;
-
-struct Integral;
-#define suite_name RocprimWarpSortTests
-#define warp_params WarpSortParamsIntegral
-#define name_suffix Integral
-
-#include "test_warp_sort.hpp"
-
-#undef suite_name
-#undef warp_params
-#undef name_suffix
-
-struct Floating;
-#define suite_name RocprimWarpSortTests
-#define warp_params WarpSortParamsFloating
-#define name_suffix Floating
-
-#include "test_warp_sort.hpp"
+#endif // TEST_WARP_SORT_KERNELS_HPP_
