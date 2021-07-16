@@ -48,6 +48,36 @@ struct block_params
     static constexpr unsigned int block_size = BlockSize;
 };
 
+template<
+    class T,
+    class U,
+    unsigned int ItemsPerThread,
+    bool ShouldBeVectorized
+>
+struct vector_params
+{
+    using type = T;
+    using vector_type = U;
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+    static constexpr bool should_be_vectorized = ShouldBeVectorized;
+};
+
+template<
+    class Type,
+    rocprim::block_load_method Load,
+    rocprim::block_store_method Store,
+    unsigned int BlockSize,
+    unsigned int ItemsPerThread
+>
+struct class_params
+{
+    using type = Type;
+    static constexpr rocprim::block_load_method load_method = Load;
+    static constexpr rocprim::block_store_method store_method = Store;
+    static constexpr unsigned int block_size = BlockSize;
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+};
+
 #if (defined(__gfx1030__))
     #define warp_param_type(type) \
         warp_params<type, 4U>, \
@@ -196,6 +226,16 @@ T apply(BinaryOp binary_op, const T& a, const T& b)
     };
 
 #define block_histo_test_suite_type_def(name, suffix) block_histo_test_suite_type_def_helper(name, suffix)
+
+#define block_reduce_test_suite_type_def_helper(name, suffix) \
+    template<class Params> \
+    class name ## suffix : public ::testing::Test { \
+    public: \
+        using input_type = typename Params::input_type; \
+        static constexpr unsigned int block_size = Params::block_size; \
+    };
+
+#define block_reduce_test_suite_type_def(name, suffix) block_reduce_test_suite_type_def_helper(name, suffix)
 
 #define typed_test_suite_def_helper(name, suffix, params) TYPED_TEST_SUITE(name ## suffix, params)
 
