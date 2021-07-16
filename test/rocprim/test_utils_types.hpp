@@ -114,22 +114,55 @@ typedef ::testing::Types<
 
 typedef ::testing::Types<
     block_param_type(int, test_utils::custom_test_type<int>),
-    block_param_type(float, long),
-    block_param_type(double, test_utils::custom_test_type<double>),
     block_param_type(uint8_t, short),
-    block_param_type(int8_t, float),
-    block_param_type(rocprim::half, rocprim::half),
-    block_param_type(rocprim::bfloat16, rocprim::bfloat16)
-> BlockParams;
+    block_param_type(int8_t, float)
+> BlockParamsIntegral;
 
 typedef ::testing::Types<
-    block_param_type(int, test_utils::custom_test_type<int>),
     block_param_type(float, long),
     block_param_type(double, test_utils::custom_test_type<double>),
+    block_param_type(rocprim::half, rocprim::half),
+    block_param_type(rocprim::bfloat16, rocprim::bfloat16)
+> BlockParamsFloating;
+
+typedef ::testing::Types<
+    block_param_type(test_utils::custom_test_type<int>, int),
+    block_param_type(uint8_t, bool),
+    block_param_type(int8_t, bool)
+> BlockDiscParamsIntegral;
+
+typedef ::testing::Types<
+    block_param_type(float, char),
+    block_param_type(double, unsigned int),
+    block_param_type(rocprim::half, int),
+    block_param_type(rocprim::bfloat16, int)
+> BlockDiscParamsFloating;
+
+typedef ::testing::Types<
+    block_param_type(unsigned int, unsigned int)
+> BlockHistAtomicParamsIntegral;
+
+typedef ::testing::Types<
+    block_param_type(float, float),
+    block_param_type(float, unsigned int),
+    block_param_type(float, unsigned long long),
+    block_param_type(double, float),
+    block_param_type(double, unsigned long long)
+> BlockHistAtomicParamsFloating;
+
+typedef ::testing::Types<
+    block_param_type(uint8_t, int),
+    block_param_type(uint8_t, uint8_t),
     block_param_type(uint8_t, short),
-    block_param_type(int8_t, float),
-    block_param_type(rocprim::half, rocprim::half)
-> BlockParamsReduced;
+    block_param_type(uint8_t, int8_t)
+> BlockHistSortParamsIntegral;
+
+typedef ::testing::Types<
+    block_param_type(unsigned short, rocprim::half),
+    block_param_type(unsigned int, rocprim::half),
+    block_param_type(unsigned short, rocprim::bfloat16),
+    block_param_type(unsigned int, rocprim::bfloat16)
+> BlockHistSortParamsFloating;
 
 static constexpr size_t n_items = 7;
 static constexpr unsigned int items[n_items] = {
@@ -151,6 +184,18 @@ T apply(BinaryOp binary_op, const T& a, const T& b)
     };
 
 #define test_suite_type_def(name, suffix) test_suite_type_def_helper(name, suffix)
+
+#define block_histo_test_suite_type_def_helper(name, suffix) \
+    template<class Params> \
+    class name ## suffix : public ::testing::Test { \
+    public: \
+        using type = typename Params::input_type; \
+        using bin_type = typename Params::output_type; \
+        static constexpr unsigned int block_size = Params::block_size; \
+        static constexpr unsigned int bin_size = Params::block_size; \
+    };
+
+#define block_histo_test_suite_type_def(name, suffix) block_histo_test_suite_type_def_helper(name, suffix)
 
 #define typed_test_suite_def_helper(name, suffix, params) TYPED_TEST_SUITE(name ## suffix, params)
 
