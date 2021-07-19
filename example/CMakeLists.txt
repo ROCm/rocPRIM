@@ -27,12 +27,25 @@ function(add_rocprim_example EXAMPLE_SOURCE)
     PRIVATE
     rocprim_hip
   )
-  foreach(amdgpu_target ${AMDGPU_TARGETS})
+  if(NOT USE_HIP_CPU)
     target_link_libraries(${EXAMPLE_TARGET}
       PRIVATE
-        --amdgpu-target=${amdgpu_target}
+        rocprim_hip
     )
-  endforeach()
+  else()
+    target_link_libraries(${TEST_EXAMPLE_TARGETTARGET}
+      PRIVATE
+        rocprim
+        Threads::Threads
+        hip_cpu_rt::hip_cpu_rt
+    )
+    if(STL_DEPENDS_ON_TBB)
+      target_link_libraries(${EXAMPLE_TARGET}
+        PRIVATE
+          TBB::tbb
+      )
+    endif()
+  endif()
   set_target_properties(${EXAMPLE_TARGET}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example"
