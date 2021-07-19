@@ -61,7 +61,8 @@ typedef ::testing::Types<
     DeviceSelectParams<int8_t, int8_t>,
     DeviceSelectParams<uint8_t, uint8_t>,
     DeviceSelectParams<rocprim::half, rocprim::half>,
-    DeviceSelectParams<rocprim::bfloat16, rocprim::bfloat16>,
+    //TODO: Disable bfloat16 test until we get a better bfloat16 implemetation for host side
+    //DeviceSelectParams<rocprim::bfloat16, rocprim::bfloat16>,
     DeviceSelectParams<unsigned char, float, int, true>,
     DeviceSelectParams<double, double, int, true>,
     DeviceSelectParams<test_utils::custom_test_type<double>, test_utils::custom_test_type<double>, int, true>

@@ -65,7 +65,8 @@ typedef ::testing::Types<
     DeviceReduceParams<int8_t, int8_t>,
     DeviceReduceParams<uint8_t, uint8_t>,
     DeviceReduceParams<rocprim::half, rocprim::half>,
-    DeviceReduceParams<rocprim::bfloat16, rocprim::bfloat16>,
+    //TODO: Disable bfloat16 test until we get a better bfloat16 implemetation for host side
+    //DeviceReduceParams<rocprim::bfloat16, rocprim::bfloat16>,
     DeviceReduceParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<float>>,
     DeviceReduceParams<test_utils::custom_test_type<int>, test_utils::custom_test_type<float>>
 > RocprimDeviceReduceTestsParams;
