@@ -49,7 +49,7 @@ struct Integral;
 
 struct Floating;
 #define suite_name RocprimBlockExchangeTests
-#define warp_params BlockParamsFloating
+#define warp_params BlockExchParamsFloating
 #define name_suffix Floating
 
 #include "test_block_exchange.hpp"
