@@ -165,9 +165,9 @@ using native_half = _Float16;
 
 #ifdef __HIP_CPU_RT__
 // TODO: Find a better type
-using native_bfloat16 = half;
+using native_bfloat16 = bfloat16;
 #else
-using native_bfloat16 = _Float16;
+using native_bfloat16 = bfloat16;
 #endif
 
 END_ROCPRIM_NAMESPACE

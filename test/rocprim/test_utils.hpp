@@ -227,13 +227,13 @@ struct half_minimum
 ROCPRIM_HOST inline
 rocprim::native_bfloat16 bfloat16_to_native(const rocprim::bfloat16& x)
 {
-    return *reinterpret_cast<const rocprim::native_bfloat16 *>(&x);
+    return rocprim::native_bfloat16(x);
 }
 
 ROCPRIM_HOST inline
 rocprim::bfloat16 native_to_bfloat16(const rocprim::native_bfloat16& x)
 {
-    return *reinterpret_cast<const rocprim::bfloat16 *>(&x);
+    return rocprim::bfloat16(x);
 }
 
 struct bfloat16_less
