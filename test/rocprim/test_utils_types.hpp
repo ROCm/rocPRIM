@@ -25,6 +25,8 @@
 
 // required rocprim headers
 #include <rocprim/config.hpp>
+#include <rocprim/block/block_load.hpp>
+#include <rocprim/block/block_store.hpp>
 
 template<
     class T,
