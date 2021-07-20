@@ -20,6 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+if (WIN32)
+  set(DLLS_COPIED OFF)
+endif()
+
 function(add_rocprim_test TEST_NAME TEST_SOURCES)
   list(GET TEST_SOURCES 0 TEST_MAIN_SOURCE)
   get_filename_component(TEST_TARGET ${TEST_MAIN_SOURCE} NAME_WE)
@@ -91,6 +95,19 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
               LABELS "hip"
       )
   endif()
+  if (WIN32 AND NOT DLLS_COPIED)
+    # for now adding in all .dll as dependency chain is not cmake based on win32
+    file( GLOB third_party_dlls
+    LIST_DIRECTORIES ON
+    CONFIGURE_DEPENDS
+    ${HIP_DIR}/bin/*.dll
+    ${CMAKE_SOURCE_DIR}/rtest.*
+    )
+    foreach( file_i ${third_party_dlls})
+    add_custom_command( TARGET ${TEST_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy ${file_i} ${PROJECT_BINARY_DIR}/test/rocprim )
+    endforeach( file_i )
+    set(DLLS_COPIED ON)
+  endif()  
 endfunction()
 
 # ****************************************************************************
@@ -123,7 +140,7 @@ add_rocprim_test("rocprim.device_reduce_by_key" test_device_reduce_by_key.cpp)
 add_rocprim_test("rocprim.device_reduce" test_device_reduce.cpp)
 add_rocprim_test("rocprim.device_run_length_encode" test_device_run_length_encode.cpp)
 add_rocprim_test("rocprim.device_scan" test_device_scan.cpp)
-add_rocprim_test("rocprim.device_segmented_radix_sort" test_device_segmented_radix_sort.cpp)
+#add_rocprim_test("rocprim.device_segmented_radix_sort" test_device_segmented_radix_sort.cpp)
 add_rocprim_test("rocprim.device_segmented_reduce" test_device_segmented_reduce.cpp)
 add_rocprim_test("rocprim.device_segmented_scan" test_device_segmented_scan.cpp)
 add_rocprim_test("rocprim.device_select" test_device_select.cpp)
@@ -140,3 +157,4 @@ add_rocprim_test("rocprim.warp_reduce" test_warp_reduce.cpp)
 add_rocprim_test("rocprim.warp_scan" test_warp_scan.cpp)
 add_rocprim_test("rocprim.warp_sort" test_warp_sort.cpp)
 add_rocprim_test("rocprim.zip_iterator" test_zip_iterator.cpp)
+

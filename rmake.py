@@ -35,6 +35,8 @@ def parse_args():
                         help='Install after build (default: False)')
     parser.add_argument(      '--cmake-darg', required=False, dest='cmake_dargs', action='append', default=[],
                         help='List of additional cmake defines for builds (e.g. CMAKE_CXX_COMPILER_LAUNCHER=ccache)')
+    parser.add_argument('-a', '--architecture', dest='gpu_architecture', required=False, default="gfx906", #:sramecc+:xnack-" ) #gfx1030" ) #gfx906" ) # gfx1030" )
+                        help='Set GPU architectures, e.g. all, gfx000, gfx803, gfx906:xnack-;gfx1030 (optional, default: all)')                        
     parser.add_argument('-v', '--verbose', required=False, default=False, action='store_true',
                         help='Verbose build (default: False)')
     return parser.parse_args()
@@ -80,14 +82,15 @@ def config_cmd():
     print( f"***************** {src_path}")
     cmake_executable = ""
     cmake_options = []
-
+    cmake_platform_opts = []
     if (OS_info["ID"] == 'windows'):
         # we don't have ROCM on windows but have hip, ROCM can be downloaded if required
         rocm_path = os.getenv( 'ROCM_PATH', "C:/hipsdk/rocm-cmake-master") #C:/hip") # rocm/Utils/cmake-rocm4.2.0"
         cmake_executable = "cmake.exe"
         toolchain = os.path.join( src_path, "toolchain-windows.cmake" )
         #set CPACK_PACKAGING_INSTALL_PREFIX= defined as blank as it is appended to end of path for archive creation
-        cmake_platform_opts = f"-DWIN32=ON -DCPACK_PACKAGING_INSTALL_PREFIX=" #" -DCPACK_PACKAGING_INSTALL_PREFIX={rocm_path}"
+        cmake_platform_opts.append( f"-DWIN32=ON -DCPACK_PACKAGING_INSTALL_PREFIX=") #" -DCPACK_PACKAGING_INSTALL_PREFIX={rocm_path}"
+        cmake_platform_opts.append( f"-DCMAKE_INSTALL_PREFIX=\"C:/hipSDK\"" )        
         generator = f"-G Ninja"
         # "-G \"Visual Studio 16 2019\" -A x64"  #  -G NMake ")  #
         cmake_options.append( generator )
@@ -103,7 +106,7 @@ def config_cmd():
     tools = f"-DCMAKE_TOOLCHAIN_FILE={toolchain}"
     cmake_options.append( tools )
 
-    cmake_options.append( f"{cmake_platform_opts}" )
+    cmake_options.extend( cmake_platform_opts)
 
 
   # build type
@@ -122,7 +125,7 @@ def config_cmd():
         deps_dir = os.path.abspath(os.path.join(build_dir, 'deps')).replace('\\','/')
     else:
         deps_dir = args.deps_dir
-    cmake_base_options = f"-DCMAKE_MODULE_PATH={deps_dir} -DROCM_PATH={rocm_path} -DCMAKE_PREFIX_PATH:PATH={rocm_path} -DCPACK_SET_DESTDIR=OFF -DCMAKE_INSTALL_PREFIX=rocmath-install" # -DCMAKE_INSTALL_PREFIX=rocmath-install" #-DCMAKE_INSTALL_LIBDIR=
+    cmake_base_options = f"-DROCM_PATH={rocm_path} -DCMAKE_PREFIX_PATH:PATH={rocm_path}" # -DCMAKE_INSTALL_PREFIX=rocmath-install" #-DCMAKE_INSTALL_LIBDIR=
     cmake_options.append( cmake_base_options )
 
     print( cmake_options )
@@ -142,6 +145,8 @@ def config_cmd():
     if args.build_clients:
         cmake_options.append( f"-DBUILD_TEST=ON -DBUILD_DIR={build_dir}" )
 
+    cmake_options.append( f"-DAMDGPU_TARGETS={args.gpu_architecture}" )
+    
     if args.cmake_dargs:
         for i in args.cmake_dargs:
           cmake_options.append( f"-D{i}" )
@@ -203,18 +208,13 @@ def run_cmd(exe, opts):
 
 def main():
     global args
-    print('os_detect');
     os_detect()
-    print('parse_args');
     args = parse_args()
-    print('configure');
     # configure
     exe, opts = config_cmd()
-    print('run_cmd')
     run_cmd(exe, opts)
 
     # make/build/install
-    print('make_cmd')
     exe, opts = make_cmd()
     run_cmd(exe, opts)
 

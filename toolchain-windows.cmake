@@ -3,11 +3,11 @@
 # Ninja doesn't support platform
 #set(CMAKE_GENERATOR_PLATFORM x64)
 
-if (DEFINED ENV{HIP_PATH})
-  file(TO_CMAKE_PATH "$ENV{HIP_PATH}" HIP_PATH)
-  set(rocm_bin "${HIP_PATH}/bin")
+if (DEFINED ENV{HIP_DIR})
+  file(TO_CMAKE_PATH "$ENV{HIP_DIR}" HIP_DIR)
+  set(rocm_bin "${HIP_DIR}/bin")
 else()
-  set(HIP_PATH "C:/hip")
+  set(HIP_DIR "C:/hip")
   set(rocm_bin "C:/hip/bin")
 endif()
 
