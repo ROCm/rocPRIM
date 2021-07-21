@@ -23,6 +23,10 @@
 # This variable is defined here to be accessible to other test sub-modules
 set(COMMON_TEST_HEADER_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
+if (WIN32)
+  set(DLLS_COPIED OFF)
+endif()
+
 function(add_hip_test TEST_NAME TEST_SOURCES)
   list(GET TEST_SOURCES 0 TEST_MAIN_SOURCE)
 
@@ -36,14 +40,12 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
   )
 
   if(TARGET GTest::GTest)
-    message(STATUS "Gtest 1")
     target_link_libraries(${TEST_TARGET}
       PRIVATE
         GTest::GTest
         GTest::Main
     )
   else()
-    message(STATUS "Gtest 2")
     target_link_libraries(${TEST_TARGET}
       PRIVATE
         GTest::gtest
