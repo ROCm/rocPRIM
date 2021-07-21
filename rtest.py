@@ -213,7 +213,6 @@ def batch(script, xml):
         else: build_type = "release"
         test_dir = f"{args.install_dir}//{build_type}//test"
     fail = False
-    print("test_dir " + test_dir)
     for i in range(len(script)):
         cmdline = script[i]
         xcmd = cmdline.replace('%IDIR%', test_dir)

@@ -1,6 +1,9 @@
 <testset>
 <var name="CTEST_FILTER" value="ctest --output-on-failure --exclude-regex"></var>
-<test sets="all">
+<test sets="psdb">
+  <run name="all_tests">{CTEST_FILTER} rocprim.device_scan</run>
+</test>
+<test sets="osdb">
   <run name="all_tests">{CTEST_FILTER} rocprim.device_scan</run>
 </test>
 </testset>
