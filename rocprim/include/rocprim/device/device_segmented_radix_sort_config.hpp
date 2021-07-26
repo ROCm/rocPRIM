@@ -180,31 +180,31 @@ struct segmented_radix_sort_config_1030
     using type = select_type<
         select_type_case<
             (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<4, 4, kernel_config<256, 5> >
+            segmented_radix_sort_config<4, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<6, 5, kernel_config<256, 5> >
+            segmented_radix_sort_config<6, 5, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 8> >
+            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
         >,
         select_type_case<
             (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 8> >
+            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
         >,
-        segmented_radix_sort_config<7, 6, kernel_config<256, ::rocprim::max(1u, 8u / item_scale)> >
+        segmented_radix_sort_config<7, 6, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
     >;
 };
 
 template<class Key>
 struct segmented_radix_sort_config_1030<Key, empty_type>
     : select_type<
-        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, kernel_config<256, 5> > >,
-        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, kernel_config<256, 5> > >,
-        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, kernel_config<256, 9> > >,
-        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, kernel_config<256, 8> > >
+        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, kernel_config<256, 17> > >,
+        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, kernel_config<256, 15> > >
     > { };
 
 template<unsigned int TargetArch, class Key, class Value>
