@@ -176,9 +176,9 @@ typedef ::testing::Types<
 > BlockHistAtomicParamsIntegral;
 
 typedef ::testing::Types<
-    block_param_type(float, char),
-    block_param_type(double, unsigned int),
-    block_param_type(rocprim::half, int)
+    block_param_type(float, long),
+    block_param_type(double, test_utils::custom_test_type<double>),
+    block_param_type(rocprim::half, rocprim::half)
 > BlockExchParamsFloating;
 
 typedef ::testing::Types<

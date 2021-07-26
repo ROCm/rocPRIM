@@ -38,18 +38,18 @@ struct RocprimBlockExchangeTests;
 
 struct Integral;
 #define suite_name RocprimBlockExchangeTests
-#define warp_params BlockParamsIntegral
+#define block_params BlockParamsIntegral
 #define name_suffix Integral
 
 #include "test_block_exchange.hpp"
 
 #undef suite_name
-#undef warp_params
+#undef block_params
 #undef name_suffix
 
 struct Floating;
 #define suite_name RocprimBlockExchangeTests
-#define warp_params BlockExchParamsFloating
+#define block_params BlockExchParamsFloating
 #define name_suffix Floating
 
 #include "test_block_exchange.hpp"
