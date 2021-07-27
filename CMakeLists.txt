@@ -95,7 +95,10 @@ if(NOT USE_HIP_CPU)
   set(AMDGPU_TEST_TARGETS "" CACHE STRING "List of specific device types to test for" FORCE) # Leave empty for default system device
 
   # Verify that hcc compiler is used on ROCM platform
-  #include(cmake/VerifyCompiler.cmake)
+  # TODO: Fix VerifyCompiler for HIP on Windows
+  if (NOT WIN32)
+    include(cmake/VerifyCompiler.cmake)
+  endif()
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} ${ROCM_PATH}/hip ${ROCM_PATH}/llvm /opt/rocm/llvm /opt/rocm/hip)
   find_package(hip REQUIRED CONFIG PATHS ${HIP_DIR} ${ROCM_PATH} /opt/rocm)
 endif()

@@ -22,10 +22,6 @@
 
 #include "common_test_header.hpp"
 
-#ifdef WIN32
-#include <numeric>
-#endif
-
 // required rocprim headers
 #include <rocprim/functional.hpp>
 #include <rocprim/iterator/transform_iterator.hpp>
