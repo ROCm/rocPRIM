@@ -92,7 +92,6 @@ if(NOT USE_HIP_CPU)
   endif()
 
   #set(AMDGPU_TARGETS "${DEFAULT_AMDGPU_TARGETS}" CACHE STRING "List of specific machine types for library to target" FORCE)
-  set(AMDGPU_TEST_TARGETS "" CACHE STRING "List of specific device types to test for" FORCE) # Leave empty for default system device
 
   # Verify that hcc compiler is used on ROCM platform
   # TODO: Fix VerifyCompiler for HIP on Windows
