@@ -78,7 +78,7 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
     ${CMAKE_SOURCE_DIR}/rtest.*
     )
     foreach( file_i ${third_party_dlls})
-    add_custom_command( TARGET ${TEST_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy ${file_i} ${PROJECT_BINARY_DIR}/benchmarks )
+    add_custom_command( TARGET ${BENCHMARK_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy ${file_i} ${PROJECT_BINARY_DIR}/benchmarks )
     endforeach( file_i )
     set(DLLS_COPIED ON)
   endif()    
