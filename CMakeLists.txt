@@ -59,7 +59,7 @@ if(NOT USE_HIP_CPU)
   include(cmake/Dependencies.cmake)
   # Set the AMDGPU_TARGETS with backward compatiblity
   # Use target ID syntax if supported for AMDGPU_TARGETS
-  set(AMDGPU_TARGETS "all" CACHE STRING "Compile for which gpu architectures?")  
+  set(AMDGPU_TARGETS "all" CACHE STRING "Compile for which gpu architectures?")
   if(COMMAND rocm_check_target_ids)
     rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
       TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1030"
@@ -90,7 +90,7 @@ if(NOT USE_HIP_CPU)
     # to override CACHE var and set --offload-arch flags via hip-config.cmake hip::device dependency
     set( AMDGPU_TARGETS "${gpus}" CACHE STRING "AMD GPU targets to compile for" FORCE )
   endif()
-  
+
   #set(AMDGPU_TARGETS "${DEFAULT_AMDGPU_TARGETS}" CACHE STRING "List of specific machine types for library to target" FORCE)
   set(AMDGPU_TEST_TARGETS "" CACHE STRING "List of specific device types to test for" FORCE) # Leave empty for default system device
 
@@ -167,12 +167,6 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-rocclr (>= 3.5.0)")
 set(CPACK_RPM_PACKAGE_REQUIRES "hip-rocclr >= 3.5.0")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-
-if (NOT WIN32)
-  if(NOT CPACK_PACKAGING_INSTALL_PREFIX)
-    set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-  endif()
-endif()
 
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" "\${CPACK_PACKAGING_INSTALL_PREFIX}/include" )
 
