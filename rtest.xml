@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <testset>
 <var name="CTEST_FILTER" value="ctest --output-on-failure --exclude-regex"></var>
 <test sets="psdb">
