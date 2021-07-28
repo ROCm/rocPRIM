@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testset>
+<testset failure-regex="[1-9]\d* tests failed">
 <var name="CTEST_FILTER" value="ctest --output-on-failure --exclude-regex"></var>
 <test sets="psdb">
   <run name="all_tests">{CTEST_FILTER} rocprim.device_scan</run>
