@@ -39,7 +39,9 @@ function(add_rocprim_example EXAMPLE_SOURCE)
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example"
   )
-  if (WIN32 AND NOT DLLS_COPIED)
+  if (WIN32 AND NOT DEFINED DLLS_COPIED)
+    set(DLLS_COPIED "YES")
+    set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
     # for now adding in all .dll as dependency chain is not cmake based on win32
     file( GLOB third_party_dlls
     LIST_DIRECTORIES ON
@@ -48,10 +50,9 @@ function(add_rocprim_example EXAMPLE_SOURCE)
     ${CMAKE_SOURCE_DIR}/rtest.*
     )
     foreach( file_i ${third_party_dlls})
-    add_custom_command( TARGET ${EXAMPLE_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy ${file_i} ${PROJECT_BINARY_DIR}/example )
+      add_custom_command( TARGET ${EXAMPLE_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/example )
     endforeach( file_i )
-    set(DLLS_COPIED ON)
-  endif()    
+  endif()     
 endfunction()
 
 # ****************************************************************************

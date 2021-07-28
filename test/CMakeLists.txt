@@ -23,10 +23,6 @@
 # This variable is defined here to be accessible to other test sub-modules
 set(COMMON_TEST_HEADER_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-if (WIN32)
-  set(DLLS_COPIED OFF)
-endif()
-
 function(add_hip_test TEST_NAME TEST_SOURCES)
   list(GET TEST_SOURCES 0 TEST_MAIN_SOURCE)
 
@@ -85,7 +81,9 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
   )
 
   add_test(${TEST_NAME} ${TEST_TARGET})
-  if (WIN32 AND NOT DLLS_COPIED)
+  if (WIN32 AND NOT DEFINED DLLS_COPIED)
+    set(DLLS_COPIED "YES")
+    set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
     # for now adding in all .dll as dependency chain is not cmake based on win32
     file( GLOB third_party_dlls
     LIST_DIRECTORIES ON
@@ -94,10 +92,9 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
     ${CMAKE_SOURCE_DIR}/rtest.*
     )
     foreach( file_i ${third_party_dlls})
-    add_custom_command( TARGET ${TEST_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy ${file_i} ${PROJECT_BINARY_DIR}/test )
+      add_custom_command( TARGET ${TEST_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/test )
     endforeach( file_i )
-    set(DLLS_COPIED ON)
-  endif()    
+  endif()   
 endfunction()
 
 # ****************************************************************************
