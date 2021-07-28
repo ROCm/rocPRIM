@@ -93,9 +93,9 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
               LABELS "hip"
       )
   endif()
-  if (WIN32 AND NOT DEFINED DLLS_COPIED)
-    set(DLLS_COPIED "YES")
-    set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
+  if (WIN32 AND NOT DEFINED DLLS_COPIED_2)
+    set(DLLS_COPIED_2 "YES")
+    set(DLLS_COPIED_2 ${DLLS_COPIED_2} PARENT_SCOPE)
     # for now adding in all .dll as dependency chain is not cmake based on win32
     file( GLOB third_party_dlls
     LIST_DIRECTORIES ON
