@@ -902,6 +902,83 @@ struct radix_merge_compare<true, true, T>
     }
 };
 
+template<>
+struct radix_merge_compare<false, false, rocprim::half>
+{
+    ROCPRIM_DEVICE inline
+    bool operator()(const rocprim::half& a, const rocprim::half& b) const
+    {
+        return __hle(b, a);
+    }
+};
+
+template<>
+struct radix_merge_compare<true, false, rocprim::half>
+{
+    ROCPRIM_DEVICE inline
+    bool operator()(const rocprim::half& a, const rocprim::half& b) const
+    {
+        return __hle(a, b);
+    }
+};
+
+template<>
+struct radix_merge_compare<false, true, rocprim::half>
+{
+    using key_codec = radix_key_codec<rocprim::half, true>;
+    using bit_key_type = typename key_codec::bit_key_type;
+
+    bit_key_type radix_mask;
+
+    radix_merge_compare(const unsigned int bit, const unsigned int current_radix_bits)
+    {
+        bit_key_type radix_mask_upper  = (bit_key_type(1) << (current_radix_bits + bit)) - 1;
+        bit_key_type radix_mask_bottom = bit == 0 ? 0 : ((bit_key_type(1) << bit) - 1);
+        radix_mask = radix_mask_upper ^ radix_mask_bottom;
+    }
+
+    ROCPRIM_DEVICE inline
+    bool operator()(const rocprim::half& a, const rocprim::half& b) const
+    {
+        const bit_key_type encoded_key_a = key_codec::encode(a);
+        const bit_key_type masked_key_a  = encoded_key_a & radix_mask;
+
+        const bit_key_type encoded_key_b = key_codec::encode(b);
+        const bit_key_type masked_key_b  = encoded_key_b & radix_mask;
+
+        return __hle(key_codec::decode(masked_key_b), key_codec::decode(masked_key_a));
+    }
+};
+
+template<>
+struct radix_merge_compare<true, true, rocprim::half>
+{
+    using key_codec = radix_key_codec<rocprim::half, true>;
+    using bit_key_type = typename key_codec::bit_key_type;
+
+    bit_key_type radix_mask;
+
+    radix_merge_compare(const unsigned int bit, const unsigned int current_radix_bits)
+    {
+        bit_key_type radix_mask_upper  = (bit_key_type(1) << (current_radix_bits + bit)) - 1;
+        bit_key_type radix_mask_bottom = bit == 0 ? 0 : ((bit_key_type(1) << bit) - 1);
+        radix_mask = radix_mask_upper ^ radix_mask_bottom;
+    }
+
+
+    ROCPRIM_DEVICE inline
+    bool operator()(const rocprim::half& a, const rocprim::half& b) const
+    {
+        const bit_key_type encoded_key_a = key_codec::encode(a);
+        const bit_key_type masked_key_a  = encoded_key_a & radix_mask;
+
+        const bit_key_type encoded_key_b = key_codec::encode(b);
+        const bit_key_type masked_key_b  = encoded_key_b & radix_mask;
+
+        return __hle(key_codec::decode(masked_key_a), key_codec::decode(masked_key_b));
+    }
+};
+
 template<
     unsigned int BlockSize,
     unsigned int ItemsPerThread,
