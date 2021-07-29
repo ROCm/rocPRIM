@@ -110,11 +110,6 @@ namespace detail
         );
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("radix_sort_single", size, start)
 
-
-
-
-
-
         bool temporary_store = true;
         for(unsigned int block = items_per_block; block < size; block *= 2)
         {
@@ -122,7 +117,7 @@ namespace detail
             if(temporary_store)
             {
                 if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-                if( bit == sizeof(key_type) * 8 )
+                if( current_radix_bits == sizeof(key_type) * 8 )
                 {
                     hipLaunchKernelGGL(
                         HIP_KERNEL_NAME(radix_block_merge_kernel<block_size, items_per_thread>),
@@ -145,7 +140,7 @@ namespace detail
             else
             {
                 if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-                if( bit == sizeof(key_type) * 8 )
+                if( current_radix_bits == sizeof(key_type) * 8 )
                 {
                     hipLaunchKernelGGL(
                         HIP_KERNEL_NAME(radix_block_merge_kernel<block_size, items_per_thread>),

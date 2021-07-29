@@ -908,7 +908,7 @@ struct radix_merge_compare<false, false, rocprim::half>
     ROCPRIM_DEVICE inline
     bool operator()(const rocprim::half& a, const rocprim::half& b) const
     {
-        return __hle(b, a);
+        return __hgt(b, a);
     }
 };
 
@@ -918,7 +918,7 @@ struct radix_merge_compare<true, false, rocprim::half>
     ROCPRIM_DEVICE inline
     bool operator()(const rocprim::half& a, const rocprim::half& b) const
     {
-        return __hle(a, b);
+        return __hgt(a, b);
     }
 };
 
@@ -946,7 +946,7 @@ struct radix_merge_compare<false, true, rocprim::half>
         const bit_key_type encoded_key_b = key_codec::encode(b);
         const bit_key_type masked_key_b  = encoded_key_b & radix_mask;
 
-        return __hle(key_codec::decode(masked_key_b), key_codec::decode(masked_key_a));
+        return __hgt(key_codec::decode(masked_key_b), key_codec::decode(masked_key_a));
     }
 };
 
@@ -975,7 +975,7 @@ struct radix_merge_compare<true, true, rocprim::half>
         const bit_key_type encoded_key_b = key_codec::encode(b);
         const bit_key_type masked_key_b  = encoded_key_b & radix_mask;
 
-        return __hle(key_codec::decode(masked_key_a), key_codec::decode(masked_key_b));
+        return __hgt(key_codec::decode(masked_key_a), key_codec::decode(masked_key_b));
     }
 };
 
