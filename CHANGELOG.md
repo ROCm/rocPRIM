@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [Unreleased rocPRIM-2.10.11 for ROCm 4.4.0]
+## [rocPRIM-2.10.11 for ROCm 4.4.0]
 ### Added
 - Code coverage tools build option
 - Address sanitizer build option
