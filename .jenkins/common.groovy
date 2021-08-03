@@ -39,7 +39,7 @@ def runTestCommand (platform, project)
         hmmTestCommand = """
                             export HSA_XNACK=1
                             export ROCPRIM_USE_HMM=1
-                            ${testCommand}
+                            ${testCommand} ${hmmTestCommandExclude}
                          """
     }
     def command = """#!/usr/bin/env bash
@@ -47,7 +47,7 @@ def runTestCommand (platform, project)
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
                 ${testCommand} ${testCommandExclude}
-                ${hmmTestCommand} ${hmmTestCommandExclude}
+                ${hmmTestCommand}
             """
 
     platform.runCommand(this, command)
