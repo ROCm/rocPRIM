@@ -29,8 +29,10 @@ def runTestCommand (platform, project)
     String sudo = auxiliary.sudo(platform.jenkinsLabel)
     String centos = platform.jenkinsLabel.contains('centos') ? '3' : ''
 
-    def testCommand = "ctest${centos} --output-on-failure --exclude-regex rocprim.device_scan"
+    def testCommand = "ctest${centos} --output-on-failure "
     def hmmTestCommand = ''
+    def testCommandExclude = "--exclude-regex rocprim.device_scan"
+    def hmmTestCommandExclude = "--exclude-regex "(rocprim.device_merge|rocprim.device_scan|rocprim.device_run_length_encode|rocprim.device_segmented_radix_sort)"
     if (platform.jenkinsLabel.contains('gfx90a'))
     {
         hmmTestCommand = """
@@ -43,8 +45,8 @@ def runTestCommand (platform, project)
                 set -x
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
-                ${testCommand}
-                ${hmmTestCommand}
+                ${testCommand} ${testCommandExclude}
+                ${hmmTestCommand} ${hmmTestCommandExclude}
             """
 
     platform.runCommand(this, command)
