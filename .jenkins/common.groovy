@@ -27,11 +27,21 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 def runTestCommand (platform, project)
 {
     String sudo = auxiliary.sudo(platform.jenkinsLabel)
+    String installPackage = ""
+    if (platform.jenkinsLabel.contains("centos") || platform.jenkinsLabel.contains("sles"))
+    {
+        installPackage = "sudo rpm -i rocprim*.rpm"
+    }
+    else 
+    {
+        installPackage = "sudo dpkg -i rocprim*.deb"
+    }
+    String runTests = ""
     String centos = platform.jenkinsLabel.contains('centos') ? '3' : ''
 
     def testCommand = "ctest${centos} --output-on-failure "
     def hmmTestCommand = ''
-    def testCommandExclude = "--exclude-regex rocprim.device_scan"
+    def testCommandsExclude = ["device_scan"]
     def hmmExcludeRegex = /(rocprim.device_merge|rocprim.device_scan|rocprim.device_run_length_encode|rocprim.device_segmented_radix_sort|rocprim.device_partition|rocprim.device_radix_sort)/
     def hmmTestCommandExclude = "--exclude-regex \"${hmmExcludeRegex}\""
     if (platform.jenkinsLabel.contains('gfx90a'))
@@ -42,11 +52,31 @@ def runTestCommand (platform, project)
                             ${testCommand} ${hmmTestCommandExclude}
                          """
     }
+    String rocprim_tests = "/opt/rocm/rocprim/bin/*"
+    if (testCommandsExclude.size() > 0)
+    {
+        String excludeNameCondition = testCommandsExclude.collect("-name 'test_${it}'").join(' \\| ')
+        rocprim_tests = "\$(find /opt/rocm/rocprim/bin/* \\! \\( ${excludeNameCondition} \\))"
+    }
+    runTests = """
+                pushd ${project.paths.project_build_prefix}
+                mv build build_BAK
+                for test in ${rocprim_tests}; do
+                    \$test
+                    if (( \$? != 0 )); then
+                        exit 1
+                    fi
+                done
+                mv build_BAK build
+                popd
+    """
     def command = """#!/usr/bin/env bash
                 set -x
-                cd ${project.paths.project_build_prefix}
+                pushd ${project.paths.project_build_prefix}/build/release/package
+                ${installPackage}
+                popd
+                ${runTests}
                 cd ${project.testDirectory}
-                ${testCommand} ${testCommandExclude}
                 ${hmmTestCommand}
             """
 
