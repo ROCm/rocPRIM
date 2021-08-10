@@ -131,7 +131,7 @@ if(BUILD_TEST)
       GIT_REPOSITORY      https://github.com/google/googletest.git
       GIT_TAG             release-1.10.0
       INSTALL_DIR         ${GTEST_ROOT}
-      CMAKE_ARGS          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} -DBUILD_GTEST=ON -DINSTALL_GTEST=ON -Dgtest_force_shared_crt=ON -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+      CMAKE_ARGS          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=OFF -DBUILD_GTEST=ON -DINSTALL_GTEST=ON -Dgtest_force_shared_crt=ON -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
       LOG_DOWNLOAD        TRUE
       LOG_CONFIGURE       TRUE
       LOG_BUILD           TRUE
@@ -166,7 +166,7 @@ if(BUILD_BENCHMARK)
       GIT_REPOSITORY https://github.com/google/benchmark.git
       GIT_TAG        v1.4.0
       INSTALL_DIR    ${GOOGLEBENCHMARK_ROOT}
-      CMAKE_ARGS     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} -DBENCHMARK_ENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${COMPILER_OVERRIDE}
+      CMAKE_ARGS     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=OFF -DBENCHMARK_ENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${COMPILER_OVERRIDE}
       LOG_DOWNLOAD   TRUE
       LOG_CONFIGURE  TRUE
       LOG_BUILD      TRUE
@@ -208,7 +208,7 @@ if (WIN32)
     find_package(ROCM REQUIRED CONFIG PATHS ${CMAKE_CURRENT_BINARY_DIR}/rocm-cmake-${rocm_cmake_tag})
   endif()
 else()
-  find_package(ROCM 0.6 QUIET CONFIG PATHS /opt/rocm)
+  find_package(ROCM 0.7 QUIET CONFIG PATHS /opt/rocm)
   if(NOT ROCM_FOUND)
     message(STATUS "rocm-cmake not found. Downloading and building rocm-cmake.")
     if(CMAKE_CONFIGURATION_TYPES)
@@ -217,8 +217,8 @@ else()
     set(ROCM_CMAKE_ROOT ${CMAKE_CURRENT_BINARY_DIR}/deps/rocm-cmake CACHE PATH "")
     download_project(
         PROJ           rocm-cmake
-        GIT_REPOSITORY https://github.com/RadeonOpenCompute/rocm-cmake.git
-        GIT_TAG        master
+        GIT_REPOSITORY https://github.com/lawruble13/rocm-cmake.git
+        GIT_TAG        client-packaging
         INSTALL_DIR    ${ROCM_CMAKE_ROOT}
         CMAKE_ARGS     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         LOG_DOWNLOAD   TRUE
@@ -228,7 +228,7 @@ else()
         BUILD_PROJECT  TRUE
         ${UPDATE_DISCONNECTED_IF_AVAILABLE}
       )
-    find_package(ROCM 0.6 REQUIRED CONFIG PATHS ${ROCM_CMAKE_ROOT})
+    find_package(ROCM 0.7 REQUIRED CONFIG PATHS ${ROCM_CMAKE_ROOT})
   endif()
 endif()
 include(ROCMSetupVersion)
@@ -237,3 +237,5 @@ include(ROCMInstallTargets)
 include(ROCMPackageConfigHelpers)
 include(ROCMInstallSymlinks)
 include(ROCMCheckTargetIds OPTIONAL)
+include(ROCMClients)
+include(ROCMUtilities)

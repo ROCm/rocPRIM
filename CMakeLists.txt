@@ -146,16 +146,19 @@ endif()
 # Tests
 if(BUILD_TEST AND NOT ONLY_INSTALL)
   enable_testing()
+  rocm_setup_client_component(tests)
   add_subdirectory(test)
 endif()
 
 # Benchmarks
 if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
+  rocm_setup_client_component(benchmarks)
   add_subdirectory(benchmark)
 endif()
 
 # Examples
 if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
+  rocm_setup_client_component(samples)
   add_subdirectory(example)
 endif()
 
@@ -168,7 +171,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" "\${CPACK_PACKAGING_INSTALL_PREFIX}/include" )
 
 rocm_create_package(
-  NAME rocprim
+  NAME rocPRIM
   DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
   MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
   HEADER_ONLY

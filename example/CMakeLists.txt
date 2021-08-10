@@ -64,6 +64,7 @@ function(add_rocprim_example EXAMPLE_SOURCE)
       add_custom_command( TARGET ${EXAMPLE_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/example )
     endforeach( file_i )
   endif()     
+  rocm_install_client_with_symlink(${EXAMPLE_TARGET} samples)
 endfunction()
 
 # ****************************************************************************

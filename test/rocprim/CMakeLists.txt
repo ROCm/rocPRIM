@@ -107,6 +107,7 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
       add_custom_command( TARGET ${TEST_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/test/rocprim )
     endforeach( file_i )
   endif()   
+  rocm_install_client_with_symlink(${TEST_TARGET} tests)
 endfunction()
 
 # ****************************************************************************

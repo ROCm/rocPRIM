@@ -79,6 +79,7 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
       add_custom_command( TARGET ${BENCHMARK_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/benchmark )
     endforeach( file_i )
   endif()  
+  rocm_install_client_with_symlink(${BENCHMARK_TARGET} benchmarks)
 endfunction()
 
 # ****************************************************************************
