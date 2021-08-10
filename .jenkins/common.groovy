@@ -26,7 +26,6 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 
 def runTestCommand (platform, project)
 {
-    String sudo = auxiliary.sudo(platform.jenkinsLabel)
     String installPackage = ""
     if (platform.jenkinsLabel.contains("centos") || platform.jenkinsLabel.contains("sles"))
     {
@@ -36,7 +35,6 @@ def runTestCommand (platform, project)
     {
         installPackage = "sudo dpkg -i rocprim*.deb"
     }
-    String runTests = ""
     String centos = platform.jenkinsLabel.contains('centos') ? '3' : ''
 
     def testCommand = "ctest${centos} --output-on-failure "
@@ -58,7 +56,7 @@ def runTestCommand (platform, project)
         String excludeNameCondition = testCommandsExclude.collect("-name 'test_${it}'").join(' \\| ')
         rocprim_tests = "\$(find /opt/rocm/rocprim/bin/* \\! \\( ${excludeNameCondition} \\))"
     }
-    runTests = """
+    String runTests = """
                 pushd ${project.paths.project_build_prefix}
                 mv build build_BAK
                 for test in ${rocprim_tests}; do
