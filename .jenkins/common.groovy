@@ -74,7 +74,7 @@ def runTestCommand (platform, project)
                 ${installPackage}
                 popd
                 ${runTests}
-                cd ${project.testDirectory}
+                cd ${project.paths.project_build_prefix}/${project.testDirectory}
                 ${hmmTestCommand}
             """
 
