@@ -50,11 +50,11 @@ def runTestCommand (platform, project)
                             ${testCommand} ${hmmTestCommandExclude}
                          """
     }
-    String rocprim_tests = "/opt/rocm/rocprim/bin/*"
+    String rocprim_tests = "/opt/rocm/rocprim/bin/test_*"
     if (testCommandsExclude.size() > 0)
     {
-        String excludeNameCondition = testCommandsExclude.collect("-name 'test_${it}'").join(' \\| ')
-        rocprim_tests = "\$(find /opt/rocm/rocprim/bin/* \\! \\( ${excludeNameCondition} \\))"
+        String excludeNameCondition = testCommandsExclude.collect({"-name 'test_${it}'"}).join(' \\| ')
+        rocprim_tests = "\$(find /opt/rocm/rocprim/bin/test_* \\! \\( ${excludeNameCondition} \\))"
     }
     String runTests = """
                 pushd ${project.paths.project_build_prefix}
