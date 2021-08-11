@@ -79,7 +79,11 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
       add_custom_command( TARGET ${BENCHMARK_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/benchmark )
     endforeach( file_i )
   endif()  
-  rocm_install_client_with_symlink(${BENCHMARK_TARGET} benchmarks)
+  rocm_install(
+    TARGETS ${BENCHMARK_TARGET}
+    PREFIX rocprim
+    COMPONENT benchmarks
+  )
 endfunction()
 
 # ****************************************************************************
@@ -112,3 +116,9 @@ add_rocprim_benchmark(benchmark_warp_reduce.cpp)
 add_rocprim_benchmark(benchmark_warp_scan.cpp)
 add_rocprim_benchmark(benchmark_warp_sort.cpp)
 add_rocprim_benchmark(benchmark_device_memory.cpp)
+
+rocm_install_symlink_subdir(
+  rocprim
+  NAME_PREFIX rocprim-
+  COMPONENT benchmarks
+)

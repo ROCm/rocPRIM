@@ -64,7 +64,11 @@ function(add_rocprim_example EXAMPLE_SOURCE)
       add_custom_command( TARGET ${EXAMPLE_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/example )
     endforeach( file_i )
   endif()     
-  rocm_install_client_with_symlink(${EXAMPLE_TARGET} samples)
+  rocm_install(
+    TARGETS ${EXAMPLE_TARGET} 
+    PREFIX rocprim
+    COMPONENT samples
+  )
 endfunction()
 
 # ****************************************************************************
@@ -72,3 +76,9 @@ endfunction()
 # ****************************************************************************
 
 add_rocprim_example(example_temporary_storage.cpp)
+
+rocm_install_symlink_subdir(
+  rocprim
+  NAME_PREFIX rocprim-
+  COMPONENT samples
+)

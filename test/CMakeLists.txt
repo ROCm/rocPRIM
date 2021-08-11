@@ -32,7 +32,7 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
-      ${COMMON_TEST_HEADER_DIRECTORY}
+      $<BUILD_INTERFACE:${COMMON_TEST_HEADER_DIRECTORY}>
   )
 
   if(TARGET GTest::GTest)
@@ -95,7 +95,11 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
       add_custom_command( TARGET ${TEST_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/test )
     endforeach( file_i )
   endif()   
-  rocm_install_client_with_symlink(${TEST_TARGET} tests)
+  rocm_install(
+    TARGETS ${TEST_TARGET}
+    PREFIX rocprim
+    COMPONENT tests
+  )
 endfunction()
 
 # ****************************************************************************
@@ -107,3 +111,9 @@ add_hip_test("hip.device_api" test_hip_api.cpp)
 
 # rocPRIM test
 add_subdirectory(rocprim)
+
+rocm_install_symlink_subdir(
+  rocprim
+  COMPONENT tests
+  NAME_PREFIX rocprim-
+)

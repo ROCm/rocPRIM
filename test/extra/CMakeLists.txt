@@ -70,7 +70,11 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
     )
   endforeach()
   add_test(${TEST_NAME} ${TEST_TARGET})
-  rocm_install_client_with_symlink(${TEST_TARGET} tests)
+  rocm_install(
+    TARGETS ${TEST_TARGET}
+    PREFIX rocprim
+    COMPONENT tests
+  )
 endfunction()
 
 

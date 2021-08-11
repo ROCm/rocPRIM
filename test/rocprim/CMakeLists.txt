@@ -30,7 +30,7 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
-      ${COMMON_TEST_HEADER_DIRECTORY}
+      $<BUILD_INTERFACE:${COMMON_TEST_HEADER_DIRECTORY}>
   )
 
   if(TARGET GTest::GTest)
@@ -107,7 +107,11 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
       add_custom_command( TARGET ${TEST_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/test/rocprim )
     endforeach( file_i )
   endif()   
-  rocm_install_client_with_symlink(${TEST_TARGET} tests)
+  rocm_install(
+    TARGETS ${TEST_TARGET}
+    PREFIX rocprim
+    COMPONENT tests
+  )
 endfunction()
 
 # ****************************************************************************
@@ -158,3 +162,8 @@ add_rocprim_test("rocprim.warp_scan" test_warp_scan.cpp)
 add_rocprim_test("rocprim.warp_sort" test_warp_sort.cpp)
 add_rocprim_test("rocprim.zip_iterator" test_zip_iterator.cpp)
 
+rocm_install_symlink_subdir(
+  rocprim
+  COMPONENT tests
+  NAME_PREFIX rocprim-
+)

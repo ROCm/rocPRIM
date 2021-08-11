@@ -143,29 +143,32 @@ if(BUILD_ADDRESS_SANITIZER)
   add_link_options(-fuse-ld=lld)
 endif()
 
+if( (BUILD_TEST OR BUILD_BENCHMARK OR BUILD_EXAMPLE) AND NOT ONLY_INSTALL)
+  rocm_package_setup_component(clients PACKAGE_NAME clients)
+endif()
+
 # Tests
 if(BUILD_TEST AND NOT ONLY_INSTALL)
   enable_testing()
-  rocm_setup_client_component(tests)
+  rocm_package_setup_client_component(tests PACKAGE_NAME tests)
   add_subdirectory(test)
 endif()
 
 # Benchmarks
 if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
-  rocm_setup_client_component(benchmarks)
+  rocm_package_setup_client_component(benchmarks PACKAGE_NAME benchmarks)
   add_subdirectory(benchmark)
 endif()
 
 # Examples
 if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
-  rocm_setup_client_component(samples)
+  rocm_package_setup_client_component(samples PACKAGE_NAME samples)
   add_subdirectory(example)
 endif()
 
 # Package
 
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-rocclr (>= 3.5.0)")
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-rocclr >= 3.5.0")
+rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" "\${CPACK_PACKAGING_INSTALL_PREFIX}/include" )
