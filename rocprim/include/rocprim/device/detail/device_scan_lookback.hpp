@@ -180,11 +180,14 @@ ROCPRIM_DEVICE inline
 void lookback_scan_kernel_impl(InputIterator input,
                                OutputIterator output,
                                const size_t size,
-                               const ResultType initial_value,
+                               ResultType initial_value,
                                BinaryFunction scan_op,
                                LookbackScanState scan_state,
                                const unsigned int number_of_blocks,
-                               ordered_block_id<unsigned int> ordered_bid)
+                               ordered_block_id<unsigned int> ordered_bid,
+                               ResultType * previous_last_element = nullptr,
+                               ResultType * new_last_element = nullptr,
+                               bool override_first_value = false)
 {
     using result_type = ResultType;
     static_assert(
@@ -258,6 +261,18 @@ void lookback_scan_kernel_impl(InputIterator input,
 
     if(flat_block_id == 0)
     {
+        if( Exclusive || flat_block_thread_id == 0)
+        {
+            if( override_first_value )
+            {
+                if( Exclusive )
+                    initial_value = scan_op(previous_last_element[0], *(input-1) );
+                else
+                    values[0] = scan_op(previous_last_element[0], values[0] );
+            }
+        }
+
+
         result_type reduction;
         lookback_block_scan<Exclusive, block_scan_type>(
             values, // input/output
@@ -266,6 +281,7 @@ void lookback_scan_kernel_impl(InputIterator input,
             storage.scan,
             scan_op
         );
+
         if(flat_block_thread_id == 0)
         {
             scan_state.set_complete(flat_block_id, reduction);
@@ -301,6 +317,13 @@ void lookback_scan_kernel_impl(InputIterator input,
                 valid_in_last_block,
                 storage.store
             );
+
+        if( new_last_element != nullptr &&
+            ( ::rocprim::detail::block_thread_id<0>() ==
+            (valid_in_last_block - 1) / items_per_thread ) )
+        {
+            new_last_element[0] = values[(valid_in_last_block - 1) % items_per_thread];
+        }
     }
     else
     {

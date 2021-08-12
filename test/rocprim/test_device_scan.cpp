@@ -37,7 +37,8 @@ template<
     class ScanOp = ::rocprim::plus<OutputType>,
     // Tests output iterator with void value_type (OutputIterator concept)
     // scan-by-key primitives don't support output iterator with void value_type
-    bool UseIdentityIteratorIfSupported = false
+    bool UseIdentityIteratorIfSupported = false,
+    size_t SizeLimit = size_t(std::numeric_limits<int>::max()) + 1
 >
 struct DeviceScanParams
 {
@@ -45,6 +46,7 @@ struct DeviceScanParams
     using output_type = OutputType;
     using scan_op_type = ScanOp;
     static constexpr bool use_identity_iterator = UseIdentityIteratorIfSupported;
+    static constexpr size_t size_limit = SizeLimit;
 };
 
 // ---------------------------------------------------------
@@ -60,6 +62,7 @@ public:
     using scan_op_type = typename Params::scan_op_type;
     const bool debug_synchronous = false;
     static constexpr bool use_identity_iterator = Params::use_identity_iterator;
+    static constexpr size_t size_limit = Params::size_limit;
 };
 
 typedef ::testing::Types<
@@ -68,7 +71,10 @@ typedef ::testing::Types<
     DeviceScanParams<unsigned short>,
     DeviceScanParams<short, int>,
     DeviceScanParams<int>,
-    DeviceScanParams<float, float, rocprim::maximum<float> >,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, 512 >,
+    //DeviceScanParams<float, float, rocprim::maximum<float> >,
+    DeviceScanParams<float, float, rocprim::plus<float>, false, 1024 >,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, 1048576 >,
     DeviceScanParams<int8_t, int8_t, rocprim::maximum<int8_t>>,
     DeviceScanParams<uint8_t, uint8_t, rocprim::maximum<uint8_t>>,
 #ifndef __HIP__
@@ -179,6 +185,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
     using scan_op_type = typename TestFixture::scan_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
+    static constexpr size_t size_limit = TestFixture::size_limit;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -237,7 +244,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    input.size(), scan_op, stream, debug_synchronous
+                    input.size(), scan_op, stream, debug_synchronous, size_limit
                 )
             );
 
@@ -254,7 +261,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    input.size(), scan_op, stream, debug_synchronous
+                    input.size(), scan_op, stream, debug_synchronous, size_limit
                 )
             );
             HIP_CHECK(hipPeekAtLastError());
@@ -288,6 +295,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
     using scan_op_type = typename TestFixture::scan_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
+    static constexpr size_t size_limit = TestFixture::size_limit;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -348,7 +356,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    initial_value, input.size(), scan_op, stream, debug_synchronous
+                    initial_value, input.size(), scan_op,
+                    stream, debug_synchronous, size_limit
                 )
             );
 
@@ -365,7 +374,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    initial_value, input.size(), scan_op, stream, debug_synchronous
+                    initial_value, input.size(), scan_op,
+                    stream, debug_synchronous, size_limit
                 )
             );
             HIP_CHECK(hipPeekAtLastError());
@@ -675,5 +685,4 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             hipFree(d_temp_storage);
         }
     }
-
 }

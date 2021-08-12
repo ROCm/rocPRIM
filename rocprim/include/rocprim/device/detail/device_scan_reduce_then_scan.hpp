@@ -326,7 +326,8 @@ void final_scan_kernel_impl(InputIterator input,
                             OutputIterator output,
                             const ResultType initial_value,
                             BinaryFunction scan_op,
-                            ResultType * block_prefixes)
+                            ResultType * block_prefixes,
+                            ResultType * last_element)
 {
     constexpr unsigned int block_size = Config::block_size;
     constexpr unsigned int items_per_thread = Config::items_per_thread;
@@ -410,6 +411,13 @@ void final_scan_kernel_impl(InputIterator input,
                 valid_in_last_block,
                 storage.store
             );
+
+        if( last_element != nullptr &&
+            ( ::rocprim::detail::block_thread_id<0>() ==
+            valid_in_last_block / items_per_thread ) )
+        {
+            last_element[0] = values[valid_in_last_block % items_per_thread];
+        }
     }
     else
     {
