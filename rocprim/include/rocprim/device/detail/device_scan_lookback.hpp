@@ -261,17 +261,13 @@ void lookback_scan_kernel_impl(InputIterator input,
 
     if(flat_block_id == 0)
     {
-        if( Exclusive || flat_block_thread_id == 0)
+        if( override_first_value )
         {
-            if( override_first_value )
-            {
-                if( Exclusive )
-                    initial_value = scan_op(previous_last_element[0], *(input-1) );
-                else
-                    values[0] = scan_op(previous_last_element[0], values[0] );
-            }
+            if( Exclusive )
+                initial_value = scan_op(previous_last_element[0], *(input-1) );
+            else if( flat_block_thread_id == 0 )
+                values[0] = scan_op(previous_last_element[0], values[0] );
         }
-
 
         result_type reduction;
         lookback_block_scan<Exclusive, block_scan_type>(

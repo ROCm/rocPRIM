@@ -410,6 +410,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
     using U = typename TestFixture::output_type;
     using scan_op_type = typename TestFixture::scan_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
+    static constexpr size_t size_limit = TestFixture::size_limit;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -510,7 +511,8 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
                 rocprim::inclusive_scan_by_key(
                     d_temp_storage, temp_storage_size_bytes,
                     d_keys, d_input, d_output, input.size(),
-                    scan_op, keys_compare_op, stream, debug_synchronous
+                    scan_op, keys_compare_op, stream, debug_synchronous,
+                    size_limit
                 )
             );
 
@@ -526,7 +528,8 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
                 rocprim::inclusive_scan_by_key(
                     d_temp_storage, temp_storage_size_bytes,
                     d_keys, d_input, d_output, input.size(),
-                    scan_op, keys_compare_op, stream, debug_synchronous
+                    scan_op, keys_compare_op, stream, debug_synchronous,
+                    size_limit
                 )
             );
             HIP_CHECK(hipPeekAtLastError());
@@ -562,6 +565,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
     using U = typename TestFixture::output_type;
     using scan_op_type = typename TestFixture::scan_op_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
+    static constexpr size_t size_limit = TestFixture::size_limit;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -644,7 +648,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
                 rocprim::exclusive_scan_by_key(
                     d_temp_storage, temp_storage_size_bytes,
                     d_keys, d_input, d_output, initial_value, input.size(),
-                    scan_op, keys_compare_op, stream, debug_synchronous
+                    scan_op, keys_compare_op, stream, debug_synchronous,
+                    size_limit
                 )
             );
 
@@ -660,7 +665,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
                 rocprim::exclusive_scan_by_key(
                     d_temp_storage, temp_storage_size_bytes,
                     d_keys, d_input, d_output, initial_value, input.size(),
-                    scan_op, keys_compare_op, stream, debug_synchronous
+                    scan_op, keys_compare_op, stream, debug_synchronous,
+                    size_limit
                 )
             );
             HIP_CHECK(hipPeekAtLastError());

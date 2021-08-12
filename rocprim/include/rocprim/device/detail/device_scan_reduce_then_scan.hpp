@@ -324,10 +324,12 @@ ROCPRIM_DEVICE inline
 void final_scan_kernel_impl(InputIterator input,
                             const size_t input_size,
                             OutputIterator output,
-                            const ResultType initial_value,
+                            ResultType initial_value,
                             BinaryFunction scan_op,
                             ResultType * block_prefixes,
-                            ResultType * last_element)
+                            ResultType * previous_last_element = nullptr,
+                            ResultType * new_last_element = nullptr,
+                            bool override_first_value = false)
 {
     constexpr unsigned int block_size = Config::block_size;
     constexpr unsigned int items_per_thread = Config::items_per_thread;
@@ -390,6 +392,11 @@ void final_scan_kernel_impl(InputIterator input,
     }
     ::rocprim::syncthreads(); // sync threads to reuse shared memory
 
+    if( Exclusive && override_first_value && flat_block_id == 0)
+    {
+        initial_value = scan_op(previous_last_element[0], *(input-1) );
+    }
+
     final_scan_block_scan<Exclusive, block_scan_type>(
         flat_block_id,
         values, // input
@@ -412,11 +419,11 @@ void final_scan_kernel_impl(InputIterator input,
                 storage.store
             );
 
-        if( last_element != nullptr &&
+        if( new_last_element != nullptr &&
             ( ::rocprim::detail::block_thread_id<0>() ==
-            valid_in_last_block / items_per_thread ) )
+            (valid_in_last_block - 1) / items_per_thread ) )
         {
-            last_element[0] = values[valid_in_last_block % items_per_thread];
+            new_last_element[0] = values[(valid_in_last_block - 1) % items_per_thread];
         }
     }
     else

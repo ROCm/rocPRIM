@@ -102,11 +102,14 @@ void final_scan_kernel(InputIterator input,
                        const ResultType initial_value,
                        BinaryFunction scan_op,
                        ResultType * block_prefixes,
-                       ResultType * last_element = nullptr)
+                       ResultType * previous_last_element = nullptr,
+                       ResultType * new_last_element = nullptr,
+                       bool override_first_value = false)
 {
     final_scan_kernel_impl<Exclusive, Config>(
         input, size, output, initial_value,
-        scan_op, block_prefixes, last_element
+        scan_op, block_prefixes,
+        previous_last_element, new_last_element, override_first_value
     );
 }
 
@@ -223,7 +226,7 @@ auto scan_impl(void * temporary_storage,
         storage_size = nested_prefixes_size_bytes;
 
         if(use_limited_size)
-            storage_size += 2 * sizeof(result_type);
+            storage_size += 4 * sizeof(result_type);
 
         // Make sure user won't try to allocate 0 bytes memory, because
         // hipMalloc will return nullptr when size is zero.
@@ -241,15 +244,15 @@ auto scan_impl(void * temporary_storage,
 
     if(number_of_blocks > 1)
     {
-        unsigned int number_of_kernels = (size + limited_size - 1)/limited_size;
-        for (size_t i = 0, offset = 0; i < number_of_kernels; i++, offset+=limited_size )
+        unsigned int number_of_lunch = (size + limited_size - 1)/limited_size;
+        for (size_t i = 0, offset = 0; i < number_of_lunch; i++, offset+=limited_size )
         {
             size_t current_size = std::min<size_t>(size - offset, limited_size);
             number_of_blocks = (current_size + items_per_block - 1)/items_per_block;
             if(debug_synchronous)
             {
                 std::cout << "use_limited_size " << use_limited_size << '\n';
-                std::cout << "number_of_kernels " << number_of_kernels << '\n';
+                std::cout << "number_of_lunch " << number_of_lunch << '\n';
                 std::cout << "inex " << i << '\n';
                 std::cout << "aligned_size_limit " << aligned_size_limit << '\n';
                 std::cout << "size " << current_size << '\n';
@@ -261,12 +264,16 @@ auto scan_impl(void * temporary_storage,
 
             // Pointer to array with block_prefixes
             char * ptr = reinterpret_cast<char *>(temporary_storage);
-            result_type * block_prefixes = static_cast<result_type*>(ptr);
-            result_type * last_element = nullptr;
+            result_type * block_prefixes = reinterpret_cast<result_type*>(ptr);
+            result_type * previous_last_element = nullptr;
+            result_type * new_last_element = nullptr;
             if(use_limited_size)
             {
                 ptr += nested_prefixes_size_bytes;
-                last_element = static_cast<result_type*>(ptr);
+                previous_last_element = reinterpret_cast<result_type*>(ptr);
+
+                ptr += sizeof(result_type);
+                new_last_element = reinterpret_cast<result_type*>(ptr);
             }
 
             // Grid size for block_reduce_kernel, we don't need to calculate reduction
@@ -278,9 +285,18 @@ auto scan_impl(void * temporary_storage,
                     config, InputIterator, BinaryFunction, result_type
                 >),
                 dim3(grid_size), dim3(block_size), 0, stream,
-                input + offset, scan_op, block_prefixes + offset
+                input + offset, scan_op, block_prefixes
             );
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", current_size, start)
+
+            if( !Exclusive && i > 0 )
+            {
+                hipError_t error = ::rocprim::transform(
+                    previous_last_element, input - 1, block_prefixes, 1,
+                    scan_op, stream, debug_synchronous
+                );
+                if(error != hipSuccess) return error;
+            }
 
             // TODO: Performance may increase if for (number_of_blocks < 8192) (or some other
             // threshold) we would just use CPU to calculate prefixes.
@@ -321,10 +337,23 @@ auto scan_impl(void * temporary_storage,
                 output + offset,
                 static_cast<result_type>(initial_value),
                 scan_op,
-                block_prefixes + offset,
-                last_element
+                block_prefixes,
+                previous_last_element,
+                new_last_element,
+                i != size_t(0)
             );
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("final_scan_kernel", size, start);
+
+            // Swap the last_elements if it's necessary
+            if(number_of_lunch > 1)
+            {
+                hipError_t error = ::rocprim::transform(
+                    new_last_element, previous_last_element, 1,
+                    ::rocprim::identity<result_type>(),
+                    stream, debug_synchronous
+                );
+                if(error != hipSuccess) return error;
+            }
         }
     }
     else
@@ -453,8 +482,8 @@ auto scan_impl(void * temporary_storage,
         int asicRevision = 0;
 #endif
 
-        unsigned int number_of_kernels = (size + limited_size - 1)/limited_size;
-        for (size_t i = 0, offset = 0; i < number_of_kernels; i++, offset+=limited_size )
+        unsigned int number_of_lunch = (size + limited_size - 1)/limited_size;
+        for (size_t i = 0, offset = 0; i < number_of_lunch; i++, offset+=limited_size )
         {
             size_t current_size = std::min<size_t>(size - offset, limited_size);
             number_of_blocks = (current_size + items_per_block - 1)/items_per_block;
@@ -464,7 +493,7 @@ auto scan_impl(void * temporary_storage,
             {
                 std::cout << "use_limited_size " << use_limited_size << '\n';
                 std::cout << "aligned_size_limit " << aligned_size_limit << '\n';
-                std::cout << "number_of_kernels " << number_of_kernels << '\n';
+                std::cout << "number_of_lunch " << number_of_lunch << '\n';
                 std::cout << "index " << i << '\n';
                 std::cout << "size " << current_size << '\n';
                 std::cout << "block_size " << block_size << '\n';
@@ -533,7 +562,8 @@ auto scan_impl(void * temporary_storage,
             }
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("lookback_scan_kernel", current_size, start)
 
-            if(number_of_kernels > 1)
+            // Swap the last_elements
+            if(number_of_lunch > 1)
             {
                 hipError_t error = ::rocprim::transform(
                     new_last_element, previous_last_element, 1,
@@ -541,11 +571,6 @@ auto scan_impl(void * temporary_storage,
                     stream, debug_synchronous
                 );
                 if(error != hipSuccess) return error;
-            }
-
-            if(debug_synchronous)
-            {
-                std::cout << "-------------------------------------------------" << '\n';
             }
         }
     }
@@ -616,7 +641,7 @@ auto scan_impl(void * temporary_storage,
 /// Default is BinaryFunction().
 /// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
-/// \param [in] size_limit - [optional] Set the maximum size for one kernel launch
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 /// launch is forced in order to check for errors. Default value is \p false.
 ///
 /// \returns \p hipSuccess (\p 0) after successful scan; otherwise a HIP runtime error of
@@ -729,7 +754,7 @@ hipError_t inclusive_scan(void * temporary_storage,
 /// The default value is \p BinaryFunction().
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
-/// \param [in] size_limit - [optional] Set the maximum size for one kernel launch
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 /// launch is forced in order to check for errors. The default value is \p false.
 ///
 /// \returns \p hipSuccess (\p 0) after successful scan; otherwise a HIP runtime error of
