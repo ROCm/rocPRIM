@@ -279,47 +279,51 @@ auto scan_impl(void * temporary_storage,
             // Grid size for block_reduce_kernel, we don't need to calculate reduction
             // of the last block as it will never be used as prefix for other blocks
             auto grid_size = number_of_blocks - 1;
-            if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(detail::block_reduce_kernel<
-                    config, InputIterator, BinaryFunction, result_type
-                >),
-                dim3(grid_size), dim3(block_size), 0, stream,
-                input + offset, scan_op, block_prefixes
-            );
-            ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", current_size, start)
-
-            if( !Exclusive && i > 0 )
+            if( grid_size != 0 )
             {
-                hipError_t error = ::rocprim::transform(
-                    previous_last_element, input - 1, block_prefixes, 1,
-                    scan_op, stream, debug_synchronous
+                if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+                hipLaunchKernelGGL(
+                    HIP_KERNEL_NAME(detail::block_reduce_kernel<
+                        config, InputIterator, BinaryFunction, result_type
+                    >),
+                    dim3(grid_size), dim3(block_size), 0, stream,
+                    input + offset, scan_op, block_prefixes
+                );
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", current_size, start)
+
+                if( !Exclusive && i > 0 )
+                {
+                    hipError_t error = ::rocprim::transform(
+                        previous_last_element, block_prefixes, block_prefixes, 1,
+                        scan_op, stream, debug_synchronous
+                    );
+                    if(error != hipSuccess) return error;
+                }
+
+                // TODO: Performance may increase if for (number_of_blocks < 8192) (or some other
+                // threshold) we would just use CPU to calculate prefixes.
+
+                // Calculate size of temporary storage for nested device scan operation
+                void * nested_temp_storage = static_cast<void*>(block_prefixes + number_of_blocks);
+                auto nested_temp_storage_size = storage_size - (number_of_blocks * sizeof(result_type));
+
+                if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+                auto error = scan_impl<false, config>(
+                    nested_temp_storage,
+                    nested_temp_storage_size,
+                    block_prefixes, // input
+                    block_prefixes, // output
+                    result_type(), // dummy initial value
+                    number_of_blocks, // input size
+                    scan_op,
+                    stream,
+                    debug_synchronous,
+                    size_limit
                 );
                 if(error != hipSuccess) return error;
+                ROCPRIM_DETAIL_HIP_SYNC("nested_device_scan", number_of_blocks, start);
+
             }
-
-            // TODO: Performance may increase if for (number_of_blocks < 8192) (or some other
-            // threshold) we would just use CPU to calculate prefixes.
-
-            // Calculate size of temporary storage for nested device scan operation
-            void * nested_temp_storage = static_cast<void*>(block_prefixes + number_of_blocks);
-            auto nested_temp_storage_size = storage_size - (number_of_blocks * sizeof(result_type));
-
-            if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-            auto error = scan_impl<false, config>(
-                nested_temp_storage,
-                nested_temp_storage_size,
-                block_prefixes, // input
-                block_prefixes, // output
-                result_type(), // dummy initial value
-                number_of_blocks, // input size
-                scan_op,
-                stream,
-                debug_synchronous,
-                size_limit
-            );
-            if(error != hipSuccess) return error;
-            ROCPRIM_DETAIL_HIP_SYNC("nested_device_scan", number_of_blocks, start);
 
             // Grid size for final_scan_kernel
             grid_size = number_of_blocks;
@@ -340,7 +344,7 @@ auto scan_impl(void * temporary_storage,
                 block_prefixes,
                 previous_last_element,
                 new_last_element,
-                i != size_t(0)
+                i != size_t(0) && ((!Exclusive && number_of_blocks == 1) || Exclusive)
             );
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("final_scan_kernel", size, start);
 
