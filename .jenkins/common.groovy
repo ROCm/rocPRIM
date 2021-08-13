@@ -83,7 +83,7 @@ def runTestCommand (platform, project)
 
 def runPackageCommand(platform, project)
 {
-    def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/release", true)
+    def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/release", true, true)
 
     platform.runCommand(this, packageHelper[0])
         platform.archiveArtifacts(this, packageHelper[1])
