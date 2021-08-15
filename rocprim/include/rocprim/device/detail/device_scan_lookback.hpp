@@ -261,11 +261,13 @@ void lookback_scan_kernel_impl(InputIterator input,
 
     if(flat_block_id == 0)
     {
-        if( override_first_value )
+        // override_first_value only true when the first chunk already processed
+        // and imnput iterator starts from an offset.
+        if(override_first_value)
         {
-            if( Exclusive )
+            if(Exclusive)
                 initial_value = scan_op(previous_last_element[0], *(input-1) );
-            else if( flat_block_thread_id == 0 )
+            else if(flat_block_thread_id == 0)
                 values[0] = scan_op(previous_last_element[0], values[0] );
         }
 
@@ -314,9 +316,9 @@ void lookback_scan_kernel_impl(InputIterator input,
                 storage.store
             );
 
-        if( new_last_element != nullptr &&
-            ( ::rocprim::detail::block_thread_id<0>() ==
-            (valid_in_last_block - 1) / items_per_thread ) )
+        if(new_last_element != nullptr &&
+           (::rocprim::detail::block_thread_id<0>() ==
+           (valid_in_last_block - 1) / items_per_thread))
         {
             new_last_element[0] = values[(valid_in_last_block - 1) % items_per_thread];
         }

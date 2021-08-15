@@ -244,15 +244,15 @@ auto scan_impl(void * temporary_storage,
 
     if(number_of_blocks > 1)
     {
-        unsigned int number_of_lunch = (size + limited_size - 1)/limited_size;
-        for (size_t i = 0, offset = 0; i < number_of_lunch; i++, offset+=limited_size )
+        unsigned int number_of_launch = (size + limited_size - 1)/limited_size;
+        for (size_t i = 0, offset = 0; i < number_of_launch; i++, offset+=limited_size )
         {
             size_t current_size = std::min<size_t>(size - offset, limited_size);
             number_of_blocks = (current_size + items_per_block - 1)/items_per_block;
             if(debug_synchronous)
             {
                 std::cout << "use_limited_size " << use_limited_size << '\n';
-                std::cout << "number_of_lunch " << number_of_lunch << '\n';
+                std::cout << "number_of_launch " << number_of_launch << '\n';
                 std::cout << "inex " << i << '\n';
                 std::cout << "aligned_size_limit " << aligned_size_limit << '\n';
                 std::cout << "size " << current_size << '\n';
@@ -349,7 +349,7 @@ auto scan_impl(void * temporary_storage,
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("final_scan_kernel", size, start);
 
             // Swap the last_elements if it's necessary
-            if(number_of_lunch > 1)
+            if(number_of_launch > 1)
             {
                 hipError_t error = ::rocprim::transform(
                     new_last_element, previous_last_element, 1,
@@ -486,8 +486,8 @@ auto scan_impl(void * temporary_storage,
         int asicRevision = 0;
 #endif
 
-        unsigned int number_of_lunch = (size + limited_size - 1)/limited_size;
-        for (size_t i = 0, offset = 0; i < number_of_lunch; i++, offset+=limited_size )
+        unsigned int number_of_launch = (size + limited_size - 1)/limited_size;
+        for (size_t i = 0, offset = 0; i < number_of_launch; i++, offset+=limited_size )
         {
             size_t current_size = std::min<size_t>(size - offset, limited_size);
             number_of_blocks = (current_size + items_per_block - 1)/items_per_block;
@@ -497,7 +497,7 @@ auto scan_impl(void * temporary_storage,
             {
                 std::cout << "use_limited_size " << use_limited_size << '\n';
                 std::cout << "aligned_size_limit " << aligned_size_limit << '\n';
-                std::cout << "number_of_lunch " << number_of_lunch << '\n';
+                std::cout << "number_of_launch " << number_of_launch << '\n';
                 std::cout << "index " << i << '\n';
                 std::cout << "size " << current_size << '\n';
                 std::cout << "block_size " << block_size << '\n';
@@ -567,7 +567,7 @@ auto scan_impl(void * temporary_storage,
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("lookback_scan_kernel", current_size, start)
 
             // Swap the last_elements
-            if(number_of_lunch > 1)
+            if(number_of_launch > 1)
             {
                 hipError_t error = ::rocprim::transform(
                     new_last_element, previous_last_element, 1,
