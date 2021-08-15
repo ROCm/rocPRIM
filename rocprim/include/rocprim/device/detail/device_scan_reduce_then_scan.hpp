@@ -393,7 +393,7 @@ void final_scan_kernel_impl(InputIterator input,
     ::rocprim::syncthreads(); // sync threads to reuse shared memory
 
     // override_first_value only true when the first chunk already processed
-    // and imnput iterator starts from an offset.
+    // and input iterator starts from an offset.
     if(override_first_value && flat_block_id == 0)
     {
         if(Exclusive)

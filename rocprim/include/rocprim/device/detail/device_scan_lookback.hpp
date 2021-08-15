@@ -262,13 +262,13 @@ void lookback_scan_kernel_impl(InputIterator input,
     if(flat_block_id == 0)
     {
         // override_first_value only true when the first chunk already processed
-        // and imnput iterator starts from an offset.
+        // and input iterator starts from an offset.
         if(override_first_value)
         {
             if(Exclusive)
-                initial_value = scan_op(previous_last_element[0], *(input-1) );
+                initial_value = scan_op(previous_last_element[0], *(input-1));
             else if(flat_block_thread_id == 0)
-                values[0] = scan_op(previous_last_element[0], values[0] );
+                values[0] = scan_op(previous_last_element[0], values[0]);
         }
 
         result_type reduction;
