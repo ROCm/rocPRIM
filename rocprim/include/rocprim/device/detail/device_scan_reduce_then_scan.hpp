@@ -329,7 +329,8 @@ void final_scan_kernel_impl(InputIterator input,
                             ResultType * block_prefixes,
                             ResultType * previous_last_element = nullptr,
                             ResultType * new_last_element = nullptr,
-                            bool override_first_value = false)
+                            bool override_first_value = false,
+                            bool save_last_value = false)
 {
     constexpr unsigned int block_size = Config::block_size;
     constexpr unsigned int items_per_thread = Config::items_per_thread;
@@ -424,11 +425,17 @@ void final_scan_kernel_impl(InputIterator input,
                 storage.store
             );
 
-        if(new_last_element != nullptr &&
+        if(save_last_value &&
            (::rocprim::detail::block_thread_id<0>() ==
            (valid_in_last_block - 1) / items_per_thread))
         {
-            new_last_element[0] = values[(valid_in_last_block - 1) % items_per_thread];
+            for(unsigned int i = 0; i < items_per_thread; i++)
+            {
+                if(i == (valid_in_last_block - 1) % items_per_thread)
+                {
+                    new_last_element[0] = values[i];
+                }
+            }
         }
     }
     else

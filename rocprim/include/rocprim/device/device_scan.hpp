@@ -104,12 +104,14 @@ void final_scan_kernel(InputIterator input,
                        ResultType * block_prefixes,
                        ResultType * previous_last_element = nullptr,
                        ResultType * new_last_element = nullptr,
-                       bool override_first_value = false)
+                       bool override_first_value = false,
+                       bool save_last_value = false)
 {
     final_scan_kernel_impl<Exclusive, Config>(
         input, size, output, initial_value,
         scan_op, block_prefixes,
-        previous_last_element, new_last_element, override_first_value
+        previous_last_element, new_last_element,
+        override_first_value, save_last_value
     );
 }
 
@@ -136,12 +138,14 @@ void lookback_scan_kernel(InputIterator input,
                           ordered_block_id<unsigned int> ordered_bid,
                           ResultType * previous_last_element = nullptr,
                           ResultType * new_last_element = nullptr,
-                          bool override_first_value = false)
+                          bool override_first_value = false,
+                          bool save_last_value = false)
 {
     lookback_scan_kernel_impl<Exclusive, Config>(
         input, output, size, initial_value, scan_op,
         lookback_scan_state, number_of_blocks, ordered_bid,
-        previous_last_element, new_last_element, override_first_value
+        previous_last_element, new_last_element,
+        override_first_value, save_last_value
     );
 }
 
@@ -344,7 +348,8 @@ auto scan_impl(void * temporary_storage,
                 block_prefixes,
                 previous_last_element,
                 new_last_element,
-                i != size_t(0) && ((!Exclusive && number_of_blocks == 1) || Exclusive)
+                i != size_t(0) && ((!Exclusive && number_of_blocks == 1) || Exclusive),
+                number_of_launch > 1
             );
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("final_scan_kernel", size, start);
 
@@ -536,7 +541,8 @@ auto scan_impl(void * temporary_storage,
                     dim3(grid_size), dim3(block_size), 0, stream,
                     input + offset, output + offset, current_size, static_cast<result_type>(initial_value),
                     scan_op, scan_state_with_sleep, number_of_blocks, ordered_bid,
-                    previous_last_element, new_last_element, i != size_t(0)
+                    previous_last_element, new_last_element,
+                    i != size_t(0), number_of_launch > 1
                 );
             }
             else
@@ -561,7 +567,8 @@ auto scan_impl(void * temporary_storage,
                     dim3(grid_size), dim3(block_size), 0, stream,
                     input + offset, output + offset, current_size, static_cast<result_type>(initial_value),
                     scan_op, scan_state, number_of_blocks, ordered_bid,
-                    previous_last_element, new_last_element, i != size_t(0)
+                    previous_last_element, new_last_element,
+                    i != size_t(0), number_of_launch > 1
                 );
             }
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("lookback_scan_kernel", current_size, start)
