@@ -2,6 +2,11 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
+## [Latest changes]
+### Changed
+- Added scan size limit feature
+- Revert old Fiji workaround, because they solved the issue at compiler side
+
 ## [Unreleased rocPRIM-2.10.11 for ROCm 4.5.0]
 ### Addded
 - Initial HIP on Windows support. See README for instructions on how to build and install.
