@@ -146,7 +146,7 @@ void test_block_histogram_input_arrays()
             )
         );
 
-        test_utils::assert_eq(output_bin, expected_bin);
+        test_utils::assert_near(output_bin, expected_bin, test_utils::precision_threshold<BinType>::percentage);
 
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_bin));

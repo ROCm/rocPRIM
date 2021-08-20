@@ -198,7 +198,7 @@ template<
 >
 void test_block_reduce_input_arrays()
 {
-    using binary_op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, test_utils::half_maximum, rocprim::maximum<T>>::type;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;
@@ -277,7 +277,7 @@ void test_block_reduce_input_arrays()
         );
 
         // Verifying results
-        test_utils::assert_near(output_reductions, expected_reductions, 0.05);
+        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
 
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
