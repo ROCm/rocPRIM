@@ -90,7 +90,7 @@ struct static_run_algo
         }
         else
         {
-            test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+            test_utils::assert_near(output_reductions, expected_reductions, 5.0f * test_utils::precision_threshold<T>::percentage);
         }
     }
 };
@@ -156,7 +156,7 @@ struct static_run_valid
         );
 
         // Verifying results
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_reductions, expected_reductions, 5.0f * test_utils::precision_threshold<T>::percentage);
     }
 };
 
@@ -277,7 +277,7 @@ void test_block_reduce_input_arrays()
         );
 
         // Verifying results
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_reductions, expected_reductions, 5.0f * test_utils::precision_threshold<T>::percentage);
 
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
