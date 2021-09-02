@@ -2,10 +2,15 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [Latest changes]
+## [Unreleased rocPRIM-2.10.12 for ROCm 5.0.0]
+### Fixed
+- Enable bfloat16 tests and reduce threshold for bfloat16
 ### Changed
 - Added scan size limit feature
 - Revert old Fiji workaround, because they solved the issue at compiler side
+### Known issues
+- Unit tests may soft hang on MI200 when running in hipMallocManaged mode.
+- block_histogram, device_scan unit tests failing for HIP on Windows
 
 ## [Unreleased rocPRIM-2.10.11 for ROCm 4.5.0]
 ### Addded
