@@ -14,8 +14,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - Added single tile radix sort for smaller sizes.
 - Improved performance for radix sort for larger element sizes.
 ### Changed
-- Packaging split into a runtime package called rocprim and a development package called rocprim-devel. The development package depends on runtime. The runtime package suggests the development package for all supported OSes except CentOS 7 to aid in the transition. The suggests feature in packaging is introduced as a deprecated feature and will be removed in a future rocm release.
-    - As rocPRIM is a header-only library, the runtime package is an empty placeholder used to aid in the transition. This package is also a deprecated feature and will be removed in a future rocm release.
+- Package renamed to rocprim-dev for `.deb`, and to rocprim-devel for `.rpm`. As rocPRIM is a header-only library, there is no associated runtime package, so for compatibility this development package provides the package rocprim. The provides feature in packaging is introduced as a deprecated feature and will be removed in a future rocm release.
 ### Known issues
 - Unit tests may soft hang on MI200 when running in hipMallocManaged mode.
 ### Deprecated
