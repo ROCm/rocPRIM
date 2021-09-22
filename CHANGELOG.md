@@ -15,8 +15,6 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - Improved performance for radix sort for larger element sizes.
 ### Changed
 - Package renamed to rocprim-dev for `.deb`, and to rocprim-devel for `.rpm`. As rocPRIM is a header-only library, there is no associated runtime package, so for compatibility this development package provides the package rocprim. The provides feature in packaging is introduced as a deprecated feature and will be removed in a future rocm release.
-### Known issues
-- Unit tests may soft hang on MI200 when running in hipMallocManaged mode.
 ### Deprecated
 - The warp_size() function is now deprecated; please switch to host_warp_size() and device_warp_size() for host and device references respectively.
 
