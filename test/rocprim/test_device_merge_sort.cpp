@@ -182,7 +182,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
                     compare_op, stream, debug_synchronous
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host
@@ -334,7 +334,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
                     compare_op, stream, debug_synchronous
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host

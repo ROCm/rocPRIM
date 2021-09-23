@@ -204,7 +204,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
                     compare_op, stream, debug_synchronous
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             ASSERT_FALSE(out_of_bounds.get());
@@ -392,7 +392,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
                     compare_op, stream, debug_synchronous
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             ASSERT_FALSE(out_of_bounds.get());

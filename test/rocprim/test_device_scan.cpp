@@ -169,7 +169,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
             0, scan_op_type(), stream, debug_synchronous
         )
     );
-    HIP_CHECK(hipPeekAtLastError());
+    HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
     ASSERT_FALSE(out_of_bounds.get());
@@ -264,7 +264,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
                     input.size(), scan_op, stream, debug_synchronous, size_limit
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host
@@ -378,7 +378,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
                     stream, debug_synchronous, size_limit
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host
@@ -532,7 +532,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
                     size_limit
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host
@@ -669,7 +669,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
                     size_limit
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host

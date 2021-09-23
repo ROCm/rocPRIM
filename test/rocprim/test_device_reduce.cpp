@@ -235,7 +235,7 @@ TYPED_TEST(RocprimDeviceReduceTests, Reduce)
                     input.size(), rocprim::plus<U>(), stream, debug_synchronous
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host
@@ -339,7 +339,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
                     test_utils::numeric_limits<U>::max(), input.size(), rocprim::minimum<U>(), stream, debug_synchronous
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host
@@ -479,7 +479,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
                     max, input.size(), reduce_op, stream, debug_synchronous
                 )
             );
-            HIP_CHECK(hipPeekAtLastError());
+            HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
             // Copy output to host
