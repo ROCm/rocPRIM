@@ -96,7 +96,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceEmptyInput)
     const bool debug_synchronous = TestFixture::debug_synchronous;
 
     // TODO: ReduceEmptyInput cause random faulire with bfloat16
-    if( std::is_same<T, bfloat16>::value || std::is_same<U, bfloat16>::value )
+    if( std::is_same<T, rocprim::bfloat16>::value || std::is_same<U, rocprim::bfloat16>::value )
         GTEST_SKIP();
 
     hipStream_t stream = 0; // default stream
