@@ -62,12 +62,10 @@ typedef ::testing::Types<
     params<double, int, true>,
     params<float, int>,
     params<rocprim::half, long long>,
-    //TODO: Disable bfloat16 test until we get a better bfloat16 implemetation for host side
     params<rocprim::bfloat16, long long>,
     params<int8_t, int8_t>,
     params<uint8_t, uint8_t>,
     params<rocprim::half, rocprim::half>,
-    //TODO: Disable bfloat16 test until we get a better bfloat16 implemetation for host side
     params<rocprim::bfloat16, rocprim::bfloat16>,
     params<int, test_utils::custom_test_type<float>>,
 
@@ -80,7 +78,6 @@ typedef ::testing::Types<
     params<unsigned int, double, true, 4, 21>,
     params<unsigned int, rocprim::half, true, 0, 15>,
     params<unsigned short, rocprim::half, false, 3, 22>,
-    //TODO: Disable bfloat16 test until we get a better bfloat16 implemetation for host side
     params<unsigned int, rocprim::bfloat16, true, 0, 12>,
     params<unsigned short, rocprim::bfloat16, false, 3, 11>,
     params<unsigned long long, char, false, 8, 20>,
@@ -292,7 +289,7 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairs)
             }
 
             std::vector<value_type> values_input(size);
-            std::iota(values_input.begin(), values_input.end(), 0);
+            test_utils::iota(values_input.begin(), values_input.end(), 0);
 
             key_type * d_keys_input;
             key_type * d_keys_output;
@@ -599,7 +596,7 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairsDoubleBuffer)
             }
 
             std::vector<value_type> values_input(size);
-            std::iota(values_input.begin(), values_input.end(), 0);
+            test_utils::iota(values_input.begin(), values_input.end(), 0);
 
             key_type * d_keys_input;
             key_type * d_keys_output;
