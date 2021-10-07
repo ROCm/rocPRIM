@@ -708,9 +708,7 @@ hipError_t inclusive_scan(void * temporary_storage,
                           size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryFunction
-    >::type;
+    using result_type = input_type;
 
     // Get default config if Config is default_config
     using config = detail::default_or_custom_config<
@@ -831,9 +829,7 @@ hipError_t exclusive_scan(void * temporary_storage,
                           size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryFunction
-    >::type;
+    using result_type = InitValueType;
 
     // Get default config if Config is default_config
     using config = detail::default_or_custom_config<
