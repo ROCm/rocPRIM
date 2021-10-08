@@ -1394,6 +1394,19 @@ auto assert_near(const custom_test_type<T>& result, const custom_test_type<T>& e
 }
 
 template<class T>
+void assert_bit_eq(const std::vector<T>& result, const std::vector<T>& expected)
+{
+    ASSERT_EQ(result.size(), expected.size());
+    for(size_t i = 0; i < result.size(); i++)
+    {
+        bool the_same = true;
+        for(size_t j = 0; j < sizeof(T); j++)
+            the_same &= ((reinterpret_cast<const uint8_t*>(&result[i]))[j] == (reinterpret_cast<const uint8_t*>(&expected[i]))[j]);
+        ASSERT_EQ(true, the_same) << "where index = " << i;
+    }
+}
+
+template<class T>
 void assert_eq(const std::vector<T>& result, const std::vector<T>& expected)
 {
     ASSERT_EQ(result.size(), expected.size());
