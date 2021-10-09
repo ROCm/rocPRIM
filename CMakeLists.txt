@@ -26,7 +26,7 @@ cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended onto install directories")
 
 #Adding CMAKE_PREFIX_PATH
-list( APPEND CMAKE_PREFIX_PATH /opt/rocm/llvm /opt/rocm )
+list( APPEND CMAKE_PREFIX_PATH /opt/rocm )
 
 # rocPRIM project
 project(rocprim LANGUAGES CXX)
@@ -42,7 +42,7 @@ option(ONLY_INSTALL "Only install" OFF)
 # CMake modules
 list(APPEND CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
-  ${HIP_PATH}/cmake /opt/rocm/hip/cmake # FindHIP.cmake
+  ${HIP_PATH}/lib/cmake/hip /opt/rocm/lib/cmake/hip # FindHIP.cmake
 )
 
 # Set a default build type if none was specified
@@ -183,7 +183,7 @@ if(BUILD_CODE_COVERAGE)
     COMMAND mkdir -p lcoverage
     COMMAND echo "\\#!/bin/bash" > llvm-gcov.sh
     COMMAND echo "\\# THIS FILE HAS BEEN GENERATED" >> llvm-gcov.sh
-    COMMAND printf "exec /opt/rocm/llvm/bin/llvm-cov gcov $$\\@" >> llvm-gcov.sh
+    COMMAND printf "exec /opt/rocm/bin/llvm/llvm-cov gcov $$\\@" >> llvm-gcov.sh
     COMMAND chmod +x llvm-gcov.sh
     )
 
