@@ -491,7 +491,7 @@ auto scan_impl(void * temporary_storage,
         int asicRevision = 0;
 #endif
 
-        unsigned int number_of_launch = (size + limited_size - 1)/limited_size;
+        size_t number_of_launch = (size + limited_size - 1)/limited_size;
         for (size_t i = 0, offset = 0; i < number_of_launch; i++, offset+=limited_size )
         {
             size_t current_size = std::min<size_t>(size - offset, limited_size);
