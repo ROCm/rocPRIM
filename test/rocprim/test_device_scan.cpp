@@ -89,7 +89,8 @@ typedef ::testing::Types<
     DeviceScanParams<rocprim::half, float>,
 #endif
     DeviceScanParams<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_maximum>,
-    DeviceScanParams<rocprim::bfloat16, float>,
+    // Uncomment when assignment operator works for bfloat16
+    //DeviceScanParams<rocprim::bfloat16, float>,
     // Large
     DeviceScanParams<int, double, rocprim::plus<int> >,
     DeviceScanParams<int, double, rocprim::plus<double> >,
@@ -236,7 +237,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 
             // Calculate expected results on host
             std::vector<U> expected(input.size());
-            test_utils::host_inclusive_scan(
+            std::partial_sum(
                 input.begin(), input.end(),
                 expected.begin(), scan_op
             );
@@ -484,7 +485,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
 
             // Calculate expected results on host
             std::vector<U> expected(input.size());
-            test_utils::host_inclusive_scan(
+            std::partial_sum(
                 rocprim::make_zip_iterator(
                     rocprim::make_tuple(input.begin(), keys.begin())
                 ),
