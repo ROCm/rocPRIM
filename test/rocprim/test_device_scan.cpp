@@ -705,7 +705,7 @@ TEST(RocprimDeviceScanTests, LargeIndicesInclusiveScan)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = unsigned char;
+    using T = unsigned int;
     using Iterator = typename rocprim::counting_iterator<T>;
     const bool debug_synchronous = false;
 
@@ -782,6 +782,7 @@ TEST(RocprimDeviceScanTests, LargeIndicesInclusiveScan)
         ASSERT_EQ(output[i], expected[i]) << "where index = " << i;
     }
 
+    hipFree(d_temp_storage);
     hipFree(d_output);
 }
 
@@ -791,7 +792,7 @@ TEST(RocprimDeviceScanTests, LargeIndicesExclusiveScan)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T = unsigned char;
+    using T = unsigned int;
     using Iterator = typename rocprim::counting_iterator<T>;
     const bool debug_synchronous = false;
 
@@ -872,5 +873,6 @@ TEST(RocprimDeviceScanTests, LargeIndicesExclusiveScan)
         ASSERT_EQ(output[i], expected[i]) << "where index = " << i;
     }
 
+    hipFree(d_temp_storage);
     hipFree(d_output);
 }
