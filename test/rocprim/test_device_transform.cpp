@@ -22,6 +22,8 @@
 
 #include "common_test_header.hpp"
 
+#include <limits>
+
 // required rocprim headers
 #include <rocprim/device/device_transform.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
@@ -34,13 +36,15 @@
 template<
     class InputType,
     class OutputType = InputType,
-    bool UseIdentityIterator = false
+    bool UseIdentityIterator = false,
+    size_t SizeLimit = size_t(std::numeric_limits<int>::max()) + 1
 >
 struct DeviceTransformParams
 {
     using input_type = InputType;
     using output_type = OutputType;
     static constexpr bool use_identity_iterator = UseIdentityIterator;
+    static constexpr size_t size_limit = SizeLimit;
 };
 
 // ---------------------------------------------------------
@@ -55,6 +59,7 @@ public:
     using output_type = typename Params::output_type;
     static constexpr bool use_identity_iterator = Params::use_identity_iterator;
     static constexpr bool debug_synchronous = false;
+    static constexpr size_t size_limit = Params::size_limit;
 };
 
 using custom_short2 = test_utils::custom_test_type<short>;
@@ -71,7 +76,12 @@ typedef ::testing::Types<
     DeviceTransformParams<short, int, true>,
     DeviceTransformParams<custom_short2, custom_int2, true>,
     DeviceTransformParams<int, float>,
-    DeviceTransformParams<custom_double2, custom_double2>
+    DeviceTransformParams<custom_double2, custom_double2>,
+    DeviceTransformParams<int, int, false, 512>,
+    DeviceTransformParams<float, float, false, 2048>,
+    DeviceTransformParams<int, int, false, 4096>,
+    DeviceTransformParams<int, int, false, 2097152>,
+    DeviceTransformParams<int, int, false, 1073741824>
 > RocprimDeviceTransformTestsParams;
 
 std::vector<size_t> get_sizes(int seed_value)
@@ -138,6 +148,7 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
     using U = typename TestFixture::output_type;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     const bool debug_synchronous = TestFixture::debug_synchronous;
+    static constexpr size_t size_limit = TestFixture::size_limit; 
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -182,7 +193,7 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
                 rocprim::transform(
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    input.size(), transform<U>(), stream, debug_synchronous
+                    input.size(), transform<U>(), stream, debug_synchronous, size_limit
                 )
             );
             HIP_CHECK(hipGetLastError());
@@ -258,6 +269,7 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
     using U = typename TestFixture::output_type;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     const bool debug_synchronous = TestFixture::debug_synchronous;
+    static constexpr size_t size_limit = TestFixture::size_limit;
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -315,7 +327,7 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
                 rocprim::transform(
                     d_input1, d_input2,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    input1.size(), binary_transform<T1, T2, U>(), stream, debug_synchronous
+                    input1.size(), binary_transform<T1, T2, U>(), stream, debug_synchronous, size_limit
                 )
             );
             HIP_CHECK(hipGetLastError());
