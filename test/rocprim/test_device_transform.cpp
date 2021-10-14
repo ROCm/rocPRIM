@@ -24,6 +24,8 @@
 
 // required rocprim headers
 #include <rocprim/device/device_transform.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/discard_iterator.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
@@ -339,3 +341,92 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
     }
 
 }
+
+std::vector<size_t> get_large_sizes(int seed_value)
+{
+    std::vector<size_t> sizes = {
+        (size_t{1} << 30) - 1, size_t{1} << 30,
+        (size_t{1} << 31) - 1, size_t{1} << 31,
+        (size_t{1} << 32) - 1, size_t{1} << 32,
+        (size_t{1} << 35) - 1, size_t{1} << 35,
+        (size_t{1} << 37) - 1,
+    };
+    const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(
+        2, (size_t {1} << 30) + 1, (size_t {1} << 37) - 2, seed_value);
+    sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
+    std::sort(sizes.begin(), sizes.end());
+    return sizes;
+}
+
+TEST(RocprimDeviceTransformTests, LargeIndices)
+{
+    const int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    using T                      = size_t;
+    using InputIterator          = rocprim::counting_iterator<T>;
+    using OutputIterator         = rocprim::discard_iterator;
+    const bool debug_synchronous = false;
+
+    const hipStream_t stream = 0; // default
+
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    {
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
+        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+
+        const std::vector<size_t> sizes = get_large_sizes(seed_value);
+
+        for(const auto size : sizes)
+        {
+            SCOPED_TRACE(testing::Message() << "with size = " << size);
+
+            const InputIterator  input {0};
+            const OutputIterator output;
+
+            bool  flags[2] = {false, false};
+            bool* d_flag   = nullptr;
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_flag, sizeof(T)));
+            HIP_CHECK(hipMemcpy(d_flag, flags, sizeof(flags), hipMemcpyHostToDevice));
+
+            const auto expected = test_utils::get_random_value<T>(0, size - 1, seed_value);
+            const auto limit = size_t(std::numeric_limits<int>::max()) + 1;
+            const auto expected_above_limit
+                = size - 1 > limit ? test_utils::get_random_value<T>(limit, size - 1, seed_value)
+                                   : size - 1;
+
+            SCOPED_TRACE(testing::Message() << "expected = " << expected);
+            SCOPED_TRACE(testing::Message() << "expected_above_limit = " << expected_above_limit);
+
+            const auto flag_expected = [=] __device__ (T value) -> int {
+                if(value == expected)
+                {
+                    d_flag[0] = true;
+                }
+                if(value == expected_above_limit)
+                {
+                    d_flag[1] = true;
+                }
+                return 0;
+            };
+
+            // Run
+            HIP_CHECK(
+                rocprim::transform(input, output, size, flag_expected, stream, debug_synchronous));
+            HIP_CHECK(hipGetLastError());
+            HIP_CHECK(hipDeviceSynchronize());
+
+            // Copy output to host
+            HIP_CHECK(hipMemcpy(flags, d_flag, sizeof(flags), hipMemcpyDeviceToHost));
+            HIP_CHECK(hipDeviceSynchronize());
+
+            ASSERT_TRUE(flags[0]);
+            ASSERT_TRUE(flags[1]);
+
+            hipFree(d_flag);
+        }
+    }
+}
+
