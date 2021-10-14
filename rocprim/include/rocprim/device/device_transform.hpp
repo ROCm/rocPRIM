@@ -21,6 +21,8 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_TRANSFORM_HPP_
 #define ROCPRIM_DEVICE_DEVICE_TRANSFORM_HPP_
 
+#include <algorithm>
+#include <limits>
 #include <type_traits>
 #include <iterator>
 
@@ -104,6 +106,7 @@ void transform_kernel(InputIterator input,
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. The default value is \p false.
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \par Example
 /// \parblock
@@ -144,7 +147,8 @@ hipError_t transform(InputIterator input,
                      const size_t size,
                      UnaryFunction transform_op,
                      const hipStream_t stream = 0,
-                     bool debug_synchronous = false)
+                     bool debug_synchronous = false,
+                     size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
 {
     if( size == size_t(0) )
         return hipSuccess;
@@ -165,24 +169,37 @@ hipError_t transform(InputIterator input,
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
+    const auto number_of_blocks_limit
+        = std::max<size_t>((size_limit + items_per_block - 1) / items_per_block, 1);
+
     auto number_of_blocks = (size + items_per_block - 1)/items_per_block;
     if(debug_synchronous)
     {
         std::cout << "block_size " << block_size << '\n';
         std::cout << "number of blocks " << number_of_blocks << '\n';
+        std::cout << "number of blocks limit " << number_of_blocks_limit << '\n';
         std::cout << "items_per_block " << items_per_block << '\n';
     }
 
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(detail::transform_kernel<
-            block_size, items_per_thread, result_type,
-            InputIterator, OutputIterator, UnaryFunction
-        >),
-        dim3(number_of_blocks), dim3(block_size), 0, stream,
-        input, size, output, transform_op
-    );
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("transform_kernel", size, start);
+    const auto aligned_size_limit = number_of_blocks_limit * items_per_block;
+
+    // Launch number_of_blocks_limit blocks while there is still at least as many blocks left as the limit
+    const auto number_of_launch = (size + aligned_size_limit - 1) / aligned_size_limit;
+    for(size_t i = 0, offset = 0; i < number_of_launch; ++i, offset += aligned_size_limit) {
+        const auto current_size = std::min(size - offset, aligned_size_limit);
+        const auto current_blocks = (current_size + items_per_block - 1) / items_per_block;
+
+        if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+        hipLaunchKernelGGL(
+            HIP_KERNEL_NAME(detail::transform_kernel<
+                block_size, items_per_thread, result_type,
+                InputIterator, OutputIterator, UnaryFunction
+            >),
+            dim3(current_blocks), dim3(block_size), 0, stream,
+            input + offset, current_size, output + offset, transform_op
+        );
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("transform_kernel", current_size, start);
+    }
 
     return hipSuccess;
 }
@@ -216,6 +233,7 @@ hipError_t transform(InputIterator input,
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced. Default value is \p false.
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \par Example
 /// \parblock
@@ -259,14 +277,15 @@ hipError_t transform(InputIterator1 input1,
                      const size_t size,
                      BinaryFunction transform_op,
                      const hipStream_t stream = 0,
-                     bool debug_synchronous = false)
+                     bool debug_synchronous = false,
+                     size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
 {
     using value_type1 = typename std::iterator_traits<InputIterator1>::value_type;
     using value_type2 = typename std::iterator_traits<InputIterator2>::value_type;
     return transform<Config>(
         ::rocprim::make_zip_iterator(::rocprim::make_tuple(input1, input2)), output,
         size, detail::unpack_binary_op<value_type1, value_type2, BinaryFunction>(transform_op),
-        stream, debug_synchronous
+        stream, debug_synchronous, size_limit
     );
 }
 
