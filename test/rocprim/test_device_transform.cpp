@@ -37,7 +37,7 @@ template<
     class InputType,
     class OutputType = InputType,
     bool UseIdentityIterator = false,
-    size_t SizeLimit = size_t(std::numeric_limits<int>::max()) + 1
+    size_t SizeLimit = ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT
 >
 struct DeviceTransformParams
 {
@@ -404,7 +404,7 @@ TEST(RocprimDeviceTransformTests, LargeIndices)
             HIP_CHECK(hipMemcpy(d_flag, flags, sizeof(flags), hipMemcpyHostToDevice));
 
             const auto expected = test_utils::get_random_value<T>(0, size - 1, seed_value);
-            const auto limit = size_t(std::numeric_limits<int>::max()) + 1;
+            const auto limit = ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT;
             const auto expected_above_limit
                 = size - 1 > limit ? test_utils::get_random_value<T>(limit, size - 1, seed_value)
                                    : size - 1;

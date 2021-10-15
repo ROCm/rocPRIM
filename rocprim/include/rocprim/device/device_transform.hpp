@@ -35,6 +35,10 @@
 #include "device_transform_config.hpp"
 #include "detail/device_transform.hpp"
 
+#ifndef ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT
+#define ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT size_t(std::numeric_limits<unsigned int>::max())
+#endif
+
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \addtogroup devicemodule
@@ -148,7 +152,7 @@ hipError_t transform(InputIterator input,
                      UnaryFunction transform_op,
                      const hipStream_t stream = 0,
                      bool debug_synchronous = false,
-                     size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
+                     size_t size_limit = ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT)
 {
     if( size == size_t(0) )
         return hipSuccess;
@@ -278,7 +282,7 @@ hipError_t transform(InputIterator1 input1,
                      BinaryFunction transform_op,
                      const hipStream_t stream = 0,
                      bool debug_synchronous = false,
-                     size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
+                     size_t size_limit = ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT)
 {
     using value_type1 = typename std::iterator_traits<InputIterator1>::value_type;
     using value_type2 = typename std::iterator_traits<InputIterator2>::value_type;
