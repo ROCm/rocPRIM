@@ -652,8 +652,8 @@ auto scan_impl(void * temporary_storage,
 /// Default is BinaryFunction().
 /// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
-/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 /// launch is forced in order to check for errors. Default value is \p false.
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \returns \p hipSuccess (\p 0) after successful scan; otherwise a HIP runtime error of
 /// type \p hipError_t.
@@ -765,8 +765,8 @@ hipError_t inclusive_scan(void * temporary_storage,
 /// The default value is \p BinaryFunction().
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
-/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 /// launch is forced in order to check for errors. The default value is \p false.
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \returns \p hipSuccess (\p 0) after successful scan; otherwise a HIP runtime error of
 /// type \p hipError_t.

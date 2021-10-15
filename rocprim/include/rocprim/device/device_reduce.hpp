@@ -23,6 +23,7 @@
 
 #include <type_traits>
 #include <iterator>
+#include <algorithm>
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
@@ -105,7 +106,8 @@ hipError_t reduce_impl(void * temporary_storage,
                        const size_t size,
                        BinaryFunction reduce_op,
                        const hipStream_t stream,
-                       bool debug_synchronous)
+                       bool debug_synchronous,
+                       size_t size_limit)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
     using result_type = typename ::rocprim::detail::match_result_type<
@@ -133,11 +135,15 @@ hipError_t reduce_impl(void * temporary_storage,
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
+    const auto number_of_blocks_limit
+        = std::max<size_t>((size_limit + items_per_block - 1) / items_per_block, 1);
+
     auto number_of_blocks = (size + items_per_block - 1)/items_per_block;
     if(debug_synchronous)
     {
         std::cout << "block_size " << block_size << '\n';
         std::cout << "number of blocks " << number_of_blocks << '\n';
+        std::cout << "number of blocks limit " << number_of_blocks_limit << '\n';
         std::cout << "items_per_block " << items_per_block << '\n';
     }
 
@@ -145,14 +151,28 @@ hipError_t reduce_impl(void * temporary_storage,
     {
         // Pointer to array with block_prefixes
         result_type * block_prefixes = static_cast<result_type*>(temporary_storage);
+        const auto    aligned_size_limit = number_of_blocks_limit * items_per_block;
 
-        if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(detail::block_reduce_kernel<false, config, result_type>),
-            dim3(number_of_blocks), dim3(block_size), 0, stream,
-            input, size, block_prefixes, initial_value, reduce_op
-        );
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", size, start);
+        // Launch number_of_blocks_limit blocks while there is still at least as many blocks left as the limit
+        const auto number_of_launch = (size + aligned_size_limit - 1) / aligned_size_limit;
+        for(size_t i = 0, offset = 0; i < number_of_launch; ++i, offset += aligned_size_limit) {
+            const auto current_size = std::min<size_t>(size - offset, aligned_size_limit);
+            const auto current_blocks = (current_size + items_per_block - 1) / items_per_block;
+
+            if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+            hipLaunchKernelGGL(
+                HIP_KERNEL_NAME(detail::block_reduce_kernel<false, config, result_type>),
+                dim3(current_blocks),
+                dim3(block_size),
+                0,
+                stream,
+                input + offset,
+                current_size,
+                block_prefixes + i * number_of_blocks_limit,
+                initial_value,
+                reduce_op);
+            ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_reduce_kernel", current_size, start);
+        }
 
         void * nested_temp_storage = static_cast<void*>(block_prefixes + number_of_blocks);
         auto nested_temp_storage_size = storage_size - (number_of_blocks * sizeof(result_type));
@@ -167,7 +187,8 @@ hipError_t reduce_impl(void * temporary_storage,
             number_of_blocks, // input size
             reduce_op,
             stream,
-            debug_synchronous
+            debug_synchronous,
+            size_limit
         );
         if(error != hipSuccess) return error;
         ROCPRIM_DETAIL_HIP_SYNC("nested_device_reduce", number_of_blocks, start);
@@ -232,6 +253,7 @@ hipError_t reduce_impl(void * temporary_storage,
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. The default value is \p false.
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \returns \p hipSuccess (\p 0) after successful reduction; otherwise a HIP runtime error of
 /// type \p hipError_t.
@@ -292,12 +314,13 @@ hipError_t reduce(void * temporary_storage,
                  const size_t size,
                  BinaryFunction reduce_op = BinaryFunction(),
                  const hipStream_t stream = 0,
-                 bool debug_synchronous = false)
+                 bool debug_synchronous = false,
+                 size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
 {
     return detail::reduce_impl<true, Config>(
         temporary_storage, storage_size,
         input, output, initial_value, size,
-        reduce_op, stream, debug_synchronous
+        reduce_op, stream, debug_synchronous, size_limit
     );
 }
 
@@ -340,6 +363,7 @@ hipError_t reduce(void * temporary_storage,
 /// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. Default value is \p false.
+/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \returns \p hipSuccess (\p 0) after successful reduction; otherwise a HIP runtime error of
 /// type \p hipError_t.
@@ -390,14 +414,15 @@ hipError_t reduce(void * temporary_storage,
                   const size_t size,
                   BinaryFunction reduce_op = BinaryFunction(),
                   const hipStream_t stream = 0,
-                  bool debug_synchronous = false)
+                  bool debug_synchronous = false,
+                  size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
 
     return detail::reduce_impl<false, Config>(
         temporary_storage, storage_size,
         input, output, input_type(), size,
-        reduce_op, stream, debug_synchronous
+        reduce_op, stream, debug_synchronous, size_limit
     );
 }
 
