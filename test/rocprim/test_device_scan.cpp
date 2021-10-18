@@ -89,7 +89,7 @@ typedef ::testing::Types<
     DeviceScanParams<rocprim::half, float>,
 #endif
     DeviceScanParams<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_maximum>,
-    // Uncomment when assignment operator works for bfloat16
+    //TODO: Disable bfloat16 test until the follwing PR merge: https://github.com/ROCm-Developer-Tools/HIP/pull/2303
     //DeviceScanParams<rocprim::bfloat16, float>,
     // Large
     DeviceScanParams<int, double, rocprim::plus<int> >,
