@@ -22,7 +22,6 @@
 #define ROCPRIM_DEVICE_DEVICE_TRANSFORM_HPP_
 
 #include <algorithm>
-#include <limits>
 #include <type_traits>
 #include <iterator>
 
@@ -34,10 +33,6 @@
 
 #include "device_transform_config.hpp"
 #include "detail/device_transform.hpp"
-
-#ifndef ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT
-#define ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT size_t(std::numeric_limits<unsigned int>::max())
-#endif
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -110,7 +105,6 @@ void transform_kernel(InputIterator input,
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. The default value is \p false.
-/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \par Example
 /// \parblock
@@ -151,8 +145,7 @@ hipError_t transform(InputIterator input,
                      const size_t size,
                      UnaryFunction transform_op,
                      const hipStream_t stream = 0,
-                     bool debug_synchronous = false,
-                     size_t size_limit = ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT)
+                     bool debug_synchronous = false)
 {
     if( size == size_t(0) )
         return hipSuccess;
@@ -173,8 +166,9 @@ hipError_t transform(InputIterator input,
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
-    const auto number_of_blocks_limit
-        = std::max<size_t>((size_limit + items_per_block - 1) / items_per_block, 1);
+    static constexpr auto size_limit = config::size_limit;
+    static constexpr auto number_of_blocks_limit
+        = std::max<size_t>(size_limit / items_per_block, 1);
 
     auto number_of_blocks = (size + items_per_block - 1)/items_per_block;
     if(debug_synchronous)
@@ -185,7 +179,7 @@ hipError_t transform(InputIterator input,
         std::cout << "items_per_block " << items_per_block << '\n';
     }
 
-    const auto aligned_size_limit = number_of_blocks_limit * items_per_block;
+    static constexpr auto aligned_size_limit = number_of_blocks_limit * items_per_block;
 
     // Launch number_of_blocks_limit blocks while there is still at least as many blocks left as the limit
     const auto number_of_launch = (size + aligned_size_limit - 1) / aligned_size_limit;
@@ -237,7 +231,6 @@ hipError_t transform(InputIterator input,
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced. Default value is \p false.
-/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \par Example
 /// \parblock
@@ -281,15 +274,14 @@ hipError_t transform(InputIterator1 input1,
                      const size_t size,
                      BinaryFunction transform_op,
                      const hipStream_t stream = 0,
-                     bool debug_synchronous = false,
-                     size_t size_limit = ROCPRIM_DEVICE_TRANSFORM_SIZE_LIMIT)
+                     bool debug_synchronous = false)
 {
     using value_type1 = typename std::iterator_traits<InputIterator1>::value_type;
     using value_type2 = typename std::iterator_traits<InputIterator2>::value_type;
     return transform<Config>(
         ::rocprim::make_zip_iterator(::rocprim::make_tuple(input1, input2)), output,
         size, detail::unpack_binary_op<value_type1, value_type2, BinaryFunction>(transform_op),
-        stream, debug_synchronous, size_limit
+        stream, debug_synchronous
     );
 }
 
