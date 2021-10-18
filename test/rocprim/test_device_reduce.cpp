@@ -36,7 +36,7 @@ template<
     class InputType,
     class OutputType = InputType,
     bool UseIdentityIterator = false,
-    size_t SizeLimit = size_t(std::numeric_limits<int>::max()) + 1
+    size_t SizeLimit = ROCPRIM_GRID_SIZE_LIMIT
 >
 struct DeviceReduceParams
 {
@@ -46,6 +46,19 @@ struct DeviceReduceParams
     static constexpr bool use_identity_iterator =  UseIdentityIterator;
     static constexpr size_t size_limit = SizeLimit;
 };
+
+template <unsigned int SizeLimit>
+struct size_limit_config {
+    using type = rocprim::reduce_config<256, 16, rocprim::block_reduce_algorithm::default_algorithm, SizeLimit>;
+};
+
+template <>
+struct size_limit_config<ROCPRIM_GRID_SIZE_LIMIT> {
+    using type = rocprim::default_config;
+};
+
+template <unsigned int SizeLimit>
+using size_limit_config_t = typename size_limit_config<SizeLimit>::type;
 
 // ---------------------------------------------------------
 // Test for reduce ops taking single input value
@@ -104,7 +117,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceEmptyInput)
     using T = typename TestFixture::input_type;
     using U = typename TestFixture::output_type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
-    static constexpr size_t size_limit = TestFixture::size_limit;
+    using Config = size_limit_config_t<TestFixture::size_limit>;
 
     // TODO: ReduceEmptyInput cause random faulire with bfloat16
     if( std::is_same<T, rocprim::bfloat16>::value || std::is_same<U, rocprim::bfloat16>::value )
@@ -120,12 +133,12 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceEmptyInput)
     size_t temp_storage_size_bytes;
     // Get size of d_temp_storage
     HIP_CHECK(
-        rocprim::reduce(
+        rocprim::reduce<Config>(
             nullptr, temp_storage_size_bytes,
             rocprim::make_constant_iterator<T>(T(345)),
             d_output,
             initial_value,
-            0, rocprim::minimum<U>(), stream, debug_synchronous, size_limit
+            0, rocprim::minimum<U>(), stream, debug_synchronous
         )
     );
 
@@ -134,12 +147,12 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceEmptyInput)
 
     // Run
     HIP_CHECK(
-        rocprim::reduce(
+        rocprim::reduce<Config>(
             d_temp_storage, temp_storage_size_bytes,
             rocprim::make_constant_iterator<T>(T(345)),
             d_output,
             initial_value,
-            0, rocprim::minimum<U>(), stream, debug_synchronous, size_limit
+            0, rocprim::minimum<U>(), stream, debug_synchronous
         )
     );
     HIP_CHECK(hipDeviceSynchronize());
@@ -169,7 +182,7 @@ TYPED_TEST(RocprimDeviceReduceTests, Reduce)
     using binary_op_type = typename test_utils::select_plus_operator<U>::type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    static constexpr size_t size_limit = TestFixture::size_limit;
+    using Config = size_limit_config_t<TestFixture::size_limit>;
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -227,11 +240,11 @@ TYPED_TEST(RocprimDeviceReduceTests, Reduce)
             void * d_temp_storage = nullptr;
             // Get size of d_temp_storage
             HIP_CHECK(
-                rocprim::reduce(
+                rocprim::reduce<Config>(
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    input.size(), rocprim::plus<U>(), stream, debug_synchronous, size_limit
+                    input.size(), rocprim::plus<U>(), stream, debug_synchronous
                 )
             );
 
@@ -244,11 +257,11 @@ TYPED_TEST(RocprimDeviceReduceTests, Reduce)
 
             // Run
             HIP_CHECK(
-                rocprim::reduce(
+                rocprim::reduce<Config>(
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    input.size(), rocprim::plus<U>(), stream, debug_synchronous, size_limit
+                    input.size(), rocprim::plus<U>(), stream, debug_synchronous
                 )
             );
             HIP_CHECK(hipGetLastError());
@@ -286,7 +299,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
     using binary_op_type = typename test_utils::select_minimum_operator<U>::type;
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    static constexpr size_t size_limit = TestFixture::size_limit;
+    using Config = size_limit_config_t<TestFixture::size_limit>;
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -332,11 +345,11 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
             void * d_temp_storage = nullptr;
             // Get size of d_temp_storage
             HIP_CHECK(
-                rocprim::reduce(
+                rocprim::reduce<Config>(
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    test_utils::numeric_limits<U>::max(), input.size(), rocprim::minimum<U>(), stream, debug_synchronous, size_limit
+                    test_utils::numeric_limits<U>::max(), input.size(), rocprim::minimum<U>(), stream, debug_synchronous
                 )
             );
 
@@ -349,11 +362,11 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
 
             // Run
             HIP_CHECK(
-                rocprim::reduce(
+                rocprim::reduce<Config>(
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    test_utils::numeric_limits<U>::max(), input.size(), rocprim::minimum<U>(), stream, debug_synchronous, size_limit
+                    test_utils::numeric_limits<U>::max(), input.size(), rocprim::minimum<U>(), stream, debug_synchronous
                 )
             );
             HIP_CHECK(hipGetLastError());
@@ -422,7 +435,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
     using key_value = rocprim::key_value_pair<int, T>;
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    static constexpr size_t size_limit = TestFixture::size_limit;
+    using Config = size_limit_config_t<TestFixture::size_limit>;
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -473,11 +486,11 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
             void * d_temp_storage = nullptr;
             // Get size of d_temp_storage
             HIP_CHECK(
-                rocprim::reduce(
+                rocprim::reduce<Config>(
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    max, input.size(), reduce_op, stream, debug_synchronous, size_limit
+                    max, input.size(), reduce_op, stream, debug_synchronous
                 )
             );
 
@@ -490,11 +503,11 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
 
             // Run
             HIP_CHECK(
-                rocprim::reduce(
+                rocprim::reduce<Config>(
                     d_temp_storage, temp_storage_size_bytes,
                     d_input,
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    max, input.size(), reduce_op, stream, debug_synchronous, size_limit
+                    max, input.size(), reduce_op, stream, debug_synchronous
                 )
             );
             HIP_CHECK(hipGetLastError());
