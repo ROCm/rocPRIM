@@ -595,7 +595,6 @@ hipError_t segmented_exclusive_scan(void * temporary_storage,
                                     hipStream_t stream = 0,
                                     bool debug_synchronous = false)
 {
-    using input_type = typename std::iterator_traits<InputIterator>::value_type;
     using result_type = InitValueType;
     using flag_type = typename std::iterator_traits<HeadFlagIterator>::value_type;
     using headflag_scan_op_wrapper_type =

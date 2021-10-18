@@ -727,7 +727,7 @@ TEST(RocprimDeviceScanTests, LargeIndicesInclusiveScan)
 
     // Calculate expected results on host
     std::vector<T> expected(size);
-    test_utils::host_inclusive_scan(
+    std::partial_sum(
         input_begin,
         input_begin + size,
         expected.begin(),

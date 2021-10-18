@@ -641,7 +641,6 @@ OutputIt host_exclusive_scan(InputIt first, InputIt last,
                              T initial_value, OutputIt d_first,
                              BinaryOperation op)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
     using result_type = T;
 
     if (first == last) return d_first;
@@ -663,7 +662,6 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
                                     T initial_value, OutputIt d_first,
                                     BinaryOperation op, KeyCompare key_compare_op)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
     using result_type = T;
 
     if (first == last) return d_first;

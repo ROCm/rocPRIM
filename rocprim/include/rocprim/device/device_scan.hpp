@@ -208,7 +208,6 @@ auto scan_impl(void * temporary_storage,
                size_t size_limit)
     -> typename std::enable_if<!Config::use_lookback, hipError_t>::type
 {
-    using input_type = typename std::iterator_traits<InputIterator>::value_type;
     using result_type = InitValueType;
 
     using config = Config;
@@ -408,7 +407,6 @@ auto scan_impl(void * temporary_storage,
                size_t size_limit)
     -> typename std::enable_if<Config::use_lookback, hipError_t>::type
 {
-    using input_type = typename std::iterator_traits<InputIterator>::value_type;
     using result_type = InitValueType;
 
     using config = Config;
