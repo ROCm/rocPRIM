@@ -106,8 +106,7 @@ hipError_t reduce_impl(void * temporary_storage,
                        const size_t size,
                        BinaryFunction reduce_op,
                        const hipStream_t stream,
-                       bool debug_synchronous,
-                       size_t size_limit)
+                       bool debug_synchronous)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
     using result_type = typename ::rocprim::detail::match_result_type<
@@ -135,8 +134,8 @@ hipError_t reduce_impl(void * temporary_storage,
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
-    const auto number_of_blocks_limit
-        = std::max<size_t>((size_limit + items_per_block - 1) / items_per_block, 1);
+    static constexpr auto size_limit             = config::size_limit;
+    static constexpr auto number_of_blocks_limit = std::max<size_t>(size_limit / items_per_block, 1);
 
     auto number_of_blocks = (size + items_per_block - 1)/items_per_block;
     if(debug_synchronous)
@@ -151,7 +150,7 @@ hipError_t reduce_impl(void * temporary_storage,
     {
         // Pointer to array with block_prefixes
         result_type * block_prefixes = static_cast<result_type*>(temporary_storage);
-        const auto    aligned_size_limit = number_of_blocks_limit * items_per_block;
+        static constexpr auto aligned_size_limit = number_of_blocks_limit * items_per_block;
 
         // Launch number_of_blocks_limit blocks while there is still at least as many blocks left as the limit
         const auto number_of_launch = (size + aligned_size_limit - 1) / aligned_size_limit;
@@ -187,8 +186,7 @@ hipError_t reduce_impl(void * temporary_storage,
             number_of_blocks, // input size
             reduce_op,
             stream,
-            debug_synchronous,
-            size_limit
+            debug_synchronous
         );
         if(error != hipSuccess) return error;
         ROCPRIM_DETAIL_HIP_SYNC("nested_device_reduce", number_of_blocks, start);
@@ -253,7 +251,6 @@ hipError_t reduce_impl(void * temporary_storage,
 /// \param [in] stream - [optional] HIP stream object. The default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. The default value is \p false.
-/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \returns \p hipSuccess (\p 0) after successful reduction; otherwise a HIP runtime error of
 /// type \p hipError_t.
@@ -314,13 +311,12 @@ hipError_t reduce(void * temporary_storage,
                  const size_t size,
                  BinaryFunction reduce_op = BinaryFunction(),
                  const hipStream_t stream = 0,
-                 bool debug_synchronous = false,
-                 size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
+                 bool debug_synchronous = false)
 {
     return detail::reduce_impl<true, Config>(
         temporary_storage, storage_size,
         input, output, initial_value, size,
-        reduce_op, stream, debug_synchronous, size_limit
+        reduce_op, stream, debug_synchronous
     );
 }
 
@@ -363,7 +359,6 @@ hipError_t reduce(void * temporary_storage,
 /// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. Default value is \p false.
-/// \param [in] size_limit - [optional] Set the maximum size which handled at the same time
 ///
 /// \returns \p hipSuccess (\p 0) after successful reduction; otherwise a HIP runtime error of
 /// type \p hipError_t.
@@ -414,15 +409,14 @@ hipError_t reduce(void * temporary_storage,
                   const size_t size,
                   BinaryFunction reduce_op = BinaryFunction(),
                   const hipStream_t stream = 0,
-                  bool debug_synchronous = false,
-                  size_t size_limit = size_t(std::numeric_limits<int>::max()) + 1)
+                  bool debug_synchronous = false)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
 
     return detail::reduce_impl<false, Config>(
         temporary_storage, storage_size,
         input, output, input_type(), size,
-        reduce_op, stream, debug_synchronous, size_limit
+        reduce_op, stream, debug_synchronous
     );
 }
 
