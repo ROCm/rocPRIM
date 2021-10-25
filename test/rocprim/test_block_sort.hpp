@@ -323,7 +323,7 @@ typed_test_def(suite_name, name_suffix, CustomSortKeyValue)
 
 }
 
-/*typed_test_def(suite_name, name_suffix, SortKeysMultipleItemsPerThread)
+typed_test_def(suite_name, name_suffix, SortKeysMultipleItemsPerThread)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -336,6 +336,11 @@ typed_test_def(suite_name, name_suffix, CustomSortKeyValue)
     const size_t size = block_size * items_per_thread * 1134;
     const size_t grid_size = size / ( block_size * items_per_thread);
 
+    // Only power of two items_per_threads are supported
+    // items_per_thread is only supported if blocksize is a power of two
+    if(!is_power_of_two(items_per_thread) || !is_power_of_two(block_size))
+        GTEST_SKIP();
+
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
@@ -347,11 +352,11 @@ typed_test_def(suite_name, name_suffix, CustomSortKeyValue)
         // Calculate expected results on host
         std::vector<key_type> expected(output);
         binary_op_type binary_op;
-        for(size_t i = 0; i < output.size() / block_size; i++)
+        for(size_t i = 0; i < output.size() / block_size / items_per_thread; i++)
         {
             std::sort(
-                expected.begin() + (i * block_size),
-                expected.begin() + ((i + 1) * block_size),
+                expected.begin() + (i * block_size * items_per_thread),
+                expected.begin() + ((i + 1) * block_size * items_per_thread),
                 binary_op
             );
         }
@@ -388,4 +393,4 @@ typed_test_def(suite_name, name_suffix, CustomSortKeyValue)
 
         HIP_CHECK(hipFree(device_key_output));
     }
-}*/
+}
