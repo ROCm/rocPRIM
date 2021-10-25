@@ -76,6 +76,19 @@ public:
         );
     }
 
+    template<class BinaryFunction, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              storage_type& storage,
+              BinaryFunction compare_function)
+    {
+        this->sort_impl<BlockSize * ItemsPerThread>(
+            ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>(),
+            storage, compare_function,
+            thread_keys
+        );
+    }
+
     template<class BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void sort(Key& thread_key,
@@ -83,6 +96,15 @@ public:
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         this->sort(thread_key, storage, compare_function);
+    }
+
+    template<class BinaryFunction, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              BinaryFunction compare_function)
+    {
+        ROCPRIM_SHARED_MEMORY storage_type storage;
+        this->sort(thread_keys, storage, compare_function);
     }
 
     template<class BinaryFunction>
@@ -99,6 +121,20 @@ public:
         );
     }
 
+    template<class BinaryFunction, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              Value (&thread_values)[ItemsPerThread],
+              storage_type& storage,
+              BinaryFunction compare_function)
+    {
+        this->sort_impl<BlockSize * ItemsPerThread>(
+            ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>(),
+            storage, compare_function,
+            thread_keys, thread_values
+        );
+    }
+
     template<class BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void sort(Key& thread_key,
@@ -108,6 +144,17 @@ public:
         ROCPRIM_SHARED_MEMORY storage_type storage;
         this->sort(thread_key, thread_value, storage, compare_function);
     }
+
+    template<class BinaryFunction, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              Value (&thread_values)[ItemsPerThread],
+              BinaryFunction compare_function)
+    {
+        ROCPRIM_SHARED_MEMORY storage_type storage;
+        this->sort(thread_keys, thread_values, storage, compare_function);
+    }
+
 
     template<class BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -123,6 +170,20 @@ public:
         );
     }
 
+    template<class BinaryFunction, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              storage_type& storage,
+              const unsigned int size,
+              BinaryFunction compare_function)
+    {
+        this->sort_impl(
+            ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>(), size,
+            storage, compare_function,
+            thread_keys
+        );
+    }
+
     template<class BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void sort(Key& thread_key,
@@ -135,6 +196,21 @@ public:
             ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>(), size,
             storage, compare_function,
             thread_key, thread_value
+        );
+    }
+
+    template<class BinaryFunction, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              Value (&thread_values)[ItemsPerThread],
+              storage_type& storage,
+              const unsigned int size,
+              BinaryFunction compare_function)
+    {
+        this->sort_impl(
+            ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>(), size,
+            storage, compare_function,
+            thread_keys, thread_values
         );
     }
 
@@ -285,6 +361,44 @@ private:
                 warp_swap(kv..., k, local_dir, compare_function);
             }
         }
+    }
+
+    template<
+        unsigned int Size,
+        unsigned int ItemsPerThread,
+        class BinaryFunction
+    >
+    ROCPRIM_DEVICE inline
+    typename std::enable_if<(Size > ::rocprim::device_warp_size() * ItemsPerThread)>::type
+    sort_power_two(const unsigned int flat_tid,
+                   storage_type& storage,
+                   BinaryFunction compare_function,
+                   Key (&keys)[ItemsPerThread])
+    {
+        (void) flat_tid;
+        (void) storage;
+        (void) compare_function;
+        (void) keys;
+    }
+
+    template<
+        unsigned int Size,
+        unsigned int ItemsPerThread,
+        class BinaryFunction
+    >
+    ROCPRIM_DEVICE inline
+    typename std::enable_if<(Size > ::rocprim::device_warp_size() * ItemsPerThread)>::type
+    sort_power_two(const unsigned int flat_tid,
+                   storage_type& storage,
+                   BinaryFunction compare_function,
+                   Key (&keys)[ItemsPerThread],
+                   Value (&values)[ItemsPerThread])
+    {
+        (void) flat_tid;
+        (void) storage;
+        (void) compare_function;
+        (void) keys;
+        (void) values;
     }
 
     template<

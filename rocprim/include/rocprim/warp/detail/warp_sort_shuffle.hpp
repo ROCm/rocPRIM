@@ -69,6 +69,56 @@ private:
         }
     }
 
+    template<
+        int warp,
+        class V,
+        class BinaryFunction,
+        unsigned int ItemsPerThread
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<!(WarpSize > warp)>::type
+    swap(Key (&k)[ItemsPerThread],
+         V (&v)[ItemsPerThread],
+         int mask,
+         bool dir,
+         BinaryFunction compare_function)
+    {
+        (void) k;
+        (void) v;
+        (void) mask;
+        (void) dir;
+        (void) compare_function;
+    }
+
+    template<
+        int warp,
+        class V,
+        class BinaryFunction,
+        unsigned int ItemsPerThread
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<(WarpSize > warp)>::type
+    swap(Key (&k)[ItemsPerThread],
+         V (&v)[ItemsPerThread],
+         int mask,
+         bool dir,
+         BinaryFunction compare_function)
+    {
+        Key k1[ItemsPerThread];
+        ROCPRIM_UNROLL
+        for (unsigned int item = 0; item < ItemsPerThread; item++)
+        {
+           k1[item]= warp_shuffle_xor(k[item], mask, WarpSize);
+           //V v1 = warp_shuffle_xor(v, mask, WarpSize);
+           bool swap = compare_function(dir ? k[item] : k1[item], dir ? k1[item] : k[item]);
+           if (swap)
+           {
+               k[item] = k1[item];
+               v[item] = warp_shuffle_xor(v[item], mask, WarpSize);
+           }
+        }
+    }
+
     template<int warp, class BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     typename std::enable_if<!(WarpSize > warp)>::type
@@ -93,7 +143,86 @@ private:
         }
     }
 
+    template<
+        int warp,
+        class BinaryFunction,
+        unsigned int ItemsPerThread
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<!(WarpSize > warp)>::type
+    swap(Key (&k)[ItemsPerThread], int mask, bool dir, BinaryFunction compare_function)
+    {
+        (void) k;
+        (void) mask;
+        (void) dir;
+        (void) compare_function;
+    }
+
+    template<
+        int warp,
+        class BinaryFunction,
+        unsigned int ItemsPerThread
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<(WarpSize > warp)>::type
+    swap(Key (&k)[ItemsPerThread], int mask, bool dir, BinaryFunction compare_function)
+    {
+        Key k1[ItemsPerThread];
+        ROCPRIM_UNROLL
+        for (unsigned int item = 0; item < ItemsPerThread; item++)
+        {
+            k1[item]= warp_shuffle_xor(k[item], mask, WarpSize);
+            bool swap = compare_function(dir ? k[item] : k1[item], dir ? k1[item] : k[item]);
+            if (swap)
+            {
+                k[item] = k1[item];
+            }
+        }
+    }
+
     template<class BinaryFunction, class... KeyValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void bitonic_sort(BinaryFunction compare_function, KeyValue&... kv)
+    {
+        static_assert(
+            sizeof...(KeyValue) < 3,
+            "KeyValue parameter pack can 1 or 2 elements (key, or key and value)"
+        );
+
+        unsigned int id = detail::logical_lane_id<WarpSize>();
+        swap< 2>(kv..., 1, get_bit(id, 1) != get_bit(id, 0), compare_function);
+
+        swap< 4>(kv..., 2, get_bit(id, 2) != get_bit(id, 1), compare_function);
+        swap< 4>(kv..., 1, get_bit(id, 2) != get_bit(id, 0), compare_function);
+
+        swap< 8>(kv..., 4, get_bit(id, 3) != get_bit(id, 2), compare_function);
+        swap< 8>(kv..., 2, get_bit(id, 3) != get_bit(id, 1), compare_function);
+        swap< 8>(kv..., 1, get_bit(id, 3) != get_bit(id, 0), compare_function);
+
+        swap<16>(kv..., 8, get_bit(id, 4) != get_bit(id, 3), compare_function);
+        swap<16>(kv..., 4, get_bit(id, 4) != get_bit(id, 2), compare_function);
+        swap<16>(kv..., 2, get_bit(id, 4) != get_bit(id, 1), compare_function);
+        swap<16>(kv..., 1, get_bit(id, 4) != get_bit(id, 0), compare_function);
+
+        swap<32>(kv..., 16, get_bit(id, 5) != get_bit(id, 4), compare_function);
+        swap<32>(kv..., 8,  get_bit(id, 5) != get_bit(id, 3), compare_function);
+        swap<32>(kv..., 4,  get_bit(id, 5) != get_bit(id, 2), compare_function);
+        swap<32>(kv..., 2,  get_bit(id, 5) != get_bit(id, 1), compare_function);
+        swap<32>(kv..., 1,  get_bit(id, 5) != get_bit(id, 0), compare_function);
+
+        swap<32>(kv..., 32, get_bit(id, 5) != 0, compare_function);
+        swap<16>(kv..., 16, get_bit(id, 4) != 0, compare_function);
+        swap< 8>(kv..., 8,  get_bit(id, 3) != 0, compare_function);
+        swap< 4>(kv..., 4,  get_bit(id, 2) != 0, compare_function);
+        swap< 2>(kv..., 2,  get_bit(id, 1) != 0, compare_function);
+        swap< 0>(kv..., 1,  get_bit(id, 0) != 0, compare_function);
+    }
+
+    template<
+        unsigned int ItemsPerThread,
+        class BinaryFunction,
+        class... KeyValue
+    >
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void bitonic_sort(BinaryFunction compare_function, KeyValue&... kv)
     {
@@ -153,6 +282,31 @@ public:
         sort(thread_value, compare_function);
     }
 
+    template<
+        unsigned int ItemsPerThread,
+        class BinaryFunction
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void sort(Key (&thread_values)[ItemsPerThread],
+              BinaryFunction compare_function)
+    {
+        // sort by value only
+        bitonic_sort(compare_function, thread_values);
+    }
+
+    template<
+        unsigned int ItemsPerThread,
+        class BinaryFunction
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void sort(Key (&thread_values)[ItemsPerThread],
+              storage_type& storage,
+              BinaryFunction compare_function)
+    {
+        (void) storage;
+        sort(thread_values, compare_function);
+    }
+
     template<class BinaryFunction, class V = Value>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     typename std::enable_if<(sizeof(V) <= sizeof(int))>::type
@@ -181,6 +335,61 @@ public:
     {
         (void) storage;
         sort(compare_function, thread_key, thread_value);
+    }
+
+    template<
+        unsigned int ItemsPerThread,
+        class BinaryFunction,
+        class V = Value
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<(sizeof(V) <= sizeof(int))>::type
+    sort(Key (&thread_keys)[ItemsPerThread],
+         Value (&thread_values)[ItemsPerThread],
+         BinaryFunction compare_function)
+    {
+        bitonic_sort(compare_function, thread_keys, thread_values);
+    }
+
+    template<
+        unsigned int ItemsPerThread,
+        class BinaryFunction,
+        class V = Value
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<!(sizeof(V) <= sizeof(int))>::type
+    sort(Key (&thread_keys)[ItemsPerThread],
+         Value (&thread_values)[ItemsPerThread],
+         BinaryFunction compare_function)
+    {
+        // Instead of passing large values between lanes we pass indices and gather values after sorting.
+        unsigned int v[ItemsPerThread];
+        ROCPRIM_UNROLL
+        for (unsigned int item = 0; item < ItemsPerThread; item++)
+        {
+            v[item] = detail::logical_lane_id<WarpSize>();
+        }
+
+        bitonic_sort(compare_function, thread_keys, v);
+
+        ROCPRIM_UNROLL
+        for (unsigned int item = 0; item < ItemsPerThread; item++)
+        {
+            thread_values[item] = warp_shuffle(thread_values[item], v[item], WarpSize);
+        }
+    }
+
+    template<
+        unsigned int ItemsPerThread,
+        class BinaryFunction
+    >
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              Value (&thread_values)[ItemsPerThread],
+              storage_type& storage, BinaryFunction compare_function)
+    {
+        (void) storage;
+        sort(compare_function, thread_keys, thread_values);
     }
 };
 

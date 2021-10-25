@@ -147,6 +147,17 @@ public:
         base_type::sort(thread_key, compare_function);
     }
 
+    template<
+        unsigned int ItemsPerThread = 1,
+        class BinaryFunction = ::rocprim::less<Key>
+    >
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              BinaryFunction compare_function = BinaryFunction())
+    {
+        base_type::sort(thread_keys, compare_function);
+    }
+
     /// \brief Block sort for any data type.
     ///
     /// \tparam BinaryFunction - type of binary function used for sort. Default type
@@ -197,6 +208,18 @@ public:
         base_type::sort(thread_key, storage, compare_function);
     }
 
+    template<
+        unsigned int ItemsPerThread = 1,
+        class BinaryFunction = ::rocprim::less<Key>
+    >
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              storage_type& storage,
+              BinaryFunction compare_function = BinaryFunction())
+    {
+        base_type::sort(thread_keys, storage, compare_function);
+    }
+
     /// \brief Block sort by key for any data type.
     ///
     /// \tparam BinaryFunction - type of binary function used for sort. Default type
@@ -216,6 +239,18 @@ public:
               BinaryFunction compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, thread_value, compare_function);
+    }
+
+    template<
+        unsigned int ItemsPerThread = 1,
+        class BinaryFunction = ::rocprim::less<Key>
+    >
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              Value (&thread_values)[ItemsPerThread],
+              BinaryFunction compare_function = BinaryFunction())
+    {
+        base_type::sort(thread_keys, thread_values, compare_function);
     }
 
     /// \brief Block sort by key for any data type.
@@ -268,6 +303,19 @@ public:
               BinaryFunction compare_function = BinaryFunction())
     {
         base_type::sort(thread_key, thread_value, storage, compare_function);
+    }
+
+    template<
+        unsigned int ItemsPerThread = 1,
+        class BinaryFunction = ::rocprim::less<Key>
+    >
+    ROCPRIM_DEVICE inline
+    void sort(Key (&thread_keys)[ItemsPerThread],
+              Value (&thread_values)[ItemsPerThread],
+              storage_type& storage,
+              BinaryFunction compare_function = BinaryFunction())
+    {
+        base_type::sort(thread_keys, thread_values, storage, compare_function);
     }
 
     /// \brief Block sort by key for any data type. If \p size is

@@ -38,6 +38,27 @@ void sort_key_kernel(key_type * device_key_output)
     device_key_output[index] = key;
 }
 
+template<
+    unsigned int BlockSize,
+    unsigned int ItemsPerThread,
+    class key_type
+>
+__global__
+__launch_bounds__(BlockSize)
+void sort_keys_kernel(key_type * device_key_output)
+{
+    const unsigned int lid = threadIdx.x;
+    const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
+
+    key_type keys[ItemsPerThread];
+    ::rocprim::block_load_direct_striped<BlockSize>(lid, device_key_output + block_offset, keys);
+
+    ::rocprim::block_sort<key_type, BlockSize> sort;
+    sort.sort(keys);
+
+    ::rocprim::block_store_direct_striped<BlockSize>(lid, device_key_output + block_offset, keys);
+}
+
 template<class Key, class Value>
 struct pair_comparator
 {
