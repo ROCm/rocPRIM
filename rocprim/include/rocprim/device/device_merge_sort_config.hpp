@@ -33,11 +33,25 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
+namespace detail
+{
+    template <unsigned int SortBlockSize,
+              unsigned int SortItemsPerThread,
+              unsigned int MergeBlockSize>
+    struct merge_sort_config_impl
+    {
+        using sort_config  = kernel_config<SortBlockSize, SortItemsPerThread>;
+        using merge_config = kernel_config<MergeBlockSize, 1>;
+    };
+}
+
 /// \brief Configuration of device-level merge primitives.
 ///
-/// \tparam BlockSize - block size used in merge sort.
-template<unsigned int BlockSize>
-using merge_sort_config = kernel_config<BlockSize, 1>;
+/// \tparam SortBlockSize - block size in the block-sort step
+/// \tparam SortItemsPerThread - ItemsPerThread in the block-sort step
+/// \tparam MergeBlockSize - block size in the block merge step
+template <unsigned int MergeBlockSize, unsigned int SortBlockSize = MergeBlockSize, unsigned int SortItemsPerThread = 1>
+using merge_sort_config = detail::merge_sort_config_impl<SortBlockSize, SortItemsPerThread, MergeBlockSize>;
 
 namespace detail
 {
