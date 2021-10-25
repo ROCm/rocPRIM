@@ -180,6 +180,97 @@ private:
         }
     }
 
+    template <unsigned int ItemsPerThread, class BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void thread_swap(Key (&k)[ItemsPerThread],
+                     unsigned int   i,
+                     unsigned int   j,
+                     bool           dir,
+                     BinaryFunction compare_function)
+    {
+        if(compare_function(dir ? k[i] : k[j], dir ? k[j] : k[i]))
+        {
+            Key temp = k[i];
+            k[i]     = k[j];
+            k[j]     = temp;
+        }
+    }
+
+    template <unsigned int ItemsPerThread, class V, class BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void thread_swap(Key (&k)[ItemsPerThread],
+                     V   (&v)[ItemsPerThread],
+                     unsigned int   i,
+                     unsigned int   j,
+                     bool           dir,
+                     BinaryFunction compare_function)
+    {
+        if(compare_function(dir ? k[i] : k[j], dir ? k[j] : k[i]))
+        {
+            Key k_temp = k[i];
+            k[i]       = k[j];
+            k[j]       = k_temp;
+            V v_temp   = v[i];
+            v[i]       = v[j];
+            v[j]       = v_temp;
+        }
+    }
+
+    template <unsigned int ItemsPerThread, class BinaryFunction, class... KeyValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void thread_shuffle(unsigned int   group_size,
+                        unsigned int   offset,
+                        bool           dir,
+                        BinaryFunction compare_function,
+                        KeyValue&...   kv)
+    {
+        ROCPRIM_UNROLL
+        for(unsigned int base = 0; base < ItemsPerThread; base += 2 * offset) {
+            // The local direction must change every group_size items
+            // and is flipped if dir is true
+            const bool local_dir = ((base & group_size) > 0) != dir;
+
+            ROCPRIM_UNROLL
+            for(unsigned i = 0; i < offset; ++i) {
+                thread_swap(kv..., base + i, base + i + offset, local_dir, compare_function);
+            }
+        }
+    }
+
+    template <unsigned int ItemsPerThread, class BinaryFunction, class... KeyValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE 
+    void thread_sort(bool dir, BinaryFunction compare_function, KeyValue&... kv)
+    {
+        ROCPRIM_UNROLL
+        for(unsigned int k = 2; k <= ItemsPerThread; k *= 2)
+        {
+            ROCPRIM_UNROLL
+            for(unsigned int j = k / 2; j > 0; j /= 2)
+            {
+                thread_shuffle<ItemsPerThread>(k, j, dir, compare_function, kv...);
+            }
+        }
+    }
+
+    template <int warp, unsigned int ItemsPerThread, class BinaryFunction, class... KeyValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<(WarpSize > warp)>::type
+    thread_merge(bool dir, BinaryFunction compare_function, KeyValue&... kv)
+    {
+        ROCPRIM_UNROLL
+        for(unsigned int j = ItemsPerThread / 2; j > 0; j /= 2)
+        {
+            thread_shuffle<ItemsPerThread>(ItemsPerThread, j, dir, compare_function, kv...);
+        }
+    }
+
+    template <int warp, unsigned int ItemsPerThread, class BinaryFunction, class... KeyValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::enable_if<!(WarpSize > warp)>::type
+    thread_merge(bool /*dir*/, BinaryFunction /*compare_function*/, KeyValue&... /*kv*/)
+    {
+    }
+
     template<class BinaryFunction, class... KeyValue>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void bitonic_sort(BinaryFunction compare_function, KeyValue&... kv)
@@ -231,26 +322,35 @@ private:
             "KeyValue parameter pack can 1 or 2 elements (key, or key and value)"
         );
 
+        static_assert(detail::is_power_of_two(ItemsPerThread), "ItemsPerThread must be power of 2");
+
         unsigned int id = detail::logical_lane_id<WarpSize>();
+        thread_sort<ItemsPerThread>(get_bit(id, 0) != 0, compare_function, kv...);
+
         swap< 2>(kv..., 1, get_bit(id, 1) != get_bit(id, 0), compare_function);
+        thread_merge<2, ItemsPerThread>(get_bit(id, 1) != 0, compare_function, kv...);
 
         swap< 4>(kv..., 2, get_bit(id, 2) != get_bit(id, 1), compare_function);
         swap< 4>(kv..., 1, get_bit(id, 2) != get_bit(id, 0), compare_function);
+        thread_merge<4, ItemsPerThread>(get_bit(id, 2) != 0, compare_function, kv...);
 
         swap< 8>(kv..., 4, get_bit(id, 3) != get_bit(id, 2), compare_function);
         swap< 8>(kv..., 2, get_bit(id, 3) != get_bit(id, 1), compare_function);
         swap< 8>(kv..., 1, get_bit(id, 3) != get_bit(id, 0), compare_function);
+        thread_merge<8, ItemsPerThread>(get_bit(id, 3) != 0, compare_function, kv...);
 
         swap<16>(kv..., 8, get_bit(id, 4) != get_bit(id, 3), compare_function);
         swap<16>(kv..., 4, get_bit(id, 4) != get_bit(id, 2), compare_function);
         swap<16>(kv..., 2, get_bit(id, 4) != get_bit(id, 1), compare_function);
         swap<16>(kv..., 1, get_bit(id, 4) != get_bit(id, 0), compare_function);
+        thread_merge<16, ItemsPerThread>(get_bit(id, 4) != 0, compare_function, kv...);
 
         swap<32>(kv..., 16, get_bit(id, 5) != get_bit(id, 4), compare_function);
         swap<32>(kv..., 8,  get_bit(id, 5) != get_bit(id, 3), compare_function);
         swap<32>(kv..., 4,  get_bit(id, 5) != get_bit(id, 2), compare_function);
         swap<32>(kv..., 2,  get_bit(id, 5) != get_bit(id, 1), compare_function);
         swap<32>(kv..., 1,  get_bit(id, 5) != get_bit(id, 0), compare_function);
+        thread_merge<32, ItemsPerThread>(get_bit(id, 5) != 0, compare_function, kv...);
 
         swap<32>(kv..., 32, get_bit(id, 5) != 0, compare_function);
         swap<16>(kv..., 16, get_bit(id, 4) != 0, compare_function);
@@ -258,6 +358,7 @@ private:
         swap< 4>(kv..., 4,  get_bit(id, 2) != 0, compare_function);
         swap< 2>(kv..., 2,  get_bit(id, 1) != 0, compare_function);
         swap< 0>(kv..., 1,  get_bit(id, 0) != 0, compare_function);
+        thread_merge<1, ItemsPerThread>(false, compare_function, kv...);
     }
 
 public:
@@ -291,7 +392,7 @@ public:
               BinaryFunction compare_function)
     {
         // sort by value only
-        bitonic_sort(compare_function, thread_values);
+        bitonic_sort<ItemsPerThread>(compare_function, thread_values);
     }
 
     template<
@@ -348,7 +449,7 @@ public:
          Value (&thread_values)[ItemsPerThread],
          BinaryFunction compare_function)
     {
-        bitonic_sort(compare_function, thread_keys, thread_values);
+        bitonic_sort<ItemsPerThread>(compare_function, thread_keys, thread_values);
     }
 
     template<
@@ -367,15 +468,25 @@ public:
         ROCPRIM_UNROLL
         for (unsigned int item = 0; item < ItemsPerThread; item++)
         {
-            v[item] = detail::logical_lane_id<WarpSize>();
+            v[item] = ItemsPerThread * detail::logical_lane_id<WarpSize>() + item;
         }
 
-        bitonic_sort(compare_function, thread_keys, v);
+        bitonic_sort<ItemsPerThread>(compare_function, thread_keys, v);
+
+        V copy[ItemsPerThread];
+        ROCPRIM_UNROLL
+        for(unsigned item = 0; item < ItemsPerThread; ++item) {
+            copy[item] = thread_values[item];
+        }
 
         ROCPRIM_UNROLL
-        for (unsigned int item = 0; item < ItemsPerThread; item++)
-        {
-            thread_values[item] = warp_shuffle(thread_values[item], v[item], WarpSize);
+        for(unsigned int dst_item = 0; dst_item < ItemsPerThread; ++dst_item) {
+            ROCPRIM_UNROLL
+            for(unsigned src_item = 0; src_item < ItemsPerThread; ++src_item) {
+                V temp = warp_shuffle(copy[src_item], v[dst_item] / ItemsPerThread, WarpSize);
+                if(v[dst_item] % ItemsPerThread == src_item)
+                    thread_values[dst_item] = temp;
+            }
         }
     }
 

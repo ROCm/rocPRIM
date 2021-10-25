@@ -44,7 +44,9 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
     static constexpr size_t block_size = std::max<size_t>(256U, logical_warp_size * 4);
 
     static constexpr unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size = items_per_thread * block_size * grid_size;
+
+    SCOPED_TRACE(testing::Message() << "with size= " << size);
 
     // Check if warp size is supported
     if( logical_warp_size > current_device_warp_size ||
@@ -67,9 +69,11 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
         // Calculate expected results on host
         std::vector<T> expected(output);
         binary_op_type binary_op;
-        for(size_t i = 0; i < output.size() / logical_warp_size; i++)
+        for(size_t i = 0; i < output.size() / logical_warp_size / items_per_thread; i++)
         {
-            std::sort(expected.begin() + (i * logical_warp_size), expected.begin() + ((i + 1) * logical_warp_size), binary_op);
+            std::sort(expected.begin() + (i * logical_warp_size * items_per_thread),
+                      expected.begin() + ((i + 1) * logical_warp_size * items_per_thread),
+                      binary_op);
         }
 
         // Writing to device memory
@@ -136,7 +140,9 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
     static constexpr size_t block_size = std::max<size_t>(256U, logical_warp_size * 4);
 
     static constexpr unsigned int grid_size = 4;
-    const size_t size = block_size * grid_size;
+    const size_t size = items_per_thread * block_size * grid_size;
+
+    SCOPED_TRACE(testing::Message() << "with size= " << size);
 
     // Check if warp size is supported
     if( logical_warp_size > current_device_warp_size ||
@@ -167,11 +173,10 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
 
         // Calculate expected results on host
         std::vector<pair> expected(target);
-        for(size_t i = 0; i < expected.size() / logical_warp_size; i++)
+        for(size_t i = 0; i < expected.size() / logical_warp_size / items_per_thread; i++)
         {
-            std::sort(expected.begin() + (i * logical_warp_size),
-                    expected.begin() + ((i + 1) * logical_warp_size)
-            );
+            std::sort(expected.begin() + (i * logical_warp_size * items_per_thread),
+                      expected.begin() + ((i + 1) * logical_warp_size * items_per_thread));
         }
 
         // Writing to device memory

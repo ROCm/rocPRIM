@@ -30,7 +30,7 @@ template<
     class T
 >
 __global__
-__launch_bounds__(LogicalWarpSize)
+__launch_bounds__(BlockSize)
 auto test_hip_warp_sort(T* d_output)
     -> typename std::enable_if<
         ItemsPerThread == 1 , void
@@ -51,7 +51,7 @@ template<
     class ValueType
 >
 __global__
-__launch_bounds__(LogicalWarpSize)
+__launch_bounds__(BlockSize)
 auto test_hip_sort_key_value_kernel(KeyType* d_output_key, ValueType* d_output_value)
     -> typename std::enable_if<
         ItemsPerThread == 1 , void
@@ -73,22 +73,39 @@ template<
     class KeyType
 >
 __global__
-__launch_bounds__(LogicalWarpSize)
+__launch_bounds__(BlockSize)
 auto test_hip_warp_sort(KeyType * device_key_output)
     -> typename std::enable_if<
-        ItemsPerThread != 1 , void
+        (ItemsPerThread != 1 && LogicalWarpSize <= ::rocprim::device_warp_size()) , void
     >::type
 {
     const unsigned int lid = threadIdx.x;
     const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
 
     KeyType keys[ItemsPerThread];
-    ::rocprim::block_load_direct_striped<BlockSize>(lid, device_key_output + block_offset, keys);
+    ::rocprim::block_load_direct_warp_striped<LogicalWarpSize>(lid, device_key_output + block_offset, keys);
 
     rocprim::warp_sort<KeyType, LogicalWarpSize> wsort;
     wsort.sort(keys);
 
-    ::rocprim::block_store_direct_striped<BlockSize>(lid, device_key_output + block_offset, keys);
+    ::rocprim::block_store_direct_blocked(lid, device_key_output + block_offset, keys);
+}
+
+template<
+    unsigned int ItemsPerThread,
+    unsigned int BlockSize,
+    unsigned int LogicalWarpSize,
+    class KeyType
+>
+__global__
+__launch_bounds__(BlockSize)
+auto test_hip_warp_sort(KeyType* /*device_key_output*/)
+    -> typename std::enable_if<
+        (ItemsPerThread != 1 && LogicalWarpSize > ::rocprim::device_warp_size()), void
+    >::type
+{
+    // This kernel will never be actually called, the tests are filtered at runtime if the warp size
+    // of the current device is less than the tested LogicalWarpSize
 }
 
 template<
@@ -99,10 +116,10 @@ template<
     class ValueType
 >
 __global__
-__launch_bounds__(LogicalWarpSize)
+__launch_bounds__(BlockSize)
 auto test_hip_sort_key_value_kernel(KeyType* device_key_output, ValueType* device_value_output)
     -> typename std::enable_if<
-        ItemsPerThread != 1 , void
+        (ItemsPerThread != 1 && LogicalWarpSize <= ::rocprim::device_warp_size()), void
     >::type
 {
     const unsigned int lid = threadIdx.x;
@@ -110,15 +127,33 @@ auto test_hip_sort_key_value_kernel(KeyType* device_key_output, ValueType* devic
 
     KeyType keys[ItemsPerThread];
     ValueType values[ItemsPerThread];
-    ::rocprim::block_load_direct_striped<BlockSize>(lid, device_key_output + block_offset, keys);
-    ::rocprim::block_load_direct_striped<BlockSize>(lid, device_value_output + block_offset, values);
+    ::rocprim::block_load_direct_warp_striped<LogicalWarpSize>(lid, device_key_output + block_offset, keys);
+    ::rocprim::block_load_direct_warp_striped<LogicalWarpSize>(lid, device_value_output + block_offset, values);
 
     rocprim::warp_sort<KeyType, LogicalWarpSize, ValueType> wsort;
     wsort.sort(keys, values);
 
-    ::rocprim::block_store_direct_striped<BlockSize>(lid, device_key_output + block_offset, keys);
-    ::rocprim::block_store_direct_striped<BlockSize>(lid, device_value_output + block_offset, values);
+    ::rocprim::block_store_direct_blocked(lid, device_key_output + block_offset, keys);
+    ::rocprim::block_store_direct_blocked(lid, device_value_output + block_offset, values);
 
+}
+
+template<
+    unsigned int ItemsPerThread,
+    unsigned int BlockSize,
+    unsigned int LogicalWarpSize,
+    class KeyType,
+    class ValueType
+>
+__global__
+__launch_bounds__(BlockSize)
+auto test_hip_sort_key_value_kernel(KeyType* /*device_key_output*/, ValueType* /*device_value_output*/)
+    -> typename std::enable_if<
+        (ItemsPerThread != 1 && LogicalWarpSize > ::rocprim::device_warp_size()), void
+    >::type
+{
+    // This kernel will never be actually called, the tests are filtered at runtime if the warp size
+    // of the current device is less than the tested LogicalWarpSize
 }
 
 #endif // TEST_WARP_SORT_KERNELS_HPP_
