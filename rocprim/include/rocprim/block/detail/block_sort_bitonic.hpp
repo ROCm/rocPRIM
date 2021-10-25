@@ -51,14 +51,14 @@ class block_sort_bitonic
     template<class KeyType, class ValueType>
     struct storage_type_
     {
-        KeyType   key[ItemsPerThread][BlockSize];
-        ValueType value[ItemsPerThread][BlockSize];
+        KeyType   key[BlockSize * ItemsPerThread];
+        ValueType value[BlockSize * ItemsPerThread];
     };
 
     template<class KeyType>
     struct storage_type_<KeyType, empty_type>
     {
-        KeyType key[ItemsPerThread][BlockSize];
+        KeyType key[BlockSize * ItemsPerThread];
     };
 
 public:
@@ -178,7 +178,7 @@ private:
     void copy_to_shared(Key& k, const unsigned int flat_tid, storage_type& storage)
     {
         storage_type_<Key, Value>& storage_ = storage.get();
-        storage_.key[0][flat_tid] = k;
+        storage_.key[flat_tid] = k;
         ::rocprim::syncthreads();
     }
 
@@ -187,7 +187,7 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            storage_.key[item][flat_tid] = k[item];
+            storage_.key[ItemsPerThread * flat_tid + item] = k[item];
         }
         ::rocprim::syncthreads();
     }
@@ -196,8 +196,8 @@ private:
     void copy_to_shared(Key& k, Value& v, const unsigned int flat_tid, storage_type& storage)
     {
         storage_type_<Key, Value>& storage_ = storage.get();
-        storage_.key[0][flat_tid] = k;
-        storage_.value[0][flat_tid] = v;
+        storage_.key[flat_tid] = k;
+        storage_.value[flat_tid] = v;
         ::rocprim::syncthreads();
     }
 
@@ -210,8 +210,8 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            storage_.key[item][flat_tid]   = k[item];
-            storage_.value[item][flat_tid] = v[item];
+            storage_.key[ItemsPerThread * flat_tid + item]   = k[item];
+            storage_.value[ItemsPerThread * flat_tid + item] = v[item];
         }
         ::rocprim::syncthreads();
     }
@@ -226,7 +226,7 @@ private:
               BinaryFunction compare_function)
     {
         storage_type_<Key, Value>& storage_ = storage.get();
-        Key next_key = storage_.key[0][next_id];
+        Key next_key = storage_.key[next_id];
         bool compare = (next_id < flat_tid) ? compare_function(key, next_key) : compare_function(next_key, key);
         bool swap = compare ^ dir;
         if(swap)
@@ -247,7 +247,7 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            Key next_key = storage_.key[item][next_id];
+            Key next_key = storage_.key[ItemsPerThread * next_id + item];
             bool compare = (next_id < flat_tid) ? compare_function(key[item], next_key) : compare_function(next_key, key[item]);
             bool swap = compare ^ dir;
             if(swap)
@@ -268,14 +268,14 @@ private:
               BinaryFunction compare_function)
     {
         storage_type_<Key, Value>& storage_ = storage.get();
-        Key next_key = storage_.key[0][next_id];
+        Key next_key = storage_.key[next_id];
         bool b = next_id < flat_tid;
         bool compare = compare_function(b ? key : next_key, b ? next_key : key);
         bool swap = compare ^ dir;
         if(swap)
         {
             key = next_key;
-            value = storage_.value[0][next_id];
+            value = storage_.value[next_id];
         }
     }
 
@@ -292,14 +292,14 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            Key next_key = storage_.key[item][next_id];
+            Key next_key = storage_.key[ItemsPerThread * next_id + item];
             bool b = next_id < flat_tid;
             bool compare = compare_function(b ? key[item] : next_key, b ? next_key : key[item]);
             bool swap = compare ^ dir;
             if(swap)
             {
                 key[item]   = next_key;
-                value[item] = storage_.value[item][next_id];
+                value[item] = storage_.value[ItemsPerThread  * next_id + item];
             }
         }
     }
