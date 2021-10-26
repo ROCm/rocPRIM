@@ -108,7 +108,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
     using scan_op_type = typename TestFixture::params::scan_op_type;
     static constexpr bool use_identity_iterator =
         TestFixture::params::use_identity_iterator;
-    using result_type = input_type;
+    using result_type = output_type;
 
     using offset_type = unsigned int;
     const bool debug_synchronous = false;
