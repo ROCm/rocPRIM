@@ -671,12 +671,40 @@ constexpr T host_reduce(InputIt first, InputIt last, rocprim::plus<T> op)
     return expected;
 }
 
+// Can't use std::prefix_sum for inclusive/exclusive scan, because
+// it does not handle short[] -> int(int a, int b) { a + b; } -> int[]
+// they way we expect. That's because sum in std::prefix_sum's implementation
+// is of type typename std::iterator_traits<InputIt>::value_type (short)
+template<class InputIt, class OutputIt, class BinaryOperation>
+OutputIt host_inclusive_scan(InputIt first, InputIt last,
+                             OutputIt d_first, BinaryOperation op)
+{
+    using input_type = typename std::iterator_traits<InputIt>::value_type;
+    using result_type = typename ::rocprim::detail::match_result_type<
+        input_type, BinaryOperation
+    >::type;
+
+    if (first == last) return d_first;
+
+    result_type sum = *first;
+    *d_first = sum;
+
+    while (++first != last) {
+       sum = op(sum, *first);
+       *++d_first = sum;
+    }
+    return ++d_first;
+}
+
 template<class InputIt, class T, class OutputIt, class BinaryOperation>
 OutputIt host_exclusive_scan(InputIt first, InputIt last,
                              T initial_value, OutputIt d_first,
                              BinaryOperation op)
 {
-    using result_type = T;
+    using input_type = typename std::iterator_traits<InputIt>::value_type;
+    using result_type = typename ::rocprim::detail::match_result_type<
+        input_type, BinaryOperation
+    >::type;
 
     if (first == last) return d_first;
 
@@ -697,7 +725,10 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
                                     T initial_value, OutputIt d_first,
                                     BinaryOperation op, KeyCompare key_compare_op)
 {
-    using result_type = T;
+    using input_type = typename std::iterator_traits<InputIt>::value_type;
+    using result_type = typename ::rocprim::detail::match_result_type<
+        input_type, BinaryOperation
+    >::type;
 
     if (first == last) return d_first;
 
@@ -706,7 +737,7 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
 
     while ((first+1) != last)
     {
-        if(key_compare_op(*k_first, *(k_first+1)))
+        if(key_compare_op(*k_first, *++k_first))
         {
             sum = op(sum, *first);
         }
@@ -714,7 +745,6 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
         {
             sum = initial_value;
         }
-	k_first++;
         *++d_first = sum;
         first++;
     }
