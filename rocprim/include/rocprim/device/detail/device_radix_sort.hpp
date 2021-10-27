@@ -824,7 +824,7 @@ struct radix_merge_compare<false, false, T>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     bool operator()(const T& a, const T& b) const
     {
-        return b > a;
+        return std::isnan(b) || b > a;
     }
 };
 
@@ -834,7 +834,7 @@ struct radix_merge_compare<true, false, T>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     bool operator()(const T& a, const T& b) const
     {
-        return a > b;
+        return std::isnan(a) || a > b;
     }
 };
 
@@ -898,7 +898,7 @@ struct radix_merge_compare<false, false, rocprim::half>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     bool operator()(const rocprim::half& a, const rocprim::half& b) const
     {
-        return __hgt(b, a);
+        return __hisnan(b) || __hgt(b, a);
     }
 };
 
@@ -908,7 +908,7 @@ struct radix_merge_compare<true, false, rocprim::half>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     bool operator()(const rocprim::half& a, const rocprim::half& b) const
     {
-        return __hgt(a, b);
+        return __hisnan(a) || __hgt(a, b);
     }
 };
 
