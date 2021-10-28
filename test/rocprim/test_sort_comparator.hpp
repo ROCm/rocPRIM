@@ -157,6 +157,20 @@
 // NOTE: ShiftLess helper is needed, because partial specializations cannot refer to the free template args.
 //       See: https://stackoverflow.com/questions/2615905/c-template-nontype-parameter-arithmetic
 
+template<class T>
+auto is_floating_nan_host(const T& a)
+    -> typename std::enable_if<rocprim::is_floating_point<T>::value, bool>::type
+{
+    return a != a;
+}
+
+template<class T>
+auto is_floating_nan_host(const T&)
+    -> typename std::enable_if<!rocprim::is_floating_point<T>::value, bool>::type
+{
+    return false;
+}
+
 template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit, bool ShiftLess = (StartBit == 0 && EndBit == sizeof(Key) * 8)>
 struct key_comparator
 {
@@ -167,7 +181,7 @@ struct key_comparator
         auto mask = (1ull << (EndBit - StartBit)) - 1;
         auto l = (static_cast<unsigned long long>(lhs) >> StartBit) & mask;
         auto r = (static_cast<unsigned long long>(rhs) >> StartBit) & mask;
-        return Descending ? ( std::isnan(l) || (r < l)) : ( std::isnan(r) || (l < r));
+        return Descending ? ( is_floating_nan_host<Key>(l) || (r < l)) : ( is_floating_nan_host<Key>(r) || (l < r));
     }
 };
 
@@ -176,7 +190,7 @@ struct key_comparator<Key, Descending, StartBit, EndBit, true>
 {
     bool operator()(const Key& lhs, const Key& rhs)
     {
-        return Descending ? ( std::isnan(lhs) || (rhs < lhs)) : ( std::isnan(rhs) || (lhs < rhs));
+        return Descending ? ( is_floating_nan_host<Key>(lhs) || (rhs < lhs)) : ( is_floating_nan_host<Key>(rhs) || (lhs < rhs));
     }
 };
 

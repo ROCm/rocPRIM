@@ -1424,8 +1424,8 @@ auto assert_eq(const std::vector<T>& result, const std::vector<T>& expected)
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
-        if( std::isnan(result[i]) )
-            ASSERT_EQ(std::isnan(result[i]), std::isnan(expected[i])) << "NAN check failed where index = " << i;
+        if( result[i] != result[i] )
+            ASSERT_EQ(result[i] != result[i], expected[i] != expected[i]) << "NAN check failed where index = " << i;
         else
             ASSERT_EQ(result[i], expected[i]) << "where index = " << i;
     }
@@ -1485,8 +1485,8 @@ template<class T>
 auto assert_eq(const T& result, const T& expected)
     -> typename std::enable_if<rocprim::is_floating_point<T>::value, void>::type
 {
-    if( std::isnan(result) )
-        ASSERT_EQ(std::isnan(result), std::isnan(expected));
+    if( result != result )
+        ASSERT_EQ( result != result, expected != expected);
     else
         ASSERT_EQ(result, expected);
 }

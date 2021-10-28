@@ -816,7 +816,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE
 auto is_floating_nan(const T& a)
     -> typename std::enable_if<rocprim::is_floating_point<T>::value, bool>::type
 {
-    return std::isnan(a);
+    return a != a;
 }
 
 template<class T>
@@ -877,8 +877,7 @@ struct radix_merge_compare<false, true, T>
         const bit_key_type encoded_key_b = key_codec::encode(b);
         const bit_key_type masked_key_b  = key_codec::extract_digit(encoded_key_b, bit, length);
 
-        const T decoded_b = key_codec::decode(masked_key_b);
-        return is_floating_nan<T>(decoded_b) || decoded_b > key_codec::decode(masked_key_a);
+        return key_codec::decode(masked_key_b) > key_codec::decode(masked_key_a);
     }
 };
 
@@ -905,8 +904,7 @@ struct radix_merge_compare<true, true, T>
         const bit_key_type encoded_key_b = key_codec::encode(b);
         const bit_key_type masked_key_b  = key_codec::extract_digit(encoded_key_b, bit, length);
 
-        const T decoded_a = key_codec::decode(masked_key_a);
-        return is_floating_nan<T>(decoded_a) || decoded_a > key_codec::decode(masked_key_b);
+        return key_codec::decode(masked_key_a) > key_codec::decode(masked_key_b);
     }
 };
 
@@ -953,8 +951,7 @@ struct radix_merge_compare<false, true, rocprim::half>
         const bit_key_type encoded_key_b = key_codec::encode(b);
         const bit_key_type masked_key_b  = key_codec::extract_digit(encoded_key_b, bit, length);
 
-        const rocprim::half decoded_b = key_codec::decode(masked_key_b);
-        return __hisnan(decoded_b) || __hgt(decoded_b, key_codec::decode(masked_key_a));
+        return __hgt(key_codec::decode(masked_key_b), key_codec::decode(masked_key_a));
     }
 };
 
@@ -981,8 +978,7 @@ struct radix_merge_compare<true, true, rocprim::half>
         const bit_key_type encoded_key_b = key_codec::encode(b);
         const bit_key_type masked_key_b  = key_codec::extract_digit(encoded_key_b, bit, length);
 
-        const rocprim::half decoded_a = key_codec::decode(masked_key_a);
-        return __hisnan(decoded_a) || __hgt(decoded_a, key_codec::decode(masked_key_b));
+        return __hgt(key_codec::decode(masked_key_a), key_codec::decode(masked_key_b));
     }
 };
 
