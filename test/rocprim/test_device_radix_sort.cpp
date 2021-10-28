@@ -158,6 +158,25 @@ TYPED_TEST(RocprimDeviceRadixSort, SortKeys)
                 if(size >= 2) keys_input[1] = key_type(-0.0);
                 if(size >= 3) keys_input[2] = key_type( 0.0);
                 if(size >= 4) keys_input[3] = std::numeric_limits<key_type>::signaling_NaN();
+
+                if( size > 20ul )
+                {
+                    keys_input[size / 2 + 1] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 2 + 2] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 2 + 3] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 2 + 4] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 2 + 5] = std::numeric_limits<key_type>::signaling_NaN();
+                }
+
+
+                if( size > 100ul )
+                {
+                    keys_input[size / 3 + 1] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 3 + 2] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 3 + 3] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 3 + 4] = std::numeric_limits<key_type>::signaling_NaN();
+                    keys_input[size / 3 + 5] = std::numeric_limits<key_type>::signaling_NaN();
+                }
             }
 
             key_type * d_keys_input;
