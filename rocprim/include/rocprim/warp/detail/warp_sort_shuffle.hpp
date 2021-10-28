@@ -188,7 +188,7 @@ private:
                      bool           dir,
                      BinaryFunction compare_function)
     {
-        if(compare_function(dir ? k[i] : k[j], dir ? k[j] : k[i]))
+        if(compare_function(k[i], k[j]) == dir)
         {
             Key temp = k[i];
             k[i]     = k[j];
@@ -205,7 +205,7 @@ private:
                      bool           dir,
                      BinaryFunction compare_function)
     {
-        if(compare_function(dir ? k[i] : k[j], dir ? k[j] : k[i]))
+        if(compare_function(k[i], k[j]) == dir)
         {
             Key k_temp = k[i];
             k[i]       = k[j];
