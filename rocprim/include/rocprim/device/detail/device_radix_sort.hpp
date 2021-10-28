@@ -821,7 +821,7 @@ auto compare_nans(const T& a, const T& b)
 
 template<class T>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-auto compare_nans(const T& a, const T& b)
+auto compare_nans(const T&, const T&)
     -> typename std::enable_if<!rocprim::is_floating_point<T>::value, bool>::type
 {
     return false;
