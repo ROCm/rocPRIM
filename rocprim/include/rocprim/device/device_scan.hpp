@@ -529,7 +529,7 @@ auto scan_impl(void * temporary_storage,
             grid_size = number_of_blocks;
             if (prop.gcnArch == 908 && asicRevision < 2)
             {
-                hipLaunchKernelGGL(
+                /*hipLaunchKernelGGL(
                     HIP_KERNEL_NAME(lookback_scan_kernel<
                         Exclusive, // flag for exclusive scan operation
                         config, // kernel configuration (block size, ipt)
@@ -541,7 +541,7 @@ auto scan_impl(void * temporary_storage,
                     scan_op, scan_state_with_sleep, number_of_blocks, ordered_bid,
                     previous_last_element, new_last_element,
                     i != size_t(0), number_of_launch > 1
-                );
+                );*/
             }
             else
             {
@@ -593,7 +593,7 @@ auto scan_impl(void * temporary_storage,
             std::cout << "items_per_block " << items_per_block << '\n';
         }
 
-        if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+        /*if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(single_scan_kernel<
                 Exclusive, // flag for exclusive scan operation
@@ -603,7 +603,7 @@ auto scan_impl(void * temporary_storage,
             dim3(1), dim3(block_size), 0, stream,
             input, size, static_cast<result_type>(initial_value), output, scan_op
         );
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("single_scan_kernel", size, start);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("single_scan_kernel", size, start);*/
     }
     return hipSuccess;
 }
