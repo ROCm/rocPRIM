@@ -156,9 +156,9 @@ void init_lookback_scan_state_kernel(LookBackScanState lookback_scan_state,
                                      const unsigned int number_of_blocks,
                                      ordered_block_id<unsigned int> ordered_bid)
 {
-    init_lookback_scan_state_kernel_impl(
+    /*init_lookback_scan_state_kernel_impl(
         lookback_scan_state, number_of_blocks, ordered_bid
-    );
+    );*/
 }
 
 #define ROCPRIM_DETAIL_HIP_SYNC(name, size, start) \
@@ -555,7 +555,7 @@ auto scan_impl(void * temporary_storage,
                     std::cout << "items_per_block " << items_per_block << '\n';
                 }
 
-                hipLaunchKernelGGL(
+                /*hipLaunchKernelGGL(
                     HIP_KERNEL_NAME(lookback_scan_kernel<
                         Exclusive, // flag for exclusive scan operation
                         config, // kernel configuration (block size, ipt)
@@ -567,7 +567,7 @@ auto scan_impl(void * temporary_storage,
                     scan_op, scan_state, number_of_blocks, ordered_bid,
                     previous_last_element, new_last_element,
                     i != size_t(0), number_of_launch > 1
-                );
+                );*/
             }
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("lookback_scan_kernel", current_size, start)
 
