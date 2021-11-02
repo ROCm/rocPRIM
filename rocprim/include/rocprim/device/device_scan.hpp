@@ -219,7 +219,7 @@ auto scan_impl(void * temporary_storage,
     constexpr auto items_per_block = block_size * items_per_thread;
 
     static constexpr size_t size_limit = config::size_limit;
-    static constexpr size_t aligned_size_limit = std::max<size_t>(size_limit - size_limit % items_per_block, items_per_block);
+    static constexpr size_t aligned_size_limit = ::rocprim::max<size_t>(size_limit - size_limit % items_per_block, items_per_block);
     size_t limited_size = std::min<size_t>(size, aligned_size_limit);
     const bool use_limited_size = limited_size == aligned_size_limit;
     size_t nested_prefixes_size_bytes = scan_get_temporary_storage_bytes<result_type>(limited_size, items_per_block);
@@ -425,7 +425,7 @@ auto scan_impl(void * temporary_storage,
     constexpr auto items_per_block = block_size * items_per_thread;
 
     static constexpr size_t size_limit = config::size_limit;
-    static constexpr size_t aligned_size_limit = std::max<size_t>(size_limit - size_limit % items_per_block, items_per_block);
+    static constexpr size_t aligned_size_limit = ::rocprim::max<size_t>(size_limit - size_limit % items_per_block, items_per_block);
     size_t limited_size = std::min<size_t>(size, aligned_size_limit);
     const bool use_limited_size = limited_size == aligned_size_limit;
 
