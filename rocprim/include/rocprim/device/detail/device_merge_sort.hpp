@@ -42,42 +42,51 @@ namespace detail
 
 template<
     unsigned int BlockSize,
-    class KeysInputIterator,
-    class Key,
-    unsigned int ItemsPerThread
+    unsigned int ItemsPerThread,
+    class Key
 >
-ROCPRIM_DEVICE ROCPRIM_INLINE
-void block_load_keys_impl(const unsigned int flat_id,
-                          const unsigned int block_offset,
-                          const unsigned int valid_in_last_block,
-                          const bool last_block,
-                          KeysInputIterator keys_input,
-                          Key (&keys)[ItemsPerThread])
-{
-    if(last_block)
-    {
-        block_load_direct_blocked(
-            flat_id,
-            keys_input + block_offset,
-            keys,
-            valid_in_last_block
-        );
-    }
-    else
-    {
-        block_load_direct_blocked(
-            flat_id,
-            keys_input + block_offset,
-            keys
-        );
-    }
+struct block_load_keys_impl {
+    using block_load_type = ::rocprim::block_load<Key,
+                                                  BlockSize,
+                                                  ItemsPerThread,
+                                                  rocprim::block_load_method::block_load_transpose>;
 
-}
+    using storage_type = typename block_load_type::storage_type;
+
+    template <class KeysInputIterator>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void load(const unsigned int block_offset,
+              const unsigned int valid_in_last_block,
+              const bool last_block,
+              KeysInputIterator keys_input,
+              Key (&keys)[ItemsPerThread],
+              storage_type& storage)
+    {
+        if(last_block)
+        {
+            block_load_type().load(
+                keys_input + block_offset,
+                keys,
+                valid_in_last_block,
+                storage
+            );
+        }
+        else
+        {
+            block_load_type().load(
+                keys_input + block_offset,
+                keys,
+                storage
+            );
+        }
+
+    }
+};
 
 template <bool WithValues, unsigned int BlockSize, unsigned int ItemsPerThread, class Value>
 struct block_load_values_impl
 {
-    using storage_type = empty_type;
+    using storage_type = empty_storage_type;
 
     template <class ValuesInputIterator>
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -121,7 +130,7 @@ struct block_load_values_impl<true, BlockSize, ItemsPerThread, Value>
     {
         if(last_block)
         {
-            block_load_direct_blocked(
+            block_load_direct_striped<BlockSize>(
                 flat_id,
                 values_input + block_offset,
                 values,
@@ -130,7 +139,7 @@ struct block_load_values_impl<true, BlockSize, ItemsPerThread, Value>
         }
         else
         {
-            block_load_direct_blocked(
+            block_load_direct_striped<BlockSize>(
                 flat_id,
                 values_input + block_offset,
                 values
@@ -139,103 +148,125 @@ struct block_load_values_impl<true, BlockSize, ItemsPerThread, Value>
 
         // Synchronize before reusing shared memory
         ::rocprim::syncthreads();
-        block_exchange().gather_to_blocked(values, values, ranks, storage);
+        block_exchange().gather_from_striped(values, values, ranks, storage);
     }
 };
 
 template<
     bool WithValues,
     unsigned int BlockSize,
-    class KeysOutputIterator,
-    class ValuesOutputIterator,
+    unsigned int ItemsPerThread,
     class Key,
-    class Value,
-    unsigned int ItemsPerThread
+    class Value
 >
-ROCPRIM_DEVICE ROCPRIM_INLINE
-typename std::enable_if<!WithValues>::type
-block_store_impl(const unsigned int flat_id,
-                 const unsigned int block_offset,
-                 const unsigned int valid_in_last_block,
-                 const bool last_block,
-                 KeysOutputIterator keys_output,
-                 ValuesOutputIterator values_output,
-                 Key (&keys)[ItemsPerThread],
-                 Value (&values)[ItemsPerThread])
-{
-    (void) values_output;
-    (void) values;
+struct block_store_impl {
+    using block_store_type
+        = block_store<Key, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>;
 
-    if(last_block)
+    using storage_type = typename block_store_type::storage_type;
+
+    template <class KeysOutputIterator, class ValuesOutputIterator>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void store(const unsigned int block_offset,
+               const unsigned int valid_in_last_block,
+               const bool last_block,
+               KeysOutputIterator keys_output,
+               ValuesOutputIterator values_output,
+               Key (&keys)[ItemsPerThread],
+               Value (&values)[ItemsPerThread],
+               storage_type& storage)
     {
-        block_store_direct_blocked(
-            flat_id,
-            keys_output + block_offset,
-            keys,
-            valid_in_last_block
-        );
+        (void) values_output;
+        (void) values;
+
+        // Synchronize before reusing shared memory
+        ::rocprim::syncthreads();
+
+        if(last_block)
+        {
+            block_store_type().store(
+                keys_output + block_offset,
+                keys,
+                valid_in_last_block,
+                storage
+            );
+        }
+        else
+        {
+            block_store_type().store(
+                keys_output + block_offset,
+                keys,
+                storage
+            );
+        }
     }
-    else
-    {
-        block_store_direct_blocked(
-            flat_id,
-            keys_output + block_offset,
-            keys
-        );
-    }
-}
+};
 
 template<
-    bool WithValues,
     unsigned int BlockSize,
-    class KeysOutputIterator,
-    class ValuesOutputIterator,
+    unsigned int ItemsPerThread,
     class Key,
-    class Value,
-    unsigned int ItemsPerThread
+    class Value
 >
-ROCPRIM_DEVICE ROCPRIM_INLINE
-typename std::enable_if<WithValues>::type
-block_store_impl(const unsigned int flat_id,
-                 const unsigned int block_offset,
-                 const unsigned int valid_in_last_block,
-                 const bool last_block,
-                 KeysOutputIterator keys_output,
-                 ValuesOutputIterator values_output,
-                 Key (&keys)[ItemsPerThread],
-                 Value (&values)[ItemsPerThread])
-{
-    if(last_block)
-    {
-        block_store_direct_blocked(
-            flat_id,
-            keys_output + block_offset,
-            keys,
-            valid_in_last_block
-        );
+struct block_store_impl<true, BlockSize, ItemsPerThread, Key, Value> {
+    using block_store_key_type   = block_store<Key, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>; 
+    using block_store_value_type = block_store<Value, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>; 
 
-        block_store_direct_blocked(
-            flat_id,
-            values_output + block_offset,
-            values,
-            valid_in_last_block
-        );
-    }
-    else
-    {
-        block_store_direct_blocked(
-            flat_id,
-            keys_output + block_offset,
-            keys
-        );
+    union storage_type {
+        typename block_store_key_type::storage_type   keys;
+        typename block_store_value_type::storage_type values;
+    };
 
-        block_store_direct_blocked(
-            flat_id,
-            values_output + block_offset,
-            values
-        );
+    template <class KeysOutputIterator, class ValuesOutputIterator>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void store(const unsigned int block_offset,
+               const unsigned int valid_in_last_block,
+               const bool last_block,
+               KeysOutputIterator keys_output,
+               ValuesOutputIterator values_output,
+               Key (&keys)[ItemsPerThread],
+               Value (&values)[ItemsPerThread],
+               storage_type& storage)
+    {
+        // Synchronize before reusing shared memory
+        ::rocprim::syncthreads();
+
+        if(last_block)
+        {
+            block_store_key_type().store(
+                keys_output + block_offset,
+                keys,
+                valid_in_last_block,
+                storage.keys
+            );
+
+            ::rocprim::syncthreads();
+
+            block_store_value_type().store(
+                values_output + block_offset,
+                values,
+                valid_in_last_block,
+                storage.values
+            );
+        }
+        else
+        {
+            block_store_key_type().store(
+                keys_output + block_offset,
+                keys,
+                storage.keys
+            );
+
+            ::rocprim::syncthreads();
+
+            block_store_value_type().store(
+                values_output + block_offset,
+                values,
+                storage.values
+            );
+        }
     }
-}
+};
 
 template <unsigned int BlockSize, unsigned int ItemsPerThread, class Key>
 struct block_sort_impl
@@ -312,16 +343,28 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
     key_type keys[ItemsPerThread];
     value_type values[ItemsPerThread];
 
-    block_load_keys_impl<BlockSize>(
-        flat_id,
+    using block_load_keys_impl = block_load_keys_impl<BlockSize, ItemsPerThread, key_type>;
+    using block_sort_impl = block_sort_impl<BlockSize, ItemsPerThread, key_type>;
+    using block_load_values_impl = block_load_values_impl<with_values, BlockSize, ItemsPerThread, value_type>;
+    using block_store_impl = block_store_impl<with_values, BlockSize, ItemsPerThread, key_type, value_type>;
+
+    ROCPRIM_SHARED_MEMORY union {
+        typename block_load_keys_impl::storage_type   load_keys;
+        typename block_sort_impl::storage_type        sort;
+        typename block_load_values_impl::storage_type load_values;
+        typename block_store_impl::storage_type       store;
+    } storage;
+
+    block_load_keys_impl().load(
         block_offset,
         valid_in_last_block,
         last_block,
         keys_input,
-        keys
+        keys,
+        storage.load_keys
     );
 
-    using block_sort_impl = block_sort_impl<BlockSize, ItemsPerThread, key_type>;
+    
     using stable_key_type = typename block_sort_impl::stable_key_type;
 
     // Special comparison that preserves relative order of equal keys
@@ -338,11 +381,8 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
         stable_keys[item] = rocprim::make_tuple(keys[item], ItemsPerThread * flat_id + item);
     }
 
-    using block_load_values_impl = block_load_values_impl<with_values, BlockSize, ItemsPerThread, value_type>;
-    ROCPRIM_SHARED_MEMORY union {
-        typename block_sort_impl::storage_type        sort;
-        typename block_load_values_impl::storage_type load;
-    } storage;
+    // Synchronize before reusing shared memory
+    ::rocprim::syncthreads();
 
     block_sort_impl().sort(
         stable_keys,
@@ -369,18 +409,18 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
         last_block,
         values_input,
         values,
-        storage.load
+        storage.load_values
     );
 
-    block_store_impl<with_values, BlockSize>(
-        flat_id,
+    block_store_impl().store(
         block_offset,
         valid_in_last_block,
         last_block,
         keys_output,
         values_output,
         keys,
-        values
+        values,
+        storage.store
     );
 }
 

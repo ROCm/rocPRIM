@@ -413,12 +413,12 @@ public:
 
     template<class U, class Offset>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    void gather_to_blocked(const T (&input)[ItemsPerThread],
-                           U (&output)[ItemsPerThread],
-                           const Offset (&ranks)[ItemsPerThread])
+    void gather_from_striped(const T (&input)[ItemsPerThread],
+                                   U (&output)[ItemsPerThread],
+                                   const Offset (&ranks)[ItemsPerThread])
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        gather_to_blocked(input, output, ranks, storage);
+        gather_from_striped(input, output, ranks, storage);
     }
 
     /// \brief Scatters items to a blocked arrangement based on their ranks
@@ -478,17 +478,17 @@ public:
 
     template <class U, class Offset>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    void gather_to_blocked(const T (&input)[ItemsPerThread],
-                           U (&output)[ItemsPerThread],
-                           const Offset (&ranks)[ItemsPerThread],
-                           storage_type& storage)
+    void gather_from_striped(const T (&input)[ItemsPerThread],
+                             U (&output)[ItemsPerThread],
+                             const Offset (&ranks)[ItemsPerThread],
+                             storage_type& storage)
     {
         const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
         storage_type_& storage_ = storage.get();
 
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            storage_.buffer[index(flat_id * ItemsPerThread + i)] = input[i];
+            storage_.buffer[index(i * BlockSize + flat_id)] = input[i];
         }
         ::rocprim::syncthreads();
 
