@@ -1,0 +1,81 @@
+--- #build parameters
+projectName: rocPRIME
+version: 2.10.9
+image: docker-virtual.mkmartifactory.amd.com/amd/jenkins/windows/vs-cmake:1.4
+dependenciesFromGitHub:
+  rsuite:
+    - git@github.com:ROCmSoftwarePlatform/rsuite.git
+    - rsuite
+dependenciesFromArtifactory:
+  hip:
+    - sw-hip-staging-local/hip.zip
+    - hip
+  lapack:
+    - sw-OpenCL-dev-local/math_lib/dependencies/lapack.zip
+    - lapack
+  rocBLAS:
+    - sw-OpenCL-dev-local/math_lib/rocBLAS/edge/rocblas-2.43.0-win64.zip
+    - hipSDK
+  rocSOLVER:
+    - sw-OpenCL-dev-local/math_lib/rocSOLVER/edge/rocsolver-3.16.0-win64.zip
+    - hipSDK
+  memoryAllocationTest:
+    - sw-OpenCL-dev-local/test/MemoryAllocation.zip
+    - ""
+dependencies:
+  use: latest # latest, build#
+  hip:
+    - sw-hip-staging-local/hip.zip
+    - hip
+  lapack:
+    - sw-OpenCL-dev-local/math_lib/dependencies/lapack.zip
+    - lapack
+  rocBLAS:
+    - sw-OpenCL-dev-local/math_lib/rocBLAS/edge/rocblas-2.43.0-win64.zip
+    - hipSDK
+  rocSOLVER:
+    - sw-OpenCL-dev-local/math_lib/rocSOLVER/edge/rocsolver-3.16.0-win64.zip
+    - hipSDK
+  memoryAllocationTest:
+    - sw-OpenCL-dev-local/test/MemoryAllocation.zip
+    - ""
+dockerEnvironment: >-
+  --isolation=process
+  -v {{WORKSPACE}}\dependencies\hip:c:\hip
+  -v {{WORKSPACE}}\dependencies\hipSDK:c:\hipSDK
+  -v {{WORKSPACE}}\dependencies\lapack:c:\lapack
+  -e PERLLIB=c:/hip/bin
+  -e HIP_DIR=c:/hip
+buildCommand: python rmake.py -ci
+testCommand: python rtest.py -t psdb
+testTimeout: 30
+testSuite:
+  dependencies:
+    - - dependencies/hip/bin/hipinfo.exe,dependencies/hip/bin/*.dll,dependencies/hipSDK/bin/*,rtest.*,{{buildDir}}/staging/*.dll
+      - "{{buildDir}}/test"
+    - - dependencies/hip/bin/hipinfo.exe,dependencies/hip/bin/*.dll,dependencies/MemoryAllocation.exe
+      - hip/bin
+  filesToPack: hip/**,rtest.*,{{buildDir}}/test/**
+baseDirOfTest: "."
+testReport: "**/clients/staging/output_*.xml,**/clients/staging/test_*.xml"
+uploadArtifactsTo:
+  dev: sw-mathlib-dev-local/rocPRIM/dev
+  pr: sw-mathlib-dev-local/rocPRIM/pr
+  master: sw-mathlib-dev-local/rocPRIM/master
+  staging: sw-mathlib-staging-local/rocPRIM/
+  release: sw-mathlib-rel-local/rocPRIM/release
+artifactNamePattern: rocprim*.zip
+maxBuilds: 3
+maxDays: 1
+--- #dependencies
+# Artifactory repositories for dependencies and build artifacts
+hip:
+  develop: sw-hip-dev-local
+  staging: sw-hip-staging-local
+  release: sw-hip-rel-local
+# Path structures of math libs
+# REPOS/libName/[branch/]BUILD#
+mathLib:
+  develop: sw-mathlib-dev-local
+  staging: sw-mathlib-staging-local
+  release: sw-mathlib-rel-local
