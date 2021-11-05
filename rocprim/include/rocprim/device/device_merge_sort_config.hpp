@@ -24,6 +24,7 @@
 #include <type_traits>
 
 #include "../config.hpp"
+#include "../functional.hpp"
 #include "../detail/various.hpp"
 
 #include "config_types.hpp"
@@ -105,92 +106,17 @@ template<class Key, class Value>
 struct merge_sort_config_900
 {
     using type = select_type<
-        select_type_case<
-            (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            merge_sort_config<64U>
-        >,
-        select_type_case<
-            (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            merge_sort_config<256U>
-        >,
-        select_type_case<
-            (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            merge_sort_config<512U>
-        >,
-        select_type_case<
-            (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            merge_sort_config<1024U>
-        >,
-        merge_sort_config<limit_block_size<1024U, sizeof(Key) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value>
-    >;
-};
-
-template<class Value>
-struct merge_sort_config_900<rocprim::half, Value>
-{
-    using type = merge_sort_config<limit_block_size<256U, sizeof(rocprim::half) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value>;
-};
-
-template<class Key>
-struct merge_sort_config_900<Key, empty_type>
-    : select_type<
-        select_type_case<sizeof(Key) == 1, merge_sort_config<64U> >,
-        select_type_case<sizeof(Key) == 2, merge_sort_config<256U> >,
-        select_type_case<sizeof(Key) == 4, merge_sort_config<256U> >,
-        select_type_case<sizeof(Key) >= 8, merge_sort_config<limit_block_size<512U, sizeof(Key), ROCPRIM_WARP_SIZE_64>::value> >
-    > { };
-
-template<>
-struct merge_sort_config_900<rocprim::half, empty_type>
-{
-    using type = merge_sort_config<256U>;
-};
-
-
-// TODO: We need to update these parameters
-template<class Key, class Value>
-struct merge_sort_config_90a
-{
-    using type = select_type<
-        select_type_case<
-            (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            merge_sort_config<64U>
-        >,
-        select_type_case<
-            (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            merge_sort_config<256U>
-        >,
-        select_type_case<
-            (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            merge_sort_config<512U>
-        >,
-        select_type_case<
-            (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            merge_sort_config<1024U>
-        >,
-        merge_sort_config<limit_block_size<1024U, sizeof(Key) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value>
-    >;
-};
-
-template<class Value>
-struct merge_sort_config_90a<rocprim::half, Value>
-{
-    using type = merge_sort_config<limit_block_size<256U, sizeof(rocprim::half) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value>;
-};
-
-template<class Key>
-struct merge_sort_config_90a<Key, empty_type>
-    : select_type<
-        select_type_case<sizeof(Key) == 1, merge_sort_config<64U> >,
-        select_type_case<sizeof(Key) == 2, merge_sort_config<256U> >,
-        select_type_case<sizeof(Key) == 4, merge_sort_config<256U> >,
-        select_type_case<sizeof(Key) >= 8, merge_sort_config<limit_block_size<512U, sizeof(Key), ROCPRIM_WARP_SIZE_64>::value> >
-    > { };
-
-template<>
-struct merge_sort_config_90a<rocprim::half, empty_type>
-{
-    using type = merge_sort_config<256U>;
+        // clang-format off
+        select_type_case<(sizeof(Key) == 1  && sizeof(Value) <= 16), merge_sort_config<1024U,   512U, 2U>>,
+        select_type_case<(sizeof(Key) == 2  && sizeof(Value) <= 16), merge_sort_config< 512U,   256U, 4U>>,
+        select_type_case<(sizeof(Key) == 4  && sizeof(Value) <= 16), merge_sort_config< 512U,   256U, 4U>>,
+        select_type_case<(sizeof(Key) == 8  && sizeof(Value) <= 16), merge_sort_config< 512U,   512U, 2U>>,
+        select_type_case<(sizeof(Key) == 16 && sizeof(Value) <= 16), merge_sort_config< 512U,  1024U, 1U>>,
+        // clang-format on
+        merge_sort_config<
+            limit_block_size<1024U,
+                             ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value)),
+                             ROCPRIM_WARP_SIZE_64>::value>>;
 };
 
 // TODO: We need to update these parameters
@@ -245,7 +171,6 @@ struct default_merge_sort_config
         TargetArch,
         select_arch_case<803, merge_sort_config_803<Key, Value>>,
         select_arch_case<900, merge_sort_config_900<Key, Value>>,
-        select_arch_case<ROCPRIM_ARCH_90a, merge_sort_config_90a<Key, Value>>,
         select_arch_case<1030, merge_sort_config_1030<Key, Value>>,
         merge_sort_config_900<Key, Value>
     > { };
