@@ -56,8 +56,8 @@
     #ifdef WIN32
       #define ROCPRIM_INLINE inline __attribute__((always_inline))
     #else
-      #define ROCPRIM_INLINE inline
-    #endif    
+      #define ROCPRIM_INLINE inline __attribute__((always_inline))
+    #endif
 #endif
 
 #if ( defined(__gfx801__) || \
