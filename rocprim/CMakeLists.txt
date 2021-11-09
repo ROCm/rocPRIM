@@ -36,7 +36,7 @@ target_include_directories(rocprim
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/rocprim>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:rocprim/include/>
+    $<INSTALL_INTERFACE:include/rocprim/>
 )
 
 # This target links against HIP library
