@@ -187,7 +187,7 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            storage_.key[ItemsPerThread * flat_tid + item] = k[item];
+            storage_.key[item * BlockSize + flat_tid] = k[item];
         }
         ::rocprim::syncthreads();
     }
@@ -210,8 +210,8 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            storage_.key[ItemsPerThread * flat_tid + item]   = k[item];
-            storage_.value[ItemsPerThread * flat_tid + item] = v[item];
+            storage_.key[item * BlockSize + flat_tid]   = k[item];
+            storage_.value[item * BlockSize + flat_tid] = v[item];
         }
         ::rocprim::syncthreads();
     }
@@ -247,7 +247,7 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            Key next_key = storage_.key[ItemsPerThread * next_id + item];
+            Key next_key = storage_.key[item * BlockSize + next_id];
             bool compare = (next_id < flat_tid) ? compare_function(key[item], next_key) : compare_function(next_key, key[item]);
             bool swap = compare ^ dir;
             if(swap)
@@ -292,14 +292,14 @@ private:
         storage_type_<Key, Value>& storage_ = storage.get();
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item) {
-            Key next_key = storage_.key[ItemsPerThread * next_id + item];
+            Key next_key = storage_.key[item * BlockSize + next_id];
             bool b = next_id < flat_tid;
             bool compare = compare_function(b ? key[item] : next_key, b ? next_key : key[item]);
             bool swap = compare ^ dir;
             if(swap)
             {
                 key[item]   = next_key;
-                value[item] = storage_.value[ItemsPerThread  * next_id + item];
+                value[item] = storage_.value[item * BlockSize + next_id];
             }
         }
     }
