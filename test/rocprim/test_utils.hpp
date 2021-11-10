@@ -50,19 +50,19 @@ static constexpr uint32_t random_data_generation_repeat_strides = 4;
 template<class T>
 struct precision_threshold
 {
-    static constexpr float percentage = 0.01f;
+    static constexpr float percentage = 0.0001f;
 };
 
 template<>
 struct precision_threshold<rocprim::half>
 {
-    static constexpr float percentage = 0.075f;
+    static constexpr float percentage = 0.01f;
 };
 
 template<>
 struct precision_threshold<rocprim::bfloat16>
 {
-    static constexpr float percentage = 0.075f;
+    static constexpr float percentage = 0.01f;
 };
 
 // Support half operators on host side
