@@ -1330,7 +1330,7 @@ auto assert_near(const std::vector<T>& result, const std::vector<T>& expected, c
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
-        auto diff = std::max<T>(std::abs(percent * expected[i]), T(percent));
+        auto diff = std::abs(percent * expected[i]);
         ASSERT_NEAR(result[i], expected[i], diff) << "where index = " << i;
     }
 }
@@ -1353,7 +1353,7 @@ void assert_near(const std::vector<rocprim::half>& result, const std::vector<roc
     for(size_t i = 0; i < result.size(); i++)
     {
         if(static_cast<float>(result[i])==static_cast<float>(expected[i])) continue;
-        auto diff = std::max<float>(std::abs(percent * static_cast<float>(expected[i])), percent);
+        auto diff = std::abs(percent * static_cast<float>(expected[i]));
         ASSERT_NEAR(static_cast<float>(result[i]), static_cast<float>(expected[i]), diff) << "where index = " << i;
     }
 }
@@ -1364,7 +1364,7 @@ void assert_near(const std::vector<rocprim::bfloat16>& result, const std::vector
     for(size_t i = 0; i < result.size(); i++)
     {
         if(result[i]==expected[i]) continue;
-        auto diff = std::max<float>(std::abs(percent * static_cast<float>(expected[i])), percent);
+        auto diff = std::abs(percent * static_cast<float>(expected[i]));
         ASSERT_NEAR(static_cast<float>(result[i]), static_cast<float>(expected[i]), diff) << "where index = " << i;
     }
 }
@@ -1374,8 +1374,8 @@ void assert_near(const std::vector<custom_test_type<rocprim::half>>& result, con
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
-        auto diff1 = std::max<float>(std::abs(percent * static_cast<float>(expected[i].x)), percent);
-        auto diff2 = std::max<float>(std::abs(percent * static_cast<float>(expected[i].y)), percent);
+        auto diff1 = std::abs(percent * static_cast<float>(expected[i].x));
+        auto diff2 = std::abs(percent * static_cast<float>(expected[i].y));
         if(static_cast<float>(result[i].x)!=static_cast<float>(expected[i].x)) ASSERT_NEAR(static_cast<float>(result[i].x), static_cast<float>(expected[i].x), diff1) << "where index = " << i;
         if(static_cast<float>(result[i].y)!=static_cast<float>(expected[i].y)) ASSERT_NEAR(static_cast<float>(result[i].y), static_cast<float>(expected[i].y), diff2) << "where index = " << i;
     }
@@ -1386,8 +1386,8 @@ void assert_near(const std::vector<custom_test_type<rocprim::bfloat16>>& result,
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
-        auto diff1 = std::max<float>(std::abs(percent * static_cast<float>(expected[i].x)), percent);
-        auto diff2 = std::max<float>(std::abs(percent * static_cast<float>(expected[i].y)), percent);
+        auto diff1 = std::abs(percent * static_cast<float>(expected[i].x));
+        auto diff2 = std::abs(percent * static_cast<float>(expected[i].y));
         if(result[i].x!=expected[i].x) ASSERT_NEAR(static_cast<float>(result[i].x), static_cast<float>(expected[i].x), diff1) << "where index = " << i;
         if(result[i].y!=expected[i].y) ASSERT_NEAR(static_cast<float>(result[i].y), static_cast<float>(expected[i].y), diff2) << "where index = " << i;
     }
@@ -1401,8 +1401,8 @@ auto assert_near(const std::vector<custom_test_type<T>>& result, const std::vect
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
-        auto diff1 = std::max<T>(std::abs(percent * expected[i].x), T(percent));
-        auto diff2 = std::max<T>(std::abs(percent * expected[i].y), T(percent));
+        auto diff1 = std::abs(percent * expected[i].x);
+        auto diff2 = std::abs(percent * expected[i].y);
         ASSERT_NEAR(result[i].x, expected[i].x, diff1) << "where index = " << i;
         ASSERT_NEAR(result[i].y, expected[i].y, diff2) << "where index = " << i;
     }
@@ -1412,7 +1412,7 @@ template<class T>
 auto assert_near(const T& result, const T& expected, const float percent)
     -> typename std::enable_if<std::is_floating_point<T>::value>::type
 {
-    auto diff = std::max<T>(std::abs(percent * expected), T(percent));
+    auto diff = std::abs(percent * expected);
     ASSERT_NEAR(result, expected, diff);
 }
 
@@ -1427,14 +1427,14 @@ auto assert_near(const T& result, const T& expected, const float percent)
 void assert_near(const rocprim::half& result, const rocprim::half& expected, float percent)
 {
     if(static_cast<float>(result)==static_cast<float>(expected)) return;
-    auto diff = std::max<float>(std::abs(percent * static_cast<float>(expected)), percent);
+    auto diff = std::abs(percent * static_cast<float>(expected));
     ASSERT_NEAR(static_cast<float>(result), static_cast<float>(expected), diff);
 }
 
 void assert_near(const rocprim::bfloat16& result, const rocprim::bfloat16& expected, float percent)
 {
     if(result==expected) return;
-    auto diff = std::max<float>(std::abs(percent * static_cast<float>(expected)), percent);
+    auto diff = std::abs(percent * static_cast<float>(expected));
     ASSERT_NEAR(static_cast<float>(result), static_cast<float>(expected), diff);
 }
 
@@ -1442,8 +1442,8 @@ template<class T>
 auto assert_near(const custom_test_type<T>& result, const custom_test_type<T>& expected, const float percent)
     -> typename std::enable_if<std::is_floating_point<T>::value>::type
 {
-    auto diff1 = std::max<T>(std::abs(percent * expected.x), T(percent));
-    auto diff2 = std::max<T>(std::abs(percent * expected.y), T(percent));
+    auto diff1 = std::abs(percent * expected.x);
+    auto diff2 = std::abs(percent * expected.y);
     ASSERT_NEAR(result.x, expected.x, diff1);
     ASSERT_NEAR(result.y, expected.y, diff2);
 }
