@@ -102,19 +102,32 @@ struct merge_sort_config_803<rocprim::half, empty_type>
     using type = merge_sort_config<256U>;
 };
 
-template<class Key, class Value>
+template<class Key, class Value, bool = is_scalar<Key>::value>
 struct merge_sort_config_900
 {
     using type = select_type<
         // clang-format off
-        select_type_case<(sizeof(Key) == 1  && sizeof(Value) <= 16), merge_sort_config<1024U,   512U, 2U>>,
-        select_type_case<(sizeof(Key) == 2  && sizeof(Value) <= 16), merge_sort_config< 512U,   256U, 4U>>,
-        select_type_case<(sizeof(Key) == 4  && sizeof(Value) <= 16), merge_sort_config< 512U,   256U, 4U>>,
-        select_type_case<(sizeof(Key) == 8  && sizeof(Value) <= 16), merge_sort_config< 512U,   512U, 2U>>,
-        select_type_case<(sizeof(Key) == 16 && sizeof(Value) <= 16), merge_sort_config< 512U,  1024U, 1U>>,
+        select_type_case<(sizeof(Key) == 1 && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
+        select_type_case<(sizeof(Key) == 2 && sizeof(Value) <= 16), merge_sort_config<512U, 256U, 4U>>,
+        select_type_case<(sizeof(Key) == 4 && sizeof(Value) <= 16), merge_sort_config<512U, 256U, 4U>>,
+        select_type_case<(sizeof(Key) == 8 && sizeof(Value) <= 16), merge_sort_config<256U, 256U, 4U>>,
         // clang-format on
         merge_sort_config<
             limit_block_size<1024U,
+                             ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value)),
+                             ROCPRIM_WARP_SIZE_64>::value>>;
+};
+
+template<class Key, class Value>
+struct merge_sort_config_900<Key, Value, false>
+{
+    using type = select_type<
+        // clang-format off
+        select_type_case<(sizeof(Key) == 8  && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
+        select_type_case<(sizeof(Key) == 16 && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
+        // clang-format on
+        merge_sort_config<
+            limit_block_size<512U,
                              ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value)),
                              ROCPRIM_WARP_SIZE_64>::value>>;
 };
