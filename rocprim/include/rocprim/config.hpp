@@ -51,13 +51,11 @@
         #define ROCPRIM_DEFAULT_MIN_WARPS_PER_EU 1
     #endif
     // Currently HIP on Windows has a bug involving inline device functions generating
-    // local memory/register allocation errors during compilation.  Current workaround is to
+    // local memory/register allocation errors during compilation.  Also on Linux
+    // when compiling in debug mode all optimizations including inlining are disabled,
+    // resulting in the same compilation error.  Current workaround is to
     // use __attribute__((always_inline)) for the affected functions
-    #ifdef WIN32
-      #define ROCPRIM_INLINE inline __attribute__((always_inline))
-    #else
-      #define ROCPRIM_INLINE inline __attribute__((always_inline))
-    #endif
+    #define ROCPRIM_INLINE inline __attribute__((always_inline))
 #endif
 
 #if ( defined(__gfx801__) || \
