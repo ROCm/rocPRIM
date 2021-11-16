@@ -23,6 +23,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - Update README cmake minimum version number
 - Block sort support multiple items per thread
     - currently only powers of two block sizes, and items per threads are supported and only for full blocks
+- Bumped the minimum required version of CMake to 3.16
 ### Known issues
 - Unit tests may soft hang on MI200 when running in hipMallocManaged mode.
 - block_histogram, device_scan unit tests failing for HIP on Windows
