@@ -700,8 +700,10 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
                 )
             );
             HIP_CHECK(hipDeviceSynchronize());
-
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<output_type>::percentage));
+            float precision = test_utils::precision_threshold<output_type>::percentage;
+            if(std::is_same<scan_op_type,rocprim::plus<float>>::value)
+                precision *= 100;
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, precision));
 
             HIP_CHECK(hipFree(d_temp_storage));
             HIP_CHECK(hipFree(d_input));

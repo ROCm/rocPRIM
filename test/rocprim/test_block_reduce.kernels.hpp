@@ -200,7 +200,7 @@ template<
 >
 void test_block_reduce_input_arrays()
 {
-    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;;
+    using binary_op_type = typename test_utils::select_maximum_operator<T>::type;
     static constexpr auto algorithm = Algorithm;
     static constexpr size_t block_size = BlockSize;
     static constexpr size_t items_per_thread = ItemsPerThread;
@@ -235,7 +235,7 @@ void test_block_reduce_input_arrays()
             for(size_t j = 0; j < items_per_block; j++)
             {
                 auto idx = i * items_per_block + j;
-                value = apply(binary_op, value, output[idx]);
+                value = binary_op(value, output[idx]);
             }
             expected_reductions[i] = value;
         }

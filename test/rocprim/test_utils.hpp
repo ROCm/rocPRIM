@@ -50,7 +50,7 @@ static constexpr uint32_t random_data_generation_repeat_strides = 4;
 template<class T>
 struct precision_threshold
 {
-    static constexpr float percentage = 0.0001f;
+    static constexpr float percentage = 0.0002f;
 };
 
 template<>
@@ -62,7 +62,7 @@ struct precision_threshold<rocprim::half>
 template<>
 struct precision_threshold<rocprim::bfloat16>
 {
-    static constexpr float percentage = 0.01f;
+    static constexpr float percentage = 0.02f;
 };
 
 // Support half operators on host side
@@ -455,23 +455,31 @@ struct select_not_equal_to_operator<::rocprim::bfloat16>
     typedef bfloat16_not_equal_to type;
 };
 
-// Plus to operator selector
+/* Plus to operator selector for host-side
+ * On host-side we use `double` as accumulator and `rocprim::plus<double>` as operator
+ * for bfloat16 and half types. This is because additions of floating-point types are not
+ * associative. This would result in wrong output rather quickly for reductions and scan-algorithms
+ * on host-side for bfloat16 and half because of their low-precision.
+ */
 template<typename T>
-struct select_plus_operator
+struct select_plus_operator_host
 {
     typedef ::rocprim::plus<T> type;
+    typedef T acc_type;
 };
 
 template<>
-struct select_plus_operator<::rocprim::half>
+struct select_plus_operator_host<::rocprim::half>
 {
-    typedef half_plus type;
+    typedef ::rocprim::plus<double> type;
+    typedef double acc_type;
 };
 
 template<>
-struct select_plus_operator<::rocprim::bfloat16>
+struct select_plus_operator_host<::rocprim::bfloat16>
 {
-    typedef bfloat16_plus type;
+    typedef ::rocprim::plus<double> type;
+    typedef double acc_type;
 };
 
 // Minimum to operator selector
@@ -675,8 +683,6 @@ template<class InputIt, class OutputIt, class BinaryOperation, class acc_type>
 OutputIt host_inclusive_scan_impl(InputIt first, InputIt last,
                              OutputIt d_first, BinaryOperation op, acc_type)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
-
     if (first == last) return d_first;
 
     acc_type sum = *first;
@@ -706,7 +712,7 @@ template<class InputIt, class OutputIt, class T,
                            std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value
                            , bool> = true>
 OutputIt host_inclusive_scan(InputIt first, InputIt last,
-                             OutputIt d_first, rocprim::plus<T> op)
+                             OutputIt d_first, rocprim::plus<T>)
 {
     using acc_type = double;
     return host_inclusive_scan_impl(first, last, d_first, rocprim::plus<acc_type>(), acc_type{});
@@ -717,8 +723,6 @@ OutputIt host_exclusive_scan_impl(InputIt first, InputIt last,
                              T initial_value, OutputIt d_first,
                              BinaryOperation op, acc_type)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
-
     if (first == last) return d_first;
 
     acc_type sum = initial_value;
@@ -763,8 +767,6 @@ OutputIt host_exclusive_scan_by_key_impl(InputIt first, InputIt last, KeyIt k_fi
                                          T initial_value, OutputIt d_first,
                                          BinaryOperation op, KeyCompare key_compare_op, acc_type)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
-
     if (first == last) return d_first;
 
     acc_type sum = initial_value;
@@ -806,6 +808,54 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
 {
     using acc_type = double;
     return host_exclusive_scan_by_key_impl(first, last, k_first, initial_value, d_first, rocprim::plus<acc_type>(), key_compare_op, acc_type{});
+}
+
+
+template<class InputIt, class KeyIt, class OutputIt, class BinaryOperation, class KeyCompare, class acc_type>
+OutputIt host_inclusive_scan_by_key_impl(InputIt first, InputIt last, KeyIt k_first,
+                                         OutputIt d_first,
+                                         BinaryOperation op, KeyCompare key_compare_op, acc_type)
+{
+    if (first == last) return d_first;
+
+    acc_type sum = *first;
+    *d_first = sum;
+
+    while (++first != last)
+    {
+        if(key_compare_op(*k_first, *++k_first))
+        {
+            sum = op(sum, *first);
+        }
+        else
+        {
+            sum = *first;
+        }
+        *++d_first = sum;
+    }
+    return ++d_first;
+}
+template<class InputIt, class KeyIt, class OutputIt, class BinaryOperation, class KeyCompare>
+OutputIt host_inclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
+                                    OutputIt d_first,
+                                    BinaryOperation op, KeyCompare key_compare_op)
+{
+    using input_type = typename std::iterator_traits<InputIt>::value_type;
+    using acc_type = typename ::rocprim::detail::match_result_type<input_type, BinaryOperation>::type;
+    return host_inclusive_scan_by_key_impl(first, last, k_first, d_first, op, key_compare_op, acc_type{});
+}
+
+template<class InputIt, class KeyIt, class OutputIt, class U, class KeyCompare,
+          std::enable_if_t<std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value ||
+                               std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::half>::value ||
+                               std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value
+                           , bool> = true>
+OutputIt host_inclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
+                                    OutputIt d_first,
+                                    rocprim::plus<U>, KeyCompare key_compare_op)
+{
+    using acc_type = double;
+    return host_inclusive_scan_by_key_impl(first, last, k_first, d_first, rocprim::plus<acc_type>(), key_compare_op, acc_type{});
 }
 
 inline
@@ -915,6 +965,13 @@ struct custom_test_type
         return !(*this == other);
     }
 };
+
+template<class T>
+struct precision_threshold<custom_test_type<T>>
+{
+    static constexpr float percentage = 0.01f;
+};
+
 
 //Overload for rocprim::half
 template<>
