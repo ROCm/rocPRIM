@@ -643,13 +643,13 @@ template<class InputIt, class T,
                      , bool> = true>
 constexpr T host_reduce(InputIt first, InputIt last, rocprim::plus<T>)
 {
-    using U = double;
+    using accumulator_type = double;
     // Calculate expected results on host
-    U expected = U(0);
-    rocprim::plus<U> bin_op;
+    accumulator_type expected = accumulator_type(0);
+    rocprim::plus<accumulator_type> bin_op;
     for(InputIt it = first; it != last; it++)
     {
-        expected = bin_op(expected, static_cast<U>(*it));
+        expected = bin_op(expected, static_cast<accumulator_type>(*it));
     }
     return static_cast<T>(expected);
 }
@@ -661,9 +661,9 @@ template<class InputIt, class T,
                            , bool> = true>
 constexpr T host_reduce(InputIt first, InputIt last, rocprim::plus<T> op)
 {
-    using U = T;
+    using acc_type = T;
     // Calculate expected results on host
-    U expected = U(0);
+    acc_type expected = acc_type(0);
     for(InputIt it = first; it != last; it++)
     {
         expected = op(expected, *it);
@@ -671,27 +671,64 @@ constexpr T host_reduce(InputIt first, InputIt last, rocprim::plus<T> op)
     return expected;
 }
 
-// Can't use std::prefix_sum for inclusive/exclusive scan, because
-// it does not handle short[] -> int(int a, int b) { a + b; } -> int[]
-// they way we expect. That's because sum in std::prefix_sum's implementation
-// is of type typename std::iterator_traits<InputIt>::value_type (short)
+template<class InputIt, class OutputIt, class BinaryOperation, class acc_type>
+OutputIt host_inclusive_scan_impl(InputIt first, InputIt last,
+                             OutputIt d_first, BinaryOperation op, acc_type)
+{
+    using input_type = typename std::iterator_traits<InputIt>::value_type;
+
+    if (first == last) return d_first;
+
+    acc_type sum = *first;
+    *d_first = sum;
+
+    while (++first != last) {
+        sum = op(sum, *first);
+        *++d_first = sum;
+    }
+    return ++d_first;
+}
+
 template<class InputIt, class OutputIt, class BinaryOperation>
 OutputIt host_inclusive_scan(InputIt first, InputIt last,
                              OutputIt d_first, BinaryOperation op)
 {
     using input_type = typename std::iterator_traits<InputIt>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
+    using acc_type = typename ::rocprim::detail::match_result_type<
         input_type, BinaryOperation
-    >::type;
+        >::type;
+    return host_inclusive_scan_impl(first, last, d_first, op, acc_type{});
+}
+
+template<class InputIt, class OutputIt, class T,
+          std::enable_if_t<std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value ||
+                           std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::half>::value ||
+                           std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value
+                           , bool> = true>
+OutputIt host_inclusive_scan(InputIt first, InputIt last,
+                             OutputIt d_first, rocprim::plus<T> op)
+{
+    using acc_type = double;
+    return host_inclusive_scan_impl(first, last, d_first, rocprim::plus<acc_type>(), acc_type{});
+}
+
+template<class InputIt, class T, class OutputIt, class BinaryOperation, class acc_type>
+OutputIt host_exclusive_scan_impl(InputIt first, InputIt last,
+                             T initial_value, OutputIt d_first,
+                             BinaryOperation op, acc_type)
+{
+    using input_type = typename std::iterator_traits<InputIt>::value_type;
 
     if (first == last) return d_first;
 
-    result_type sum = *first;
-    *d_first = sum;
+    acc_type sum = initial_value;
+    *d_first = initial_value;
 
-    while (++first != last) {
-       sum = op(sum, *first);
-       *++d_first = sum;
+    while ((first+1) != last)
+    {
+        sum = op(sum, *first);
+        *++d_first = sum;
+        first++;
     }
     return ++d_first;
 }
@@ -702,37 +739,35 @@ OutputIt host_exclusive_scan(InputIt first, InputIt last,
                              BinaryOperation op)
 {
     using input_type = typename std::iterator_traits<InputIt>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
+    using acc_type = typename ::rocprim::detail::match_result_type<
         input_type, BinaryOperation
-    >::type;
-
-    if (first == last) return d_first;
-
-    result_type sum = initial_value;
-    *d_first = initial_value;
-
-    while ((first+1) != last)
-    {
-       sum = op(sum, *first);
-       *++d_first = sum;
-       first++;
-    }
-    return ++d_first;
+        >::type;
+    return host_exclusive_scan_impl(first, last, initial_value, d_first, op, acc_type{});
 }
 
-template<class InputIt, class KeyIt, class T, class OutputIt, class BinaryOperation, class KeyCompare>
-OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
-                                    T initial_value, OutputIt d_first,
-                                    BinaryOperation op, KeyCompare key_compare_op)
+template<class InputIt, class T, class OutputIt, class U,
+          std::enable_if_t<std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value ||
+                               std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::half>::value ||
+                               std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value
+                           , bool> = true>
+OutputIt host_exclusive_scan(InputIt first, InputIt last,
+                             T initial_value, OutputIt d_first,
+                             rocprim::plus<U>)
+{
+    using acc_type = double;
+    return host_exclusive_scan_impl(first, last, initial_value, d_first, rocprim::plus<acc_type>(), acc_type{});
+}
+
+template<class InputIt, class KeyIt, class T, class OutputIt, class BinaryOperation, class KeyCompare, class acc_type>
+OutputIt host_exclusive_scan_by_key_impl(InputIt first, InputIt last, KeyIt k_first,
+                                         T initial_value, OutputIt d_first,
+                                         BinaryOperation op, KeyCompare key_compare_op, acc_type)
 {
     using input_type = typename std::iterator_traits<InputIt>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryOperation
-    >::type;
 
     if (first == last) return d_first;
 
-    result_type sum = initial_value;
+    acc_type sum = initial_value;
     *d_first = initial_value;
 
     while ((first+1) != last)
@@ -749,6 +784,28 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
         first++;
     }
     return ++d_first;
+}
+template<class InputIt, class KeyIt, class T, class OutputIt, class BinaryOperation, class KeyCompare>
+OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
+                                    T initial_value, OutputIt d_first,
+                                    BinaryOperation op, KeyCompare key_compare_op)
+{
+    using input_type = typename std::iterator_traits<InputIt>::value_type;
+    using acc_type = typename ::rocprim::detail::match_result_type<input_type, BinaryOperation>::type;
+    return host_exclusive_scan_by_key_impl(first, last, k_first, initial_value, d_first, op, key_compare_op, acc_type{});
+}
+
+template<class InputIt, class KeyIt, class T, class OutputIt, class U, class KeyCompare,
+          std::enable_if_t<std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value ||
+                               std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::half>::value ||
+                               std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value
+                           , bool> = true>
+OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
+                                    T initial_value, OutputIt d_first,
+                                    rocprim::plus<U>, KeyCompare key_compare_op)
+{
+    using acc_type = double;
+    return host_exclusive_scan_by_key_impl(first, last, k_first, initial_value, d_first, rocprim::plus<acc_type>(), key_compare_op, acc_type{});
 }
 
 inline
