@@ -628,7 +628,7 @@ inline std::vector<T> get_random_data01(size_t size, float p, seed_type seed_val
     std::vector<T> data(size);
     std::generate(
         data.begin(), data.begin() + std::min(size, max_random_size),
-        [&]() { return distribution(gen); }
+        [&]() { return static_cast<T>(distribution(gen)); }
     );
     for(size_t i = max_random_size; i < size; i += max_random_size)
     {
@@ -989,8 +989,8 @@ struct custom_test_type<rocprim::half>
     ROCPRIM_HOST_DEVICE inline
     custom_test_type(const custom_test_type<U>& other)
     {
-        x = other.x;
-        y = other.y;
+        x = static_cast<rocprim::half>(other.x);
+        y = static_cast<rocprim::half>(other.y);
     }
 
     ROCPRIM_HOST_DEVICE inline
@@ -1065,8 +1065,8 @@ struct custom_test_type<rocprim::bfloat16>
     ROCPRIM_HOST_DEVICE inline
     custom_test_type(const custom_test_type<U>& other)
     {
-        x = other.x;
-        y = other.y;
+        x = static_cast<rocprim::bfloat16>(other.x);
+        y = static_cast<rocprim::bfloat16>(other.y);
     }
 
     ROCPRIM_HOST_DEVICE inline
@@ -1663,6 +1663,7 @@ auto assert_eq(const rocprim::bfloat16& result, const rocprim::bfloat16& expecte
 }
 
 //TODO: Use custom iota until the follwing PR merge: https://github.com/ROCm-Developer-Tools/HIP/pull/2303
+//std::iota causes problems with __half and bfloat16 and custom_test_type because of a missing ++increment operator
 template<class ForwardIt, class T>
 void iota(ForwardIt first, ForwardIt last, T value)
 {

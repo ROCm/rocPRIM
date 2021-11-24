@@ -70,7 +70,6 @@ typedef ::testing::Types<
     params<custom_int2, custom_short2, rocprim::maximum<custom_int2>, 10, 1000, 10000>,
     params<float, double, rocprim::maximum<double>, 50, 2, 10>,
     params<float, float, rocprim::plus<float>, 123, 100, 200, true>,
-    //TODO: Disable bfloat16 test until the follwing PR merge: https://github.com/ROCm-Developer-Tools/HIP/pull/2303
     //params<rocprim::bfloat16, float, rocprim::plus<float>, 0, 10, 300, true>,
     params<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_minimum, 0, 1000, 30000>,
 #ifndef __HIP__
@@ -523,7 +522,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
 
             float multiplier = 1;
             if(std::is_same<scan_op_type,rocprim::plus<float>>::value)
-                multiplier = 100;
+                multiplier = 10;
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, multiplier*test_utils::precision_threshold<output_type>::percentage));
 
             HIP_CHECK(hipFree(d_temp_storage));
