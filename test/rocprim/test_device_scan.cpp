@@ -23,6 +23,7 @@
 #include "common_test_header.hpp"
 
 // required rocprim headers
+#include <rocprim/device/device_reduce.hpp>
 #include <rocprim/device/device_scan.hpp>
 #include <rocprim/device/device_scan_by_key.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
@@ -998,12 +999,6 @@ class RocprimDeviceScanFutureTests : public RocprimDeviceScanTests<Params>
 
 TYPED_TEST_SUITE(RocprimDeviceScanFutureTests, RocprimDeviceScanFutureTestsParams);
 
-template <typename T>
-static __global__ void fill_initial_value(T* ptr, const T initial_value)
-{
-    *ptr = initial_value;
-}
-
 TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 {
     using T                                     = typename TestFixture::input_type;
@@ -1037,25 +1032,35 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
+            const std::vector<T> future_input
+                = test_utils::get_random_data<T>(2048, 1, 10, ~seed_value);
             const std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
             std::vector<U>       output(input.size());
 
             T* d_input;
             U* d_output;
+            T* d_future_input;
             T* d_initial_value;
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(T)));
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, output.size() * sizeof(U)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_future_input,
+                                                         future_input.size() * sizeof(T)));
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_initial_value, sizeof(T)));
             HIP_CHECK(
                 hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
+            HIP_CHECK(hipMemcpy(d_future_input,
+                                future_input.data(),
+                                future_input.size() * sizeof(T),
+                                hipMemcpyHostToDevice));
             HIP_CHECK(hipDeviceSynchronize());
 
             // scan function
             scan_op_type scan_op;
 
+            const T initial_value = std::accumulate(future_input.begin(), future_input.end(), T(0));
+
             // Calculate expected results on host
             std::vector<U> expected(input.size());
-            T              initial_value = test_utils::get_random_value<T>(1, 10, seed_value);
             test_utils::host_exclusive_scan(
                 input.begin(), input.end(), initial_value, expected.begin(), scan_op);
 
@@ -1067,10 +1072,10 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 
             // temp storage
             size_t temp_storage_size_bytes;
-            void*  d_temp_storage = nullptr;
+            char*  d_temp_storage = nullptr;
             // Get size of d_temp_storage
             HIP_CHECK(rocprim::exclusive_scan<Config>(
-                d_temp_storage,
+                nullptr,
                 temp_storage_size_bytes,
                 d_input,
                 test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
@@ -1083,14 +1088,21 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
             // temp_storage_size_bytes must be >0
             ASSERT_GT(temp_storage_size_bytes, 0);
 
+            size_t temp_storage_reduce = 0;
+            HIP_CHECK(rocprim::reduce(
+                nullptr, temp_storage_reduce, d_future_input, d_initial_value, 2048));
+
             // allocate temporary storage
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+            HIP_CHECK(test_common_utils::hipMallocHelper(
+                &d_temp_storage, temp_storage_size_bytes + temp_storage_reduce));
             HIP_CHECK(hipDeviceSynchronize());
 
             // Fill initial value on the device
-            hipLaunchKernelGGL(
-                fill_initial_value, dim3(1), dim3(1), 0, stream, d_initial_value, initial_value);
-            HIP_CHECK(hipGetLastError());
+            HIP_CHECK(rocprim::reduce(d_temp_storage + temp_storage_size_bytes,
+                                      temp_storage_reduce,
+                                      d_future_input,
+                                      d_initial_value,
+                                      2048));
 
             // Run
             HIP_CHECK(rocprim::exclusive_scan<Config>(
@@ -1117,6 +1129,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 
             hipFree(d_input);
             hipFree(d_output);
+            hipFree(d_future_input);
             hipFree(d_initial_value);
             hipFree(d_temp_storage);
         }
