@@ -78,121 +78,36 @@ private:
 
 namespace detail
 {
-    /**
-     * \brief Allows a single kernel to support both future and immediate values.
-     */
-    template <typename T, typename Iter = T*>
-    class input_value
-    {
-    public:
-        using value_type    = T;
-        using iterator_type = Iter;
-
-        ROCPRIM_HOST_DEVICE operator T()
-        {
-            return is_future_ ? future_value_ : immediate_value_;
-        }
-
-        ROCPRIM_HOST_DEVICE operator T() const
-        {
-            return is_future_ ? future_value_ : immediate_value_;
-        }
-
-        ROCPRIM_HOST_DEVICE T get()
-        {
-            return operator T();
-        }
-
-        ROCPRIM_HOST_DEVICE T get() const
-        {
-            return operator T();
-        }
-
-        explicit ROCPRIM_HOST_DEVICE input_value(const T immediate)
-            : immediate_value_ {immediate}
-            , is_future_ {false}
-        {
-        }
-
-        explicit ROCPRIM_HOST_DEVICE input_value(const future_value<T, Iter> future)
-            : future_value_ {future}
-            , is_future_ {true}
-        {
-        }
-
-        ROCPRIM_HOST_DEVICE input_value(const input_value& rhs)
-            : is_future_ {rhs.is_future_}
-        {
-            if(is_future_)
-            {
-                future_value_ = rhs.future_value_;
-            }
-            else
-            {
-                immediate_value_ = rhs.immediate_value_;
-            }
-        }
-
-        ROCPRIM_HOST_DEVICE input_value& operator=(const input_value& rhs)
-        {
-            is_future_ = rhs.is_future_;
-            if(is_future_)
-            {
-                future_value_ = rhs.future_value_;
-            }
-            else
-            {
-                immediate_value_ = rhs.immediate_value_;
-            }
-        }
-
-        ROCPRIM_HOST_DEVICE ~input_value()
-        {
-            if(is_future_) {
-                future_value_.~future_value<T, Iter>();
-            } else {
-                immediate_value_.~T();
-            }
-        }
-
-    private:
-        union
-        {
-            future_value<T, Iter> future_value_;
-            T                     immediate_value_;
-        };
-        bool is_future_;
-    };
-
+    /// \brief Used for unpacking a future_value, basically just a cast but its more explicit
+    /// this way.
     template <typename T>
-    struct future_value_traits
+    ROCPRIM_HOST_DEVICE T get_input_value(const T value)
     {
-        using value_type    = T;
-        using iterator_type = T*;
-    };
+        return value;
+    }
 
     template <typename T, typename Iter>
-    struct future_value_traits<::rocprim::future_value<T, Iter>>
+    ROCPRIM_HOST_DEVICE T get_input_value(::rocprim::future_value<T, Iter> future) {
+        return future;
+    }
+
+    template <class T>
+    struct input_value_traits {
+        using value_type = T;
+    };
+
+    template <class T, typename Iter> 
+    struct input_value_traits<::rocprim::future_value<T, Iter>>
     {
         using value_type    = T;
         using iterator_type = Iter;
     };
 
     template <typename T>
-    using future_type_t = typename future_value_traits<T>::value_type;
+    using input_type_t = typename input_value_traits<T>::value_type;
 
     template <typename T>
-    using future_iterator_t = typename future_value_traits<T>::iterator_type;
-
-    template <typename T, typename Iter>
-    input_value<T, Iter> make_input_value(const ::rocprim::future_value<T, Iter> future) {
-        return input_value<T, Iter>{future};
-    }
-
-    template <typename T>
-    input_value<T, T*> make_input_value(const T immediate_value) {
-        return input_value<T, T*>(immediate_value);
-    }
+    using input_iterator_t = typename input_value_traits<T>::iterator_type;
 }
 
 END_ROCPRIM_NAMESPACE
