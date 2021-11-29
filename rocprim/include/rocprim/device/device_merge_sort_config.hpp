@@ -123,8 +123,8 @@ struct merge_sort_config_900<Key, Value, false>
 {
     using type = select_type<
         // clang-format off
-        select_type_case<(sizeof(Key) == 8  && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
-        select_type_case<(sizeof(Key) == 16 && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
+        select_type_case<(sizeof(Key) == 8  && sizeof(Value) <= 16), merge_sort_config<512U, 1024U, 2U>>,
+        select_type_case<(sizeof(Key) == 16 && sizeof(Value) <= 16), merge_sort_config<512U, 1024U, 2U>>,
         // clang-format on
         merge_sort_config<
             limit_block_size<512U,
