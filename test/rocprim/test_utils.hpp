@@ -699,10 +699,7 @@ template<class InputIt, class OutputIt, class BinaryOperation>
 OutputIt host_inclusive_scan(InputIt first, InputIt last,
                              OutputIt d_first, BinaryOperation op)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
-    using acc_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryOperation
-        >::type;
+    using acc_type = typename std::iterator_traits<InputIt>::value_type;
     return host_inclusive_scan_impl(first, last, d_first, op, acc_type{});
 }
 
@@ -742,10 +739,7 @@ OutputIt host_exclusive_scan(InputIt first, InputIt last,
                              T initial_value, OutputIt d_first,
                              BinaryOperation op)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
-    using acc_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryOperation
-        >::type;
+    using acc_type = typename std::iterator_traits<InputIt>::value_type;
     return host_exclusive_scan_impl(first, last, initial_value, d_first, op, acc_type{});
 }
 
@@ -792,8 +786,7 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
                                     T initial_value, OutputIt d_first,
                                     BinaryOperation op, KeyCompare key_compare_op)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
-    using acc_type = typename ::rocprim::detail::match_result_type<input_type, BinaryOperation>::type;
+    using acc_type = typename std::iterator_traits<InputIt>::value_type;
     return host_exclusive_scan_by_key_impl(first, last, k_first, initial_value, d_first, op, key_compare_op, acc_type{});
 }
 
@@ -840,8 +833,7 @@ OutputIt host_inclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
                                     OutputIt d_first,
                                     BinaryOperation op, KeyCompare key_compare_op)
 {
-    using input_type = typename std::iterator_traits<InputIt>::value_type;
-    using acc_type = typename ::rocprim::detail::match_result_type<input_type, BinaryOperation>::type;
+    using acc_type = typename std::iterator_traits<InputIt>::value_type;
     return host_inclusive_scan_by_key_impl(first, last, k_first, d_first, op, key_compare_op, acc_type{});
 }
 

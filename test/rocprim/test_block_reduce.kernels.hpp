@@ -90,8 +90,7 @@ struct static_run_algo
         }
         else
         {
-            float threshold_multiplier = std::is_same<T, ::rocprim::bfloat16>::value ? 10.0f : 5.0f;
-            test_utils::assert_near(output_reductions, expected_reductions, threshold_multiplier * test_utils::precision_threshold<T>::percentage);
+            test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
         }
     }
 };
@@ -157,8 +156,7 @@ struct static_run_valid
         );
 
         // Verifying results
-        float threshold_multiplier = std::is_same<T, ::rocprim::bfloat16>::value ? 10.0f : 5.0f;
-        test_utils::assert_near(output_reductions, expected_reductions, threshold_multiplier * test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
     }
 };
 
@@ -279,8 +277,7 @@ void test_block_reduce_input_arrays()
         );
 
         // Verifying results
-        float threshold_multiplier = std::is_same<T, ::rocprim::bfloat16>::value ? 10.0f : 5.0f;
-        test_utils::assert_near(output_reductions, expected_reductions, threshold_multiplier * test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
 
         HIP_CHECK(hipFree(device_output));
         HIP_CHECK(hipFree(device_output_reductions));
