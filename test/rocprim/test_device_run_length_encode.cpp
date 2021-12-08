@@ -257,10 +257,10 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
 
             std::vector<count_type> runs_count_expected_2;
             runs_count_expected_2.push_back(static_cast<count_type>(runs_count_expected));
-            test_utils::custom_assert_eq(runs_count_output, runs_count_expected_2, 1);
+            test_utils::assert_eq(runs_count_output, runs_count_expected_2, 1);
 
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(unique_output, unique_expected, runs_count_expected));
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(counts_output, counts_expected, runs_count_expected));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(unique_output, unique_expected, runs_count_expected));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(counts_output, counts_expected, runs_count_expected));
         }
     }
 
@@ -444,10 +444,10 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
 
             std::vector<count_type> runs_count_expected_2;
             runs_count_expected_2.push_back(static_cast<count_type>(runs_count_expected));
-            test_utils::custom_assert_eq(runs_count_output, runs_count_expected_2, 1);
+            test_utils::assert_eq(runs_count_output, runs_count_expected_2, 1);
 
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(offsets_output, offsets_expected, runs_count_expected));
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(counts_output, counts_expected, runs_count_expected));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(offsets_output, offsets_expected, runs_count_expected));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(counts_output, counts_expected, runs_count_expected));
         }
     }
 

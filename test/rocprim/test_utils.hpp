@@ -50,19 +50,29 @@ static constexpr uint32_t random_data_generation_repeat_strides = 4;
 template<class T>
 struct precision_threshold
 {
-    static constexpr float percentage = 0.0002f;
+    static constexpr float percentage = 0.0008f;
 };
 
 template<>
 struct precision_threshold<rocprim::half>
 {
-    static constexpr float percentage = 0.01f;
+    static constexpr float percentage = 0.02f;
 };
 
 template<>
 struct precision_threshold<rocprim::bfloat16>
 {
-    static constexpr float percentage = 0.02f;
+    static constexpr float percentage = 0.08f;
+};
+
+template<class T>
+struct is_plus_operator : std::false_type {
+    typedef uint8_t value_type;
+};
+
+template<class T>
+struct is_plus_operator<rocprim::plus<T>> : std::true_type {
+    typedef T value_type;
 };
 
 // Support half operators on host side
@@ -677,6 +687,41 @@ constexpr T host_reduce(InputIt first, InputIt last, rocprim::plus<T> op)
         expected = op(expected, *it);
     }
     return expected;
+}
+
+template<class acc_type, class InputIt, class OutputIt, class FlagsIt, class BinaryOperation>
+OutputIt host_inclusive_segmented_scan_headflags(InputIt first, InputIt last, FlagsIt flags,
+                                                 OutputIt d_first, BinaryOperation op)
+{
+    if (first == last) return d_first;
+
+    acc_type sum = *first;
+    *d_first = sum;
+
+    while (++first != last) {
+        ++flags;
+        sum = *flags ? *first : op(sum, *first);
+        *++d_first = sum;
+    }
+    return ++d_first;
+}
+
+template<class InputIt, class OutputIt, class FlagsIt, class BinaryOperation, class acc_type>
+OutputIt host_exclusive_segmented_scan_headflags(InputIt first, InputIt last, FlagsIt flags,
+                                                 OutputIt d_first, BinaryOperation op, acc_type init)
+{
+    if (first == last) return d_first;
+
+    acc_type sum = init;
+    *d_first = sum;
+
+    while ((first+1) != last){
+        ++flags;
+        sum = *flags ? init : op(sum, *first);
+        *++d_first = static_cast<acc_type>(sum);
+        first++;
+    }
+    return ++d_first;
 }
 
 template<class InputIt, class OutputIt, class BinaryOperation, class acc_type>
@@ -1429,6 +1474,84 @@ inline auto get_random_value(typename T::value_type min, typename T::value_type 
     return get_random_data<typename T::value_type>(random_data_generation_segments, min, max, seed_value)[0];
 }
 
+// Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
+template<class T, std::enable_if_t<sizeof(T)==1, bool> = true>
+bool inline bit_equal(const T& result, const T& expected)
+{
+    return (*reinterpret_cast<const uint8_t*>(&result) == *reinterpret_cast<const uint8_t*>(&expected));
+}
+template<class T, std::enable_if_t<sizeof(T)==2 || std::is_same<T,rocprim::half>::value || std::is_same<T,rocprim::bfloat16>::value, bool> = true>
+bool inline bit_equal(const T& result, const T& expected)
+{
+    return (*reinterpret_cast<const uint16_t*>(&result) == *reinterpret_cast<const uint16_t*>(&expected));
+}
+template<class T, std::enable_if_t<sizeof(T)==4, bool> = true>
+bool inline bit_equal(const T& result, const T& expected)
+{
+    return (*reinterpret_cast<const uint32_t*>(&result) == *reinterpret_cast<const uint32_t*>(&expected));
+}
+template<class T, std::enable_if_t<sizeof(T)==8, bool> = true>
+bool inline bit_equal(const T& result, const T& expected)
+{
+    return (*reinterpret_cast<const uint64_t*>(&result) == *reinterpret_cast<const uint64_t*>(&expected));
+}
+// end bit_equal
+
+// begin assert_eq
+
+/// Checks if `vector<T> result` matches `vector<T> expected`.
+/// If max_length is given, equality of `result.size()` and `expected.size()`
+/// is ignored and checks only the first max_length elements.
+/// \tparam T
+/// \param result
+/// \param expected
+/// \param max_length
+template<class T>
+void assert_eq(const std::vector<T>& result, const std::vector<T>& expected, const size_t max_length = SIZE_MAX)
+{
+    if(max_length == SIZE_MAX || max_length > expected.size()) ASSERT_EQ(result.size(), expected.size());
+    for(size_t i = 0; i < std::min(result.size(), max_length); i++)
+    {
+        ASSERT_EQ(result[i], expected[i]) << "where index = " << i;
+    }
+}
+
+void assert_eq(const std::vector<rocprim::half>& result, const std::vector<rocprim::half>& expected, const size_t max_length = SIZE_MAX)
+{
+    if(max_length == SIZE_MAX || max_length > expected.size()) ASSERT_EQ(result.size(), expected.size());
+    for(size_t i = 0; i < std::min(result.size(), max_length); i++)
+    {
+        ASSERT_EQ(half_to_native(result[i]), half_to_native(expected[i])) << "where index = " << i;
+    }
+}
+
+void assert_eq(const std::vector<rocprim::bfloat16>& result, const std::vector<rocprim::bfloat16>& expected, const size_t max_length = SIZE_MAX)
+{
+    if(max_length == SIZE_MAX || max_length > expected.size()) ASSERT_EQ(result.size(), expected.size());
+    for(size_t i = 0; i < std::min(result.size(), max_length); i++)
+    {
+        ASSERT_EQ(bfloat16_to_native(result[i]), bfloat16_to_native(expected[i])) << "where index = " << i;
+    }
+}
+
+template<class T>
+void assert_eq(const T& result, const T& expected)
+{
+    ASSERT_EQ(result, expected);
+}
+
+void assert_eq(const rocprim::half& result, const rocprim::half& expected)
+{
+    ASSERT_EQ(half_to_native(result), half_to_native(expected));
+}
+
+void assert_eq(const rocprim::bfloat16& result, const rocprim::bfloat16& expected)
+{
+    ASSERT_EQ(bfloat16_to_native(result), bfloat16_to_native(expected));
+}
+// end assert_eq
+
+// begin assert_near
 template<class T>
 auto assert_near(const std::vector<T>& result, const std::vector<T>& expected, const float percent)
     -> typename std::enable_if<std::is_floating_point<T>::value>::type
@@ -1436,16 +1559,16 @@ auto assert_near(const std::vector<T>& result, const std::vector<T>& expected, c
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
+        if(bit_equal(result[i], expected[i])) continue; // Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
         auto diff = std::abs(percent * expected[i]);
         ASSERT_NEAR(result[i], expected[i], diff) << "where index = " << i;
     }
 }
 
 template<class T>
-auto assert_near(const std::vector<T>& result, const std::vector<T>& expected, const float percent)
-    -> typename std::enable_if<!std::is_floating_point<T>::value>::type
+auto assert_near(const std::vector<T>& result, const std::vector<T>& expected, const float)
+    -> typename std::enable_if<!rocprim::is_floating_point<T>::value>::type
 {
-    (void)percent;
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
@@ -1453,52 +1576,18 @@ auto assert_near(const std::vector<T>& result, const std::vector<T>& expected, c
     }
 }
 
-void assert_near(const std::vector<rocprim::half>& result, const std::vector<rocprim::half>& expected, float percent)
+template<class T, std::enable_if_t<std::is_same<T, rocprim::bfloat16>::value ||
+                                        std::is_same<T, rocprim::half>::value, bool> = true>
+void assert_near(const std::vector<T>& result, const std::vector<T>& expected, const float percent)
 {
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
-        if(static_cast<float>(result[i])==static_cast<float>(expected[i])) continue;
+        if(bit_equal(result[i], expected[i])) continue; // Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
         auto diff = std::abs(percent * static_cast<float>(expected[i]));
         ASSERT_NEAR(static_cast<float>(result[i]), static_cast<float>(expected[i]), diff) << "where index = " << i;
     }
 }
-
-void assert_near(const std::vector<rocprim::bfloat16>& result, const std::vector<rocprim::bfloat16>& expected, float percent)
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        if(result[i]==expected[i]) continue;
-        auto diff = std::abs(percent * static_cast<float>(expected[i]));
-        ASSERT_NEAR(static_cast<float>(result[i]), static_cast<float>(expected[i]), diff) << "where index = " << i;
-    }
-}
-
-void assert_near(const std::vector<custom_test_type<rocprim::half>>& result, const std::vector<custom_test_type<rocprim::half>>& expected, const float percent)
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        auto diff1 = std::abs(percent * static_cast<float>(expected[i].x));
-        auto diff2 = std::abs(percent * static_cast<float>(expected[i].y));
-        if(static_cast<float>(result[i].x)!=static_cast<float>(expected[i].x)) ASSERT_NEAR(static_cast<float>(result[i].x), static_cast<float>(expected[i].x), diff1) << "where index = " << i;
-        if(static_cast<float>(result[i].y)!=static_cast<float>(expected[i].y)) ASSERT_NEAR(static_cast<float>(result[i].y), static_cast<float>(expected[i].y), diff2) << "where index = " << i;
-    }
-}
-
-void assert_near(const std::vector<custom_test_type<rocprim::bfloat16>>& result, const std::vector<custom_test_type<rocprim::bfloat16>>& expected, const float percent)
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        auto diff1 = std::abs(percent * static_cast<float>(expected[i].x));
-        auto diff2 = std::abs(percent * static_cast<float>(expected[i].y));
-        if(result[i].x!=expected[i].x) ASSERT_NEAR(static_cast<float>(result[i].x), static_cast<float>(expected[i].x), diff1) << "where index = " << i;
-        if(result[i].y!=expected[i].y) ASSERT_NEAR(static_cast<float>(result[i].y), static_cast<float>(expected[i].y), diff2) << "where index = " << i;
-    }
-}
-
 
 template<class T>
 auto assert_near(const std::vector<custom_test_type<T>>& result, const std::vector<custom_test_type<T>>& expected, const float percent)
@@ -1509,8 +1598,37 @@ auto assert_near(const std::vector<custom_test_type<T>>& result, const std::vect
     {
         auto diff1 = std::abs(percent * expected[i].x);
         auto diff2 = std::abs(percent * expected[i].y);
-        ASSERT_NEAR(result[i].x, expected[i].x, diff1) << "where index = " << i;
-        ASSERT_NEAR(result[i].y, expected[i].y, diff2) << "where index = " << i;
+        if(!bit_equal(result[i].x, expected[i].x)) ASSERT_NEAR(result[i].x, expected[i].x, diff1) << "where index = " << i;
+        if(!bit_equal(result[i].y, expected[i].y)) ASSERT_NEAR(result[i].y, expected[i].y, diff2) << "where index = " << i;
+    }
+}
+
+template<class T>
+auto assert_near(const std::vector<custom_test_type<T>>& result, const std::vector<custom_test_type<T>>& expected, const float)
+    -> typename std::enable_if<std::is_integral<T>::value>::type
+{
+    ASSERT_EQ(result.size(), expected.size());
+    for(size_t i = 0; i < result.size(); i++)
+    {
+        ASSERT_EQ(result[i].x, expected[i].x) << "where index = " << i;
+        ASSERT_EQ(result[i].y, expected[i].y) << "where index = " << i;
+    }
+}
+
+template<class T, std::enable_if_t<std::is_same<T, rocprim::bfloat16>::value ||
+                                        std::is_same<T, rocprim::half>::value, bool> = true>
+void assert_near(const std::vector<custom_test_type<T>>& result, const std::vector<custom_test_type<T>>& expected, const float percent)
+{
+    ASSERT_EQ(result.size(), expected.size());
+    for(size_t i = 0; i < result.size(); i++)
+    {
+        auto diff1 = std::abs(percent * static_cast<float>(expected[i].x));
+        auto diff2 = std::abs(percent * static_cast<float>(expected[i].y));
+        // Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
+        if(!bit_equal(result[i].x, expected[i].x))
+            ASSERT_NEAR(static_cast<float>(result[i].x), static_cast<float>(expected[i].x), diff1) << "where index = " << i;
+        if(!bit_equal(result[i].y, expected[i].y))
+            ASSERT_NEAR(static_cast<float>(result[i].y), static_cast<float>(expected[i].y), diff2) << "where index = " << i;
     }
 }
 
@@ -1518,28 +1636,23 @@ template<class T>
 auto assert_near(const T& result, const T& expected, const float percent)
     -> typename std::enable_if<std::is_floating_point<T>::value>::type
 {
+    if(bit_equal(result, expected)) return; // Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
     auto diff = std::abs(percent * expected);
     ASSERT_NEAR(result, expected, diff);
 }
 
 template<class T>
-auto assert_near(const T& result, const T& expected, const float percent)
-    -> typename std::enable_if<!std::is_floating_point<T>::value>::type
+auto assert_near(const T& result, const T& expected, const float)
+    -> typename std::enable_if<std::is_integral<T>::value>::type
 {
-    (void)percent;
     ASSERT_EQ(result, expected);
 }
 
-void assert_near(const rocprim::half& result, const rocprim::half& expected, float percent)
+template<class T, std::enable_if_t<std::is_same<T, rocprim::bfloat16>::value ||
+                                        std::is_same<T, rocprim::half>::value, bool> = true>
+void assert_near(const T& result, const T& expected, const float percent)
 {
-    if(static_cast<float>(result)==static_cast<float>(expected)) return;
-    auto diff = std::abs(percent * static_cast<float>(expected));
-    ASSERT_NEAR(static_cast<float>(result), static_cast<float>(expected), diff);
-}
-
-void assert_near(const rocprim::bfloat16& result, const rocprim::bfloat16& expected, float percent)
-{
-    if(result==expected) return;
+    if(bit_equal(result, expected)) return; // Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
     auto diff = std::abs(percent * static_cast<float>(expected));
     ASSERT_NEAR(static_cast<float>(result), static_cast<float>(expected), diff);
 }
@@ -1550,9 +1663,19 @@ auto assert_near(const custom_test_type<T>& result, const custom_test_type<T>& e
 {
     auto diff1 = std::abs(percent * expected.x);
     auto diff2 = std::abs(percent * expected.y);
-    ASSERT_NEAR(result.x, expected.x, diff1);
-    ASSERT_NEAR(result.y, expected.y, diff2);
+    if(!bit_equal(result.x, expected.x)) ASSERT_NEAR(result.x, expected.x, diff1);
+    if(!bit_equal(result.x, expected.x)) ASSERT_NEAR(result.y, expected.y, diff2);
 }
+
+template<class T>
+auto assert_near(const custom_test_type<T>& result, const custom_test_type<T>& expected, const float)
+    -> typename std::enable_if<std::is_integral<T>::value>::type
+{
+    ASSERT_EQ(result.x,expected.x);
+    ASSERT_EQ(result.y,expected.y);
+}
+
+// End assert_near
 
 template<class T>
 void assert_bit_eq(const std::vector<T>& result, const std::vector<T>& expected)
@@ -1560,110 +1683,11 @@ void assert_bit_eq(const std::vector<T>& result, const std::vector<T>& expected)
     ASSERT_EQ(result.size(), expected.size());
     for(size_t i = 0; i < result.size(); i++)
     {
-        bool the_same = true;
-        for(size_t j = 0; j < sizeof(T); j++)
-            the_same &= ((reinterpret_cast<const uint8_t*>(&result[i]))[j] == (reinterpret_cast<const uint8_t*>(&expected[i]))[j]);
-        ASSERT_EQ(true, the_same) << "where index = " << i;
+        ASSERT_EQ(true, bit_equal(result[i], expected[i])) << "where index = " << i;
     }
 }
 
-template<class T>
-auto assert_eq(const std::vector<T>& result, const std::vector<T>& expected)
-    -> typename std::enable_if<!rocprim::is_floating_point<T>::value, void>::type
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        ASSERT_EQ(result[i], expected[i]) << "where index = " << i;
-    }
-}
-
-template<class T>
-auto assert_eq(const std::vector<T>& result, const std::vector<T>& expected)
-    -> typename std::enable_if<rocprim::is_floating_point<T>::value, void>::type
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        if( result[i] != result[i] )
-            ASSERT_EQ(result[i] != result[i], expected[i] != expected[i]) << "NAN check failed where index = " << i;
-        else
-            ASSERT_EQ(result[i], expected[i]) << "where index = " << i;
-    }
-}
-
-auto assert_eq(const std::vector<rocprim::half>& result, const std::vector<rocprim::half>& expected)
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        ASSERT_EQ(half_to_native(result[i]), half_to_native(expected[i])) << "where index = " << i;
-    }
-}
-
-auto assert_eq(const std::vector<rocprim::bfloat16>& result, const std::vector<rocprim::bfloat16>& expected)
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        ASSERT_EQ(bfloat16_to_native(result[i]), bfloat16_to_native(expected[i])) << "where index = " << i;
-    }
-}
-
-template<class T>
-void custom_assert_eq(const std::vector<T>& result, const std::vector<T>& expected, size_t size)
-{
-    for(size_t i = 0; i < size; i++)
-    {
-        ASSERT_EQ(result[i], expected[i]) << "where index = " << i;
-    }
-}
-
-void custom_assert_eq(const std::vector<rocprim::half>& result, const std::vector<rocprim::half>& expected, size_t size)
-{
-    for(size_t i = 0; i < size; i++)
-    {
-        ASSERT_EQ(half_to_native(result[i]), half_to_native(expected[i])) << "where index = " << i;
-    }
-}
-
-void custom_assert_eq(const std::vector<rocprim::bfloat16>& result, const std::vector<rocprim::bfloat16>& expected, size_t size)
-{
-    for(size_t i = 0; i < size; i++)
-    {
-        ASSERT_EQ(bfloat16_to_native(result[i]), bfloat16_to_native(expected[i])) << "where index = " << i;
-    }
-}
-
-template<class T>
-auto assert_eq(const T& result, const T& expected)
-    -> typename std::enable_if<!rocprim::is_floating_point<T>::value, void>::type
-{
-    ASSERT_EQ(result, expected);
-}
-
-template<class T>
-auto assert_eq(const T& result, const T& expected)
-    -> typename std::enable_if<rocprim::is_floating_point<T>::value, void>::type
-{
-    if( result != result )
-        ASSERT_EQ( result != result, expected != expected);
-    else
-        ASSERT_EQ(result, expected);
-}
-
-auto assert_eq(const rocprim::half& result, const rocprim::half& expected)
-{
-    ASSERT_EQ(half_to_native(result), half_to_native(expected));
-}
-
-auto assert_eq(const rocprim::bfloat16& result, const rocprim::bfloat16& expected)
-{
-    ASSERT_EQ(bfloat16_to_native(result), bfloat16_to_native(expected));
-}
-
-//TODO: Use custom iota until the follwing PR merge: https://github.com/ROCm-Developer-Tools/HIP/pull/2303
-//std::iota causes problems with __half and bfloat16 and custom_test_type because of a missing ++increment operator
+// std::iota causes problems with __half and bfloat16 and custom_test_type because of a missing ++increment operator
 template<class ForwardIt, class T>
 void iota(ForwardIt first, ForwardIt last, T value)
 {

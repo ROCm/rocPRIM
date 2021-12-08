@@ -211,7 +211,7 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
                 )
             );
             HIP_CHECK(hipDeviceSynchronize());
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected, expected.size()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
 
             hipFree(d_input);
             hipFree(d_flags);
@@ -380,7 +380,7 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
                 )
             );
             HIP_CHECK(hipDeviceSynchronize());
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected, expected.size()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
 
             hipFree(d_input);
             hipFree(d_output);
@@ -595,7 +595,7 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
                     )
                 );
                 HIP_CHECK(hipDeviceSynchronize());
-                ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected, expected.size()));
+                ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
 
                 hipFree(d_input);
                 hipFree(d_output);
@@ -772,7 +772,7 @@ TEST(RocprimDeviceSelectTests, UniqueGuardedOperator)
                     )
                 );
                 HIP_CHECK(hipDeviceSynchronize());
-                ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected, expected.size()));
+                ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
 
                 hipFree(d_input);
                 hipFree(d_flag);
