@@ -303,7 +303,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, 10*test_utils::precision_threshold<T>::percentage));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage));
 
             hipFree(d_input);
             hipFree(d_output);
