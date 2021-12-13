@@ -536,10 +536,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
             );
             HIP_CHECK(hipDeviceSynchronize());
 
-            float multiplier = 1;
-            if(std::is_same<input_type,float>::value)
-                multiplier = 2;
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, multiplier*test_utils::precision_threshold<input_type>::percentage));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<input_type>::percentage));
 
             HIP_CHECK(hipFree(d_temp_storage));
             HIP_CHECK(hipFree(d_input));
@@ -678,10 +675,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
             );
             HIP_CHECK(hipDeviceSynchronize());
 
-            float multiplier = 1;
-            if(std::is_same<input_type,float>::value)
-                multiplier = 2;
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, multiplier*test_utils::precision_threshold<input_type>::percentage));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<input_type>::percentage));
 
             HIP_CHECK(hipFree(d_temp_storage));
             HIP_CHECK(hipFree(d_input));
