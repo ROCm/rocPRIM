@@ -70,7 +70,7 @@ typedef ::testing::Types<
 std::vector<size_t> get_sizes(int seed_value)
 {
     std::vector<size_t> sizes = {
-        0, 2, 32, 64, 256,
+        0, 1, 2, 32, 64, 256,
         1024, 2048,
         3072, 4096,
         27845, (1 << 18) + 1111,
@@ -487,5 +487,192 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             hipFree(d_temp_storage);
         }
     }
+}
 
+namespace {
+template <typename T>
+struct LessOp {
+    ROCPRIM_HOST_DEVICE LessOp(const T& pivot)
+        : pivot_{pivot}
+    {
+    }
+
+    ROCPRIM_HOST_DEVICE bool operator()(const T& val) const {
+        return val < pivot_; 
+    }
+private:
+    T pivot_;
+};
+}
+
+TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
+{
+    using T = typename TestFixture::input_type;
+    using U = typename TestFixture::output_type;
+    static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
+    const bool debug_synchronous = TestFixture::debug_synchronous;
+
+    const hipStream_t stream = 0; // default stream
+    const std::vector<std::array<T,2>> limit_pairs{
+        { 30, 60 }, // all sections may contain items
+        { 0, 60 },  // first section is empty
+        { 30, 30 }, // second section is empty
+        { 30, 101 } // unselected is empty
+    };
+
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    {
+        const unsigned int seed_value = seed_index < random_seeds_count
+            ? static_cast<unsigned int>(rand()) : seeds[seed_index - random_seeds_count];
+        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+
+        const std::vector<size_t> sizes = get_sizes(seed_value);
+        for(auto size : sizes)
+        {
+            SCOPED_TRACE(testing::Message() << "with size = " << size);
+            for(const auto& limits : limit_pairs)
+            {
+                SCOPED_TRACE(testing::Message() << "with limits = "
+                    << std::get<0>(limits) << ", " << std::get<1>(limits));
+                // Generate data
+                const auto input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
+
+                // Output
+                auto selected_counts = std::array<unsigned int, 2>{};
+
+                T* d_input                      = nullptr;
+                U* d_first_output               = nullptr;
+                U* d_second_output              = nullptr;
+                U* d_unselected_output          = nullptr;
+                unsigned int* d_selected_counts = nullptr;
+
+                HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(T)));
+                HIP_CHECK(hipMalloc(&d_first_output, input.size() * sizeof(U)));
+                HIP_CHECK(hipMalloc(&d_second_output, input.size() * sizeof(U)));
+                HIP_CHECK(hipMalloc(&d_unselected_output, input.size() * sizeof(U)));
+                HIP_CHECK(hipMalloc(&d_selected_counts, sizeof(selected_counts)));
+                HIP_CHECK(
+                    hipMemcpy(
+                        d_input, input.data(),
+                        input.size() * sizeof(T),
+                        hipMemcpyHostToDevice
+                    )
+                );
+
+
+                const auto first_op = LessOp<T>{std::get<0>(limits)};
+                const auto second_op = LessOp<T>{std::get<1>(limits)};
+
+                auto copy = input;
+                const auto partion_point =
+                    std::stable_partition(copy.begin(), copy.end(), first_op);
+                const auto second_partiton_point =
+                    std::stable_partition(partion_point, copy.end(), second_op);
+
+                const auto expected_counts = std::array<unsigned int, 2>{
+                    static_cast<unsigned int>(partion_point - copy.begin()),
+                    static_cast<unsigned int>(second_partiton_point - partion_point)
+                };
+
+                const auto expected = [&]{
+                    auto result = std::vector<U>(copy.size());
+                    std::copy(copy.cbegin(), copy.cend(), result.begin());
+                    return result;
+                }();
+
+                // temp storage
+                size_t temp_storage_size_bytes;
+                // Get size of d_temp_storage
+                HIP_CHECK(
+                    rocprim::partition_three_way(
+                        nullptr,
+                        temp_storage_size_bytes,
+                        d_input,
+                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_first_output),
+                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_second_output),
+                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unselected_output),
+                        d_selected_counts,
+                        input.size(),
+                        first_op,
+                        second_op,
+                        stream,
+                        debug_synchronous
+                    )
+                );
+
+                // temp_storage_size_bytes must be >0
+                ASSERT_GT(temp_storage_size_bytes, 0);
+
+                // allocate temporary storage
+                void* d_temp_storage = nullptr;
+                HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
+
+                // Run
+                HIP_CHECK(
+                    rocprim::partition_three_way(
+                        d_temp_storage,
+                        temp_storage_size_bytes,
+                        d_input,
+                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_first_output),
+                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_second_output),
+                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unselected_output),
+                        d_selected_counts,
+                        input.size(),
+                        first_op,
+                        second_op,
+                        stream,
+                        debug_synchronous
+                    )
+                );
+                HIP_CHECK(hipDeviceSynchronize());
+
+                // Check if number of selected value is as expected_selected
+                HIP_CHECK(
+                    hipMemcpy(
+                        selected_counts.data(), d_selected_counts,
+                        sizeof(selected_counts),
+                        hipMemcpyDeviceToHost
+                    )
+                );
+                ASSERT_EQ(selected_counts, expected_counts);
+
+                // Check if output values are as expected_selected
+                const auto output = [&]{
+                    auto result = std::vector<U>(input.size());
+                    HIP_CHECK(
+                        hipMemcpy(
+                            result.data(), d_first_output,
+                            expected_counts[0] * sizeof(result[0]),
+                            hipMemcpyDeviceToHost
+                        )
+                    );
+                    HIP_CHECK(
+                        hipMemcpy(
+                            result.data() + expected_counts[0], d_second_output,
+                            expected_counts[1] * sizeof(result[0]),
+                            hipMemcpyDeviceToHost
+                        )
+                    );
+                    HIP_CHECK(
+                        hipMemcpy(
+                            result.data() + expected_counts[0] + expected_counts[1],
+                            d_unselected_output,
+                            (input.size() - expected_counts[0] - expected_counts[1]) * sizeof(result[0]),
+                            hipMemcpyDeviceToHost
+                        )
+                    );
+                    return result;
+                }();
+
+                ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected, expected.size()));
+
+                hipFree(d_input);
+                hipFree(d_first_output);
+                hipFree(d_second_output);
+                hipFree(d_unselected_output);
+                hipFree(d_selected_counts);
+                hipFree(d_temp_storage);
+            }
+        }
+    }
 }

@@ -327,6 +327,52 @@ auto partition_block_load_flags(InputIterator block_predecessor,
 }
 
 template<
+    unsigned int BlockSize,
+    class ValueType,
+    unsigned int ItemsPerThread,
+    class FirstUnaryPredicate,
+    class SecondUnaryPredicate
+>
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void partition_three_way_block_generate_flags(ValueType (&values)[ItemsPerThread],
+                                              bool (&is_selected_first)[ItemsPerThread],
+                                              bool (&is_selected_second)[ItemsPerThread],
+                                              FirstUnaryPredicate select_first_part_op,
+                                              SecondUnaryPredicate select_second_part_op,
+                                              const unsigned int block_thread_id,
+                                              const bool is_last_block,
+                                              const unsigned int valid_in_last_block)
+{
+    if(is_last_block)
+    {
+        const auto offset = block_thread_id * ItemsPerThread;
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            if((offset + i) < valid_in_last_block)
+            {
+                is_selected_first[i] = select_first_part_op(values[i]);
+                is_selected_second[i] = !is_selected_first[i] && select_second_part_op(values[i]);
+            }
+            else
+            {
+                is_selected_first[i] = false;
+                is_selected_second[i] = false;
+            }
+        }
+    }
+    else
+    {
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            is_selected_first[i] = select_first_part_op(values[i]);
+            is_selected_second[i] = !is_selected_first[i] && select_second_part_op(values[i]);
+        }
+    }
+}
+
+template<
     bool OnlySelected,
     unsigned int BlockSize,
     class ValueType,
@@ -449,6 +495,90 @@ auto partition_scatter(ValueType (&values)[ItemsPerThread],
                 {
                     output[output_indices[i]] = values[i];
                 }
+            }
+        }
+    }
+}
+
+template<
+    unsigned int BlockSize,
+    class ValueType,
+    unsigned int ItemsPerThread,
+    class OffsetType,
+    class FirstOutputIterator,
+    class SecondOutputIterator,
+    class UnselectedOutputIterator,
+    class ScatterStorageType
+>
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void partition_three_way_scatter(ValueType (&values)[ItemsPerThread],
+                                 bool (&is_first_selected)[ItemsPerThread],
+                                 bool (&is_second_selected)[ItemsPerThread],
+                                 OffsetType (&output_indices)[ItemsPerThread],
+                                 FirstOutputIterator output_first_part,
+                                 SecondOutputIterator output_second_part,
+                                 UnselectedOutputIterator output_unselected,
+                                 const OffsetType selected_prefix,
+                                 const OffsetType selected_in_block,
+                                 ScatterStorageType& storage,
+                                 const unsigned int flat_block_id,
+                                 const unsigned int flat_block_thread_id,
+                                 const bool is_last_block,
+                                 const unsigned int valid_in_last_block)
+{
+    constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
+    auto scatter_storage = storage.get();
+
+    ROCPRIM_UNROLL
+    for(unsigned int i = 0; i < ItemsPerThread; i++)
+    {
+        const unsigned int first_selected_item_index = output_indices[i].first - selected_prefix.first;
+        const unsigned int second_selected_item_index = output_indices[i].second - selected_prefix.second
+            + selected_in_block.first;
+        unsigned int scatter_index{};
+
+        if(is_first_selected[i])
+        {
+            scatter_index = first_selected_item_index;
+        }
+        else if(is_second_selected[i])
+        {
+            scatter_index = second_selected_item_index;
+        }
+        else
+        {
+            const unsigned int item_index = (flat_block_thread_id * ItemsPerThread) + i;
+            const unsigned int unselected_item_index = (item_index - first_selected_item_index - second_selected_item_index)
+                + 2*selected_in_block.first + selected_in_block.second;
+            scatter_index = unselected_item_index;
+        }
+        scatter_storage[scatter_index] = values[i];
+    }
+    ::rocprim::syncthreads(); // sync threads to reuse shared memory
+
+    ROCPRIM_UNROLL
+    for(unsigned int i = 0; i < ItemsPerThread; i++)
+    {
+        const unsigned int item_index = (i * BlockSize) + flat_block_thread_id;
+        if (!is_last_block || item_index < valid_in_last_block)
+        {
+            if(item_index < selected_in_block.first)
+            {
+                output_first_part[item_index + selected_prefix.first] = scatter_storage[item_index];
+            }
+            else if(item_index < selected_in_block.first + selected_in_block.second)
+            {
+                output_second_part[item_index - selected_in_block.first + selected_prefix.second]
+                    = scatter_storage[item_index];
+            }
+            else
+            {
+                const unsigned int all_items_in_previous_blocks = items_per_block * flat_block_id;
+                const unsigned int unselected_items_in_previous_blocks = all_items_in_previous_blocks
+                    - selected_prefix.first - selected_prefix.second;
+                const unsigned int output_index = item_index + unselected_items_in_previous_blocks
+                    - selected_in_block.first - selected_in_block.second;
+                output_unselected[output_index] = scatter_storage[item_index];
             }
         }
     }
@@ -641,6 +771,193 @@ void partition_kernel_impl(InputIterator input,
     if(flat_block_id == (number_of_blocks - 1) && flat_block_thread_id == 0)
     {
         selected_count_output[0] = selected_prefix + selected_in_block;
+    }
+}
+
+template<
+    class Config,
+    class InputIterator,
+    class FirstOutputIterator,
+    class SecondOutputIterator,
+    class UnselectedOutputIterator,
+    class SelectedCountOutputIterator,
+    class FirstUnaryPredicate,
+    class SecondUnaryPredicate,
+    class OffsetLookbackScanState
+>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
+void partition_three_way_kernel_impl(InputIterator input,
+                                     FirstOutputIterator output_first_part,
+                                     SecondOutputIterator output_second_part,
+                                     UnselectedOutputIterator output_unselected,
+                                     SelectedCountOutputIterator selected_count_output,
+                                     const size_t size,
+                                     FirstUnaryPredicate select_first_part_op,
+                                     SecondUnaryPredicate select_second_part_op,
+                                     OffsetLookbackScanState offset_scan_state,
+                                     const unsigned int number_of_blocks,
+                                     ordered_block_id<unsigned int> ordered_bid)
+{
+    constexpr auto block_size = Config::block_size;
+    constexpr auto items_per_thread = Config::items_per_thread;
+    constexpr unsigned int items_per_block = block_size * items_per_thread;
+
+    using offset_type = typename OffsetLookbackScanState::value_type;
+    using value_type = typename std::iterator_traits<InputIterator>::value_type;
+
+    // Block primitives
+    using block_load_value_type = ::rocprim::block_load<
+        value_type, block_size, items_per_thread,
+        Config::value_block_load_method
+    >;
+    using block_scan_offset_type = ::rocprim::block_scan<
+        offset_type, block_size,
+        Config::block_scan_method
+    >;
+    using order_bid_type = ordered_block_id<unsigned int>;
+
+    // Offset prefix operation type
+    using offset_scan_prefix_op_type = offset_lookback_scan_prefix_op<
+        offset_type, OffsetLookbackScanState
+    >;
+
+    // Memory required for 2-phase scatter
+    using exchange_storage_type = value_type[items_per_block];
+    using raw_exchange_storage_type = typename detail::raw_storage<exchange_storage_type>;
+
+    ROCPRIM_SHARED_MEMORY struct
+    {
+        typename order_bid_type::storage_type ordered_bid;
+        union
+        {
+            raw_exchange_storage_type exchange_values;
+            typename block_load_value_type::storage_type load_values;
+            typename block_scan_offset_type::storage_type scan_offsets;
+        };
+    } storage;
+
+    const auto flat_block_thread_id = ::rocprim::detail::block_thread_id<0>();
+    const auto flat_block_id = ordered_bid.get(flat_block_thread_id, storage.ordered_bid);
+    const unsigned int block_offset = flat_block_id * items_per_block;
+    const auto valid_in_last_block = size - items_per_block * (number_of_blocks - 1);
+
+    value_type values[items_per_thread];
+    bool is_selected_first[items_per_thread];
+    bool is_selected_second[items_per_thread];
+    offset_type output_indices[items_per_thread];
+
+    // Load input values into values
+    bool is_last_block = flat_block_id == (number_of_blocks - 1);
+    if(is_last_block) // last block
+    {
+        block_load_value_type()
+            .load(
+                input + block_offset,
+                values,
+                valid_in_last_block,
+                storage.load_values
+            );
+    }
+    else
+    {
+        block_load_value_type()
+            .load(
+                input + block_offset,
+                values,
+                storage.load_values
+            );
+    }
+    ::rocprim::syncthreads(); // sync threads to reuse shared memory
+
+    // Load selection flags into is_selected, generate them using
+    // input value and selection predicate, or generate them using
+    // block_discontinuity primitive
+    partition_three_way_block_generate_flags<block_size>(
+        values,
+        is_selected_first,
+        is_selected_second,
+        select_first_part_op,
+        select_second_part_op,
+        flat_block_thread_id,
+        is_last_block,
+        valid_in_last_block
+    );
+
+    // Convert true/false is_selected flags to 0s and 1s
+    ROCPRIM_UNROLL
+    for(unsigned int i = 0; i < items_per_thread; i++)
+    {
+        output_indices[i] = offset_type{
+            is_selected_first[i] ? 1u : 0u,
+            is_selected_second[i] ? 1u : 0u };
+    }
+
+    // Number of selected values in previous blocks
+    offset_type selected_prefix{};
+    // Number of selected values in this block
+    offset_type selected_in_block{};
+
+    // Calculate number of selected values in block and their indices
+    if(flat_block_id == 0)
+    {
+        block_scan_offset_type()
+            .exclusive_scan(
+                output_indices,
+                output_indices,
+                offset_type{}, /** initial value */
+                selected_in_block,
+                storage.scan_offsets,
+                ::rocprim::plus<offset_type>()
+            );
+        if(flat_block_thread_id == 0)
+        {
+            offset_scan_state.set_complete(flat_block_id, selected_in_block);
+        }
+        ::rocprim::syncthreads(); // sync threads to reuse shared memory
+    }
+    else
+    {
+        ROCPRIM_SHARED_MEMORY typename offset_scan_prefix_op_type::storage_type storage_prefix_op_storage;
+        if(flat_block_thread_id == 0)
+        {
+            storage_prefix_op_storage.block_reduction.first = 0;
+            storage_prefix_op_storage.block_reduction.second = 0;
+            storage_prefix_op_storage.exclusive_prefix.first = 0;
+            storage_prefix_op_storage.exclusive_prefix.second = 0;
+        }
+        auto prefix_op = offset_scan_prefix_op_type(
+            flat_block_id,
+            offset_scan_state,
+            storage_prefix_op_storage
+        );
+        block_scan_offset_type()
+            .exclusive_scan(
+                output_indices,
+                output_indices,
+                storage.scan_offsets,
+                prefix_op,
+                ::rocprim::plus<offset_type>()
+            );
+        ::rocprim::syncthreads(); // sync threads to reuse shared memory
+
+        selected_in_block = prefix_op.get_reduction();
+        selected_prefix = prefix_op.get_exclusive_prefix();
+    }
+
+    // Scatter selected and rejected values
+    partition_three_way_scatter<block_size>(
+        values, is_selected_first, is_selected_second, output_indices,
+        output_first_part, output_second_part, output_unselected,
+        selected_prefix, selected_in_block, storage.exchange_values,
+        flat_block_id, flat_block_thread_id,
+        is_last_block, valid_in_last_block
+    );
+
+    // Last block in grid stores number of selected values
+    if(flat_block_id == (number_of_blocks - 1) && flat_block_thread_id == 0)
+    {
+        selected_count_output[0] = selected_prefix.first + selected_in_block.first;
+        selected_count_output[1] = selected_prefix.second + selected_in_block.second;
     }
 }
 
