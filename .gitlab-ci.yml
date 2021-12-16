@@ -156,7 +156,6 @@ build:benchmark:
       -D BUILD_TEST=OFF
       -D BUILD_EXAMPLE=OFF
       -D BUILD_BENCHMARK=ON
-      -D DISABLE_WERROR=OFF
       -D AMDGPU_TARGETS=$GPU_TARGETS
       ..
     - cmake --build .
