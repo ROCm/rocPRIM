@@ -94,16 +94,16 @@ std::vector<size_t> get_sizes(int seed_value)
     return sizes;
 }
 
-template <class T, class S>
-T get_random_value_no_duplicate(const T& duplicate, const std::vector<T> &source, const S& seed)
+template <class T>
+T get_random_value_no_duplicate(const T duplicate, const std::vector<T> &source, const size_t start_index)
 {
     T val;
-    int i = 0;
+    size_t i = 0;
     do
     {
-        val = source[(seed+i) % source.size()];
+        val = source[(start_index+i) % source.size()];
         i++;
-    } while (val == duplicate);
+    } while (val == duplicate && i < source.size());
     return val;
 }
 
