@@ -57,7 +57,7 @@ template<
     class OffsetIterator
 >
 ROCPRIM_KERNEL
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
+__launch_bounds__(Config::sort::block_size)
 void segmented_sort_kernel(KeysInputIterator keys_input,
                            typename std::iterator_traits<KeysInputIterator>::value_type * keys_tmp,
                            KeysOutputIterator keys_output,
@@ -169,9 +169,17 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
 
     if(debug_synchronous)
     {
+        std::cout << "begin_bit " << begin_bit << '\n';
+        std::cout << "end_bit " << end_bit << '\n';
+        std::cout << "bits " << bits << '\n';
+        std::cout << "segments " << segments << '\n';
+        std::cout << "radix_bits_diff " << radix_bits_diff << '\n';
+        std::cout << "storage_size " << storage_size << '\n';
         std::cout << "iterations " << iterations << '\n';
         std::cout << "long_iterations " << long_iterations << '\n';
         std::cout << "short_iterations " << short_iterations << '\n';
+        std::cout << "config::sort::block_size: " << config::sort::block_size << '\n';
+        std::cout << "config::sort::items_per_thread: " << config::sort::items_per_thread << '\n';
         hipError_t error = hipStreamSynchronize(stream);
         if(error != hipSuccess) return error;
     }
