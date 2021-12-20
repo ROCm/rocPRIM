@@ -512,10 +512,10 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
 
     const hipStream_t stream = 0; // default stream
     const std::vector<std::array<T,2>> limit_pairs{
-        { 30, 60 }, // all sections may contain items
-        { 0, 60 },  // first section is empty
-        { 30, 30 }, // second section is empty
-        { 30, 101 } // unselected is empty
+        { static_cast<T>(30), static_cast<T>(60) }, // all sections may contain items
+        { static_cast<T>(0), static_cast<T>(60) },  // first section is empty
+        { static_cast<T>(30), static_cast<T>(30) }, // second section is empty
+        { static_cast<T>(30), static_cast<T>(101) } // unselected is empty
     };
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
@@ -662,7 +662,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                     return result;
                 }();
 
-                ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected, expected.size()));
+                ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
 
                 hipFree(d_input);
                 hipFree(d_first_output);
