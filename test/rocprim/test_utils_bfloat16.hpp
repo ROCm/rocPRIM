@@ -22,6 +22,7 @@
 #define ROCPRIM_TEST_UTILS_BFLOAT16_HPP
 
 namespace test_utils {
+using bfloat16 = rocprim::bfloat16;
 
 // Support bfloat16 operators on host side
 ROCPRIM_HOST inline

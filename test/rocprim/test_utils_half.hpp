@@ -23,6 +23,7 @@
 
 namespace test_utils
 {
+using half = rocprim::half;
 // Support half operators on host side
 
 ROCPRIM_HOST inline rocprim::native_half half_to_native(const rocprim::half& x)

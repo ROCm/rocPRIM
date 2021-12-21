@@ -21,6 +21,9 @@
 #ifndef ROCPRIM_TEST_UTILS_CUSTOM_TEST_TYPES_HPP
 #define ROCPRIM_TEST_UTILS_CUSTOM_TEST_TYPES_HPP
 
+#include "test_utils_half.hpp"
+#include "test_utils_bfloat16.hpp"
+
 namespace test_utils {
 
 template<class T>

@@ -33,11 +33,9 @@
 // Seed values
 #include "test_seed.hpp"
 
-// First load datatypes
 #include "test_utils_half.hpp"
 #include "test_utils_bfloat16.hpp"
 #include "test_utils_custom_test_types.hpp"
-// Then load special tools
 #include "test_utils_data_generation.hpp"
 #include "test_utils_assertions.hpp"
 
@@ -475,40 +473,6 @@ size_t get_max_block_size()
     }
     return device_properties.maxThreadsPerBlock;
 }
-
-namespace detail
-{
-    template<class T>
-    struct numeric_limits_custom_test_type : public std::numeric_limits<typename T::value_type>
-    {
-    };
-}
-
-// Numeric limits which also supports custom_test_type<U> classes
-template<class T>
-struct numeric_limits : public std::conditional<
-        is_custom_test_type<T>::value,
-        detail::numeric_limits_custom_test_type<T>,
-        std::numeric_limits<T>
-    >::type
-{
-};
-
-template<> struct numeric_limits<rocprim::half> : public std::numeric_limits<rocprim::half> {
-public:
-    static rocprim::half min() {
-        return rocprim::half(0.00006104f);
-    };
-};
-
-template<> class numeric_limits<rocprim::bfloat16> : public std::numeric_limits<rocprim::bfloat16> {
-public:
-    static rocprim::bfloat16 min() {
-        rocprim::bfloat16 a;
-        a.data = 0x0080;
-        return a;
-    };
-};
 
 // std::iota causes problems with __half and bfloat16 and custom_test_type because of a missing ++increment operator
 template<class ForwardIt, class T>

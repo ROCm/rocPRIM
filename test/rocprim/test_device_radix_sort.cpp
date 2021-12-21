@@ -145,7 +145,8 @@ TYPED_TEST(RocprimDeviceRadixSort, SortKeys)
             std::vector<key_type> keys_input;
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value, true);
+                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value);
+                test_utils::add_special_values(keys_input, seed_value);
             }
             else
             {
@@ -282,7 +283,8 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairs)
             std::vector<key_type> keys_input;
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value, true);
+                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value);
+                test_utils::add_special_values(keys_input, seed_value);
             }
             else
             {
@@ -464,7 +466,8 @@ TYPED_TEST(RocprimDeviceRadixSort, SortKeysDoubleBuffer)
             std::vector<key_type> keys_input;
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value, true);
+                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value);
+                test_utils::add_special_values(keys_input, seed_value);
             }
             else
             {
@@ -589,7 +592,8 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairsDoubleBuffer)
             std::vector<key_type> keys_input;
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value, true);
+                keys_input = test_utils::get_random_data<key_type>(size, (key_type)-1000, (key_type)+1000, seed_value);
+                test_utils::add_special_values(keys_input, seed_value);
             }
             else
             {

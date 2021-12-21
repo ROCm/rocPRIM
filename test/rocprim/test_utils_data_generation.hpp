@@ -24,55 +24,152 @@
 // Std::memcpy and std::memcmp
 #include <cstring>
 
+#include "test_utils_half.hpp"
+#include "test_utils_bfloat16.hpp"
+#include "test_utils_custom_test_types.hpp"
+
 namespace test_utils {
 
 static constexpr uint32_t random_data_generation_segments = 32;
 static constexpr uint32_t random_data_generation_repeat_strides = 4;
 
-// helpers to produce special values for floating-point types, also compile for integrals.
-#define special_values_methods(T) \
-static T pNaN(){ T r; std::memcpy(&r, &s[0], sizeof(T)); return r; } \
-static T nNaN(){ T r; std::memcpy(&r, &s[1], sizeof(T)); return r; } \
-static T pInf(){ T r; std::memcpy(&r, &s[2], sizeof(T)); return r; } \
-static T nInf(){ T r; std::memcpy(&r, &s[3], sizeof(T)); return r; } \
-static T p0(){ T r; std::memcpy(&r, &s[4], sizeof(T)); return r; } \
-static T n0(){ T r; std::memcpy(&r, &s[5], sizeof(T)); return r; } \
-static std::vector<T> vector(){ std::vector<T> r = { pNaN(), pInf(), nInf(), p0(), n0() }; return r; }
+// std::uniform_int_distribution is undefined for anything other than
+// short, int, long, long long, unsigned short, unsigned int, unsigned long, or unsigned long long.
+template <typename T>
+struct is_valid_for_int_distribution :
+    std::integral_constant<bool,
+                           std::is_same<short, T>::value ||
+                               std::is_same<unsigned short, T>::value ||
+                               std::is_same<int, T>::value ||
+                               std::is_same<unsigned int, T>::value ||
+                               std::is_same<long, T>::value ||
+                               std::is_same<unsigned long, T>::value ||
+                               std::is_same<long long, T>::value ||
+                               std::is_same<unsigned long long, T>::value
+                           > {};
+namespace detail
+{
+    template<class T>
+    struct numeric_limits_custom_test_type : public std::numeric_limits<typename T::value_type>
+    {
+    };
+}
 
+// Numeric limits which also supports custom_test_type<U> classes
+template<class T>
+struct numeric_limits : public std::conditional<
+                            is_custom_test_type<T>::value,
+                            detail::numeric_limits_custom_test_type<T>,
+                            std::numeric_limits<T>
+                            >::type
+{
+};
+
+template<> struct numeric_limits<test_utils::half> : public std::numeric_limits<test_utils::half> {
+public:
+    using T = test_utils::half;
+    static inline T min() {
+        return T(0.00006104f);
+    };
+    static inline T max() {
+        return T(65504.0f);
+    };
+    static inline T lowest() {
+        return T(-65504.0f);
+    };
+    static inline T infinity() {
+        return T(std::numeric_limits<float>::infinity());
+    };
+    static inline T quiet_NaN() {
+        return T(std::numeric_limits<float>::quiet_NaN());
+    };
+    static inline T signaling_NaN() {
+        return T(std::numeric_limits<float>::signaling_NaN());
+    };
+};
+
+template<> class numeric_limits<test_utils::bfloat16> : public std::numeric_limits<test_utils::bfloat16> {
+public:
+    using T = test_utils::bfloat16;
+
+    static inline T max() {
+        return T(std::numeric_limits<float>::max()*0.998);
+    };
+    static inline T min() {
+        return T(std::numeric_limits<float>::min());
+    };
+    static inline T lowest() {
+        return T(std::numeric_limits<float>::lowest()*0.998);
+    };
+    static inline T infinity() {
+        return T(std::numeric_limits<float>::infinity());
+    };
+    static inline T quiet_NaN() {
+        return T(std::numeric_limits<float>::quiet_NaN());
+    };
+    static inline T signaling_NaN() {
+        return T(std::numeric_limits<float>::signaling_NaN());
+    };
+};
+// End of extended numeric_limits
+
+// Helper class to generate a vector of special values for any type
 template<class T>
 struct special_values {
-    static constexpr T s[] = {0, 0, 0, 0, 0, 0};
-    special_values_methods(T);
-};
+private:
+    // sign_bit_flip needed because host-side operators for __half are missing. (e.g. -__half unary operator or (-1*) __half*__half binary operator
+    static T sign_bit_flip(T value){
+        uint8_t* data = reinterpret_cast<uint8_t*>(&value);
+        data[sizeof(T)-1] ^= 0x80;
+        return value;
+    }
 
-template<>
-struct special_values<float>{         // +NaN,           -NaN,           +Inf,           -Inf,           +0.0,           -0.0
-    static constexpr uint32_t s[] = {0x7fffffff, 0xffffffff, 0x7F800000, 0xFF800000, 0x00000000, 0x80000000}; // float
-    special_values_methods(float);
-};
-template<>
-struct special_values<rocprim::bfloat16>{
-    static constexpr uint16_t s[] = {0x7fff, 0xffff, 0x7F80, 0xFF80, 0x0000, 0x8000}; // bfloat16
-    special_values_methods(rocprim::bfloat16);
-};
-template<>
-struct special_values<rocprim::half>{
-    static constexpr uint16_t s[] = {0x7fff, 0xffff, 0x7C00, 0xFC00, 0x0000, 0x8000}; // half
-    special_values_methods(rocprim::half);
-};
-template<>
-struct special_values<double>{
-    static constexpr uint64_t s[] = {0x7fffffffffffffff, 0xffffffffffffffff, 0x7FF0000000000000, 0xFFF0000000000000, 0x0000000000000000, 0x8000000000000000}; // double
-    special_values_methods(double);
+public:
+    static std::vector<T> vector(){
+        if(std::is_integral<T>::value){
+            return std::vector<T>();
+        }else {
+            std::vector<T> r = {test_utils::numeric_limits<T>::quiet_NaN(),
+                                //sign_bit_flip(test_utils::numeric_limits<T>::quiet_NaN()),
+                                //test_utils::numeric_limits<T>::signaling_NaN(), // signaling_NaN not supported on NVIDIA yet
+                                //sign_bit_flip(test_utils::numeric_limits<T>::signaling_NaN()),
+                                test_utils::numeric_limits<T>::infinity(),
+                                sign_bit_flip(test_utils::numeric_limits<T>::infinity()),
+                                T(0.0),
+                                T(-0.0)};
+            return r;
+        }
+    }
 };
 // end of special_values helpers
 
+/// Insert special values of type T at a random place in the source vector
+/// \tparam T
+/// \param source The source vector<T> to modify
+template<class T>
+void add_special_values(std::vector<T>& source, seed_type seed_value)
+{
+    engine_type gen{seed_value};
+    std::vector<T> special_values = test_utils::special_values<T>::vector();
+    if(source.size() > special_values.size())
+    {
+        unsigned int start = gen() % (source.size() - special_values.size());
+        std::copy(special_values.begin(), special_values.end(), source.begin() + start);
+    }
+}
+
 template<class T, class U, class V>
-inline auto get_random_data(size_t size, U min, V max, seed_type seed_value, bool = false)
+inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
     -> typename std::enable_if<rocprim::is_integral<T>::value, std::vector<T>>::type
 {
     engine_type gen{seed_value};
-    using dis_type = T;
+    using dis_type = typename std::conditional<
+        is_valid_for_int_distribution<T>::value,
+        T,
+        typename std::conditional<std::is_signed<T>::value,
+                                  int,
+                                  unsigned int>::type
+        >::type;
     std::uniform_int_distribution<dis_type> distribution(static_cast<dis_type>(min), static_cast<dis_type>(max));
     std::vector<T> data(size);
     size_t segment_size = size / random_data_generation_segments;
@@ -106,7 +203,7 @@ inline auto get_random_data(size_t size, U min, V max, seed_type seed_value, boo
 }
 
 template<class T, class U, class V>
-inline auto get_random_data(size_t size, U min, V max, seed_type seed_value, bool use_special_values = false)
+inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
     -> typename std::enable_if<rocprim::is_floating_point<T>::value, std::vector<T>>::type
 {
     engine_type gen{seed_value};
@@ -142,16 +239,11 @@ inline auto get_random_data(size_t size, U min, V max, seed_type seed_value, boo
         std::generate(data.begin(), data.end(), [&]() { return static_cast<T>(distribution(gen)); });
 
     }
-    std::vector<T> special_values = test_utils::special_values<T>::vector();
-    if(use_special_values && size > special_values.size()){
-        int start = gen() % (size-special_values.size());
-        std::copy(special_values.begin(), special_values.end(), data.begin()+start);
-    }
     return data;
 }
 
 template<class T>
-inline auto get_random_data(size_t size, T min, T max, seed_type seed_value, bool = false)
+inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
     -> typename std::enable_if<
         is_custom_test_type<T>::value && std::is_integral<typename T::value_type>::value,
         std::vector<T>
@@ -191,7 +283,7 @@ inline auto get_random_data(size_t size, T min, T max, seed_type seed_value, boo
 }
 
 template<class T>
-inline auto get_random_data(size_t size, T min, T max, seed_type seed_value, bool = false)
+inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
     -> typename std::enable_if<
         is_custom_test_type<T>::value && std::is_floating_point<typename T::value_type>::value,
         std::vector<T>
@@ -231,7 +323,7 @@ inline auto get_random_data(size_t size, T min, T max, seed_type seed_value, boo
 }
 
 template<class T>
-inline auto get_random_data(size_t size, typename T::value_type min, typename T::value_type max, seed_type seed_value, bool = false)
+inline auto get_random_data(size_t size, typename T::value_type min, typename T::value_type max, seed_type seed_value)
     -> typename std::enable_if<
         is_custom_test_array_type<T>::value && std::is_integral<typename T::value_type>::value,
         std::vector<T>

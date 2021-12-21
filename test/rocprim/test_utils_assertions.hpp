@@ -24,6 +24,10 @@
 // Std::memcpy and std::memcmp
 #include <cstring>
 
+#include "test_utils_half.hpp"
+#include "test_utils_bfloat16.hpp"
+#include "test_utils_custom_test_types.hpp"
+
 namespace test_utils {
 
 // begin assert_eq

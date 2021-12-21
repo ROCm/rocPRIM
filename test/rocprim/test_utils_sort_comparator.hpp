@@ -25,6 +25,9 @@
 
 #include <rocprim/type_traits.hpp>
 
+#include "test_utils_half.hpp"
+#include "test_utils_bfloat16.hpp"
+
 namespace test_utils
 {
 
@@ -77,6 +80,9 @@ struct key_comparator<Key, Descending, StartBit, EndBit, true, typename std::ena
 {
     bool operator()(const Key& lhs, const Key& rhs)
     {
+        if(is_floating_nan_host(lhs) && is_floating_nan_host(rhs) && std::signbit(lhs) == std::signbit(rhs)){
+            return false;
+        }
         if(Descending){
             if(is_floating_nan_host(lhs)) return !std::signbit(lhs);
             if(is_floating_nan_host(rhs)) return std::signbit(rhs);
