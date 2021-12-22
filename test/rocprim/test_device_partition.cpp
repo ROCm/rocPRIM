@@ -62,8 +62,7 @@ typedef ::testing::Types<
     DevicePartitionParams<int8_t, int8_t>,
     DevicePartitionParams<uint8_t, uint8_t>,
     DevicePartitionParams<rocprim::half, rocprim::half>,
-    //TODO: Disable bfloat16 test until we get a better bfloat16 implemetation for host side
-    //DevicePartitionParams<rocprim::bfloat16, rocprim::bfloat16>,
+    DevicePartitionParams<rocprim::bfloat16, rocprim::bfloat16>,
     DevicePartitionParams<test_utils::custom_test_type<long long>>
 > RocprimDevicePartitionTestsParams;
 
@@ -230,8 +229,8 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
                 auto j = i + expected_selected.size();
                 output_rejected.push_back(output[j]);
             }
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected_selected, expected_selected.size()));
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output_rejected, expected_rejected, expected_rejected.size()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected_selected, expected_selected.size()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output_rejected, expected_rejected, expected_rejected.size()));
 
             hipFree(d_input);
             hipFree(d_flags);
@@ -342,8 +341,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using O = typename TestFixture::input_type;
-    using T = typename std::conditional<std::is_same<O, rocprim::half>::value || std::is_same<O, rocprim::bfloat16>::value, int, O>::type;//typename TestFixture::input_type;
+    using T = typename TestFixture::input_type;
     using U = typename TestFixture::output_type;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     const bool debug_synchronous = TestFixture::debug_synchronous;
@@ -478,8 +476,8 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
                 auto j = i + expected_selected.size();
                 output_rejected.push_back(output[j]);
             }
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected_selected, expected_selected.size()));
-            ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output_rejected, expected_rejected, expected_rejected.size()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected_selected, expected_selected.size()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output_rejected, expected_rejected, expected_rejected.size()));
 
             hipFree(d_input);
             hipFree(d_output);
@@ -514,10 +512,10 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
 
     const hipStream_t stream = 0; // default stream
     const std::vector<std::array<T,2>> limit_pairs{
-        { 30, 60 }, // all sections may contain items
-        { 0, 60 },  // first section is empty
-        { 30, 30 }, // second section is empty
-        { 30, 101 } // unselected is empty
+        { static_cast<T>(30), static_cast<T>(60) }, // all sections may contain items
+        { static_cast<T>(0), static_cast<T>(60) },  // first section is empty
+        { static_cast<T>(30), static_cast<T>(30) }, // second section is empty
+        { static_cast<T>(30), static_cast<T>(101) } // unselected is empty
     };
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
@@ -664,7 +662,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                     return result;
                 }();
 
-                ASSERT_NO_FATAL_FAILURE(test_utils::custom_assert_eq(output, expected, expected.size()));
+                ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
 
                 hipFree(d_input);
                 hipFree(d_first_output);
