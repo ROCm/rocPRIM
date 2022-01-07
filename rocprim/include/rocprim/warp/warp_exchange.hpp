@@ -25,6 +25,7 @@
 #include "../detail/various.hpp"
 
 #include "../intrinsics.hpp"
+#include "../intrinsics/warp_shuffle.hpp"
 #include "../functional.hpp"
 #include "../types.hpp"
 
@@ -38,14 +39,12 @@ BEGIN_ROCPRIM_NAMESPACE
 ///
 /// \tparam T - the input type.
 /// \tparam ItemsPerThread - the number of items contributed by each thread.
-/// \tparam WarpSize - the number of threads in a warp. It must be a divisor of the
-/// kernel block size.
+/// \tparam WarpSize - the number of threads in a warp.
 ///
 /// \par Overview
 /// * The \p warp_exchange class supports the following rearrangement methods:
 ///   * Transposing a blocked arrangement to a striped arrangement.
 ///   * Transposing a striped arrangement to a blocked arrangement.
-/// * Data is automatically padded to ensure zero bank conflicts.
 ///
 /// \par Examples
 /// \parblock
@@ -85,18 +84,10 @@ class warp_exchange
     static_assert(WarpSize <= ::rocprim::device_warp_size(),
                   "Logical warp size cannot be larger than physical warp size.");
 
-    // Minimize LDS bank conflicts for power-of-two strides, i.e. when items accessed
-    // using `thread_id * ItemsPerThread` pattern where ItemsPerThread is power of two
-    static constexpr bool has_bank_conflicts =
-        ItemsPerThread >= 2 && ::rocprim::detail::is_power_of_two(ItemsPerThread);
-    static constexpr unsigned int banks_no = ::rocprim::detail::get_lds_banks_no();
-    static constexpr unsigned int bank_conflicts_padding =
-        has_bank_conflicts ? (WarpSize * ItemsPerThread / banks_no) : 0;
-
     // Struct used for creating a raw_storage object for this primitive's temporary storage.
     struct storage_type_
     {
-        T buffer[WarpSize * ItemsPerThread + bank_conflicts_padding];
+        T buffer[WarpSize * ItemsPerThread];
     };
 
 public:
@@ -158,15 +149,80 @@ public:
         const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
         storage_type_& storage_ = storage.get();
 
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            storage_.buffer[index(flat_id * ItemsPerThread + i)] = input[i];
+            storage_.buffer[flat_id * ItemsPerThread + i] = input[i];
         }
         ::rocprim::wave_barrier();
 
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            output[i] = storage_.buffer[index(i * WarpSize + flat_id)];
+            output[i] = storage_.buffer[i * WarpSize + flat_id];
+        }
+    }
+
+    /// \brief Transposes a blocked arrangement of items to a striped arrangement
+    /// across the warp, using warp shuffle operations.
+    /// Caution: this API is experimental. Performance might not be consistent.
+    /// ItemsPerThread must be a divisor of WarpSize.
+    ///
+    /// \tparam U - [inferred] the output type.
+    ///
+    /// \param [in] input - array that data is loaded from.
+    /// \param [out] output - array that data is loaded to.
+    ///
+    /// \par Example.
+    /// \code{.cpp}
+    /// __global__ void example_kernel(...)
+    /// {
+    ///     constexpr unsigned int threads_per_block = 128;
+    ///     constexpr unsigned int threads_per_warp  =   8;
+    ///     constexpr unsigned int items_per_thread  =   4;
+    ///     constexpr unsigned int warps_per_block   = threads_per_block / threads_per_warp;
+    ///     const unsigned int warp_id = hipThreadIdx_x / threads_per_warp;
+    ///     // specialize warp_exchange for int, warp of 8 threads and 4 items per thread
+    ///     using warp_exchange_int = rocprim::warp_exchange<int, items_per_thread, threads_per_warp>;
+    ///
+    ///     int items[items_per_thread];
+    ///     ...
+    ///     warp_exchange_int w_exchange;
+    ///     w_exchange.blocked_to_striped_shuffle(items, items);
+    ///     ...
+    /// }
+    /// \endcode
+    template<class U>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void blocked_to_striped_shuffle(const T (&input)[ItemsPerThread],
+                                    U (&output)[ItemsPerThread])
+    {
+        static_assert(WarpSize % ItemsPerThread == 0,
+                      "ItemsPerThread must be a divisor of WarpSize to use blocked_to_striped_shuffle");
+        const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
+        U work_array[ItemsPerThread];
+
+        ROCPRIM_UNROLL
+        for(unsigned int dst_idx = 0; dst_idx < ItemsPerThread; dst_idx++)
+        {
+            ROCPRIM_UNROLL
+            for(unsigned int src_idx = 0; src_idx < ItemsPerThread; src_idx++)
+            {
+                const auto value = ::rocprim::warp_shuffle(
+                    input[src_idx],
+                    flat_id / ItemsPerThread + dst_idx * (WarpSize / ItemsPerThread)
+                );
+                if(src_idx == flat_id % ItemsPerThread)
+                {
+                    work_array[dst_idx] = value;
+                }
+            }
+        }
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            output[i] = work_array[i];
         }
     }
 
@@ -213,25 +269,81 @@ public:
         const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
         storage_type_& storage_ = storage.get();
 
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            storage_.buffer[index(i * WarpSize + flat_id)] = input[i];
+            storage_.buffer[i * WarpSize + flat_id] = input[i];
         }
         ::rocprim::wave_barrier();
 
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            output[i] = storage_.buffer[index(flat_id * ItemsPerThread + i)];
+            output[i] = storage_.buffer[flat_id * ItemsPerThread + i];
         }
     }
 
-private:
-    // Change index to minimize LDS bank conflicts if necessary
+    /// \brief Transposes a striped arrangement of items to a blocked arrangement
+    /// across the warp, using warp shuffle operations.
+    /// Caution: this API is experimental. Performance might not be consistent.
+    /// ItemsPerThread must be a divisor of WarpSize.
+    ///
+    /// \tparam U - [inferred] the output type.
+    ///
+    /// \param [in] input - array that data is loaded from.
+    /// \param [out] output - array that data is loaded to.
+    ///
+    /// \par Example.
+    /// \code{.cpp}
+    /// __global__ void example_kernel(...)
+    /// {
+    ///     constexpr unsigned int threads_per_block = 128;
+    ///     constexpr unsigned int threads_per_warp  =   8;
+    ///     constexpr unsigned int items_per_thread  =   4;
+    ///     constexpr unsigned int warps_per_block   = threads_per_block / threads_per_warp;
+    ///     const unsigned int warp_id = hipThreadIdx_x / threads_per_warp;
+    ///     // specialize warp_exchange for int, warp of 8 threads and 4 items per thread
+    ///     using warp_exchange_int = rocprim::warp_exchange<int, items_per_thread, threads_per_warp>;
+    ///
+    ///     int items[items_per_thread];
+    ///     ...
+    ///     warp_exchange_int w_exchange;
+    ///     w_exchange.striped_to_blocked_shuffle(items, items);
+    ///     ...
+    /// }
+    /// \endcode
+    template<class U>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int index(unsigned int n)
+    void striped_to_blocked_shuffle(const T (&input)[ItemsPerThread],
+                                    U (&output)[ItemsPerThread])
     {
-        // Move every 32-bank wide "row" (32 banks * 4 bytes) by one item
-        return has_bank_conflicts ? (n + n / banks_no) : n;
+        static_assert(WarpSize % ItemsPerThread == 0,
+                      "ItemsPerThread must be a divisor of WarpSize to use striped_to_blocked_shuffle");
+        const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
+        U work_array[ItemsPerThread];
+
+        ROCPRIM_UNROLL
+        for(unsigned int dst_idx = 0; dst_idx < ItemsPerThread; dst_idx++)
+        {
+            ROCPRIM_UNROLL
+            for(unsigned int src_idx = 0; src_idx < ItemsPerThread; src_idx++)
+            {
+                const auto value = ::rocprim::warp_shuffle(
+                    input[src_idx],
+                    (ItemsPerThread * flat_id + dst_idx) % WarpSize
+                );
+                if(flat_id / (WarpSize / ItemsPerThread) == src_idx)
+                {
+                    work_array[dst_idx] = value;
+                }
+            }
+        }
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            output[i] = work_array[i];
+        }
     }
 };
 
