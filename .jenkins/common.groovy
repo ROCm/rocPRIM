@@ -44,6 +44,9 @@ def runTestCommand (platform, project)
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
                 ${testCommand}
+                if (( \$? != 0 )); then
+                    exit 1
+                fi
                 ${hmmTestCommand}
             """
 
