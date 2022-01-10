@@ -23,6 +23,7 @@
 
 #include <rocprim/types.hpp>
 #include <rocprim/functional.hpp>
+#include <rocprim/intrinsics.hpp>
 #include <rocprim/type_traits.hpp>
 #include <rocprim/detail/match_result_type.hpp>
 
@@ -484,6 +485,25 @@ void iota(ForwardIt first, ForwardIt last, T value)
         ++value;
     }
 }
+
+#define SKIP_IF_UNSUPPORTED_WARP_SIZE(test_warp_size) { \
+    const auto host_warp_size = ::rocprim::host_warp_size(); \
+    if (host_warp_size < (test_warp_size)) \
+    { \
+        GTEST_SKIP() << "Cannot run test of warp size " \
+            << (test_warp_size) \
+            << " on a device with warp size " \
+            << host_warp_size; \
+    } \
+}
+
+template<unsigned int LogicalWarpSize>
+struct DeviceSelectWarpSize
+{
+    static constexpr unsigned value = ::rocprim::device_warp_size() >= LogicalWarpSize
+        ? LogicalWarpSize
+        : ::rocprim::device_warp_size();
+};
 
 } // end test_utils namespace
 
