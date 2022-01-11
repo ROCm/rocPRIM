@@ -44,10 +44,16 @@ BEGIN_ROCPRIM_NAMESPACE
 ///
 /// \tparam LongRadixBits - number of bits in long iterations.
 /// \tparam ShortRadixBits - number of bits in short iterations, must be equal to or less than \p LongRadixBits.
+/// \tparam UseWarpSort - whether to use warp sort for the smallest segments.
+/// \tparam WarpSortWarpThreads - the number of threads in a warp for the warp sort.
+/// \tparam WarpSortItemsPerThread - the number of items processed by each thread in the warp sort.
 /// \tparam SortConfig - configuration of radix sort kernel. Must be \p kernel_config.
 template<
     unsigned int LongRadixBits,
     unsigned int ShortRadixBits,
+    bool UseWarpSort,
+    unsigned int WarpSortWarpThreads,
+    unsigned int WarpSortItemsPerThread,
     class SortConfig
 >
 struct segmented_radix_sort_config
@@ -56,6 +62,12 @@ struct segmented_radix_sort_config
     static constexpr unsigned int long_radix_bits = LongRadixBits;
     /// \brief Number of bits in short iterations
     static constexpr unsigned int short_radix_bits = ShortRadixBits;
+    /// \brief Warp sort is used for small segments or not
+    static constexpr bool use_warp_sort = UseWarpSort;
+    /// \brief Number of threads per warp in the warp sort
+    static constexpr unsigned int warp_sort_warp_threads = WarpSortWarpThreads;
+    /// \brief Number of items processed by a thread in the warp sort.
+    static constexpr unsigned int warp_sort_items_per_thread = WarpSortItemsPerThread;
     /// \brief Configuration of radix sort kernel.
     using sort = SortConfig;
 };
@@ -72,31 +84,31 @@ struct segmented_radix_sort_config_803
     using type = select_type<
         select_type_case<
             (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<8, 7, kernel_config<256, 10> >
+            segmented_radix_sort_config<8, 7, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<8, 7, kernel_config<256, 10> >
+            segmented_radix_sort_config<8, 7, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> >
         >,
         select_type_case<
             (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 13> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 13> >
         >,
-        segmented_radix_sort_config<7, 6, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
+        segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
     >;
 };
 
 template<class Key>
 struct segmented_radix_sort_config_803<Key, empty_type>
     : select_type<
-        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<8, 7, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<8, 7, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, kernel_config<256, 9> > >,
-        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, kernel_config<256, 7> > >
+        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<8, 7, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<8, 7, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 9> > >,
+        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 7> > >
     > { };
 
 template<class Key, class Value>
@@ -108,31 +120,31 @@ struct segmented_radix_sort_config_900
     using type = select_type<
         select_type_case<
             (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<4, 4, kernel_config<256, 10> >
+            segmented_radix_sort_config<4, 4, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<6, 5, kernel_config<256, 10> >
+            segmented_radix_sort_config<6, 5, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> >
         >,
         select_type_case<
             (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> >
         >,
-        segmented_radix_sort_config<7, 6, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
+        segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
     >;
 };
 
 template<class Key>
 struct segmented_radix_sort_config_900<Key, empty_type>
     : select_type<
-        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, kernel_config<256, 17> > >,
-        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, kernel_config<256, 15> > >
+        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 17> > >,
+        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> > >
     > { };
 
 template<class Key, class Value>
@@ -144,31 +156,31 @@ struct segmented_radix_sort_config_90a
     using type = select_type<
         select_type_case<
             (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<4, 4, kernel_config<256, 10> >
+            segmented_radix_sort_config<4, 4, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<6, 5, kernel_config<256, 10> >
+            segmented_radix_sort_config<6, 5, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> >
         >,
         select_type_case<
             (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> >
         >,
-        segmented_radix_sort_config<7, 6, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
+        segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
     >;
 };
 
 template<class Key>
 struct segmented_radix_sort_config_90a<Key, empty_type>
     : select_type<
-        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, kernel_config<256, 17> > >,
-        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, kernel_config<256, 15> > >
+        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 17> > >,
+        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> > >
     > { };
 
 template<class Key, class Value>
@@ -180,31 +192,31 @@ struct segmented_radix_sort_config_1030
     using type = select_type<
         select_type_case<
             (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<4, 4, kernel_config<256, 10> >
+            segmented_radix_sort_config<4, 4, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<6, 5, kernel_config<256, 10> >
+            segmented_radix_sort_config<6, 5, false, 32, 4, kernel_config<256, 10> >
         >,
         select_type_case<
             (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> >
         >,
         select_type_case<
             (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15> >
+            segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> >
         >,
-        segmented_radix_sort_config<7, 6, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
+        segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)> >
     >;
 };
 
 template<class Key>
 struct segmented_radix_sort_config_1030<Key, empty_type>
     : select_type<
-        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, kernel_config<256, 10> > >,
-        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, kernel_config<256, 17> > >,
-        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, kernel_config<256, 15> > >
+        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, false, 32, 4, kernel_config<256, 10> > >,
+        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 17> > >,
+        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, true, 32, 4, kernel_config<256, 15> > >
     > { };
 
 template<unsigned int TargetArch, class Key, class Value>
