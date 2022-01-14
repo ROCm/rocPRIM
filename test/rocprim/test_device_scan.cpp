@@ -27,6 +27,7 @@
 #include <rocprim/device/device_scan.hpp>
 #include <rocprim/device/device_scan_by_key.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
