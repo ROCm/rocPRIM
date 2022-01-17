@@ -471,27 +471,49 @@ public:
 };
 
 template<
+    class Config,
     class Key,
     class Value,
-    unsigned int ItemsPerThread,
-    unsigned int LogicalWarpSize,
+    bool Descending,
+    class Enable = void
+>
+struct segmented_warp_sort_helper
+{
+    static constexpr unsigned int items_per_warp = 0;
+    using storage_type = ::rocprim::empty_type;
+
+    template<class... Args>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void sort(Args&&...)
+    {
+    }
+};
+
+template<
+    class Config,
+    class Key,
+    class Value,
     bool Descending
 >
-class segmented_warp_sort_helper
+class segmented_warp_sort_helper<Config, Key, Value, Descending,
+    std::enable_if_t<!std::is_same<DisabledWarpSortConfig, Config>::value>>
 {
+    static constexpr unsigned int logical_warp_size = Config::logical_warp_size;
+    static constexpr unsigned int items_per_thread = Config::items_per_thread;
+
     using key_type     = Key;
     using value_type   = Value;
     using key_codec    = ::rocprim::detail::radix_key_codec<key_type, Descending>;
     using bit_key_type = typename key_codec::bit_key_type;
 
-    using keys_load_type        = ::rocprim::warp_load<key_type, ItemsPerThread, LogicalWarpSize, ::rocprim::warp_load_method::warp_load_striped>;
-    using values_load_type      = ::rocprim::warp_load<value_type, ItemsPerThread, LogicalWarpSize, ::rocprim::warp_load_method::warp_load_striped>;
-    using keys_store_type       = ::rocprim::warp_store<key_type, ItemsPerThread, LogicalWarpSize>;
-    using values_store_type     = ::rocprim::warp_store<value_type, ItemsPerThread, LogicalWarpSize>;
+    using keys_load_type        = ::rocprim::warp_load<key_type, items_per_thread, logical_warp_size, ::rocprim::warp_load_method::warp_load_striped>;
+    using values_load_type      = ::rocprim::warp_load<value_type, items_per_thread, logical_warp_size, ::rocprim::warp_load_method::warp_load_striped>;
+    using keys_store_type       = ::rocprim::warp_store<key_type, items_per_thread, logical_warp_size>;
+    using values_store_type     = ::rocprim::warp_store<value_type, items_per_thread, logical_warp_size>;
     template<bool UseRadixMask>
     using radix_comparator_type = ::rocprim::detail::radix_merge_compare<Descending, UseRadixMask, key_type>;
     using stable_key_type       = ::rocprim::tuple<key_type, unsigned int>;
-    using sort_type             = ::rocprim::warp_sort<stable_key_type, LogicalWarpSize, value_type>;
+    using sort_type             = ::rocprim::warp_sort<stable_key_type, logical_warp_size, value_type>;
 
     static constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
 
@@ -508,6 +530,8 @@ class segmented_warp_sort_helper
     }
 
 public:
+    static constexpr unsigned int items_per_warp = items_per_thread * logical_warp_size;
+
     union storage_type
     {
         typename keys_load_type::storage_type keys_load;
@@ -534,23 +558,23 @@ public:
               unsigned int end_bit,
               storage_type& storage)
     {
-        if(::rocprim::flat_block_thread_id() >= LogicalWarpSize)
+        if(::rocprim::flat_block_thread_id() >= logical_warp_size)
         {
             return;
         }
         const unsigned int num_items = end_offset - begin_offset;
         const key_type out_of_bounds = key_codec::decode(bit_key_type(-1));
 
-        key_type keys[ItemsPerThread];
-        stable_key_type stable_keys[ItemsPerThread];
-        value_type values[ItemsPerThread];
+        key_type keys[items_per_thread];
+        stable_key_type stable_keys[items_per_thread];
+        value_type values[items_per_thread];
         keys_load_type().load(keys_input + begin_offset, keys, num_items, out_of_bounds, storage.keys_load);
 
         ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        for(unsigned int i = 0; i < items_per_thread; i++)
         {
             ::rocprim::get<0>(stable_keys[i]) = keys[i];
-            ::rocprim::get<1>(stable_keys[i]) = ::rocprim::lane_id() + LogicalWarpSize * i;
+            ::rocprim::get<1>(stable_keys[i]) = ::rocprim::lane_id() + logical_warp_size * i;
         }
 
         if(with_values)
@@ -571,7 +595,7 @@ public:
         }
 
         ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        for(unsigned int i = 0; i < items_per_thread; i++)
         {
             keys[i] = ::rocprim::get<0>(stable_keys[i]);
         }
@@ -654,11 +678,7 @@ void segmented_sort(KeysInputIterator keys_input,
     constexpr unsigned int short_radix_bits = Config::short_radix_bits;
     constexpr unsigned int block_size = Config::sort::block_size;
     constexpr unsigned int items_per_thread = Config::sort::items_per_thread;
-    constexpr bool use_warp_sort = Config::use_warp_sort;
-    constexpr unsigned int warp_sort_items_per_thread = Config::warp_sort_items_per_thread;
-    constexpr unsigned int warp_sort_warp_threads = Config::warp_sort_warp_threads;
     constexpr unsigned int items_per_block = block_size * items_per_thread;
-    constexpr unsigned int items_per_warp = warp_sort_warp_threads * warp_sort_items_per_thread;
 
     using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
     using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
@@ -679,9 +699,9 @@ void segmented_sort(KeysInputIterator keys_input,
         short_radix_bits, Descending
     >;
     using warp_sort_helper_type = segmented_warp_sort_helper<
-        key_type, value_type, warp_sort_items_per_thread, warp_sort_warp_threads,
-        Descending
+        typename Config::warp_sort_config, key_type, value_type, Descending
     >;
+    static constexpr unsigned int items_per_warp = warp_sort_helper_type::items_per_warp;
 
     ROCPRIM_SHARED_MEMORY union
     {
@@ -733,7 +753,7 @@ void segmented_sort(KeysInputIterator keys_input,
             bit += short_radix_bits;
         }
     }
-    else if (!use_warp_sort || (end_offset - begin_offset > items_per_warp))
+    else if (end_offset - begin_offset > items_per_warp)
     {
         // Short segment
         single_block_helper_type().sort(
