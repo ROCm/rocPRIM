@@ -385,7 +385,7 @@ OutputIt host_exclusive_scan_by_key_impl(InputIt first, InputIt last, KeyIt k_fi
         {
             sum = initial_value;
         }
-		k_first++;
+        k_first++;
         *++d_first = sum;
         first++;
     }
@@ -434,7 +434,7 @@ OutputIt host_inclusive_scan_by_key_impl(InputIt first, InputIt last, KeyIt k_fi
         {
             sum = *first;
         }
-		k_first++;
+        k_first++;
         *++d_first = sum;
     }
     return ++d_first;
