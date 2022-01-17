@@ -23,6 +23,7 @@
 
 #include <type_traits>
 #include <iterator>
+#include <cstring> // std::memcpy
 
 #include "../../config.hpp"
 #include "../../detail/various.hpp"
@@ -813,18 +814,33 @@ block_load_radix_impl(const unsigned int flat_id,
 
 template<class T>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-auto compare_nans(const T& a, const T& b)
+auto compare_nan_sensitive(const T& a, const T& b)
     -> typename std::enable_if<rocprim::is_floating_point<T>::value, bool>::type
 {
-    return (a != a) && (b == b);
+    static constexpr auto sign_bit = float_bit_mask<T>::sign_bit;
+    using bit_key_type = typename float_bit_mask<T>::bit_type;
+    
+    bit_key_type a_bits, b_bits;
+    std::memcpy(&a_bits, &a, sizeof(T));
+    std::memcpy(&b_bits, &b, sizeof(T));
+
+    // convert -0.0 to +0.0
+    a_bits = a_bits == sign_bit ? 0 : a_bits;
+    b_bits = b_bits == sign_bit ? 0 : b_bits;
+    // invert negatives, put 1 into sign bit for positives 
+    a_bits ^= (sign_bit & a_bits) == 0 ? sign_bit : bit_key_type(-1);
+    b_bits ^= (sign_bit & b_bits) == 0 ? sign_bit : bit_key_type(-1);
+
+    // sort numbers and NaNs according to their bit representation
+    return a_bits > b_bits;
 }
 
 template<class T>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-auto compare_nans(const T&, const T&)
+auto compare_nan_sensitive(const T& a, const T& b)
     -> typename std::enable_if<!rocprim::is_floating_point<T>::value, bool>::type
 {
-    return false;
+    return a > b;
 }
 
 template<
@@ -841,7 +857,7 @@ struct radix_merge_compare<false, false, T>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     bool operator()(const T& a, const T& b) const
     {
-        return compare_nans<T>(b, a) || b > a;
+        return compare_nan_sensitive<T>(b, a);
     }
 };
 
@@ -851,7 +867,7 @@ struct radix_merge_compare<true, false, T>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     bool operator()(const T& a, const T& b) const
     {
-        return compare_nans<T>(a, b) || a > b;
+        return compare_nan_sensitive<T>(a, b);
     }
 };
 
@@ -907,80 +923,6 @@ struct radix_merge_compare<Descending, true, T, typename std::enable_if<rocprim:
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
     bool operator()(const T&, const T&) const { return false; }
-};
-
-template<>
-struct radix_merge_compare<false, false, rocprim::half>
-{
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const rocprim::half& a, const rocprim::half& b) const
-    {
-        return (__hisnan(b) && !__hisnan(a)) || __hgt(b, a);
-    }
-};
-
-template<>
-struct radix_merge_compare<true, false, rocprim::half>
-{
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const rocprim::half& a, const rocprim::half& b) const
-    {
-        return (!__hisnan(b) && __hisnan(a)) || __hgt(a, b);
-    }
-};
-
-template<>
-struct radix_merge_compare<false, true, rocprim::half>
-{
-    using key_codec = radix_key_codec<rocprim::half, true>;
-    using bit_key_type = typename key_codec::bit_key_type;
-
-    unsigned int bit, length;
-
-    radix_merge_compare(const unsigned int bit, const unsigned int current_radix_bits)
-    {
-        this->bit = bit;
-        this->length = current_radix_bits;
-    }
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const rocprim::half& a, const rocprim::half& b) const
-    {
-        const bit_key_type encoded_key_a = key_codec::encode(a);
-        const bit_key_type masked_key_a  = key_codec::extract_digit(encoded_key_a, bit, length);
-
-        const bit_key_type encoded_key_b = key_codec::encode(b);
-        const bit_key_type masked_key_b  = key_codec::extract_digit(encoded_key_b, bit, length);
-
-        return __hgt(key_codec::decode(masked_key_b), key_codec::decode(masked_key_a));
-    }
-};
-
-template<>
-struct radix_merge_compare<true, true, rocprim::half>
-{
-    using key_codec = radix_key_codec<rocprim::half, true>;
-    using bit_key_type = typename key_codec::bit_key_type;
-
-    unsigned int bit, length;
-
-    radix_merge_compare(const unsigned int bit, const unsigned int current_radix_bits)
-    {
-        this->bit = bit;
-        this->length = current_radix_bits;
-    }
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const rocprim::half& a, const rocprim::half& b) const
-    {
-        const bit_key_type encoded_key_a = key_codec::encode(a);
-        const bit_key_type masked_key_a  = key_codec::extract_digit(encoded_key_a, bit, length);
-
-        const bit_key_type encoded_key_b = key_codec::encode(b);
-        const bit_key_type masked_key_b  = key_codec::extract_digit(encoded_key_b, bit, length);
-
-        return __hgt(key_codec::decode(masked_key_a), key_codec::decode(masked_key_b));
-    }
 };
 
 template<
