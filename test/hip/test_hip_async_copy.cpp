@@ -191,3 +191,47 @@ TEST(HipAsyncCopyTests, AsyncCopyConcurrently)
 
     ASSERT_EQ(expecteds, outputs);
 }
+
+TEST(HipAsyncCopyTests, StreamInStruct)
+{
+    struct StreamWrapper
+    {
+        hipStream_t stream;
+    };
+    using T = int;
+    using vector_type = std::vector<T, PinnedAllocator<T>>;
+    static constexpr int seed = 543897;
+    static constexpr unsigned int block_size = 1024;
+
+    const size_t size = get_sizes().back();
+    std::default_random_engine prng(seed);
+    std::uniform_int_distribution<T> dist;
+
+    StreamWrapper stream_wrapper;
+    HIP_CHECK(hipStreamCreateWithFlags(&stream_wrapper.stream, hipStreamNonBlocking));
+    vector_type input;
+    std::generate_n(std::back_inserter(input), size, [&](){ return dist(prng); });
+    vector_type expected;
+    std::transform(input.begin(), input.end(), std::back_inserter(expected),
+        [](const auto& val){ return val + static_cast<T>(1); });
+
+    T* d_input{};
+    const auto size_bytes = size * sizeof(T);
+    HIP_CHECK(hipMallocHelper(&d_input, size_bytes));
+    HIP_CHECK(hipMemcpyAsync(d_input, input.data(), size_bytes, hipMemcpyHostToDevice, stream_wrapper.stream));
+
+    const unsigned int grid_size = (size + block_size - 1) / block_size;
+    hipLaunchKernelGGL(
+        HIP_KERNEL_NAME(increment_kernel),
+        dim3(grid_size), dim3(block_size), 0, stream_wrapper.stream,
+        d_input, size
+    );
+
+    vector_type output(size);
+    HIP_CHECK(hipMemcpyAsync(output.data(), d_input, size_bytes, hipMemcpyDeviceToHost, stream_wrapper.stream));
+    HIP_CHECK(hipStreamSynchronize(stream_wrapper.stream));
+    HIP_CHECK(hipFree(d_input));
+    HIP_CHECK(hipStreamDestroy(stream_wrapper.stream));
+
+    ASSERT_EQ(output, expected);
+}
