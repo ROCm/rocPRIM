@@ -76,96 +76,67 @@ void increment_kernel(T* const d_input, const size_t size)
 
 }
 
-TEST(HipAsyncCopyTests, AsyncCopySerially)
+class HipAsyncCopyTests : public ::testing::Test
 {
+protected:
     using T = int;
     using vector_type = std::vector<T, PinnedAllocator<T>>;
     static constexpr int seed = 543897;
     static constexpr unsigned int block_size = 1024;
 
-    std::default_random_engine prng(seed);
-    std::uniform_int_distribution<T> dist;
+    std::vector<size_t> sizes;
+    std::vector<vector_type> inputs;
+    std::vector<vector_type> expecteds;
+    std::vector<T*> d_inputs;
+    std::vector<vector_type> outputs;
+    std::vector<hipStream_t> streams;
 
-    for(size_t stream_idx = 0; stream_idx < 2; stream_idx++)
+    void SetUp() override
     {
-        hipStream_t stream = hipStreamDefault;
-        if(stream_idx > 0)
-        {
-            HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
-        }
-        SCOPED_TRACE(testing::Message() << "with stream= " << stream);
+        std::default_random_engine prng(seed);
+        std::uniform_int_distribution<T> dist;
 
-        for(const auto size : get_sizes())
+        sizes = get_sizes();
+        inputs.resize(sizes.size());
+        expecteds.resize(sizes.size());
+        d_inputs.resize(sizes.size());
+        outputs.resize(sizes.size());
+        streams.resize(sizes.size());
+
+        for(size_t i = 0; i < sizes.size(); i++)
         {
-            SCOPED_TRACE(testing::Message() << "with size= " << size);
-            vector_type input;
-            std::generate_n(std::back_inserter(input), size, [&](){ return dist(prng); });
-            vector_type expected;
-            std::transform(input.begin(), input.end(), std::back_inserter(expected),
+            const auto size = sizes[i];
+            std::generate_n(std::back_inserter(inputs[i]), size, [&](){ return dist(prng); });
+            std::transform(inputs[i].begin(), inputs[i].end(), std::back_inserter(expecteds[i]),
                 [](const auto& val) { return val + static_cast<T>(1); });
-
-            T* d_input{};
-            const auto size_bytes = size * sizeof(T);
-            HIP_CHECK(hipMallocHelper(&d_input, size_bytes));
-            HIP_CHECK(hipMemcpyAsync(d_input, input.data(), size_bytes, hipMemcpyHostToDevice, stream));
-
-            const unsigned int grid_size = (size + block_size - 1) / block_size;
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(increment_kernel),
-                dim3(grid_size), dim3(block_size), 0, stream,
-                d_input, size
-            );
-
-            vector_type output(size);
-            HIP_CHECK(hipMemcpyAsync(output.data(), d_input, size_bytes, hipMemcpyDeviceToHost, stream));
-            HIP_CHECK(hipStreamSynchronize(stream));
-            HIP_CHECK(hipFree(d_input));
-
-            ASSERT_EQ(output, expected);
-        }
-
-        if(stream_idx > 0)
-        {
-            HIP_CHECK(hipStreamDestroy(stream));
+            HIP_CHECK(hipMallocHelper(d_inputs.data() + i, size * sizeof(T)));
+            outputs[i].resize(size);
+            if(i == 0)
+            {
+                streams[i] = hipStreamDefault;
+            }
+            else
+            {
+                HIP_CHECK(hipStreamCreateWithFlags(streams.data() + i, hipStreamNonBlocking));
+            }
         }
     }
-}
 
-TEST(HipAsyncCopyTests, AsyncCopyConcurrently)
-{
-    using T = int;
-    using vector_type = std::vector<T, PinnedAllocator<T>>;
-    static constexpr int seed = 543897;
-    static constexpr unsigned int block_size = 1024;
-
-    std::default_random_engine prng(seed);
-    std::uniform_int_distribution<T> dist;
-
-    const auto sizes = get_sizes();
-    std::vector<vector_type> inputs(sizes.size());
-    std::vector<vector_type> expecteds(sizes.size());
-    std::vector<T*> d_inputs(sizes.size());
-    std::vector<vector_type> outputs(sizes.size());
-    std::vector<hipStream_t> streams(sizes.size());
-
-    for(size_t i = 0; i < sizes.size(); i++)
+    void TearDown() override
     {
-        const auto size = sizes[i];
-        std::generate_n(std::back_inserter(inputs[i]), size, [&](){ return dist(prng); });
-        std::transform(inputs[i].begin(), inputs[i].end(), std::back_inserter(expecteds[i]),
-            [](const auto& val) { return val + static_cast<T>(1); });
-        HIP_CHECK(hipMallocHelper(d_inputs.data() + i, size * sizeof(T)));
-        outputs[i].resize(size);
-        if(i == 0)
+        for(size_t i = 0; i < sizes.size(); i++)
         {
-            streams[i] = hipStreamDefault;
-        }
-        else
-        {
-            HIP_CHECK(hipStreamCreateWithFlags(streams.data() + i, hipStreamNonBlocking));
+            if(i > 0)
+            {
+                HIP_CHECK(hipStreamDestroy(streams[i]));
+            }
+            HIP_CHECK(hipFree(d_inputs[i]));
         }
     }
+};
 
+TEST_F(HipAsyncCopyTests, AsyncCopyDepthFirst)
+{
     for(size_t i = 0; i < sizes.size(); i++)
     {
         const auto size_bytes = sizes[i] * sizeof(T);
@@ -179,20 +150,35 @@ TEST(HipAsyncCopyTests, AsyncCopyConcurrently)
         HIP_CHECK(hipMemcpyAsync(outputs[i].data(), d_inputs[i], size_bytes, hipMemcpyDeviceToHost, streams[i]));
     }
     HIP_CHECK(hipDeviceSynchronize());
-
-    for(size_t i = 0; i < sizes.size(); i++)
-    {
-        if(i > 0)
-        {
-            HIP_CHECK(hipStreamDestroy(streams[i]));
-        }
-        HIP_CHECK(hipFree(d_inputs[i]));
-    }
-
     ASSERT_EQ(expecteds, outputs);
 }
 
-TEST(HipAsyncCopyTests, StreamInStruct)
+TEST_F(HipAsyncCopyTests, AsyncCopyBreadthFirst)
+{
+    for(size_t i = 0; i < sizes.size(); i++)
+    {
+        const auto size_bytes = sizes[i] * sizeof(T);
+        HIP_CHECK(hipMemcpyAsync(d_inputs[i], inputs[i].data(), size_bytes, hipMemcpyHostToDevice, streams[i]));
+    }
+    for(size_t i = 0; i < sizes.size(); i++)
+    {
+        const unsigned int grid_size = (sizes[i] + block_size - 1) / block_size;
+        hipLaunchKernelGGL(
+            HIP_KERNEL_NAME(increment_kernel),
+            dim3(grid_size), dim3(block_size), 0, streams[i],
+            d_inputs[i], sizes[i]
+        );
+    }
+    for(size_t i = 0; i < sizes.size(); i++)
+    {
+        const auto size_bytes = sizes[i] * sizeof(T);
+        HIP_CHECK(hipMemcpyAsync(outputs[i].data(), d_inputs[i], size_bytes, hipMemcpyDeviceToHost, streams[i]));
+    }
+    HIP_CHECK(hipDeviceSynchronize());
+    ASSERT_EQ(expecteds, outputs);
+}
+
+TEST(HipAsyncCopyTestsExtra, StreamInStruct)
 {
     struct StreamWrapper
     {
