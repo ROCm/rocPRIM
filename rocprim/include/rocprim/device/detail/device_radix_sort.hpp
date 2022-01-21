@@ -876,6 +876,7 @@ struct radix_merge_compare<false, true, T, typename std::enable_if<rocprim::is_i
 {
     T radix_mask;
 
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
     radix_merge_compare(const unsigned int start_bit, const unsigned int current_radix_bits)
     {
         T radix_mask_upper  = (T(1) << (current_radix_bits + start_bit)) - 1;
@@ -897,6 +898,7 @@ struct radix_merge_compare<true, true, T, typename std::enable_if<rocprim::is_in
 {
     T radix_mask;
 
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
     radix_merge_compare(const unsigned int start_bit, const unsigned int current_radix_bits)
     {
         T radix_mask_upper  = (T(1) << (current_radix_bits + start_bit)) - 1;
@@ -919,6 +921,7 @@ struct radix_merge_compare<Descending, true, T, typename std::enable_if<rocprim:
     // radix_merge_compare supports masks only for integrals.
     // even though masks are never used for floating point-types,
     // it needs to be able to compile.
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
     radix_merge_compare(const unsigned int, const unsigned int){}
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
