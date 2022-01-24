@@ -132,39 +132,6 @@ struct merge_sort_config_900<Key, Value, false>
                              ROCPRIM_WARP_SIZE_64>::value>>;
 };
 
-template<class Key, class Value>
-struct merge_sort_config_908
-{
-    using type = select_type<
-        // clang-format off
-        select_type_case<(sizeof(Key) == 1 && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
-        select_type_case<(sizeof(Key) == 2 && sizeof(Value) <= 16), merge_sort_config<512U, 256U, 4U>>,
-        select_type_case<(sizeof(Key) == 4 && sizeof(Value) == 4), merge_sort_config<1024U, 256U, 4U>>,
-        select_type_case<(sizeof(Key) == 4 && sizeof(Value) != 4), merge_sort_config<512U, 512U, 2U>>,
-        select_type_case<(sizeof(Key) == 8 && sizeof(Value) <= 16), merge_sort_config<128U, 256U, 1U>>,
-        // clang-format on
-        merge_sort_config<
-            limit_block_size<1024U,
-                             ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value)),
-                             ROCPRIM_WARP_SIZE_64>::value>>;
-};
-
-template<class Key>
-struct merge_sort_config_908<Key, empty_type>
-{
-    using type = select_type<
-        // clang-format off
-        select_type_case<sizeof(Key) == 1, merge_sort_config<64U, 256U, 2U>>,
-        select_type_case<sizeof(Key) == 2, merge_sort_config<512U, 256U, 4U>>,
-        select_type_case<sizeof(Key) == 4, merge_sort_config<64U, 64U, 2U>>,
-        select_type_case<sizeof(Key) == 8, merge_sort_config<128U, 256U, 2U>>,
-        // clang-format on
-        merge_sort_config<
-            limit_block_size<1024U,
-                             sizeof(Key) + sizeof(unsigned int),
-                             ROCPRIM_WARP_SIZE_64>::value>>;
-};
-
 // TODO: We need to update these parameters
 template<class Key, class Value>
 struct merge_sort_config_1030
@@ -217,7 +184,6 @@ struct default_merge_sort_config
         TargetArch,
         select_arch_case<803, merge_sort_config_803<Key, Value>>,
         select_arch_case<900, merge_sort_config_900<Key, Value>>,
-        select_arch_case<908, merge_sort_config_908<Key, Value>>,
         select_arch_case<1030, merge_sort_config_1030<Key, Value>>,
         merge_sort_config_900<Key, Value>
     > { };
