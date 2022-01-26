@@ -1,0 +1,8 @@
+/* ************************************************************************
+ * Copyright 2019-2022 Advanced Micro Devices, Inc.
+ * ************************************************************************ */
+
+/* The Wrapper template Configuration & settings
+ */
+#warning "This file is deprecated and will be removed in future releases. Use the include path /opt/rocm-ver/include and prefix with rocprim."
+@include_statements@

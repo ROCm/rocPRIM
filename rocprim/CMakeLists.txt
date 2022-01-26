@@ -29,6 +29,12 @@ configure_file(
   @ONLY
 )
 
+if (BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
+  include(${PROJECT_SOURCE_DIR}/cmake/rocprim-backward-compat.cmake)
+  package_gen_bkwdcomp_hdrfile( "${CMAKE_CURRENT_BINARY_DIR}/include/rocprim/rocprim_version.hpp" )
+  message( STATUS "Completed package_gen_bkwdcomp_hdrfile() for rocprim version")
+endif( )
+
 # Only header target, does not include dependencies
 add_library(rocprim INTERFACE)
 target_include_directories(rocprim
@@ -36,7 +42,7 @@ target_include_directories(rocprim
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/rocprim>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:rocprim/include/>
+    $<INSTALL_INTERFACE:include/>
 )
 
 # This target links against HIP library
@@ -53,27 +59,30 @@ set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 # does not support header-only libraries (INTERFACE targets)
 rocm_install_targets(
   TARGETS rocprim rocprim_hip
-  PREFIX rocprim
 )
 
 rocm_install(
   DIRECTORY
     "include/"
     "${PROJECT_BINARY_DIR}/rocprim/include/"
-  DESTINATION rocprim/include/
+  DESTINATION include/
   FILES_MATCHING
   PATTERN "*.h"
   PATTERN "*.hpp"
   PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
 )
 
+
+if (BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
+rocm_install(
+    DIRECTORY
+       "${PROJECT_BINARY_DIR}/include"
+        DESTINATION rocprim/ )
+endif()
+
 # Export targets
 rocm_export_targets(
   TARGETS roc::rocprim roc::rocprim_hip
-  PREFIX rocprim
   DEPENDS PACKAGE hip
   NAMESPACE roc::
 )
-
-# Create symlinks
-rocm_install_symlink_subdir(rocprim)
