@@ -62,7 +62,7 @@ struct DisabledWarpSortConfig
 template<class Key>
 using select_warp_sort_config_t =
     std::conditional_t<
-        ::rocprim::is_floating_point<Key>::value || sizeof(Key) < 4,
+        sizeof(Key) < 4,
         DisabledWarpSortConfig,
         WarpSortConfig<32, 4>
     >;

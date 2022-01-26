@@ -23,7 +23,6 @@
 
 #include <type_traits>
 #include <iterator>
-#include <cstring> // std::memcpy
 
 #include "../../config.hpp"
 #include "../../detail/various.hpp"
@@ -817,12 +816,15 @@ ROCPRIM_DEVICE ROCPRIM_INLINE
 auto compare_nan_sensitive(const T& a, const T& b)
     -> typename std::enable_if<rocprim::is_floating_point<T>::value, bool>::type
 {
-    static constexpr auto sign_bit = float_bit_mask<T>::sign_bit;
+    // Beware: the performance of this function is extremely vulnerable to refactoring.
+    // Always check benchmark_device_segmented_radix_sort and benchmark_device_radix_sort
+    // when making changes to this function.
+
     using bit_key_type = typename float_bit_mask<T>::bit_type;
+    static constexpr auto sign_bit = float_bit_mask<T>::sign_bit;
     
-    bit_key_type a_bits, b_bits;
-    std::memcpy(&a_bits, &a, sizeof(T));
-    std::memcpy(&b_bits, &b, sizeof(T));
+    auto a_bits = __builtin_bit_cast(bit_key_type, a);
+    auto b_bits = __builtin_bit_cast(bit_key_type, b);
 
     // convert -0.0 to +0.0
     a_bits = a_bits == sign_bit ? 0 : a_bits;
