@@ -111,8 +111,6 @@ option(BUILD_CODE_COVERAGE "Build with code coverage enabled" OFF)
 # FOR HANDLING ENABLE/DISABLE OPTIONAL BACKWARD COMPATIBILITY for FILE/FOLDER REORG
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" OFF)
 if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILE_REORG_BACKWARD_COMPATIBILITY")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFILE_REORG_BACKWARD_COMPATIBILITY")
   include(cmake/rocprim-backward-compat.cmake)
   package_gen_bkwdcomp_hdrs()
   message (STATUS "Completed package_gen_bkwdcomp_hdrs() Configuration")
