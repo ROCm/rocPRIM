@@ -23,5 +23,5 @@
 /* The Wrapper template Configuration & settings
  */
 #warning "This file is deprecated and will be removed in future releases. Use the include path /opt/rocm-ver/include and prefix with rocprim/"
-@include_statements@
+#include @include_statements@
 #endif

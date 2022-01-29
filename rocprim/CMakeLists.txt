@@ -31,8 +31,8 @@ configure_file(
 
 if (BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
   include(${PROJECT_SOURCE_DIR}/cmake/rocprim-backward-compat.cmake)
-  package_gen_bkwdcomp_hdrfile( "${CMAKE_CURRENT_BINARY_DIR}/include/rocprim/rocprim_version.hpp" )
-  message( STATUS "Completed package_gen_bkwdcomp_hdrfile() for rocprim version")
+  package_single_headerfile_wrapper( "${CMAKE_CURRENT_BINARY_DIR}/include/rocprim/rocprim_version.hpp" )
+  message( STATUS "Completed package_single_headerfile_wrapper() for rocprim version")
 endif( )
 
 # Only header target, does not include dependencies
@@ -76,7 +76,7 @@ rocm_install(
 if (BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
 rocm_install(
     DIRECTORY
-       "${PROJECT_BINARY_DIR}/include"
+       "${PROJECT_BINARY_DIR}/rocprim/wrapper/"
         DESTINATION rocprim/ )
 endif()
 

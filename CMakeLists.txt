@@ -112,8 +112,8 @@ option(BUILD_CODE_COVERAGE "Build with code coverage enabled" OFF)
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" OFF)
 if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
   include(cmake/rocprim-backward-compat.cmake)
-  package_gen_bkwdcomp_hdrs()
-  message (STATUS "Completed package_gen_bkwdcomp_hdrs() Configuration")
+  package_header_wrappers()
+  message (STATUS "Completed package_header_wrappers()")
 endif()
 
 
