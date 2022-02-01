@@ -22,7 +22,6 @@
 #define ROCPRIM_DETAIL_RADIX_SORT_HPP_
 
 #include <type_traits>
-#include <cstring> // std::memcpy
 
 #include "../config.hpp"
 #include "../type_traits.hpp"
@@ -50,17 +49,13 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static bit_key_type encode(Key key)
     {
-        bit_key_type bit_key;
-        std::memcpy(&bit_key, &key, sizeof(bit_key));
-        return bit_key;
+        return __builtin_bit_cast(bit_key_type, key);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static Key decode(bit_key_type bit_key)
     {
-        Key key;
-        std::memcpy(&key, &bit_key, sizeof(bit_key));
-        return key;
+        return __builtin_bit_cast(Key, bit_key);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -81,9 +76,7 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static bit_key_type encode(Key key)
     {
-        bit_key_type bit_key;
-        std::memcpy(&bit_key, &key, sizeof(bit_key));
-
+        const bit_key_type bit_key = __builtin_bit_cast(bit_key_type, key);
         return sign_bit ^ bit_key;
     }
 
@@ -91,10 +84,7 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
     static Key decode(bit_key_type bit_key)
     {
         bit_key ^= sign_bit;
-
-        Key key;
-        std::memcpy(&key, &bit_key, sizeof(bit_key));
-        return key;
+        return __builtin_bit_cast(Key, bit_key);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -154,9 +144,7 @@ struct radix_key_codec_floating
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static bit_key_type encode(Key key)
     {
-        bit_key_type bit_key;
-        std::memcpy(&bit_key, &key, sizeof(bit_key));
-        
+        bit_key_type bit_key = __builtin_bit_cast(bit_key_type, key);
         bit_key ^= (sign_bit & bit_key) == 0 ? sign_bit : bit_key_type(-1);
         return bit_key;
     }
@@ -165,10 +153,7 @@ struct radix_key_codec_floating
     static Key decode(bit_key_type bit_key)
     {
         bit_key ^= (sign_bit & bit_key) == 0 ? bit_key_type(-1) : sign_bit;
-        
-        Key key;
-        std::memcpy(&key, &bit_key, sizeof(bit_key));
-        return key;
+        return __builtin_bit_cast(Key, bit_key);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
