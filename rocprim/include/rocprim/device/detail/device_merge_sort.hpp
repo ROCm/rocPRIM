@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR next DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef ROCPRIM_DEVICE_DETAIL_DEVICE_SORT_HPP_
-#define ROCPRIM_DEVICE_DETAIL_DEVICE_SORT_HPP_
+#ifndef ROCPRIM_DEVICE_DETAIL_DEVICE_MERGE_SORT_HPP_
+#define ROCPRIM_DEVICE_DETAIL_DEVICE_MERGE_SORT_HPP_
 
 #include <type_traits>
 #include <iterator>
@@ -53,9 +53,9 @@ struct block_load_keys_impl {
 
     using storage_type = typename block_load_type::storage_type;
 
-    template <class KeysInputIterator>
+    template <class KeysInputIterator, class OffsetT>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    void load(const unsigned int block_offset,
+    void load(const OffsetT block_offset,
               const unsigned int valid_in_last_block,
               const bool last_block,
               KeysInputIterator keys_input,
@@ -88,11 +88,11 @@ struct block_load_values_impl
 {
     using storage_type = empty_storage_type;
 
-    template <class ValuesInputIterator>
+    template <class ValuesInputIterator, class OffsetT>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void load(const unsigned int flat_id,
               const unsigned int (&ranks)[ItemsPerThread],
-              const unsigned int block_offset,
+              const OffsetT block_offset,
               const unsigned int valid_in_last_block,
               const bool last_block,
               ValuesInputIterator values_input,
@@ -116,12 +116,12 @@ struct block_load_values_impl<true, BlockSize, ItemsPerThread, Value>
     using block_exchange = ::rocprim::block_exchange<Value, BlockSize, ItemsPerThread>;
 
     using storage_type = typename block_exchange::storage_type;
-    
-    template <class ValuesInputIterator>
+
+    template <class ValuesInputIterator, class OffsetT>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void load(const unsigned int flat_id,
               const unsigned int (&ranks)[ItemsPerThread],
-              const unsigned int block_offset,
+              const OffsetT block_offset,
               const unsigned int valid_in_last_block,
               const bool last_block,
               ValuesInputIterator values_input,
@@ -165,24 +165,41 @@ struct block_store_impl {
 
     using storage_type = typename block_store_type::storage_type;
 
-    template <class KeysOutputIterator, class ValuesOutputIterator>
+    template <class KeysOutputIterator, class ValuesOutputIterator, class OffsetT>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    void store(const unsigned int block_offset,
+    void store(const OffsetT block_offset,
                const unsigned int valid_in_last_block,
-               const bool last_block,
+               const bool is_incomplete_block,
                KeysOutputIterator keys_output,
                ValuesOutputIterator values_output,
                Key (&keys)[ItemsPerThread],
                Value (&values)[ItemsPerThread],
                storage_type& storage)
     {
-        (void) values_output;
-        (void) values;
+        if(is_incomplete_block)
+        {
+            store<true>(block_offset, valid_in_last_block, keys_output, values_output, keys, values, storage);
+        }
+        else
+        {
+            store<false>(block_offset, valid_in_last_block, keys_output, values_output, keys, values, storage);
+        }
+    }
 
+    template <bool IsIncompleteBlock, class KeysOutputIterator, class ValuesOutputIterator, class OffsetT>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void store(const OffsetT block_offset,
+               const unsigned int valid_in_last_block,
+               KeysOutputIterator keys_output,
+               ValuesOutputIterator ,
+               Key (&keys)[ItemsPerThread],
+               Value (&)[ItemsPerThread],
+               storage_type& storage)
+    {
         // Synchronize before reusing shared memory
         ::rocprim::syncthreads();
 
-        if(last_block)
+        if ROCPRIM_IF_CONSTEXPR(IsIncompleteBlock)
         {
             block_store_type().store(
                 keys_output + block_offset,
@@ -209,19 +226,39 @@ template<
     class Value
 >
 struct block_store_impl<true, BlockSize, ItemsPerThread, Key, Value> {
-    using block_store_key_type   = block_store<Key, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>; 
-    using block_store_value_type = block_store<Value, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>; 
+    using block_store_key_type   = block_store<Key, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>;
+    using block_store_value_type = block_store<Value, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>;
 
     union storage_type {
         typename block_store_key_type::storage_type   keys;
         typename block_store_value_type::storage_type values;
     };
 
-    template <class KeysOutputIterator, class ValuesOutputIterator>
+    template <class KeysOutputIterator, class ValuesOutputIterator, class OffsetT>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    void store(const unsigned int block_offset,
+    void store(const OffsetT block_offset,
                const unsigned int valid_in_last_block,
-               const bool last_block,
+               const bool is_incomplete_block,
+               KeysOutputIterator keys_output,
+               ValuesOutputIterator values_output,
+               Key (&keys)[ItemsPerThread],
+               Value (&values)[ItemsPerThread],
+               storage_type& storage)
+    {
+        if(is_incomplete_block)
+        {
+            store<true>(block_offset, valid_in_last_block, keys_output, values_output, keys, values, storage);
+        }
+        else
+        {
+            store<false>(block_offset, valid_in_last_block, keys_output, values_output, keys, values, storage);
+        }
+    }
+
+    template <bool IsIncompleteBlock, class KeysOutputIterator, class ValuesOutputIterator, class OffsetT>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void store(const OffsetT block_offset,
+               const unsigned int valid_in_last_block,
                KeysOutputIterator keys_output,
                ValuesOutputIterator values_output,
                Key (&keys)[ItemsPerThread],
@@ -231,7 +268,7 @@ struct block_store_impl<true, BlockSize, ItemsPerThread, Key, Value> {
         // Synchronize before reusing shared memory
         ::rocprim::syncthreads();
 
-        if(last_block)
+        if ROCPRIM_IF_CONSTEXPR(IsIncompleteBlock)
         {
             block_store_key_type().store(
                 keys_output + block_offset,
@@ -317,6 +354,7 @@ template<
     class KeysOutputIterator,
     class ValuesInputIterator,
     class ValuesOutputIterator,
+    class OffsetT,
     class BinaryFunction
 >
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
@@ -324,21 +362,20 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
                             KeysOutputIterator keys_output,
                             ValuesInputIterator values_input,
                             ValuesOutputIterator values_output,
-                            const size_t input_size,
+                            const OffsetT input_size,
                             BinaryFunction compare_function)
 {
     using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
     using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
     constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
 
-    const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-    const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
-    const unsigned int items_per_block = BlockSize * ItemsPerThread;
+    const unsigned int flat_id = block_thread_id<0>();
+    const unsigned int flat_block_id = block_id<0>();
+    constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
 
-    const unsigned int block_offset = flat_block_id * items_per_block;
-    const unsigned int number_of_blocks = (input_size + items_per_block - 1) / items_per_block;
-    const auto valid_in_last_block = input_size - items_per_block * (number_of_blocks - 1);
-    const bool last_block = flat_block_id == (number_of_blocks - 1);
+    const OffsetT block_offset = flat_block_id * items_per_block;
+    const unsigned int valid_in_last_block = input_size - block_offset;
+    const bool is_incomplete_block = flat_block_id == (input_size / items_per_block);
 
     key_type keys[ItemsPerThread];
     value_type values[ItemsPerThread];
@@ -358,13 +395,12 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
     block_load_keys_impl().load(
         block_offset,
         valid_in_last_block,
-        last_block,
+        is_incomplete_block,
         keys_input,
         keys,
         storage.load_keys
     );
 
-    
     using stable_key_type = typename block_sort_impl::stable_key_type;
 
     // Special comparison that preserves relative order of equal keys
@@ -388,12 +424,12 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
         stable_keys,
         storage.sort,
         valid_in_last_block,
-        last_block,
+        is_incomplete_block,
         stable_compare_function
     );
 
     unsigned int ranks[ItemsPerThread];
-    
+
     ROCPRIM_UNROLL
     for(unsigned int item = 0; item < ItemsPerThread; ++item) {
         keys[item]  = rocprim::get<0>(stable_keys[item]);
@@ -406,7 +442,7 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
         ranks,
         block_offset,
         valid_in_last_block,
-        last_block,
+        is_incomplete_block,
         values_input,
         values,
         storage.load_values
@@ -415,7 +451,7 @@ void block_sort_kernel_impl(KeysInputIterator keys_input,
     block_store_impl().store(
         block_offset,
         valid_in_last_block,
-        last_block,
+        is_incomplete_block,
         keys_output,
         values_output,
         keys,
@@ -430,6 +466,7 @@ template<
     class KeysOutputIterator,
     class ValuesInputIterator,
     class ValuesOutputIterator,
+    class OffsetT,
     class BinaryFunction
 >
 ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -437,7 +474,7 @@ void block_merge_kernel_impl(KeysInputIterator keys_input,
                              KeysOutputIterator keys_output,
                              ValuesInputIterator values_input,
                              ValuesOutputIterator values_output,
-                             const size_t input_size,
+                             const OffsetT input_size,
                              const unsigned int block_size,
                              BinaryFunction compare_function)
 {
@@ -526,4 +563,4 @@ void block_merge_kernel_impl(KeysInputIterator keys_input,
 
 END_ROCPRIM_NAMESPACE
 
-#endif // ROCPRIM_DEVICE_DETAIL_DEVICE_SORT_HPP_
+#endif // ROCPRIM_DEVICE_DETAIL_DEVICE_MERGE_SORT_HPP_

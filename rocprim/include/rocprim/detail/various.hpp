@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -54,11 +54,19 @@ constexpr T next_power_of_two(const T x, const T acc = 1)
     return acc >= x ? acc : next_power_of_two(x, 2 * acc);
 }
 
+template <class T>
+ROCPRIM_HOST_DEVICE inline
+constexpr T midpoint(const T begin, const T end)
+{
+    return begin + (end - begin) / 2;
+}
+
 template <
     typename T,
     typename U,
     std::enable_if_t<::rocprim::is_integral<T>::value && ::rocprim::is_integral<U>::value, int> = 0>
-ROCPRIM_HOST_DEVICE inline constexpr auto ceiling_div(const T a, const U b)
+ROCPRIM_HOST_DEVICE inline
+constexpr auto ceiling_div(const T a, const U b)
 {
     return (a + b - 1) / b;
 }
