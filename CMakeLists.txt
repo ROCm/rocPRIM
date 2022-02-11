@@ -111,12 +111,13 @@ option(BUILD_CODE_COVERAGE "Build with code coverage enabled" OFF)
 # FOR HANDLING ENABLE/DISABLE OPTIONAL BACKWARD COMPATIBILITY for FILE/FOLDER REORG
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" OFF)
 if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
-  include(cmake/rocprim-backward-compat.cmake)
-  package_header_wrappers()
-  message (STATUS "Completed package_header_wrappers()")
+  rocm_wrap_header_dir(
+    "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
+    WRAPPER_LOCATIONS rocprim/include/rocprim
+    OUTPUT_LOCATIONS rocprim/wrapper/include/rocprim
+    PATTERNS *.hpp
+  )
 endif()
-
-
 
 if(BUILD_CODE_COVERAGE)
   add_compile_options(-fprofile-arcs -ftest-coverage)

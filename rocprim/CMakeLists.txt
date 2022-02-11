@@ -30,9 +30,11 @@ configure_file(
 )
 
 if (BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
-  include(${PROJECT_SOURCE_DIR}/cmake/rocprim-backward-compat.cmake)
-  package_single_headerfile_wrapper( "${CMAKE_CURRENT_BINARY_DIR}/include/rocprim/rocprim_version.hpp" )
-  message( STATUS "Completed package_single_headerfile_wrapper() for rocprim version")
+  rocm_wrap_header_file(
+    "rocprim_version.hpp"
+    WRAPPER_LOCATIONS rocprim/include/rocprim
+    OUTPUT_LOCATIONS rocprim/wrapper/include/rocprim
+  )
 endif( )
 
 # Only header target, does not include dependencies
