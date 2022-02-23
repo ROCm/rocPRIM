@@ -2,7 +2,18 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [rocPRIM-2.10.12 for ROCm 5.0.0]
+## [Unreleased rocPRIM-2.10.13 for ROCm 5.1.0]
+### Fixed
+- Fixed radix sort int64_t bug introduced in [2.10.11]
+### Added
+- Future value
+- Added device partition_three_way to partition input to three output iterators based on two predicates
+### Changed
+- The reduce/scan algorithm precision issues in the tests has been resolved for half types.
+### Known issues
+- device_segmented_radix_sort unit test failing for HIP on Windows
+
+## [Released rocPRIM-2.10.12 for ROCm 5.0.0]
 ### Fixed
 - Enable bfloat16 tests and reduce threshold for bfloat16
 - Fix device scan limit_size feature

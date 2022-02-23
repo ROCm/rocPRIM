@@ -63,7 +63,7 @@ if(NOT USE_HIP_CPU)
   set(AMDGPU_TARGETS "all" CACHE STRING "Compile for which gpu architectures?")
   if(COMMAND rocm_check_target_ids)
     rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
-      TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1030"
+      TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1011;gfx1030"
     )
   else()
     # Detect compiler support for target ID
@@ -101,14 +101,11 @@ if(NOT USE_HIP_CPU)
   find_package(hip REQUIRED CONFIG PATHS ${HIP_DIR} ${ROCM_PATH} /opt/rocm)
 endif()
 # Build options
-# Disable -Werror
-option(DISABLE_WERROR "Disable building with Werror" ON)
 option(BUILD_TEST "Build tests (requires googletest)" OFF)
 option(BUILD_BENCHMARK "Build benchmarks" OFF)
 option(BUILD_EXAMPLE "Build examples" OFF)
 # Disables building tests, benchmarks, examples
 option(ONLY_INSTALL "Only install" OFF)
-option(BUILD_ADDRESS_SANITIZER "Build with address sanitizer enabled" OFF)
 option(BUILD_CODE_COVERAGE "Build with code coverage enabled" OFF)
 
 if(BUILD_CODE_COVERAGE)
@@ -136,13 +133,6 @@ print_configuration_summary()
 
 # rocPRIM library
 add_subdirectory(rocprim)
-
-# Address Sanitizer
-if(BUILD_ADDRESS_SANITIZER)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -shared-libasan")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -shared-libasan")
-  add_link_options(-fuse-ld=lld)
-endif()
 
 # Tests
 if(BUILD_TEST AND NOT ONLY_INSTALL)
