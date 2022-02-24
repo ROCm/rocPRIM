@@ -23,6 +23,8 @@
 #ifndef TEST_BLOCK_ADJACENT_DIFFERENCE_KERNELS_HPP_
 #define TEST_BLOCK_ADJACENT_DIFFERENCE_KERNELS_HPP_
 
+#include "test_utils.hpp"
+
 template<class T>
 struct custom_flag_op1
 {
@@ -44,16 +46,15 @@ struct custom_flag_op2
 };
 
 // Host (CPU) implementaions of the wrapping function that allows to pass 3 args
-template<class T, class FlagType, class FlagOp>
-typename std::enable_if<rocprim::detail::with_b_index_arg<T, FlagType>::value, FlagType>::type
-apply(FlagOp flag_op, const T& a, const T& b, unsigned int b_index)
+template <class T, class FlagType, class FlagOp>
+auto apply(FlagOp flag_op, const T& a, const T& b, unsigned int b_index)
+    -> decltype(flag_op(b, a, b_index))
 {
     return flag_op(b, a, b_index);
 }
 
-template<class T, class FlagType, class FlagOp>
-typename std::enable_if<!rocprim::detail::with_b_index_arg<T, FlagType>::value, FlagType>::type
-apply(FlagOp flag_op, const T& a, const T& b, unsigned int)
+template <class T, class FlagType, class FlagOp>
+auto apply(FlagOp flag_op, const T& a, const T& b, unsigned int) -> decltype(flag_op(b, a))
 {
     return flag_op(b, a);
 }
@@ -79,6 +80,9 @@ void flag_heads_kernel(Type* device_input, long long* device_heads)
     rocprim::block_adjacent_difference<Type, BlockSize> bdiscontinuity;
 
     FlagType head_flags[ItemsPerThread];
+
+    // Still need to test it even tough its deprecated
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated")
     if(blockIdx.x % 2 == 1)
     {
         const Type tile_predecessor_item = device_input[block_offset - 1];
@@ -88,6 +92,7 @@ void flag_heads_kernel(Type* device_input, long long* device_heads)
     {
         bdiscontinuity.flag_heads(head_flags, input, FlagOpType());
     }
+    ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 
     rocprim::block_store_direct_blocked(lid, device_heads + block_offset, head_flags);
 }
@@ -113,6 +118,9 @@ void flag_tails_kernel(Type* device_input, long long* device_tails)
     rocprim::block_adjacent_difference<Type, BlockSize> bdiscontinuity;
 
     FlagType tail_flags[ItemsPerThread];
+
+    // Still need to test it even tough its deprecated
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated")
     if(blockIdx.x % 2 == 0)
     {
         const Type tile_successor_item = device_input[block_offset + items_per_block];
@@ -122,6 +130,7 @@ void flag_tails_kernel(Type* device_input, long long* device_tails)
     {
         bdiscontinuity.flag_tails(tail_flags, input, FlagOpType());
     }
+    ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 
     rocprim::block_store_direct_blocked(lid, device_tails + block_offset, tail_flags);
 }
@@ -148,6 +157,9 @@ void flag_heads_and_tails_kernel(Type* device_input, long long* device_heads, lo
 
     FlagType head_flags[ItemsPerThread];
     FlagType tail_flags[ItemsPerThread];
+
+    // Still need to test it even tough its deprecated
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated")
     if(blockIdx.x % 4 == 0)
     {
         const Type tile_successor_item = device_input[block_offset + items_per_block];
@@ -168,6 +180,7 @@ void flag_heads_and_tails_kernel(Type* device_input, long long* device_heads, lo
     {
         bdiscontinuity.flag_heads_and_tails(head_flags, tail_flags, input, FlagOpType());
     }
+    ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 
     rocprim::block_store_direct_blocked(lid, device_heads + block_offset, head_flags);
     rocprim::block_store_direct_blocked(lid, device_tails + block_offset, tail_flags);
