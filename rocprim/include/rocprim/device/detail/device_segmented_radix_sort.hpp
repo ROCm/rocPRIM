@@ -66,7 +66,7 @@ class segmented_radix_sort_helper
     using scan_type = typename ::rocprim::block_scan<unsigned int, radix_size>;
     using sort_and_scatter_helper = radix_sort_and_scatter_helper<
         BlockSize, ItemsPerThread, RadixBits, Descending,
-        key_type, value_type>;
+        key_type, value_type, unsigned int>;
 
 public:
 
