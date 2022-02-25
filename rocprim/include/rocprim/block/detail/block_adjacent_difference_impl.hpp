@@ -27,6 +27,7 @@
 
 #include <type_traits>
 
+#include <cassert>
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -63,27 +64,25 @@ ROCPRIM_DEVICE ROCPRIM_INLINE auto apply(BinaryFunction op,
 }
 
 template <typename T, typename BinaryFunction, bool AsFlags>
-ROCPRIM_DEVICE ROCPRIM_INLINE auto apply(BinaryFunction flag_op,
+ROCPRIM_DEVICE ROCPRIM_INLINE auto apply(BinaryFunction op,
                                          const T&       a,
                                          const T&       b,
                                          unsigned int,
                                          bool_constant<AsFlags> /*as_flags*/,
-                                         bool_constant<false> /*reversed*/)
-    -> decltype(flag_op(b, a))
+                                         bool_constant<false> /*reversed*/) -> decltype(op(b, a))
 {
-    return flag_op(a, b);
+    return op(a, b);
 }
 
 template <typename T, typename BinaryFunction, bool AsFlags>
-ROCPRIM_DEVICE ROCPRIM_INLINE auto apply(BinaryFunction flag_op,
+ROCPRIM_DEVICE ROCPRIM_INLINE auto apply(BinaryFunction op,
                                          const T&       a,
                                          const T&       b,
                                          unsigned int,
                                          bool_constant<AsFlags> /*as_flags*/,
-                                         bool_constant<true> /*reversed*/)
-    -> decltype(flag_op(b, a))
+                                         bool_constant<true> /*reversed*/) -> decltype(op(b, a))
 {
-    return flag_op(b, a);
+    return op(b, a);
 }
 
 template <typename T,
@@ -140,8 +139,74 @@ public:
         }
         else
         {
-            output[0] = get_first_item(input, as_flags);
+            output[0] = get_default_item(input, 0, as_flags);
             if(flat_id != 0) {
+                output[0] = detail::apply(op,
+                                          storage.items[flat_id - 1],
+                                          input[0],
+                                          flat_id * ItemsPerThread,
+                                          as_flags,
+                                          reversed);
+            }
+        }
+    }
+
+    template <bool         AsFlags,
+              bool         Reversed,
+              bool         WithTilePredecessor,
+              unsigned int ItemsPerThread,
+              typename Output,
+              typename BinaryFunction>
+    ROCPRIM_DEVICE void apply_left_partial(const T (&input)[ItemsPerThread],
+                                           Output (&output)[ItemsPerThread],
+                                           BinaryFunction     op,
+                                           const T            tile_predecessor_item,
+                                           const unsigned int valid_items,
+                                           storage_type&      storage)
+    {
+        static constexpr auto as_flags = bool_constant<AsFlags> {};
+        static constexpr auto reversed = bool_constant<Reversed> {};
+
+        assert(valid_items <= BlockSize * ItemsPerThread);
+
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+
+        // Save the last item of each thread
+        storage.items[flat_id] = input[ItemsPerThread - 1];
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = ItemsPerThread - 1; i > 0; --i)
+        {
+            const unsigned int index = flat_id * ItemsPerThread + i;
+            output[i] = get_default_item(input, i, as_flags);
+            if(index < valid_items) {
+                output[i] = detail::apply(op, input[i - 1], input[i], index, as_flags, reversed);
+            }
+        }
+        ::rocprim::syncthreads();
+
+        const unsigned int index = flat_id * ItemsPerThread;
+
+        if ROCPRIM_IF_CONSTEXPR (WithTilePredecessor)
+        {
+            T predecessor_item = tile_predecessor_item;
+            if(flat_id != 0) {
+                predecessor_item = storage.items[flat_id - 1];
+            }
+
+            output[0] = get_default_item(input, 0, as_flags);
+            if(index < valid_items)
+            {
+                output[0]
+                    = detail::apply(op, predecessor_item, input[0], index, as_flags, reversed);
+            }
+        }
+        else
+        {
+            output[0] = get_default_item(input, 0, as_flags);
+            if(flat_id != 0 && index < valid_items)
+            {
                 output[0] = detail::apply(op,
                                           storage.items[flat_id - 1],
                                           input[0],
@@ -181,7 +246,6 @@ public:
         }
         ::rocprim::syncthreads();
 
-
         if ROCPRIM_IF_CONSTEXPR (WithTileSuccessor)
         {
             T successor_item = tile_successor_item;
@@ -198,7 +262,7 @@ public:
         }
         else
         {
-            output[ItemsPerThread - 1] = get_last_item(input, as_flags);
+            output[ItemsPerThread - 1] = get_default_item(input, ItemsPerThread - 1, as_flags);
             if(flat_id != BlockSize - 1) {
                 output[ItemsPerThread - 1]
                     = detail::apply(op,
@@ -210,32 +274,69 @@ public:
             }
         }
     }
+    template <bool         AsFlags,
+              bool         Reversed,
+              unsigned int ItemsPerThread,
+              typename Output,
+              typename BinaryFunction>
+    ROCPRIM_DEVICE void apply_right_partial(const T (&input)[ItemsPerThread],
+                                            Output (&output)[ItemsPerThread],
+                                            BinaryFunction     op,
+                                            const unsigned int valid_items,
+                                            storage_type&      storage)
+    {
+        static constexpr auto as_flags = bool_constant<AsFlags> {};
+        static constexpr auto reversed = bool_constant<Reversed> {};
+
+        assert(valid_items <= BlockSize * ItemsPerThread);
+
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+
+        // Save the first item of each thread
+        storage.items[flat_id] = input[0];
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread - 1; ++i)
+        {
+            const unsigned int index = flat_id * ItemsPerThread + i + 1;
+            output[i] = get_default_item(input, i, as_flags);
+            if(index < valid_items)
+            {
+                output[i] = detail::apply(op, input[i], input[i + 1], index, as_flags, reversed);
+            }
+        }
+        ::rocprim::syncthreads();
+
+        output[ItemsPerThread - 1] = get_default_item(input, ItemsPerThread - 1, as_flags);
+
+        const unsigned int next_thread_index = flat_id * ItemsPerThread + ItemsPerThread;
+        if(next_thread_index < valid_items)
+        {
+            output[ItemsPerThread - 1] = detail::apply(op,
+                                                       input[ItemsPerThread - 1],
+                                                       storage.items[flat_id + 1],
+                                                       next_thread_index,
+                                                       as_flags,
+                                                       reversed);
+        }
+    }
 
 private:
     template <unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE int get_first_item(const T (&)[ItemsPerThread], bool_constant<true> /*as_flags*/)
+    ROCPRIM_DEVICE int get_default_item(const T (&)[ItemsPerThread],
+                                        unsigned int /*index*/,
+                                        bool_constant<true> /*as_flags*/)
     {
         return 1;
     }
 
     template <unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE T get_first_item(const T (&input)[ItemsPerThread],
-                                    bool_constant<false> /*as_flags*/)
+    ROCPRIM_DEVICE T get_default_item(const T (&input)[ItemsPerThread],
+                                      const unsigned int index,
+                                      bool_constant<false> /*as_flags*/)
     {
-        return input[0];
-    }
-
-    template <unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE int get_last_item(const T (&)[ItemsPerThread], bool_constant<true> /*as_flags*/)
-    {
-        return 1;
-    }
-
-    template <unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE T get_last_item(const T (&input)[ItemsPerThread],
-                                   bool_constant<false> /*as_flags*/)
-    {
-        return input[ItemsPerThread - 1];
+        return input[index];
     }
 };
 

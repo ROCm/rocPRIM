@@ -834,6 +834,109 @@ public:
             input, flag_op, storage
         );
     }
+
+    template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left(const T (&input)[ItemsPerThread],
+                                                     Output (&output)[ItemsPerThread],
+                                                     const BinaryFunction op,
+                                                     storage_type&        storage)
+    {
+        static constexpr auto as_flags         = false;
+        static constexpr auto reversed         = true;
+        static constexpr auto with_predecessor = false;
+
+        base_type::template apply_left<as_flags, reversed, with_predecessor>(
+            input, output, op, input[0] /* predecessor */, storage.get().left);
+    }
+
+    template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left(const T (&input)[ItemsPerThread],
+                                                     Output (&output)[ItemsPerThread],
+                                                     const BinaryFunction op,
+                                                     const T              tile_predecessor,
+                                                     storage_type&        storage)
+    {
+        static constexpr auto as_flags         = false;
+        static constexpr auto reversed         = true;
+        static constexpr auto with_predecessor = true;
+
+        base_type::template apply_left<as_flags, reversed, with_predecessor>(
+            input, output, op, tile_predecessor, storage.get().left);
+    }
+
+    template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left_partial(const T (&input)[ItemsPerThread],
+                                                             Output (&output)[ItemsPerThread],
+                                                             const BinaryFunction op,
+                                                             const unsigned int   valid_items,
+                                                             storage_type&        storage)
+    {
+        static constexpr auto as_flags         = false;
+        static constexpr auto reversed         = true;
+        static constexpr auto with_predecessor = false;
+
+        base_type::template apply_left_partial<as_flags, reversed, with_predecessor>(
+            input, output, op, input[0] /* predecessor */, valid_items, storage.get().left);
+    }
+
+    template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left_partial(const T (&input)[ItemsPerThread],
+                                                             Output (&output)[ItemsPerThread],
+                                                             const BinaryFunction op,
+                                                             const T              tile_predecessor,
+                                                             const unsigned int   valid_items,
+                                                             storage_type&        storage)
+    {
+        static constexpr auto as_flags         = false;
+        static constexpr auto reversed         = true;
+        static constexpr auto with_predecessor = true;
+
+        base_type::template apply_left_partial<as_flags, reversed, with_predecessor>(
+            input, output, op, tile_predecessor, valid_items, storage.get().left);
+    }
+
+    template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_right(const T (&input)[ItemsPerThread],
+                                                      Output (&output)[ItemsPerThread],
+                                                      const BinaryFunction op,
+                                                      storage_type&        storage)
+    {
+        static constexpr auto as_flags       = false;
+        static constexpr auto reversed       = false;
+        static constexpr auto with_successor = false;
+
+        base_type::template apply_right<as_flags, reversed, with_successor>(
+            input, output, op, input[0] /* successor */, storage.get().right);
+    }
+
+    template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_right(const T (&input)[ItemsPerThread],
+                                                      Output (&output)[ItemsPerThread],
+                                                      const BinaryFunction op,
+                                                      const T              tile_successor,
+                                                      storage_type&        storage)
+    {
+        static constexpr auto as_flags       = false;
+        static constexpr auto reversed       = false;
+        static constexpr auto with_successor = true;
+
+        base_type::template apply_right<as_flags, reversed, with_successor>(
+            input, output, op, tile_successor, storage.get().right);
+    }
+
+    template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_right_partial(const T (&input)[ItemsPerThread],
+                                                              Output (&output)[ItemsPerThread],
+                                                              const BinaryFunction op,
+                                                              const unsigned int   valid_items,
+                                                              storage_type&        storage)
+    {
+        static constexpr auto as_flags = false;
+        static constexpr auto reversed = false;
+
+        base_type::template apply_right_partial<as_flags, reversed>(
+            input, output, op, valid_items, storage.get().right);
+    }
 };
 
 END_ROCPRIM_NAMESPACE
