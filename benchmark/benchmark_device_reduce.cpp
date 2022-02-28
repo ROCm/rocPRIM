@@ -40,6 +40,7 @@
 // CmdParser
 #include "cmdparser.hpp"
 #include "benchmark_utils.hpp"
+#include "benchmark_device_reduce.parallel.hpp"
 
 #define HIP_CHECK(condition)         \
   {                                  \
@@ -54,6 +55,7 @@
 const size_t DEFAULT_N = 1024 * 1024 * 128;
 #endif
 
+std::vector<std::unique_ptr<config_autotune_interface>> config_autotune_vector;
 const unsigned int batch_size = 10;
 const unsigned int warmup_size = 5;
 
@@ -148,6 +150,8 @@ int main(int argc, char *argv[])
     cli::Parser parser(argc, argv);
     parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
     parser.set_optional<int>("trials", "trials", -1, "number of iterations");
+    parser.set_optional<int>("parallel_instance", "parallel_instance", 0, "parallel instance");
+    parser.set_optional<int>("parallel_instances", "parallel_instances", 1, "total parallel instances");
     parser.run_and_exit_if_error();
 
     // Parse argv
@@ -163,9 +167,33 @@ int main(int argc, char *argv[])
     HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
     std::cout << "[HIP] Device name: " << devProp.name << std::endl;
 
+#ifdef BENCHMARK_CONFIG_TUNING
+    // Re-run CMake if you change anything in the comments below:
+    // CA_OUTPUT_PATTERN_SUFFIX=@DT@_@WS@_@BS@_@IPT@$
+    // CONFIG_AUTOTUNE_BS=64 128 256$512 1024
+    // CONFIG_AUTOTUNE_WS=32 64$
+    // CONFIG_AUTOTUNE_IPT=1 2 4 8 16$
+    // CONFIG_AUTOTUNE_DT=int float double int8_t int64_t rocprim::half$
+    const float parallel_instance = parser.get<int>("parallel_instance");
+    const float parallel_instances = parser.get<int>("parallel_instances");
+    const int start = config_autotune_vector.size()*parallel_instance/parallel_instances;
+    const int end = config_autotune_vector.size()*(parallel_instance+1)/parallel_instances;
+    std::vector<benchmark::internal::Benchmark*> benchmarks = {};
+    for(int i = start; i < end; i++){
+        std::unique_ptr<config_autotune_interface>& uniq_ptr = config_autotune_vector.at(i);
+        config_autotune_interface* tuning_benchmark = uniq_ptr.get();
+        benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(
+            (tuning_benchmark->name().c_str()),
+            [tuning_benchmark](benchmark::State& state, size_t size, const hipStream_t stream) {
+                tuning_benchmark->operator()(state, size, stream);
+            },
+            size,
+            stream);
+        benchmarks.emplace_back(benchmark);
+    }
+#else
     using custom_float2 = custom_type<float, float>;
     using custom_double2 = custom_type<double, double>;
-
     // Add benchmarks
     std::vector<benchmark::internal::Benchmark*> benchmarks =
     {
@@ -182,6 +210,7 @@ int main(int argc, char *argv[])
         CREATE_BENCHMARK(custom_float2, rocprim::plus<custom_float2>),
         CREATE_BENCHMARK(custom_double2, rocprim::plus<custom_double2>),
     };
+#endif
 
     // Use manual timing
     for(auto& b : benchmarks)
