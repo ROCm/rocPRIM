@@ -1,7 +1,7 @@
 /******************************************************************************
 * Copyright (c) 2011, Duane Merrill.  All rights reserved.
 * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
-* Modifications Copyright (c) 2021, Advanced Micro Devices, Inc.  All rights reserved.
+* Modifications Copyright (c) 2022, Advanced Micro Devices, Inc.  All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
@@ -44,8 +44,8 @@
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief The \p block_adjacent_difference class is a block level parallel primitive which provides
-/// methods for flagging items that are discontinued within an ordered set of items across
-/// threads in a block.
+/// methods for applying binary functions for pairs of consecutive items parition across a thread
+/// block.
 ///
 /// \tparam T - the input type.
 /// \tparam BlockSize - the number of threads in a block.
@@ -122,7 +122,8 @@ public:
     /// \brief Tags \p head_flags that indicate discontinuities between items partitioned
     /// across the thread block, where the first item has no reference and is always
     /// flagged.
-    ///
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_left() or block_discontinuity::flag_heads() instead.
     /// \tparam ItemsPerThread - [inferred] the number of items to be processed by
     /// each thread.
     /// \tparam Flag - [inferred] the flag type.
@@ -177,6 +178,8 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_left() or block_discontinuity::flag_heads() instead.
     /// This overload does not take a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -195,6 +198,8 @@ public:
     /// \brief Tags \p head_flags that indicate discontinuities between items partitioned
     /// across the thread block, where the first item of the first thread is compared against
     /// a \p tile_predecessor_item.
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_left() or block_discontinuity::flag_heads() instead.
     ///
     /// \tparam ItemsPerThread - [inferred] the number of items to be processed by
     /// each thread.
@@ -259,6 +264,9 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_left() or block_discontinuity::flag_heads() instead.
+    ///
     /// This overload does not accept a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -278,6 +286,8 @@ public:
     /// \brief Tags \p tail_flags that indicate discontinuities between items partitioned
     /// across the thread block, where the last item has no reference and is always
     /// flagged.
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_right() or block_discontinuity::flag_tails() instead.
     ///
     /// \tparam ItemsPerThread - [inferred] the number of items to be processed by
     /// each thread.
@@ -333,6 +343,9 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_right() or block_discontinuity::flag_tails() instead.
+    ///
     /// This overload does not accept a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -351,6 +364,8 @@ public:
     /// \brief Tags \p tail_flags that indicate discontinuities between items partitioned
     /// across the thread block, where the last item of the last thread is compared against
     /// a \p tile_successor_item.
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_right() or block_discontinuity::flag_tails() instead.
     ///
     /// \tparam ItemsPerThread - [inferred] the number of items to be processed by
     /// each thread.
@@ -415,6 +430,9 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use subtract_right() or block_discontinuity::flag_tails() instead.
+    ///
     /// This overload does not accept a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -505,6 +523,9 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use block_discontinuity::flag_heads_and_tails() instead.
+    ///
     /// This overload does not accept a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -524,6 +545,8 @@ public:
     /// \brief Tags both \p head_flags and\p tail_flags that indicate discontinuities
     /// between items partitioned across the thread block, where the last item of the
     /// last thread is compared against a \p tile_successor_item.
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use block_discontinuity::flag_heads_and_tails() instead.
     ///
     /// \tparam ItemsPerThread - [inferred] the number of items to be processed by
     /// each thread.
@@ -605,6 +628,9 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use block_discontinuity::flag_heads_and_tails() instead.
+    ///
     /// This overload does not accept a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -625,6 +651,8 @@ public:
     /// \brief Tags both \p head_flags and\p tail_flags that indicate discontinuities
     /// between items partitioned across the thread block, where the first item of the
     /// first thread is compared against a \p tile_predecessor_item.
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use block_discontinuity::flag_heads_and_tails() instead.
     ///
     /// \tparam ItemsPerThread - [inferred] the number of items to be processed by
     /// each thread.
@@ -706,6 +734,9 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use block_discontinuity::flag_heads_and_tails() instead.
+    ///
     /// This overload does not accept a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -727,6 +758,8 @@ public:
     /// between items partitioned across the thread block, where the first and last items of
     /// the first and last thread is compared against a \p tile_predecessor_item and
     /// a \p tile_successor_item.
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use block_discontinuity::flag_heads_and_tails() instead.
     ///
     /// \tparam ItemsPerThread - [inferred] the number of items to be processed by
     /// each thread.
@@ -814,6 +847,9 @@ public:
     }
 
     /// \overload
+    /// \deprecated The flags API of block_adjacent_difference is deprecated,
+    /// use block_discontinuity::flag_heads_and_tails() instead.
+    ///
     /// This overload does not accept a reference to temporary storage, instead it is declared as
     /// part of the function itself. Note that this does NOT decrease the shared memory requirements
     /// of a kernel using this function.
@@ -835,6 +871,29 @@ public:
         );
     }
 
+    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// the block and write the output to the position of the left item.
+    ///
+    /// The first item in the first thread is copied from the input then for the rest the following
+    /// code applies.
+    /// \code
+    /// // For each i in [1, block_size * ItemsPerThread) across threads in a block
+    /// output[i] = op(input[i], input[i-1]);
+    /// \endcode
+    ///
+    /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
+    /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
+    /// \tparam BinaryFunction - [inferred] the type of the function to apply
+    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [out] output - array where the result of function application will be written to
+    /// \param [in] op - binary function applied to the items.
+    /// The signature of the function should be equivalent to the following:
+    /// `bool f(const T &a, const T &b)` The signature does not need to have
+    /// `const &` but the function object must not modify the objects passed to it.
+    /// \param storage reference to a temporary storage object of type #storage_type
+    /// \par Storage reusage
+    /// Synchronization barrier should be placed before `storage` is reused
+    /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left(const T (&input)[ItemsPerThread],
                                                      Output (&output)[ItemsPerThread],
@@ -849,6 +908,32 @@ public:
             input, output, op, input[0] /* predecessor */, storage.get().left);
     }
 
+    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// the block and write the output to the position of the left item, with an explicit item before 
+    /// the tile.
+    ///
+    /// \code
+    /// // For the first item on the first thread use the tile predecessor
+    /// output[0] = op(input[0], tile_predecessor)
+    /// // For other items, i in [1, block_size * ItemsPerThread) across threads in a block
+    /// output[i] = op(input[i], input[i-1]);
+    /// \endcode
+    ///
+    /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
+    /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
+    /// \tparam BinaryFunction - [inferred] the type of the function to apply
+    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [out] output - array where the result of function application will be written to
+    /// \param [in] op - binary function applied to the items.
+    /// The signature of the function should be equivalent to the following:
+    /// `bool f(const T &a, const T &b)` The signature does not need to have
+    /// `const &` but the function object must not modify the objects passed to it.
+    /// \param [in] tile_predecessor - the item before the tile, will be used as the input 
+    /// of the first application of `op`
+    /// \param storage - reference to a temporary storage object of type #storage_type
+    /// \par Storage reusage
+    /// Synchronization barrier should be placed before `storage` is reused
+    /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left(const T (&input)[ItemsPerThread],
                                                      Output (&output)[ItemsPerThread],
@@ -864,6 +949,32 @@ public:
             input, output, op, tile_predecessor, storage.get().left);
     }
 
+    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// the block and write the output to the position of the left item, in a partial tile.
+    ///
+    /// \code
+    /// output[0] = input[0]
+    /// // For each item i in [1, valid_items) across threads in a block
+    /// output[i] = op(input[i], input[i-1]);
+    /// // Just copy "invalid" items in [valid_items, block_size * ItemsPerThread)
+    /// output[i] = input[i]
+    /// \endcode
+    ///
+    /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
+    /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
+    /// \tparam BinaryFunction - [inferred] the type of the function to apply
+    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [out] output - array where the result of function application will be written to
+    /// \param [in] op - binary function applied to the items.
+    /// The signature of the function should be equivalent to the following:
+    /// `bool f(const T &a, const T &b)` The signature does not need to have
+    /// `const &` but the function object must not modify the objects passed to it.
+    /// \param [in] valid_items - number of items in the block which are considered "valid" and will
+    /// be used. Must be less or equal to `BlockSize` * `ItemsPerThread`
+    /// \param storage - reference to a temporary storage object of type #storage_type
+    /// \par Storage reusage
+    /// Synchronization barrier should be placed before `storage` is reused
+    /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left_partial(const T (&input)[ItemsPerThread],
                                                              Output (&output)[ItemsPerThread],
@@ -879,6 +990,28 @@ public:
             input, output, op, input[0] /* predecessor */, valid_items, storage.get().left);
     }
 
+    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// the block and write the output to the position of the left item, in a partial tile with a
+    /// predecessor.
+    ///
+    /// This combines subtract_left_partial() with a tile predecesor.
+    /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
+    /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
+    /// \tparam BinaryFunction - [inferred] the type of the function to apply
+    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [out] output - array where the result of function application will be written to
+    /// \param [in] op - binary function applied to the items.
+    /// The signature of the function should be equivalent to the following:
+    /// `bool f(const T &a, const T &b)` The signature does not need to have
+    /// `const &` but the function object must not modify the objects passed to it.
+    /// \param [in] tile_predecessor - the item before the tile, will be used as the input 
+    /// of the first application of `op`
+    /// \param [in] valid_items - number of items in the block which are considered "valid" and will
+    /// be used. Must be less or equal to `BlockSize` * `ItemsPerThread`
+    /// \param storage - reference to a temporary storage object of type #storage_type
+    /// \par Storage reusage
+    /// Synchronization barrier should be placed before `storage` is reused
+    /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_left_partial(const T (&input)[ItemsPerThread],
                                                              Output (&output)[ItemsPerThread],
@@ -895,6 +1028,29 @@ public:
             input, output, op, tile_predecessor, valid_items, storage.get().left);
     }
 
+    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// the block and write the output to the position of the right item.
+    ///
+    /// The last item in the last thread is copied from the input then for the rest the following
+    /// code applies.
+    /// \code
+    /// // For each i in [0, block_size * ItemsPerThread - 1) across threads in a block
+    /// output[i] = op(input[i], input[i+1]);
+    /// \endcode
+    ///
+    /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
+    /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
+    /// \tparam BinaryFunction - [inferred] the type of the function to apply
+    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [out] output - array where the result of function application will be written to
+    /// \param [in] op - binary function applied to the items.
+    /// The signature of the function should be equivalent to the following:
+    /// `bool f(const T &a, const T &b)` The signature does not need to have
+    /// `const &` but the function object must not modify the objects passed to it.
+    /// \param storage - reference to a temporary storage object of type #storage_type
+    /// \par Storage reusage
+    /// Synchronization barrier should be placed before `storage` is reused
+    /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_right(const T (&input)[ItemsPerThread],
                                                       Output (&output)[ItemsPerThread],
@@ -909,6 +1065,33 @@ public:
             input, output, op, input[0] /* successor */, storage.get().right);
     }
 
+    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// the block and write the output to the position of the right item, with an explicit item after 
+    /// the tile.
+    ///
+    /// \code
+    /// // For each items i in [0, block_size * ItemsPerThread - 1) across threads in a block
+    /// output[i] = op(input[i], input[i+1]);
+    /// // For the last item on the last thread use the tile successor
+    /// output[block_size * ItemsPerThread - 1] =
+    ///      op(input[block_size * ItemsPerThread - 1], tile_successor)
+    /// \endcode
+    ///
+    /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
+    /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
+    /// \tparam BinaryFunction - [inferred] the type of the function to apply
+    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [out] output - array where the result of function application will be written to
+    /// \param [in] op - binary function applied to the items.
+    /// The signature of the function should be equivalent to the following:
+    /// `bool f(const T &a, const T &b)` The signature does not need to have
+    /// `const &` but the function object must not modify the objects passed to it.
+    /// \param [in] tile_successor - the item after the tile, will be used as the input 
+    /// of the last application of `op`
+    /// \param storage - reference to a temporary storage object of type #storage_type
+    /// \par Storage reusage
+    /// Synchronization barrier should be placed before `storage` is reused
+    /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_right(const T (&input)[ItemsPerThread],
                                                       Output (&output)[ItemsPerThread],
@@ -924,6 +1107,31 @@ public:
             input, output, op, tile_successor, storage.get().right);
     }
 
+    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// the block and write the output to the position of the right item, in a partial tile.
+    ///
+    /// \code
+    /// // For each item i in [0, valid_items) across threads in a block
+    /// output[i] = op(input[i], input[i + 1]);
+    /// // Just copy "invalid" items in [valid_items, block_size * ItemsPerThread)
+    /// output[i] = input[i]
+    /// \endcode
+    ///
+    /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
+    /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
+    /// \tparam BinaryFunction - [inferred] the type of the function to apply
+    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [out] output - array where the result of function application will be written to
+    /// \param [in] op - binary function applied to the items.
+    /// The signature of the function should be equivalent to the following:
+    /// `bool f(const T &a, const T &b)` The signature does not need to have
+    /// `const &` but the function object must not modify the objects passed to it.
+    /// \param [in] valid_items - number of items in the block which are considered "valid" and will
+    /// be used. Must be less or equal to `BlockSize` * `ItemsPerThread`
+    /// \param storage - reference to a temporary storage object of type #storage_type
+    /// \par Storage reusage
+    /// Synchronization barrier should be placed before `storage` is reused
+    /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void subtract_right_partial(const T (&input)[ItemsPerThread],
                                                               Output (&output)[ItemsPerThread],
