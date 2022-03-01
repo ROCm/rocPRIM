@@ -40,8 +40,9 @@ function(add_configured_source)
 
   string(CONFIGURE "${ARG_OUTPUT_PATTERN}" output @ONLY)
   string(REPLACE ":" "_" output ${output})
-  configure_file("${ARG_INPUT}" "${ARG_TARGET}.units/${output}" @ONLY)
-  target_sources("${ARG_TARGET}" PRIVATE "${ARG_TARGET}.units/${output}")
+  configure_file("${ARG_INPUT}" "${ARG_TARGET}.parallel/${output}" @ONLY)
+  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${ARG_TARGET}.parallel")
+  target_sources("${ARG_TARGET}" PRIVATE "${ARG_TARGET}.parallel/${output}")
   target_include_directories("${ARG_TARGET}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
   # Cmake configuration needs to be rerun if the input template changes
