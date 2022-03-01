@@ -32,6 +32,13 @@ struct PinnedAllocator
 {
     using value_type = T;
 
+    PinnedAllocator() = default;
+
+    template <class U>
+    constexpr PinnedAllocator(const PinnedAllocator<U>&) noexcept
+    {
+    }
+
     T* allocate(const size_t size)
     {
         T* ptr{};
