@@ -64,10 +64,15 @@ struct PinnedAllocator
 
 std::vector<size_t> get_sizes()
 {
-    return std::vector<size_t>{
-        0, 1, 10, 53, 211, 1024, 2345, 4096, 34567,
+    std::vector<size_t> sizes{
+        1, 10, 53, 211, 1024, 2345, 4096, 34567,
         (1 << 16) - 1220, (1 << 22) - 76543
     };
+    if (!test_common_utils::use_hmm())
+    {
+        sizes.insert(sizes.begin(), 0);
+    }
+    return sizes;
 }
 
 template<class T>
