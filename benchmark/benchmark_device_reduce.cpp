@@ -168,24 +168,20 @@ int main(int argc, char *argv[])
     std::cout << "[HIP] Device name: " << devProp.name << std::endl;
 
 #ifdef BENCHMARK_CONFIG_TUNING
-    // Re-run CMake if you change anything in the comments below:
-    // CA_OUTPUT_PATTERN_SUFFIX=@DT@_@WS@_@BS@_@IPT@$
-    // CONFIG_AUTOTUNE_BS=64 128 256$512 1024
-    // CONFIG_AUTOTUNE_WS=32 64$
-    // CONFIG_AUTOTUNE_IPT=1 2 4 8 16$
-    // CONFIG_AUTOTUNE_DT=int float double int8_t int64_t rocprim::half$
     const float parallel_instance = parser.get<int>("parallel_instance");
     const float parallel_instances = parser.get<int>("parallel_instances");
-    const int start = config_autotune_vector.size()*parallel_instance/parallel_instances;
-    const int end = config_autotune_vector.size()*(parallel_instance+1)/parallel_instances;
+    auto& vector = config_autotune_register::vector();
+    const int start = vector.size() * parallel_instance / parallel_instances;
+    const int end = vector.size() * (parallel_instance + 1) / parallel_instances;
     std::vector<benchmark::internal::Benchmark*> benchmarks = {};
-    for(int i = start; i < end; i++){
-        std::unique_ptr<config_autotune_interface>& uniq_ptr = config_autotune_vector.at(i);
+    for(int i = start; i < end; i++)
+    {
+        std::unique_ptr<config_autotune_interface>& uniq_ptr = vector.at(i);
         config_autotune_interface* tuning_benchmark = uniq_ptr.get();
         benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(
-            (tuning_benchmark->name().c_str()),
+            tuning_benchmark->name().c_str(),
             [tuning_benchmark](benchmark::State& state, size_t size, const hipStream_t stream) {
-                tuning_benchmark->operator()(state, size, stream);
+                tuning_benchmark->run(state, size, stream);
             },
             size,
             stream);

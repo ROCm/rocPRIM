@@ -21,7 +21,8 @@
 # SOFTWARE.
 
 option(BENCHMARK_CONFIG_TUNING "Benchmark device-level functions using various configs" OFF)
-include(ConfigAutotune.cmake)
+include(../cmake/ConfigAutotune.cmake)
+include(ConfigAutotuneSettings.cmake)
 
 function(add_rocprim_benchmark BENCHMARK_SOURCE)
   get_filename_component(BENCHMARK_TARGET ${BENCHMARK_SOURCE} NAME_WE)
@@ -67,8 +68,8 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
     target_compile_definitions(${BENCHMARK_TARGET} PRIVATE BENCHMARK_CONFIG_TUNING)
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK_TARGET}.parallel.cpp.in")
-      message(STATUS "found config autotune parallel file for ${BENCHMARK_TARGET}")
-      read_config_autotune_settings(${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK_SOURCE} list_across_names list_across output_pattern_suffix)
+      message(STATUS "found ${BENCHMARK_TARGET}.parallel.cpp.in file, compiling in parallel.")
+      read_config_autotune_settings(${BENCHMARK_TARGET} list_across_names list_across output_pattern_suffix)
       add_matrix(TARGET ${BENCHMARK_TARGET}
               FILTER "reject_odd_blocksize"
               SHARDS 1
@@ -77,7 +78,6 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
               OUTPUT_PATTERN "${BENCHMARK_TARGET}_${output_pattern_suffix}.cpp"
               NAMES ${list_across_names}
               LISTS ${list_across})
-    else()
     endif()
   endif()
   rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)

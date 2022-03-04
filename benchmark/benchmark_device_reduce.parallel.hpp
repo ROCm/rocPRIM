@@ -20,6 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#ifndef ROCPRIM_BENCHMARK_DEVICE_REDUCE_PARALLEL_HPP_
+#define ROCPRIM_BENCHMARK_DEVICE_REDUCE_PARALLEL_HPP_
+
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -52,21 +55,23 @@
 
 template<
     unsigned int BlockSize,
-    unsigned int WarpSize,
     unsigned int ItemsPerThread,
     class T,
-    class BinaryFunction>
-struct config_autotune_run_benchmark : public config_autotune_interface
+    class BinaryFunction
+>
+struct reduce_benchmark : public config_autotune_interface
 {
-    std::string name(){
-        return std::string("device_reduce<"+std::to_string(BlockSize)+", "+std::to_string(ItemsPerThread)+", "+std::to_string(WarpSize)+", "+Traits<T>::name()+">");
+    std::string name() override
+    {
+        return std::string("device_reduce<"+std::to_string(BlockSize)+", "+std::to_string(ItemsPerThread)+", "+Traits<T>::name()+">");
     }
-    using ConfigType = rocprim::reduce_config<rocprim::detail::limit_block_size<BlockSize, sizeof(T), WarpSize>::value, ItemsPerThread, ::rocprim::block_reduce_algorithm::using_warp_reduce>;
-    const unsigned int batch_size = 10;
-    const unsigned int warmup_size = 5;
-    void operator()(benchmark::State& state,
-                    size_t size,
-                    const hipStream_t stream){
+    using ConfigType = rocprim::reduce_config<BlockSize, ItemsPerThread, ::rocprim::block_reduce_algorithm::using_warp_reduce>;
+    static constexpr unsigned int batch_size = 10;
+    static constexpr unsigned int warmup_size = 5;
+    void run(benchmark::State& state,
+             size_t size,
+             const hipStream_t stream) override
+    {
         BinaryFunction reduce_op{};
         std::vector<T> input = get_random_data<T>(size, T(0), T(1000));
 
@@ -140,3 +145,4 @@ struct config_autotune_run_benchmark : public config_autotune_interface
     }
 };
 
+#endif

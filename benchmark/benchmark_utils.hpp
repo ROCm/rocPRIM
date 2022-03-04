@@ -31,6 +31,7 @@
 #endif
 
 #include <rocprim/rocprim.hpp>
+#include "benchmark/benchmark.h"
 
 #define HIP_CHECK(condition)         \
   {                                  \
@@ -339,12 +340,25 @@ void static_for_each(Args... args)
     static_for_each_impl<typename Indices::value_type, Function>(Indices {}, args...);
 }
 
-struct config_autotune_interface {
-    virtual std::string name() { return ""; };
-    virtual ~config_autotune_interface() = default;
-    virtual void operator()(benchmark::State&,
-                            size_t,
-                            const hipStream_t){ }
+struct config_autotune_interface
+{
+    virtual std::string name()                               = 0;
+    virtual ~config_autotune_interface()                     = default;
+    virtual void run(benchmark::State&, size_t, hipStream_t) = 0;
+};
+
+struct config_autotune_register
+{
+    static std::vector<std::unique_ptr<config_autotune_interface>>& vector() {
+        static std::vector<std::unique_ptr<config_autotune_interface>> storage;
+        return storage;
+    }
+
+    template <typename T>
+    static config_autotune_register create() {
+        vector().push_back(std::make_unique<T>());
+        return config_autotune_register();
+    }
 };
 
 template <typename T>
@@ -369,6 +383,8 @@ template <>
 inline const char* Traits<rocprim::half>::name() { return "rocprim::half"; }
 template <>
 inline const char* Traits<long long>::name() { return "long long"; }
+template <>
+inline const char* Traits<int64_t>::name() { return "int64_t"; }
 template <>
 inline const char* Traits<float>::name() { return "float"; }
 template <>

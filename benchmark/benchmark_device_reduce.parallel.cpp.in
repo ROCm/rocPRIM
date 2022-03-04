@@ -20,15 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#ifndef ROCPRIM_BENCHMARK_DEVICE_REDUCE_PARALLEL_CPP_IN_
+#define ROCPRIM_BENCHMARK_DEVICE_REDUCE_PARALLEL_CPP_IN_
+
+#include "benchmark_utils.hpp"
 #include "benchmark_device_reduce.parallel.hpp"
-extern std::vector<std::unique_ptr<config_autotune_interface>> config_autotune_vector;
 
 namespace {
-    int a = [] {
-        auto* pointer_to_benchmark
-            = new config_autotune_run_benchmark<@BS@u, @WS@u, @IPT@u, @DT@, rocprim::plus<@DT@>>; // create new object
-        config_autotune_vector.push_back(std::unique_ptr<config_autotune_interface>(pointer_to_benchmark));  // put it in the vector
-        return 0;
-    }();
+    auto benchmark = config_autotune_register::create<reduce_benchmark<@BS@u, @IPT@u, @DT@, rocprim::plus<@DT@>>>();
 }
-/*template struct tuning_run_benchmark<@BlockSize@, @WarpSize@, @ItemsPerThread@, @DataType@, rocprim::plus<@DataType@>>;*/
+
+#endif
