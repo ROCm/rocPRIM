@@ -675,24 +675,24 @@ auto test_block_adjacent_difference()
 
 }
 
-template<
-    typename T,
-    typename Output,
-    typename BinaryFunction,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-auto test_block_adjacent_difference()
--> typename std::enable_if<Method == 3>::type
+template <typename T,
+          typename Output,
+          typename BinaryFunction,
+          unsigned int Method,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+auto test_block_adjacent_difference() -> typename std::enable_if<Method == 3>::type
 {
     using stored_type = std::conditional_t<std::is_same<Output, bool>::value, int, Output>;
 
-    static constexpr auto block_size = BlockSize;
+    static constexpr auto block_size       = BlockSize;
     static constexpr auto items_per_thread = ItemsPerThread;
-    static constexpr auto items_per_block = block_size * items_per_thread;
-    static constexpr auto size = items_per_block * 20;
-    static constexpr auto grid_size = size / items_per_block;
+    static constexpr auto items_per_block  = block_size * items_per_thread;
+    static constexpr auto grid_size        = 20;
+    static constexpr auto size             = grid_size * items_per_block;
+
+    SCOPED_TRACE(testing::Message() << "with block_size = " << block_size << ", items_per_thread = "
+                                    << items_per_thread << ", size = " << size);
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -700,7 +700,7 @@ auto test_block_adjacent_difference()
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
@@ -712,16 +712,18 @@ auto test_block_adjacent_difference()
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);
-        BinaryFunction      op;
-        for(size_t block_index = 0; block_index < size / items_per_block; ++block_index)
+        BinaryFunction           op;
+        for(size_t block_index = 0; block_index < grid_size; ++block_index)
         {
             for(unsigned int item = 0; item < items_per_block; ++item)
             {
                 const size_t i = block_index * items_per_block + item;
-                if(item == 0) {
-                    expected[i]
-                        = block_index % 2 == 1 ? op(input[i], input[i - 1]) : input[i];
-                } else {
+                if(item == 0)
+                {
+                    expected[i] = block_index % 2 == 1 ? op(input[i], input[i - 1]) : input[i];
+                }
+                else
+                {
                     expected[i] = op(input[i], input[i - 1]);
                 }
             }
@@ -732,13 +734,8 @@ auto test_block_adjacent_difference()
         stored_type* d_output;
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(input[0])));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(output[0])));
-        HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(input[0]),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            d_input, input.data(), input.size() * sizeof(input[0]), hipMemcpyHostToDevice));
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(subtract_left_kernel<T,
@@ -756,13 +753,8 @@ auto test_block_adjacent_difference()
         HIP_CHECK(hipGetLastError());
 
         // Reading results
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(output[0]),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
             output, expected, test_utils::precision_threshold<T>::percentage));
@@ -772,24 +764,24 @@ auto test_block_adjacent_difference()
     }
 }
 
-template<
-    typename T,
-    typename Output,
-    typename BinaryFunction,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-auto test_block_adjacent_difference()
--> typename std::enable_if<Method == 4>::type
+template <typename T,
+          typename Output,
+          typename BinaryFunction,
+          unsigned int Method,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+auto test_block_adjacent_difference() -> typename std::enable_if<Method == 4>::type
 {
     using stored_type = std::conditional_t<std::is_same<Output, bool>::value, int, Output>;
 
-    static constexpr auto block_size = BlockSize;
+    static constexpr auto block_size       = BlockSize;
     static constexpr auto items_per_thread = ItemsPerThread;
-    static constexpr auto items_per_block = block_size * items_per_thread;
-    static constexpr auto size = items_per_block * 20;
-    static constexpr auto grid_size = size / items_per_block;
+    static constexpr auto items_per_block  = block_size * items_per_thread;
+    static constexpr auto grid_size        = 20;
+    static constexpr auto size             = grid_size * items_per_block;
+
+    SCOPED_TRACE(testing::Message() << "with block_size = " << block_size << ", items_per_thread = "
+                                    << items_per_thread << ", size = " << size);
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -797,28 +789,30 @@ auto test_block_adjacent_difference()
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        const std::vector<T>           input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
+        const std::vector<T>     input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
         std::vector<stored_type> output(size);
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);
-        BinaryFunction      op;
-        for(size_t block_index = 0; block_index < size / items_per_block; ++block_index)
+        BinaryFunction           op;
+        for(size_t block_index = 0; block_index < grid_size; ++block_index)
         {
             for(unsigned int item = 0; item < items_per_block; ++item)
             {
                 const size_t i = block_index * items_per_block + item;
-                if(item == items_per_block - 1) {
-                    expected[i]
-                        = block_index % 2 == 0 ? op(input[i], input[i + 1]) : input[i];
-                } else {
+                if(item == items_per_block - 1)
+                {
+                    expected[i] = block_index % 2 == 0 ? op(input[i], input[i + 1]) : input[i];
+                }
+                else
+                {
                     expected[i] = op(input[i], input[i + 1]);
                 }
             }
@@ -829,21 +823,16 @@ auto test_block_adjacent_difference()
         stored_type* d_output;
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(input[0])));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(output[0])));
-        HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(input[0]),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            d_input, input.data(), input.size() * sizeof(input[0]), hipMemcpyHostToDevice));
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(subtract_right_kernel<T,
-                                                                Output,
-                                                                stored_type,
-                                                                BinaryFunction,
-                                                                block_size,
-                                                                items_per_thread>),
+                                                                 Output,
+                                                                 stored_type,
+                                                                 BinaryFunction,
+                                                                 block_size,
+                                                                 items_per_thread>),
                            dim3(grid_size),
                            dim3(block_size),
                            0,
@@ -853,13 +842,8 @@ auto test_block_adjacent_difference()
         HIP_CHECK(hipGetLastError());
 
         // Reading results
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(output[0]),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
             output, expected, test_utils::precision_threshold<T>::percentage));
@@ -869,24 +853,24 @@ auto test_block_adjacent_difference()
     }
 }
 
-template<
-    typename T,
-    typename Output,
-    typename BinaryFunction,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-auto test_block_adjacent_difference()
--> typename std::enable_if<Method == 5>::type
+template <typename T,
+          typename Output,
+          typename BinaryFunction,
+          unsigned int Method,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+auto test_block_adjacent_difference() -> typename std::enable_if<Method == 5>::type
 {
     using stored_type = std::conditional_t<std::is_same<Output, bool>::value, int, Output>;
 
-    static constexpr auto block_size = BlockSize;
+    static constexpr auto block_size       = BlockSize;
     static constexpr auto items_per_thread = ItemsPerThread;
-    static constexpr auto items_per_block = block_size * items_per_thread;
-    static constexpr auto size = items_per_block * 20;
-    static constexpr auto grid_size = size / items_per_block;
+    static constexpr auto items_per_block  = block_size * items_per_thread;
+    static constexpr auto grid_size        = 20;
+    static constexpr auto size             = grid_size * items_per_block;
+
+    SCOPED_TRACE(testing::Message() << "with block_size = " << block_size << ", items_per_thread = "
+                                    << items_per_thread << ", size = " << size);
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -894,14 +878,14 @@ auto test_block_adjacent_difference()
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        const std::vector<T> input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
+        const std::vector<T>     input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
         std::vector<stored_type> output(size);
 
         const std::vector<unsigned int> tile_sizes
@@ -909,13 +893,14 @@ auto test_block_adjacent_difference()
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);
-        BinaryFunction      op;
-        for(size_t block_index = 0; block_index < size / items_per_block; ++block_index)
+        BinaryFunction           op;
+        for(size_t block_index = 0; block_index < grid_size; ++block_index)
         {
             for(unsigned int item = 0; item < items_per_block; ++item)
             {
                 const size_t i = block_index * items_per_block + item;
-                if (item < tile_sizes[block_index]) {
+                if(item < tile_sizes[block_index])
+                {
                     if(item == 0)
                     {
                         expected[i] = block_index % 2 == 1 ? op(input[i], input[i - 1]) : input[i];
@@ -924,7 +909,9 @@ auto test_block_adjacent_difference()
                     {
                         expected[i] = op(input[i], input[i - 1]);
                     }
-                } else {
+                }
+                else
+                {
                     expected[i] = input[i];
                 }
             }
@@ -937,20 +924,12 @@ auto test_block_adjacent_difference()
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(input[0])));
         HIP_CHECK(hipMalloc(&d_tile_sizes, tile_sizes.size() * sizeof(tile_sizes[0])));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(output[0])));
-        HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(input[0]),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_tile_sizes, tile_sizes.data(),
-                tile_sizes.size() * sizeof(tile_sizes[0]),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            d_input, input.data(), input.size() * sizeof(input[0]), hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_tile_sizes,
+                            tile_sizes.data(),
+                            tile_sizes.size() * sizeof(tile_sizes[0]),
+                            hipMemcpyHostToDevice));
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(subtract_left_partial_kernel<T,
@@ -969,13 +948,8 @@ auto test_block_adjacent_difference()
         HIP_CHECK(hipGetLastError());
 
         // Reading results
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(output[0]),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
             output, expected, test_utils::precision_threshold<T>::percentage));
@@ -986,24 +960,24 @@ auto test_block_adjacent_difference()
     }
 }
 
-template<
-    typename T,
-    typename Output,
-    typename BinaryFunction,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-auto test_block_adjacent_difference()
--> typename std::enable_if<Method == 6>::type
+template <typename T,
+          typename Output,
+          typename BinaryFunction,
+          unsigned int Method,
+          unsigned int BlockSize,
+          unsigned int ItemsPerThread>
+auto test_block_adjacent_difference() -> typename std::enable_if<Method == 6>::type
 {
     using stored_type = std::conditional_t<std::is_same<Output, bool>::value, int, Output>;
 
-    static constexpr auto block_size = BlockSize;
+    static constexpr auto block_size       = BlockSize;
     static constexpr auto items_per_thread = ItemsPerThread;
-    static constexpr auto items_per_block = block_size * items_per_thread;
-    static constexpr auto size = items_per_block * 20;
-    static constexpr auto grid_size = size / items_per_block;
+    static constexpr auto items_per_block  = block_size * items_per_thread;
+    static constexpr auto grid_size        = 20;
+    static constexpr auto size             = grid_size * items_per_block;
+
+    SCOPED_TRACE(testing::Message() << "with block_size = " << block_size << ", items_per_thread = "
+                                    << items_per_thread << ", size = " << size);
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -1011,14 +985,14 @@ auto test_block_adjacent_difference()
         return;
     }
 
-    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
         // Generate data
-        const std::vector<T> input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
+        const std::vector<T>     input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
         std::vector<stored_type> output(size);
 
         const std::vector<unsigned int> tile_sizes
@@ -1026,13 +1000,14 @@ auto test_block_adjacent_difference()
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);
-        BinaryFunction      op;
-        for(size_t block_index = 0; block_index < size / items_per_block; ++block_index)
+        BinaryFunction           op;
+        for(size_t block_index = 0; block_index < grid_size; ++block_index)
         {
             for(unsigned int item = 0; item < items_per_block; ++item)
             {
                 const size_t i = block_index * items_per_block + item;
-                if (item < tile_sizes[block_index]) {
+                if(item < tile_sizes[block_index])
+                {
                     if(item == tile_sizes[block_index] - 1 || item == items_per_block - 1)
                     {
                         expected[i] = input[i];
@@ -1041,7 +1016,9 @@ auto test_block_adjacent_difference()
                     {
                         expected[i] = op(input[i], input[i + 1]);
                     }
-                } else {
+                }
+                else
+                {
                     expected[i] = input[i];
                 }
             }
@@ -1054,20 +1031,12 @@ auto test_block_adjacent_difference()
         HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(input[0])));
         HIP_CHECK(hipMalloc(&d_tile_sizes, tile_sizes.size() * sizeof(tile_sizes[0])));
         HIP_CHECK(hipMalloc(&d_output, output.size() * sizeof(output[0])));
-        HIP_CHECK(
-            hipMemcpy(
-                d_input, input.data(),
-                input.size() * sizeof(input[0]),
-                hipMemcpyHostToDevice
-            )
-        );
-        HIP_CHECK(
-            hipMemcpy(
-                d_tile_sizes, tile_sizes.data(),
-                tile_sizes.size() * sizeof(tile_sizes[0]),
-                hipMemcpyHostToDevice
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            d_input, input.data(), input.size() * sizeof(input[0]), hipMemcpyHostToDevice));
+        HIP_CHECK(hipMemcpy(d_tile_sizes,
+                            tile_sizes.data(),
+                            tile_sizes.size() * sizeof(tile_sizes[0]),
+                            hipMemcpyHostToDevice));
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(subtract_right_partial_kernel<T,
@@ -1086,13 +1055,8 @@ auto test_block_adjacent_difference()
         HIP_CHECK(hipGetLastError());
 
         // Reading results
-        HIP_CHECK(
-            hipMemcpy(
-                output.data(), d_output,
-                output.size() * sizeof(output[0]),
-                hipMemcpyDeviceToHost
-            )
-        );
+        HIP_CHECK(hipMemcpy(
+            output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
             output, expected, test_utils::precision_threshold<T>::percentage));
