@@ -13,6 +13,8 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - Future value
 - Added device partition_three_way to partition input to three output iterators based on two predicates
 - Added File/Folder Reorg Changes and Enabled Backward compatibility support using wrapper headers.
+- New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
+  on pairs of adjacent items distributed between threads in a block.
 ### Changed
 - The reduce/scan algorithm precision issues in the tests has been resolved for half types.
 - The device radix sort algorithm supports indexing with 64 bit unsigned integers.
@@ -21,6 +23,8 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
   - Else the indexer type is 64 bit unsigned int.
   - The maximum problem size is based on the compile time configuration of the algorithm according to the following formula:
     - `max_problem_size = (UINT_MAX + 1) * config::scan::block_size * config::scan::items_per_thread`.
+- The flags API of `block_adjacent_difference` is now deprecated and will be removed in a future
+  version.
 ### Known issues
 - device_segmented_radix_sort unit test failing for HIP on Windows
 
