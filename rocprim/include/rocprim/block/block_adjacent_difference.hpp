@@ -44,7 +44,7 @@
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief The \p block_adjacent_difference class is a block level parallel primitive which provides
-/// methods for applying binary functions for pairs of consecutive items parition across a thread
+/// methods for applying binary functions for pairs of consecutive items partition across a thread
 /// block.
 ///
 /// \tparam T - the input type.
@@ -138,7 +138,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -217,7 +217,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -303,7 +303,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -383,7 +383,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -467,7 +467,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -565,7 +565,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -671,7 +671,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -780,7 +780,7 @@ public:
     /// must not modify the objects passed to it.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     ///
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused
     /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
     ///
@@ -871,7 +871,7 @@ public:
         );
     }
 
-    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// \brief Apply a function to each consecutive pair of elements partitioned across threads in
     /// the block and write the output to the position of the left item.
     ///
     /// The first item in the first thread is copied from the input then for the rest the following
@@ -884,14 +884,14 @@ public:
     /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
     /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
     /// \tparam BinaryFunction - [inferred] the type of the function to apply
-    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [in] input - array that data is loaded from partitioned across the threads in the block
     /// \param [out] output - array where the result of function application will be written to
     /// \param [in] op - binary function applied to the items.
     /// The signature of the function should be equivalent to the following:
     /// `bool f(const T &a, const T &b)` The signature does not need to have
     /// `const &` but the function object must not modify the objects passed to it.
     /// \param storage reference to a temporary storage object of type #storage_type
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before `storage` is reused
     /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
@@ -908,7 +908,7 @@ public:
             input, output, op, input[0] /* predecessor */, storage.get().left);
     }
 
-    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// \brief Apply a function to each consecutive pair of elements partitioned across threads in
     /// the block and write the output to the position of the left item, with an explicit item before 
     /// the tile.
     ///
@@ -922,7 +922,7 @@ public:
     /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
     /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
     /// \tparam BinaryFunction - [inferred] the type of the function to apply
-    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [in] input - array that data is loaded from partitioned across the threads in the block
     /// \param [out] output - array where the result of function application will be written to
     /// \param [in] op - binary function applied to the items.
     /// The signature of the function should be equivalent to the following:
@@ -931,7 +931,7 @@ public:
     /// \param [in] tile_predecessor - the item before the tile, will be used as the input 
     /// of the first application of `op`
     /// \param storage - reference to a temporary storage object of type #storage_type
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before `storage` is reused
     /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
@@ -949,7 +949,7 @@ public:
             input, output, op, tile_predecessor, storage.get().left);
     }
 
-    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// \brief Apply a function to each consecutive pair of elements partitioned across threads in
     /// the block and write the output to the position of the left item, in a partial tile.
     ///
     /// \code
@@ -963,7 +963,7 @@ public:
     /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
     /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
     /// \tparam BinaryFunction - [inferred] the type of the function to apply
-    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [in] input - array that data is loaded from partitioned across the threads in the block
     /// \param [out] output - array where the result of function application will be written to
     /// \param [in] op - binary function applied to the items.
     /// The signature of the function should be equivalent to the following:
@@ -972,7 +972,7 @@ public:
     /// \param [in] valid_items - number of items in the block which are considered "valid" and will
     /// be used. Must be less or equal to `BlockSize` * `ItemsPerThread`
     /// \param storage - reference to a temporary storage object of type #storage_type
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before `storage` is reused
     /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
@@ -990,15 +990,15 @@ public:
             input, output, op, input[0] /* predecessor */, valid_items, storage.get().left);
     }
 
-    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// \brief Apply a function to each consecutive pair of elements partitioned across threads in
     /// the block and write the output to the position of the left item, in a partial tile with a
     /// predecessor.
     ///
-    /// This combines subtract_left_partial() with a tile predecesor.
+    /// This combines subtract_left_partial() with a tile predecessor.
     /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
     /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
     /// \tparam BinaryFunction - [inferred] the type of the function to apply
-    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [in] input - array that data is loaded from partitioned across the threads in the block
     /// \param [out] output - array where the result of function application will be written to
     /// \param [in] op - binary function applied to the items.
     /// The signature of the function should be equivalent to the following:
@@ -1009,7 +1009,7 @@ public:
     /// \param [in] valid_items - number of items in the block which are considered "valid" and will
     /// be used. Must be less or equal to `BlockSize` * `ItemsPerThread`
     /// \param storage - reference to a temporary storage object of type #storage_type
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before `storage` is reused
     /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
@@ -1028,7 +1028,7 @@ public:
             input, output, op, tile_predecessor, valid_items, storage.get().left);
     }
 
-    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// \brief Apply a function to each consecutive pair of elements partitioned across threads in
     /// the block and write the output to the position of the right item.
     ///
     /// The last item in the last thread is copied from the input then for the rest the following
@@ -1041,14 +1041,14 @@ public:
     /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
     /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
     /// \tparam BinaryFunction - [inferred] the type of the function to apply
-    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [in] input - array that data is loaded from partitioned across the threads in the block
     /// \param [out] output - array where the result of function application will be written to
     /// \param [in] op - binary function applied to the items.
     /// The signature of the function should be equivalent to the following:
     /// `bool f(const T &a, const T &b)` The signature does not need to have
     /// `const &` but the function object must not modify the objects passed to it.
     /// \param storage - reference to a temporary storage object of type #storage_type
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before `storage` is reused
     /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
@@ -1065,7 +1065,7 @@ public:
             input, output, op, input[0] /* successor */, storage.get().right);
     }
 
-    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// \brief Apply a function to each consecutive pair of elements partitioned across threads in
     /// the block and write the output to the position of the right item, with an explicit item after 
     /// the tile.
     ///
@@ -1080,7 +1080,7 @@ public:
     /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
     /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
     /// \tparam BinaryFunction - [inferred] the type of the function to apply
-    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [in] input - array that data is loaded from partitioned across the threads in the block
     /// \param [out] output - array where the result of function application will be written to
     /// \param [in] op - binary function applied to the items.
     /// The signature of the function should be equivalent to the following:
@@ -1089,7 +1089,7 @@ public:
     /// \param [in] tile_successor - the item after the tile, will be used as the input 
     /// of the last application of `op`
     /// \param storage - reference to a temporary storage object of type #storage_type
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before `storage` is reused
     /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
@@ -1107,7 +1107,7 @@ public:
             input, output, op, tile_successor, storage.get().right);
     }
 
-    /// \brief Apply a function to each consecutive pair of elements paritioned across threads in
+    /// \brief Apply a function to each consecutive pair of elements partitioned across threads in
     /// the block and write the output to the position of the right item, in a partial tile.
     ///
     /// \code
@@ -1120,7 +1120,7 @@ public:
     /// \tparam Output - [inferred] the type of output, must be assignable from the result of `op`
     /// \tparam ItemsPerThread - [inferred] the number of items processed by each thread
     /// \tparam BinaryFunction - [inferred] the type of the function to apply
-    /// \param [in] input - array that data is loaded from paritioned across the threads in the block
+    /// \param [in] input - array that data is loaded from partitioned across the threads in the block
     /// \param [out] output - array where the result of function application will be written to
     /// \param [in] op - binary function applied to the items.
     /// The signature of the function should be equivalent to the following:
@@ -1129,7 +1129,7 @@ public:
     /// \param [in] valid_items - number of items in the block which are considered "valid" and will
     /// be used. Must be less or equal to `BlockSize` * `ItemsPerThread`
     /// \param storage - reference to a temporary storage object of type #storage_type
-    /// \par Storage reusage
+    /// \par Storage reuse
     /// Synchronization barrier should be placed before `storage` is reused
     /// or repurposed: `__syncthreads()` or \link syncthreads() rocprim::syncthreads() \endlink.
     template <typename Output, unsigned int ItemsPerThread, typename BinaryFunction>
