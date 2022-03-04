@@ -20,9 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-include(CMakePrintHelpers)
-option(BENCHMARK_CONFIG_AUTOTUNE "Benchmark device-level functions using various configs" OFF)
-
 function(add_configured_source)
   cmake_parse_arguments(PARSE_ARGV 0 ARG "" "INPUT;TARGET;OUTPUT_PATTERN" "NAMES;VALUES")
   list(LENGTH ARG_NAMES NAMES_LEN)
@@ -43,7 +40,7 @@ function(add_configured_source)
   configure_file("${ARG_INPUT}" "${ARG_TARGET}.parallel/${output}" @ONLY)
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${ARG_TARGET}.parallel")
   target_sources("${ARG_TARGET}" PRIVATE "${ARG_TARGET}.parallel/${output}")
-  target_include_directories("${ARG_TARGET}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_include_directories("${ARG_TARGET}" PRIVATE "../benchmark")
 
   # Cmake configuration needs to be rerun if the input template changes
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${ARG_INPUT}")
@@ -52,20 +49,6 @@ endfunction()
 function(div_round_up dividend divisor result_var)
   math(EXPR result "(${dividend} + ${divisor} - 1) / ${divisor}")
   set("${result_var}" "${result}" PARENT_SCOPE)
-endfunction()
-
-function(read_config_autotune_settings file list_across_names list_across output_pattern_suffix)
-  file(READ ${file} FILE_CONTENTS)
-  string(REGEX MATCHALL "CONFIG_AUTOTUNE_[A-z]*=[^\$]*" regex_found_list ${FILE_CONTENTS})
-  foreach(match IN LISTS regex_found_list)
-    string(REGEX MATCH "CONFIG_AUTOTUNE_([A-z]*)=(.*)" _ ${match})
-    list(APPEND across_names ${CMAKE_MATCH_1})
-    list(APPEND across ${CMAKE_MATCH_2})
-  endforeach()
-  set(list_across_names ${across_names} PARENT_SCOPE)
-  set(list_across ${across} PARENT_SCOPE)
-  string(REGEX MATCH "CA_OUTPUT_PATTERN_SUFFIX=([^\$]*)" _ ${FILE_CONTENTS})
-  set(output_pattern_suffix ${CMAKE_MATCH_1} PARENT_SCOPE)
 endfunction()
 
 function(add_matrix)
@@ -126,14 +109,7 @@ function(add_matrix)
   endforeach()
 endfunction()
 
-function(reject_all RESULT)
-  set("${RESULT}" OFF PARENT_SCOPE)
-endfunction()
-
-function(accept_all RESULT)
-  set("${RESULT}" ON PARENT_SCOPE)
-endfunction()
-
+# example of a FILTER rule
 function(reject_odd_blocksize RESULT BlockSize)
   math(EXPR res "${BlockSize} % 2")
   if(res EQUAL 0)
