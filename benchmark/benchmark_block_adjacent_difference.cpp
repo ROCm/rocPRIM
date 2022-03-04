@@ -57,25 +57,20 @@ const size_t DEFAULT_N = 1024 * 1024 * 128;
 
 namespace rp = rocprim;
 
-template <class Runner,
+template <class Benchmark,
           unsigned int BlockSize,
           unsigned int ItemsPerThread,
           bool         WithTile,
-          unsigned int Trials,
           typename... Args>
 __global__ __launch_bounds__(BlockSize) void kernel(Args ...args)
 {
-    Runner::template run<BlockSize, ItemsPerThread, WithTile, Trials>(args...);
+    Benchmark::template run<BlockSize, ItemsPerThread, WithTile>(args...);
 }
 
 struct subtract_left
 {
-    template <unsigned int BlockSize,
-              unsigned int ItemsPerThread,
-              bool         WithTile,
-              unsigned int Trials,
-              typename T>
-    __device__ static void run(const T* d_input, T* d_output)
+    template <unsigned int BlockSize, unsigned int ItemsPerThread, bool WithTile, typename T>
+    __device__ static void run(const T* d_input, T* d_output, unsigned int trials)
     {
         const unsigned int lid = threadIdx.x;
         const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
@@ -87,7 +82,7 @@ struct subtract_left
         __shared__ typename adjacent_diff_t::storage_type storage;
 
         ROCPRIM_NO_UNROLL
-        for(unsigned int trial = 0; trial < Trials; trial++)
+        for(unsigned int trial = 0; trial < trials; trial++)
         {
             T output[ItemsPerThread];
             if(WithTile)
@@ -112,12 +107,9 @@ struct subtract_left
 
 struct subtract_left_partial
 {
-    template <unsigned int BlockSize,
-              unsigned int ItemsPerThread,
-              bool         WithTile,
-              unsigned int Trials,
-              typename T>
-    __device__ static void run(const T* d_input, const unsigned int* tile_sizes, T* d_output)
+    template <unsigned int BlockSize, unsigned int ItemsPerThread, bool WithTile, typename T>
+    __device__ static void
+        run(const T* d_input, const unsigned int* tile_sizes, T* d_output, unsigned int trials)
     {
         const unsigned int lid = threadIdx.x;
         const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
@@ -131,10 +123,10 @@ struct subtract_left_partial
         unsigned int tile_size = tile_sizes[blockIdx.x];
 
         // Try to evenly distribute the length of tile_sizes between all the trials
-        static constexpr auto tile_size_diff = (BlockSize * ItemsPerThread) / Trials + 1;
+        const auto tile_size_diff = (BlockSize * ItemsPerThread) / trials + 1;
 
         ROCPRIM_NO_UNROLL
-        for(unsigned int trial = 0; trial < Trials; trial++)
+        for(unsigned int trial = 0; trial < trials; trial++)
         {
             T output[ItemsPerThread];
             if(WithTile)
@@ -164,9 +156,8 @@ struct subtract_right
     template <unsigned int BlockSize,
               unsigned int ItemsPerThread,
               bool         WithTile,
-              unsigned int Trials,
               typename T>
-    __device__ static void run(const T* d_input, T* d_output)
+    __device__ static void run(const T* d_input, T* d_output, unsigned int trials)
     {
         const unsigned int lid = threadIdx.x;
         const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
@@ -178,7 +169,7 @@ struct subtract_right
         __shared__ typename adjacent_diff_t::storage_type storage;
 
         ROCPRIM_NO_UNROLL
-        for(unsigned int trial = 0; trial < Trials; trial++)
+        for(unsigned int trial = 0; trial < trials; trial++)
         {
             T output[ItemsPerThread];
             if(WithTile)
@@ -203,12 +194,9 @@ struct subtract_right
 
 struct subtract_right_partial
 {
-    template <unsigned int BlockSize,
-              unsigned int ItemsPerThread,
-              bool         WithTile,
-              unsigned int Trials,
-              typename T>
-    __device__ static void run(const T* d_input, const unsigned int* tile_sizes, T* d_output)
+    template <unsigned int BlockSize, unsigned int ItemsPerThread, bool WithTile, typename T>
+    __device__ static void
+        run(const T* d_input, const unsigned int* tile_sizes, T* d_output, unsigned int trials)
     {
         const unsigned int lid = threadIdx.x;
         const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
@@ -221,10 +209,10 @@ struct subtract_right_partial
 
         unsigned int tile_size = tile_sizes[blockIdx.x];
         // Try to evenly distribute the length of tile_sizes between all the trials
-        static constexpr auto tile_size_diff = (BlockSize * ItemsPerThread) / Trials + 1;
+        const auto tile_size_diff = (BlockSize * ItemsPerThread) / trials + 1;
 
         ROCPRIM_NO_UNROLL
-        for(unsigned int trial = 0; trial < Trials; trial++)
+        for(unsigned int trial = 0; trial < trials; trial++)
         {
             T output[ItemsPerThread];
             adjacent_diff_t().subtract_right_partial(input, output, rp::minus<>{}, tile_size, storage);
@@ -252,7 +240,9 @@ auto run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
                         && !std::is_same<Benchmark, subtract_right_partial>::value>
 {
     constexpr auto items_per_block = BlockSize * ItemsPerThread;
-    const auto size = items_per_block * ((N + items_per_block - 1)/items_per_block);
+    const auto num_blocks = (N + items_per_block - 1) / items_per_block;
+    // Round up size to the next multiple of items_per_block
+    const auto size = num_blocks * items_per_block;
 
     const std::vector<T> input = get_random_data<T>(size, T(0), T(10));
     T* d_input;
@@ -272,9 +262,9 @@ auto run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
         auto start = std::chrono::high_resolution_clock::now();
 
         hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(kernel<Benchmark, BlockSize, ItemsPerThread, WithTile, Trials>),
-            dim3(size/items_per_block), dim3(BlockSize), 0, stream,
-            d_input, d_output
+            HIP_KERNEL_NAME(kernel<Benchmark, BlockSize, ItemsPerThread, WithTile>),
+            dim3(num_blocks), dim3(BlockSize), 0, stream,
+            d_input, d_output, Trials
         );
         HIP_CHECK(hipGetLastError());
         HIP_CHECK(hipDeviceSynchronize());
@@ -336,9 +326,9 @@ auto run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
         auto start = std::chrono::high_resolution_clock::now();
 
         hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(kernel<Benchmark, BlockSize, ItemsPerThread, WithTile, Trials>),
+            HIP_KERNEL_NAME(kernel<Benchmark, BlockSize, ItemsPerThread, WithTile>),
             dim3(num_blocks), dim3(BlockSize), 0, stream,
-            d_input, d_tile_sizes, d_output
+            d_input, d_tile_sizes, d_output, Trials
         );
         HIP_CHECK(hipGetLastError());
         HIP_CHECK(hipDeviceSynchronize());
