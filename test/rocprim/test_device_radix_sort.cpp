@@ -780,7 +780,7 @@ TEST(RocprimDeviceRadixSort, SortKeysOver4G)
     HIP_CHECK(hipMemcpy(output.data(), d_keys_input_output, size * sizeof(key_type), hipMemcpyDeviceToHost));
 
     size_t counter = 0;
-    for(size_t i = std::numeric_limits<key_type>::min(); i <= std::numeric_limits<key_type>::max(); ++i)
+    for(size_t i = 0; i <= std::numeric_limits<key_type>::max(); ++i)
     {
         for(size_t j = 0; j < histogram[i]; ++j)
         {
