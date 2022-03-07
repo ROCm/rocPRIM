@@ -725,11 +725,12 @@ TEST(RocprimDeviceRadixSort, SortKeysOver4G)
 {
     using key_type = uint8_t;
     constexpr unsigned int start_bit = 0;
-    constexpr unsigned int end_bit = 8 * sizeof(key_type);
+    constexpr unsigned int end_bit = 8ull * sizeof(key_type);
     constexpr hipStream_t stream = 0;
     constexpr bool debug_synchronous = false;
-    constexpr size_t size = (1ul << 32) + 32;
-    constexpr size_t number_of_possible_keys = 1U << (8 * sizeof(key_type));
+    constexpr size_t size = (1ull << 32) + 32;
+    constexpr size_t number_of_possible_keys = 1ull << (8ull * sizeof(key_type));
+    assert(std::is_unsigned<key_type>::value);
     std::vector<size_t> histogram(number_of_possible_keys, 0);
     const int seed_value = rand();
 
