@@ -37,15 +37,22 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
-/// \brief Configuration of device-level transform primitives.
+/// \brief Configuration of device-level adjacent_difference primitives.
+/// 
+/// \tparam BlockSize - number of threads in a block.
+/// \tparam ItemsPerThread - number of items processed by each thread
+/// \tparam LoadMethod - method for loading input values
+/// \tparam StoreMethod - method for storing values
+/// \tparam SizeLimit - limit on the number of items for a single adjacent_difference kernel launch.
+/// Larger input sizes will be broken up to multiple kernel launches.
 template <unsigned int       BlockSize,
           unsigned int       ItemsPerThread,
           block_load_method  LoadMethod  = block_load_method::block_load_transpose,
           block_store_method StoreMethod = block_store_method::block_store_transpose,
           unsigned int       SizeLimit    = ROCPRIM_GRID_SIZE_LIMIT>
 struct adjacent_difference_config : kernel_config<BlockSize, ItemsPerThread, SizeLimit> {
-    static constexpr auto load_method  = LoadMethod;
-    static constexpr auto store_method = StoreMethod;
+    static constexpr block_load_method  load_method  = LoadMethod;
+    static constexpr block_store_method store_method = StoreMethod;
 };
 
 namespace detail

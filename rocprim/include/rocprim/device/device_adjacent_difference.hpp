@@ -20,7 +20,13 @@
 
 #include <cstddef>
 
+/// \file
+///
+/// Device level adjacent_difference parallel primitives
+
 BEGIN_ROCPRIM_NAMESPACE
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // Do not document
 
 #define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                           \
     {                                                                                            \
@@ -186,6 +192,11 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
 } // namespace detail
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
+/// \addtogroup devicemodule
+/// @{
 
 /// \brief Parallel primitive for applying a binary operation across pairs of consecutive elements
 /// in device accessible memory. Writes the output to the position of the left item.
@@ -484,5 +495,8 @@ hipError_t adjacent_difference_right_inplace(void* const          temporary_stor
     return detail::adjacent_difference_impl<Config, in_place, right>(
         temporary_storage, storage_size, values, values, size, op, stream, debug_synchronous);
 }
+
+/// @}
+// end of group devicemodule
 
 END_ROCPRIM_NAMESPACE
