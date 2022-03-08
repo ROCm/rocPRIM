@@ -784,7 +784,7 @@ TEST(RocprimDeviceRadixSort, SortKeysOver4G)
     {
         for(size_t j = 0; j < histogram[i]; ++j)
         {
-            ASSERT_EQ(static_cast<int>(output[counter]), i);
+            ASSERT_EQ(static_cast<size_t>(output[counter]), i);
             ++counter;
         }
     }
