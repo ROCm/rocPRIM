@@ -723,12 +723,15 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairsDoubleBuffer)
 
 TEST(RocprimDeviceRadixSort, SortKeysOver4G)
 {
-    using key_type = char;
+    using key_type = uint8_t;
     constexpr unsigned int start_bit = 0;
-    constexpr unsigned int end_bit = 8 * sizeof(key_type);
+    constexpr unsigned int end_bit = 8ull * sizeof(key_type);
     constexpr hipStream_t stream = 0;
     constexpr bool debug_synchronous = false;
-    constexpr size_t size = (1ul << 32) + 4297;
+    constexpr size_t size = (1ull << 32) + 32;
+    constexpr size_t number_of_possible_keys = 1ull << (8ull * sizeof(key_type));
+    assert(std::is_unsigned<key_type>::value);
+    std::vector<size_t> histogram(number_of_possible_keys, 0);
     const int seed_value = rand();
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
@@ -740,6 +743,11 @@ TEST(RocprimDeviceRadixSort, SortKeysOver4G)
         std::numeric_limits<key_type>::min(),
         std::numeric_limits<key_type>::max(),
         seed_value);
+
+    //generate histogram of the randomly generated values
+    std::for_each(keys_input.begin(), keys_input.end(), [&](const key_type &a){
+        histogram[a]++;
+    });
 
     key_type * d_keys_input_output{};
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input_output, size * sizeof(key_type)));
@@ -767,11 +775,20 @@ TEST(RocprimDeviceRadixSort, SortKeysOver4G)
             stream, debug_synchronous
         )
     );
-    std::sort(keys_input.begin(), keys_input.end());
+    
     std::vector<key_type> output(keys_input.size());
     HIP_CHECK(hipMemcpy(output.data(), d_keys_input_output, size * sizeof(key_type), hipMemcpyDeviceToHost));
 
-    ASSERT_EQ(keys_input, output);
+    size_t counter = 0;
+    for(size_t i = 0; i <= std::numeric_limits<key_type>::max(); ++i)
+    {
+        for(size_t j = 0; j < histogram[i]; ++j)
+        {
+            ASSERT_EQ(static_cast<size_t>(output[counter]), i);
+            ++counter;
+        }
+    }
+    ASSERT_EQ(counter, size);
 
     HIP_CHECK(hipFree(d_keys_input_output));
     HIP_CHECK(hipFree(d_temporary_storage));
