@@ -15,6 +15,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - Added File/Folder Reorg Changes and Enabled Backward compatibility support using wrapper headers.
 - New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
   on pairs of adjacent items distributed between threads in a block.
+- New device level `adjacent_difference` primitives.
 ### Changed
 - The reduce/scan algorithm precision issues in the tests has been resolved for half types.
 - The device radix sort algorithm supports indexing with 64 bit unsigned integers.
