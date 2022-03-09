@@ -68,6 +68,8 @@ struct adjacent_diff_helper
         // Not the first block, i.e. has a predecessor
         if(starting_block + block_id != 0)
         {
+            // `previous_values` needs to be accessed with a stride of `items_per_block` if the
+            // operation is out-of-place
             const unsigned int block_offset = InPlace ? block_id : block_id * items_per_block;
             const InputIt      block_previous_values = previous_values + block_offset;
 
@@ -124,9 +126,11 @@ struct adjacent_diff_helper
         // Not the last (i.e. full) block and has a successor
         if(starting_block + block_id != num_blocks - 1)
         {
-            // When in-place the first block does not save its value (since it wont be used)
-            // so the block values are shifted right one. So the next blocks first value is the
-            // position block_id
+            // `previous_values` needs to be accessed with a stride of `items_per_block` if the
+            // operation is out-of-place
+            // When in-place, the first block does not save its value (since it won't be used)
+            // so the block values are shifted right one. This means that next block's first value
+            // is in the position `block_id`
             const unsigned int block_offset = InPlace ? block_id : (block_id + 1) * items_per_block;
 
             const InputIt next_block_values = previous_values + block_offset;
@@ -212,13 +216,22 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void adjacent_difference_kernel_impl(
     }
     ::rocprim::syncthreads();
 
+    // Type tags for tag dispatch.
     static constexpr auto in_place = bool_constant<InPlace> {};
     static constexpr auto right    = bool_constant<Right> {};
 
+    // When doing the operation in-place the last/first items of each block have been copied out
+    // in advance and written to the contiguos locations, since accessing them would be a data race
+    // with the writing of their new values. In this case `select_previous_values_iterator` returns
+    // a pointer to the copied values, and it should be addressed by block_id.
+    // Otherwise (when the transform is out-of-place) it just returns the input iterator, and the
+    // first/last values of the blocks can be accessed with a stride of `items_per_block`
     const auto previous_values_it
         = select_previous_values_iterator(previous_values, input, in_place);
 
     output_type thread_output[items_per_thread];
+    // Do tag dispatch on `right` to select either `subtract_right` or `subtract_left`.
+    // Note that the function is overloaded on its last parameter.
     adjacent_helper {}.dispatch(thread_input,
                                 thread_output,
                                 op,

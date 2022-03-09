@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef ROCPRIM_DEVICE_DEVICE_ADJACENT_DIFFERENCE_HPP_
-#define ROCPRIM_DEVICE_DEVICE_ADJACENT_DIFFERENCE_HPP_
+#ifndef ROCPRIM_DEVICE_DEVICE_ADJACENT_DIFFERENCE_CONFIG_HPP_
+#define ROCPRIM_DEVICE_DEVICE_ADJACENT_DIFFERENCE_CONFIG_HPP_
 
 #include <type_traits>
 
@@ -38,7 +38,7 @@
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Configuration of device-level adjacent_difference primitives.
-/// 
+///
 /// \tparam BlockSize - number of threads in a block.
 /// \tparam ItemsPerThread - number of items processed by each thread
 /// \tparam LoadMethod - method for loading input values
@@ -49,8 +49,9 @@ template <unsigned int       BlockSize,
           unsigned int       ItemsPerThread,
           block_load_method  LoadMethod  = block_load_method::block_load_transpose,
           block_store_method StoreMethod = block_store_method::block_store_transpose,
-          unsigned int       SizeLimit    = ROCPRIM_GRID_SIZE_LIMIT>
-struct adjacent_difference_config : kernel_config<BlockSize, ItemsPerThread, SizeLimit> {
+          unsigned int       SizeLimit   = ROCPRIM_GRID_SIZE_LIMIT>
+struct adjacent_difference_config : kernel_config<BlockSize, ItemsPerThread, SizeLimit>
+{
     static constexpr block_load_method  load_method  = LoadMethod;
     static constexpr block_store_method store_method = StoreMethod;
 };
@@ -59,25 +60,7 @@ namespace detail
 {
 
 template <class Value>
-struct adjacent_difference_config_900
-{
-    static constexpr unsigned int item_scale
-        = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
-
-    using type = adjacent_difference_config<256, ::rocprim::max(1u, 16u / item_scale)>;
-};
-
-template <class Value>
-struct adjacent_difference_config_90a
-{
-    static constexpr unsigned int item_scale
-        = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
-
-    using type = adjacent_difference_config<256, ::rocprim::max(1u, 16u / item_scale)>;
-};
-
-template <class Value>
-struct adjacent_difference_config_1030
+struct adjacent_difference_config_fallback
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
@@ -87,11 +70,7 @@ struct adjacent_difference_config_1030
 
 template <unsigned int TargetArch, class Value>
 struct default_adjacent_difference_config
-    : select_arch<TargetArch,
-                  select_arch_case<900, adjacent_difference_config_900<Value>>,
-                  select_arch_case<ROCPRIM_ARCH_90a, adjacent_difference_config_90a<Value>>,
-                  select_arch_case<1030, adjacent_difference_config_1030<Value>>,
-                  adjacent_difference_config_900<Value>>
+    : select_arch<TargetArch, adjacent_difference_config_fallback<Value>>
 {
 };
 
