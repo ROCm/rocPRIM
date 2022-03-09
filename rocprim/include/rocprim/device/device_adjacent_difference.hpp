@@ -1,3 +1,26 @@
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+#ifndef ROCPRIM_DEVICE_DEVICE_ADJACENT_DIFFERENCE_HPP_
+#define ROCPRIM_DEVICE_DEVICE_ADJACENT_DIFFERENCE_HPP_
+
 #include "detail/device_adjacent_difference.hpp"
 
 #include "device_adjacent_difference_config.hpp"
@@ -94,11 +117,14 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
 
     if(temporary_storage == nullptr)
     {
-        // Make sure user won't try to allocate 0 bytes memory, because
-        // hipMalloc will return nullptr when size is zero.
-        if(InPlace && num_blocks >= 2) {
+        if(InPlace && num_blocks >= 2)
+        {
             storage_size = align_size((num_blocks - 1) * sizeof(value_type));
-        } else {
+        }
+        else
+        {
+            // Make sure user won't try to allocate 0 bytes memory, because
+            // hipMalloc will return nullptr when size is zero.
             storage_size = 4;
         }
 
@@ -110,16 +136,13 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
         return hipSuccess;
     }
 
-    // Copy values before they are overwritten to use as tile predecessors/sucessors
+    // Copy values before they are overwritten to use as tile predecessors/successors
     // this is not dereferenced when the operation is not in place
     auto* const previous_values = static_cast<value_type*>(temporary_storage);
     if ROCPRIM_IF_CONSTEXPR(InPlace)
     {
         // If doing left adjacent diff then the last item of each block is needed for the
         // next block, otherwise the first item is needed for the previous block
-        //const auto block_starts_iter
-        //    = skip_iterator<InputIt, items_per_block> {input + items_per_block - (Right ? 0 : 1)};
-
         static constexpr auto offset = items_per_block - (Right ? 0 : 1);
 
         const auto block_starts_iter = make_transform_iterator(
@@ -500,3 +523,5 @@ hipError_t adjacent_difference_right_inplace(void* const          temporary_stor
 // end of group devicemodule
 
 END_ROCPRIM_NAMESPACE
+
+#endif // ROCPRIM_DEVICE_DEVICE_ADJACENT_DIFFERENCE_HPP_
