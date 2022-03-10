@@ -61,7 +61,11 @@ using size_limit_config_t = typename size_limit_config<T, SizeLimit>::type;
 
 std::vector<size_t> get_sizes(int seed_value)
 {
-    std::vector<size_t> sizes = {0, 1, 10, 53, 211, 1024, 2048, 5096, 34567, (1 << 17) - 1220};
+    std::vector<size_t> sizes = {1, 10, 53, 211, 1024, 2048, 5096, 34567, (1 << 17) - 1220};
+    if(!test_common_utils::use_hmm())
+    {
+        sizes.push_back(0);
+    }
     const std::vector<size_t> random_sizes
         = test_utils::get_random_data<size_t>(2, 1, 16384, seed_value);
     sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
