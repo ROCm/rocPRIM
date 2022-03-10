@@ -4,7 +4,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 
 ## [Unreleased rocPRIM-2.10.14 for ROCm 5.2.0]
 ### Added
-- Packages for test/benchmark executable on all OSes using CPack.
+- Packages for tests and benchmark executable on all supported OSes using CPack.
 
 ## [Unreleased rocPRIM-2.10.13 for ROCm 5.1.0]
 ### Fixed
