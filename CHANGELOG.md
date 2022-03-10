@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [Unreleased rocPRIM-2.10.13 for ROCm 5.1.0]
+## [rocPRIM-2.10.13 for ROCm 5.1.0]
 ### Fixed
 - Fixed radix sort int64_t bug introduced in [2.10.11]
 ### Added
