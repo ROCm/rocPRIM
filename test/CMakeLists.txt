@@ -38,6 +38,7 @@ function(add_relative_test test_name test_target)
     endif()
     file(RELATIVE_PATH rel_path "${CMAKE_CURRENT_BINARY_DIR}" "${EXE_PATH}/${EXE_NAME}")
     add_test(NAME "${test_name}" COMMAND "./${rel_path}")
+    rocm_install(TARGETS ${test_target} COMPONENT tests)
 endfunction()
 
 function(add_hip_test TEST_NAME TEST_SOURCES)
@@ -49,7 +50,7 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
-      ${COMMON_TEST_HEADER_DIRECTORY}
+      $<BUILD_INTERFACE:${COMMON_TEST_HEADER_DIRECTORY}>
   )
 
   if(TARGET GTest::GTest)
@@ -119,7 +120,8 @@ endfunction()
 # ****************************************************************************
 
 # HIP tests without using rocPRIM
-add_hip_test("hip.device_api" test_hip_api.cpp)
+add_hip_test("hip.device_api" hip/test_hip_api.cpp)
+add_hip_test("hip.async_copy" hip/test_hip_async_copy.cpp)
 
 # rocPRIM test
 add_subdirectory(rocprim)
