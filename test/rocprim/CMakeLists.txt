@@ -27,6 +27,7 @@ function(add_rocprim_test TEST_NAME TEST_SOURCES)
   get_filename_component(TEST_TARGET ${TEST_MAIN_SOURCE} NAME_WE)
 
   add_executable(${TEST_TARGET} ${TEST_SOURCES})
+  rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
