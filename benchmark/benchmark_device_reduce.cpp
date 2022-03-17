@@ -55,7 +55,6 @@
 const size_t DEFAULT_N = 1024 * 1024 * 128;
 #endif
 
-std::vector<std::unique_ptr<config_autotune_interface>> config_autotune_vector;
 const unsigned int batch_size = 10;
 const unsigned int warmup_size = 5;
 
