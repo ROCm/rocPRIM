@@ -366,6 +366,7 @@ struct Traits
 {
     //static inline method instead of static inline attribute because that's only supported from C++17 onwards
     static inline const char* name(){
+        static_assert(sizeof(T) == 0, "Traits<T>::name() unknown");
         return "unknown";
     }
 };
