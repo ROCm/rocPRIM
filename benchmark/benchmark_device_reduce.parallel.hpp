@@ -54,23 +54,26 @@
   }
 
 template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
     class T,
-    class BinaryFunction
+    class BinaryFunction,
+    class Config = rocprim::detail::default_reduce_config<0, T>
 >
 struct reduce_benchmark : public config_autotune_interface
 {
-    std::string name() override
+    /*using defaultConfig = rocprim::detail::default_reduce_config<0, T>;
+    using customConfig = rocprim::reduce_config<BlockSize, ItemsPerThread, ::rocprim::block_reduce_algorithm::using_warp_reduce>;
+    using ConfigType = std::conditional_t<UseDefaultConfig, defaultConfig, customConfig>;*/
+
+    std::string name() const override
     {
-        return std::string("device_reduce<"+std::to_string(BlockSize)+", "+std::to_string(ItemsPerThread)+", "+Traits<T>::name()+">");
+        return std::string("device_reduce<"+std::to_string(Config::block_size)+", "+std::to_string(Config::items_per_thread)+", "+Traits<T>::name()+">");
     }
-    using ConfigType = rocprim::reduce_config<BlockSize, ItemsPerThread, ::rocprim::block_reduce_algorithm::using_warp_reduce>;
+
     static constexpr unsigned int batch_size = 10;
     static constexpr unsigned int warmup_size = 5;
     void run(benchmark::State& state,
              size_t size,
-             const hipStream_t stream) override
+             const hipStream_t stream) const override
     {
         BinaryFunction reduce_op{};
         std::vector<T> input = get_random_data<T>(size, T(0), T(1000));
@@ -93,7 +96,7 @@ struct reduce_benchmark : public config_autotune_interface
         void * d_temp_storage = nullptr;
         // Get size of d_temp_storage
         HIP_CHECK(
-            rocprim::reduce<ConfigType>(
+            rocprim::reduce<Config>(
                 d_temp_storage, temp_storage_size_bytes,
                 d_input, d_output, T(), size,
                 reduce_op, stream
@@ -106,7 +109,7 @@ struct reduce_benchmark : public config_autotune_interface
         for(size_t i = 0; i < warmup_size; i++)
         {
             HIP_CHECK(
-                rocprim::reduce<ConfigType>(
+                rocprim::reduce<Config>(
                     d_temp_storage, temp_storage_size_bytes,
                     d_input, d_output, T(), size,
                     reduce_op, stream
@@ -122,7 +125,7 @@ struct reduce_benchmark : public config_autotune_interface
             for(size_t i = 0; i < batch_size; i++)
             {
                 HIP_CHECK(
-                    rocprim::reduce<ConfigType>(
+                    rocprim::reduce<Config>(
                         d_temp_storage, temp_storage_size_bytes,
                         d_input, d_output, T(), size,
                         reduce_op, stream
