@@ -55,94 +55,18 @@
 const size_t DEFAULT_N = 1024 * 1024 * 128;
 #endif
 
-const unsigned int batch_size = 10;
-const unsigned int warmup_size = 5;
-
-template<
-    class T,
-    class BinaryFunction
->
-void run_benchmark(benchmark::State& state,
-                   size_t size,
-                   const hipStream_t stream,
-                   BinaryFunction reduce_op)
-{
-    std::vector<T> input = get_random_data<T>(size, T(0), T(1000));
-
-    T * d_input;
-    T * d_output;
-    HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input), size * sizeof(T)));
-    HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_output), sizeof(T)));
-    HIP_CHECK(
-        hipMemcpy(
-            d_input, input.data(),
-            size * sizeof(T),
-            hipMemcpyHostToDevice
-        )
-    );
-    HIP_CHECK(hipDeviceSynchronize());
-
-    // Allocate temporary storage memory
-    size_t temp_storage_size_bytes;
-    void * d_temp_storage = nullptr;
-    // Get size of d_temp_storage
-    HIP_CHECK(
-        rocprim::reduce(
-            d_temp_storage, temp_storage_size_bytes,
-            d_input, d_output, T(), size,
-            reduce_op, stream
-        )
-    );
-    HIP_CHECK(hipMalloc(&d_temp_storage,temp_storage_size_bytes));
-    HIP_CHECK(hipDeviceSynchronize());
-
-    // Warm-up
-    for(size_t i = 0; i < warmup_size; i++)
-    {
-        HIP_CHECK(
-            rocprim::reduce(
-                d_temp_storage, temp_storage_size_bytes,
-                d_input, d_output, T(), size,
-                reduce_op, stream
-            )
-        );
-    }
-    HIP_CHECK(hipDeviceSynchronize());
-
-    for(auto _ : state)
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-
-        for(size_t i = 0; i < batch_size; i++)
-        {
-            HIP_CHECK(
-                rocprim::reduce(
-                    d_temp_storage, temp_storage_size_bytes,
-                    d_input, d_output, T(), size,
-                    reduce_op, stream
-                )
-            );
-        }
-        HIP_CHECK(hipStreamSynchronize(stream));
-
-        auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-        state.SetIterationTime(elapsed_seconds.count());
-    }
-    state.SetBytesProcessed(state.iterations() * batch_size * size * sizeof(T));
-    state.SetItemsProcessed(state.iterations() * batch_size * size);
-
-    HIP_CHECK(hipFree(d_input));
-    HIP_CHECK(hipFree(d_output));
-    HIP_CHECK(hipFree(d_temp_storage));
+#define CREATE_BENCHMARK(T, REDUCE_OP)                                                          \
+{                                                                                               \
+    const reduce_benchmark<T, REDUCE_OP> instance;                                        \
+    benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(                   \
+        instance.name().c_str(),                                                                \
+        [instance](benchmark::State& state, size_t size, const hipStream_t stream) {            \
+            instance.run(state, size, stream);                                                  \
+        },                                                                                      \
+        size,                                                                                   \
+        stream);                                                                                \
+    benchmarks.emplace_back(benchmark);                                                         \
 }
-
-#define CREATE_BENCHMARK(T, REDUCE_OP) \
-benchmark::RegisterBenchmark( \
-    ("reduce<" #T ", " #REDUCE_OP ">"), \
-    run_benchmark<T, REDUCE_OP>, size, stream, REDUCE_OP() \
-)
 
 int main(int argc, char *argv[])
 {
@@ -166,13 +90,13 @@ int main(int argc, char *argv[])
     HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
     std::cout << "[HIP] Device name: " << devProp.name << std::endl;
 
+    std::vector<benchmark::internal::Benchmark*> benchmarks = {};
 #ifdef BENCHMARK_CONFIG_TUNING
     const float parallel_instance = parser.get<int>("parallel_instance");
     const float parallel_instances = parser.get<int>("parallel_instances");
     auto& vector = config_autotune_register::vector();
     const int start = vector.size() * parallel_instance / parallel_instances;
     const int end = vector.size() * (parallel_instance + 1) / parallel_instances;
-    std::vector<benchmark::internal::Benchmark*> benchmarks = {};
     for(int i = start; i < end; i++)
     {
         std::unique_ptr<config_autotune_interface>& uniq_ptr = vector.at(i);
@@ -190,21 +114,18 @@ int main(int argc, char *argv[])
     using custom_float2 = custom_type<float, float>;
     using custom_double2 = custom_type<double, double>;
     // Add benchmarks
-    std::vector<benchmark::internal::Benchmark*> benchmarks =
-    {
-        CREATE_BENCHMARK(int, rocprim::plus<int>),
-        CREATE_BENCHMARK(long long, rocprim::plus<long long>),
+    CREATE_BENCHMARK(int, rocprim::plus<int>)
+    CREATE_BENCHMARK(long long, rocprim::plus<long long>)
 
-        CREATE_BENCHMARK(float, rocprim::plus<float>),
-        CREATE_BENCHMARK(double, rocprim::plus<double>),
+    CREATE_BENCHMARK(float, rocprim::plus<float>)
+    CREATE_BENCHMARK(double, rocprim::plus<double>)
 
-        CREATE_BENCHMARK(int8_t, rocprim::plus<int8_t>),
-        CREATE_BENCHMARK(uint8_t, rocprim::plus<uint8_t>),
-        CREATE_BENCHMARK(rocprim::half, rocprim::plus<rocprim::half>),
+    CREATE_BENCHMARK(int8_t, rocprim::plus<int8_t>)
+    CREATE_BENCHMARK(uint8_t, rocprim::plus<uint8_t>)
+    CREATE_BENCHMARK(rocprim::half, rocprim::plus<rocprim::half>)
 
-        CREATE_BENCHMARK(custom_float2, rocprim::plus<custom_float2>),
-        CREATE_BENCHMARK(custom_double2, rocprim::plus<custom_double2>),
-    };
+    CREATE_BENCHMARK(custom_float2, rocprim::plus<custom_float2>)
+    CREATE_BENCHMARK(custom_double2, rocprim::plus<custom_double2>)
 #endif
 
     // Use manual timing

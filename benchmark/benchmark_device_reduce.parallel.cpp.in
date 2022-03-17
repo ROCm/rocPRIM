@@ -27,7 +27,7 @@
 #include "benchmark_device_reduce.parallel.hpp"
 
 namespace {
-    auto benchmark = config_autotune_register::create<reduce_benchmark<@BS@u, @IPT@u, @DT@, rocprim::plus<@DT@>>>();
+    auto benchmark = config_autotune_register::create<reduce_benchmark<@DT@, rocprim::plus<@DT@>, rocprim::reduce_config<@BS@u, @IPT@u, rocprim::block_reduce_algorithm::using_warp_reduce>>>();
 }
 
 #endif

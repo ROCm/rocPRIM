@@ -342,9 +342,9 @@ void static_for_each(Args... args)
 
 struct config_autotune_interface
 {
-    virtual std::string name()                               = 0;
-    virtual ~config_autotune_interface()                     = default;
-    virtual void run(benchmark::State&, size_t, hipStream_t) = 0;
+    virtual std::string name() const                               = 0;
+    virtual ~config_autotune_interface()                           = default;
+    virtual void run(benchmark::State&, size_t, hipStream_t) const = 0;
 };
 
 struct config_autotune_register
