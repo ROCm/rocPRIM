@@ -57,7 +57,7 @@ const size_t DEFAULT_N = 1024 * 1024 * 128;
 
 #define CREATE_BENCHMARK(T, REDUCE_OP)                                                          \
 {                                                                                               \
-    const device_reduce_benchmark<T, REDUCE_OP> instance;                                        \
+    const device_reduce_benchmark<T, REDUCE_OP> instance;                                       \
     benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(                   \
         instance.name().c_str(),                                                                \
         [instance](benchmark::State& state, size_t size, const hipStream_t stream) {            \
@@ -92,14 +92,19 @@ int main(int argc, char *argv[])
 
     std::vector<benchmark::internal::Benchmark*> benchmarks = {};
 #ifdef BENCHMARK_CONFIG_TUNING
-    const float parallel_instance = parser.get<int>("parallel_instance");
+    const int parallel_instance = parser.get<int>("parallel_instance");
     const float parallel_instances = parser.get<int>("parallel_instances");
-    auto& vector = config_autotune_register::vector();
-    const int start = vector.size() * parallel_instance / parallel_instances;
-    const int end = vector.size() * (parallel_instance + 1) / parallel_instances;
-    for(int i = start; i < end; i++)
+    std::vector<std::unique_ptr<config_autotune_interface>>& configs = config_autotune_register::vector();
+    std::sort(configs.begin(), configs.end(), [](const auto& l, const auto& r){
+        return l->name() < r->name();
+    });
+    size_t configs_per_instance = ceil(static_cast<float>(configs.size()) / parallel_instances);
+    size_t start = std::min(parallel_instance * configs_per_instance, configs.size());
+    size_t end   = std::min((parallel_instance + 1) * configs_per_instance, configs.size());
+
+    for(size_t i = start; i < end; i++)
     {
-        std::unique_ptr<config_autotune_interface>& uniq_ptr = vector.at(i);
+        std::unique_ptr<config_autotune_interface>& uniq_ptr = configs.at(i);
         config_autotune_interface* tuning_benchmark = uniq_ptr.get();
         benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(
             tuning_benchmark->name().c_str(),
