@@ -57,7 +57,7 @@ const size_t DEFAULT_N = 1024 * 1024 * 128;
 
 #define CREATE_BENCHMARK(T, REDUCE_OP)                                                          \
 {                                                                                               \
-    const reduce_benchmark<T, REDUCE_OP> instance;                                        \
+    const device_reduce_benchmark<T, REDUCE_OP> instance;                                        \
     benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(                   \
         instance.name().c_str(),                                                                \
         [instance](benchmark::State& state, size_t size, const hipStream_t stream) {            \

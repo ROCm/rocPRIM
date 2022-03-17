@@ -58,15 +58,12 @@ template<
     class BinaryFunction,
     class Config = rocprim::detail::default_reduce_config<0, T>
 >
-struct reduce_benchmark : public config_autotune_interface
+struct device_reduce_benchmark : public config_autotune_interface
 {
-    /*using defaultConfig = rocprim::detail::default_reduce_config<0, T>;
-    using customConfig = rocprim::reduce_config<BlockSize, ItemsPerThread, ::rocprim::block_reduce_algorithm::using_warp_reduce>;
-    using ConfigType = std::conditional_t<UseDefaultConfig, defaultConfig, customConfig>;*/
-
     std::string name() const override
     {
-        return std::string("device_reduce<"+std::to_string(Config::block_size)+", "+std::to_string(Config::items_per_thread)+", "+Traits<T>::name()+">");
+        return std::string("device_reduce_benchmark<"+std::string(Traits<T>::name())+", reduce_config<"+std::to_string(Config::block_size)
+                           +", "+std::to_string(Config::items_per_thread)+">>");
     }
 
     static constexpr unsigned int batch_size = 10;
