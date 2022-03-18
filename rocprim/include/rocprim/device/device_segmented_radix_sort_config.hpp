@@ -123,7 +123,7 @@ template<
     unsigned int LongRadixBits,
     unsigned int ShortRadixBits,
     class SortConfig,
-    class WarpSortConfig
+    class WarpSortConfig = DisabledWarpSortConfig
 >
 struct segmented_radix_sort_config
 {
