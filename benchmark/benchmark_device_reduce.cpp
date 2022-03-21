@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     std::sort(configs.begin(), configs.end(), [](const auto& l, const auto& r){
         return l->name() < r->name();
     });
-    size_t configs_per_instance = configs.size() + parallel_instances - 1 / parallel_instances;
+    size_t configs_per_instance = (configs.size() + parallel_instances - 1) / parallel_instances;
     size_t start = std::min(parallel_instance * configs_per_instance, configs.size());
     size_t end   = std::min((parallel_instance + 1) * configs_per_instance, configs.size());
 
