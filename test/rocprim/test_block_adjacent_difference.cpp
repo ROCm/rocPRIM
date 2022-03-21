@@ -42,6 +42,15 @@ struct Integral;
 #define warp_params BlockDiscParamsIntegral
 #define name_suffix Integral
 
+template<typename T>
+struct op_type_3
+{
+    __host__ __device__ T operator()(const T& a, const T& b) const
+    {
+        return (b + b) - a;
+    }
+};
+
 #include "test_block_adjacent_difference.hpp"
 
 #undef suite_name

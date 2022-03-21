@@ -77,20 +77,13 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractLeft)
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
 
     constexpr size_t block_size = TestFixture::params::block_size;
 
     // clang-format off
     static_for<0, 2,       T, T, op_type_1, 3, block_size>::run();
     static_for<2, 4,       T, T, op_type_2, 3, block_size>::run();
-    static_for<4, n_items, T, T, op_type_3, 3, block_size>::run();
+    static_for<4, n_items, T, T, op_type_3<T>, 3, block_size>::run();
     // clang-format on
 }
 
@@ -100,20 +93,13 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractRight)
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
 
     constexpr size_t block_size = TestFixture::params::block_size;
 
     // clang-format off
     static_for<0, 2,       T, T, op_type_1, 4, block_size>::run();
     static_for<2, 4,       T, T, op_type_2, 4, block_size>::run();
-    static_for<4, n_items, T, T, op_type_3, 4, block_size>::run();
+    static_for<4, n_items, T, T, op_type_3<T>, 4, block_size>::run();
     // clang-format on
 }
 
@@ -123,20 +109,13 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractLeftPartial)
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
 
     constexpr size_t block_size = TestFixture::params::block_size;
 
     // clang-format off
     static_for<0, 2,       T, T, op_type_1, 5, block_size>::run();
     static_for<2, 4,       T, T, op_type_2, 5, block_size>::run();
-    static_for<4, n_items, T, T, op_type_3, 5, block_size>::run();
+    static_for<4, n_items, T, T, op_type_3<T>, 5, block_size>::run();
     // clang-format on
 }
 
@@ -146,19 +125,12 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractRightPartial
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
 
     constexpr size_t block_size = TestFixture::params::block_size;
 
     // clang-format off
     static_for<0, 2,       T, T, op_type_1, 6, block_size>::run();
     static_for<2, 4,       T, T, op_type_2, 6, block_size>::run();
-    static_for<4, n_items, T, T, op_type_3, 6, block_size>::run();
+    static_for<4, n_items, T, T, op_type_3<T>, 6, block_size>::run();
     // clang-format on
 }
