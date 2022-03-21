@@ -48,9 +48,9 @@ BEGIN_ROCPRIM_NAMESPACE
 template<
     unsigned int LogicalWarpSize,
     unsigned int ItemsPerThread,
-    unsigned int BlockSize,
-    unsigned int PartitioningThreshold,
-    bool EnableUnpartitionedWarpSort
+    unsigned int BlockSize = 256,
+    unsigned int PartitioningThreshold = 3000,
+    bool EnableUnpartitionedWarpSort = true
 >
 struct WarpSortConfig
 {
@@ -123,7 +123,7 @@ template<
     unsigned int LongRadixBits,
     unsigned int ShortRadixBits,
     class SortConfig,
-    class WarpSortConfig
+    class WarpSortConfig = DisabledWarpSortConfig
 >
 struct segmented_radix_sort_config
 {
