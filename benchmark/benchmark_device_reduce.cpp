@@ -93,12 +93,13 @@ int main(int argc, char *argv[])
     std::vector<benchmark::internal::Benchmark*> benchmarks = {};
 #ifdef BENCHMARK_CONFIG_TUNING
     const int parallel_instance = parser.get<int>("parallel_instance");
-    const float parallel_instances = parser.get<int>("parallel_instances");
+    const int parallel_instances = parser.get<int>("parallel_instances");
     std::vector<std::unique_ptr<config_autotune_interface>>& configs = config_autotune_register::vector();
+    // sorting to get a consistent order because order of initialization of static variables is undefined by the C++ standard.
     std::sort(configs.begin(), configs.end(), [](const auto& l, const auto& r){
         return l->name() < r->name();
     });
-    size_t configs_per_instance = ceil(static_cast<float>(configs.size()) / parallel_instances);
+    size_t configs_per_instance = configs.size() + parallel_instances - 1 / parallel_instances;
     size_t start = std::min(parallel_instance * configs_per_instance, configs.size());
     size_t end   = std::min((parallel_instance + 1) * configs_per_instance, configs.size());
 
