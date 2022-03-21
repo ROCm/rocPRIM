@@ -77,13 +77,7 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractLeft)
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
+    using op_type_3 = test_op<T>;
 
     constexpr size_t block_size = TestFixture::params::block_size;
 
@@ -100,13 +94,7 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractRight)
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
+    using op_type_3 = test_op<T>;
 
     constexpr size_t block_size = TestFixture::params::block_size;
 
@@ -123,13 +111,7 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractLeftPartial)
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
+    using op_type_3 = test_op<T>;
 
     constexpr size_t block_size = TestFixture::params::block_size;
 
@@ -146,13 +128,7 @@ typed_test_def(RocprimBlockAdjacentDifference, name_suffix, SubtractRightPartial
 
     using op_type_1 = rocprim::minus<>;
     using op_type_2 = rocprim::plus<>;
-    struct op_type_3
-    {
-        __host__ __device__ T operator()(const T& a, const T& b) const
-        {
-            return (b + b) - a;
-        }
-    };
+    using op_type_3 = test_op<T>;
 
     constexpr size_t block_size = TestFixture::params::block_size;
 

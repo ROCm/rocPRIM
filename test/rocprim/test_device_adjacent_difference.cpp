@@ -348,6 +348,21 @@ public:
     static constexpr bool debug_synchronous = false;
 };
 
+template<class T>
+struct discard_write
+{
+    T value;
+
+    __device__ operator T() const
+    {
+        return value;
+    }
+    __device__ discard_write& operator=(T)
+    {
+        return *this;
+    }
+};
+
 using RocprimDeviceAdjacentDifferenceLargeTestsParams
     = ::testing::Types<DeviceAdjacentDifferenceLargeParams<true, false>,
                        DeviceAdjacentDifferenceLargeParams<true, true>,
@@ -392,20 +407,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             // The conversion to T is used by flag_expected to actually perform the test
             const auto input = rocprim::make_transform_iterator(
                 rocprim::make_counting_iterator(T {0}), [] __device__(const T i) {
-                    struct discard_write
-                    {
-                        T value;
-
-                        __device__ operator T() const
-                        {
-                            return value;
-                        }
-                        __device__ discard_write& operator=(T)
-                        {
-                            return *this;
-                        }
-                    };
-                    return discard_write {i};
+                    return discard_write<T> {i};
                 });
 
             int  flags[2] = {0, 0};
