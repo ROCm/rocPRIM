@@ -31,6 +31,7 @@
 #endif
 
 #include <rocprim/rocprim.hpp>
+#include "benchmark/benchmark.h"
 
 #define HIP_CHECK(condition)         \
   {                                  \
@@ -263,7 +264,7 @@ inline auto get_random_data(size_t size, T min, T max, size_t max_random_size = 
     return data;
 }
 
-bool is_warp_size_supported(const unsigned int required_warp_size)
+inline bool is_warp_size_supported(const unsigned int required_warp_size)
 {
     return ::rocprim::host_warp_size() >= required_warp_size;
 }
@@ -339,41 +340,65 @@ void static_for_each(Args... args)
     static_for_each_impl<typename Indices::value_type, Function>(Indices {}, args...);
 }
 
+struct config_autotune_interface
+{
+    virtual std::string name() const                               = 0;
+    virtual ~config_autotune_interface()                           = default;
+    virtual void run(benchmark::State&, size_t, hipStream_t) const = 0;
+};
+
+struct config_autotune_register
+{
+    static std::vector<std::unique_ptr<config_autotune_interface>>& vector() {
+        static std::vector<std::unique_ptr<config_autotune_interface>> storage;
+        return storage;
+    }
+
+    template <typename T>
+    static config_autotune_register create() {
+        vector().push_back(std::make_unique<T>());
+        return config_autotune_register();
+    }
+};
+
 template <typename T>
 struct Traits
 {
-    static const char* name;
+    //static inline method instead of static inline attribute because that's only supported from C++17 onwards
+    static inline const char* name(){
+        static_assert(sizeof(T) == 0, "Traits<T>::name() unknown");
+        return "unknown";
+    }
 };
-// Generic definition as a fall-back:
-template <typename T>
-const char* Traits<T>::name = "unknown";
 
 // Explicit definitions
 template <>
-const char* Traits<int>::name = "int";
+inline const char* Traits<int>::name() { return "int"; }
 template <>
-const char* Traits<short>::name = "short";
+inline const char* Traits<short>::name() { return "short"; }
 template <>
-const char* Traits<int8_t>::name = "int8_t";
+inline const char* Traits<int8_t>::name() { return "int8_t"; }
 template <>
-const char* Traits<uint8_t>::name = "uint8_t";
+inline const char* Traits<uint8_t>::name() { return "uint8_t"; }
 template <>
-const char* Traits<rocprim::half>::name = "rocprim::half";
+inline const char* Traits<rocprim::half>::name() { return "rocprim::half"; }
 template <>
-const char* Traits<long long>::name = "long long";
+inline const char* Traits<long long>::name() { return "long long"; }
 template <>
-const char* Traits<float>::name = "float";
+inline const char* Traits<int64_t>::name() { return "int64_t"; }
 template <>
-const char* Traits<double>::name = "double";
+inline const char* Traits<float>::name() { return "float"; }
 template <>
-const char* Traits<custom_type<int, int>>::name = "custom_int2";
+inline const char* Traits<double>::name() { return "double"; }
 template <>
-const char* Traits<custom_type<float, float>>::name = "custom_float2";
+inline const char* Traits<custom_type<int, int>>::name() { return "custom_int2"; }
 template <>
-const char* Traits<custom_type<double, double>>::name = "custom_double2";
+inline const char* Traits<custom_type<float, float>>::name() { return "custom_float2"; }
 template <>
-const char* Traits<custom_type<char, double>>::name = "custom_char_double";
+inline const char* Traits<custom_type<double, double>>::name() { return "custom_double2"; }
 template <>
-const char* Traits<custom_type<long long, double>>::name = "custom_longlong_double";
+inline const char* Traits<custom_type<char, double>>::name() { return "custom_char_double"; }
+template <>
+inline const char* Traits<custom_type<long long, double>>::name() { return "custom_longlong_double"; }
 
 #endif // ROCPRIM_BENCHMARK_UTILS_HPP_
