@@ -39,6 +39,15 @@ auto apply(FlagOp flag_op, const T& a, const T& b, unsigned int) -> decltype(fla
     return flag_op(b, a);
 }
 
+template<typename T>
+struct test_op
+{
+    __host__ __device__ T operator()(const T& a, const T& b) const
+    {
+        return (b + b) - a;
+    }
+};
+
 template<
     class Type,
     class FlagType,
