@@ -114,12 +114,15 @@ endfunction()
 # ****************************************************************************
 # Tests
 # ****************************************************************************
+set(BLOCK_ADJACENT_DIFFERENCE_SOURCES_LIST test_block_adjacent_difference.floating.cpp
+                                           test_block_adjacent_difference.integral.cpp)
+
 
 # HIP basic test, which also checks if there are no linkage problems when there are multiple sources
 add_rocprim_test("rocprim.basic_test" "test_basic.cpp;detail/get_rocprim_version.cpp")
 
 add_rocprim_test("rocprim.arg_index_iterator" test_arg_index_iterator.cpp)
-add_rocprim_test("rocprim.block_adjacent_difference" test_block_adjacent_difference.cpp)
+add_rocprim_test("rocprim.block_adjacent_difference" "${BLOCK_ADJACENT_DIFFERENCE_SOURCES_LIST}")
 add_rocprim_test("rocprim.block_discontinuity" test_block_discontinuity.cpp)
 add_rocprim_test("rocprim.block_exchange" test_block_exchange.cpp)
 add_rocprim_test("rocprim.block_histogram" test_block_histogram.cpp)
