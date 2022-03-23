@@ -117,6 +117,11 @@ endfunction()
 set(BLOCK_ADJACENT_DIFFERENCE_SOURCES_LIST test_block_adjacent_difference.floating.cpp
                                            test_block_adjacent_difference.integral.cpp)
 
+set(DEVICE_RADIX_SORT_SOURCES_LIST test_device_radix_sort.sortkeys.cpp
+                                           test_device_radix_sort.sortkeysdouble.cpp
+                                           test_device_radix_sort.sortpairs.cpp
+                                           test_device_radix_sort.sortpairsdouble.cpp
+                                           test_device_radix_sort.sortkeysover4g.cpp)
 
 # HIP basic test, which also checks if there are no linkage problems when there are multiple sources
 add_rocprim_test("rocprim.basic_test" "test_basic.cpp;detail/get_rocprim_version.cpp")
@@ -140,7 +145,7 @@ add_rocprim_test("rocprim.device_histogram" test_device_histogram.cpp)
 add_rocprim_test("rocprim.device_merge" test_device_merge.cpp)
 add_rocprim_test("rocprim.device_merge_sort" test_device_merge_sort.cpp)
 add_rocprim_test("rocprim.device_partition" test_device_partition.cpp)
-add_rocprim_test("rocprim.device_radix_sort" test_device_radix_sort.cpp)
+add_rocprim_test("rocprim.device_radix_sort" "${DEVICE_RADIX_SORT_SOURCES_LIST}")
 add_rocprim_test("rocprim.device_reduce_by_key" test_device_reduce_by_key.cpp)
 add_rocprim_test("rocprim.device_reduce" test_device_reduce.cpp)
 add_rocprim_test("rocprim.device_run_length_encode" test_device_run_length_encode.cpp)
