@@ -123,6 +123,9 @@ set(DEVICE_RADIX_SORT_SOURCES_LIST test_device_radix_sort.sortkeys.cpp
                                            test_device_radix_sort.sortpairsdouble.cpp
                                            test_device_radix_sort.sortkeysover4g.cpp)
 
+set(DEVICE_SEGMENTED_RADIX_SORT_SOURCES_LIST test_device_segmented_radix_sort.sortkeys.cpp
+                                             test_device_segmented_radix_sort.sortpairs.cpp)
+
 # HIP basic test, which also checks if there are no linkage problems when there are multiple sources
 add_rocprim_test("rocprim.basic_test" "test_basic.cpp;detail/get_rocprim_version.cpp")
 
@@ -150,7 +153,7 @@ add_rocprim_test("rocprim.device_reduce_by_key" test_device_reduce_by_key.cpp)
 add_rocprim_test("rocprim.device_reduce" test_device_reduce.cpp)
 add_rocprim_test("rocprim.device_run_length_encode" test_device_run_length_encode.cpp)
 add_rocprim_test("rocprim.device_scan" test_device_scan.cpp)
-add_rocprim_test("rocprim.device_segmented_radix_sort" test_device_segmented_radix_sort.cpp)
+add_rocprim_test("rocprim.device_segmented_radix_sort" "${DEVICE_SEGMENTED_RADIX_SORT_SOURCES_LIST}")
 add_rocprim_test("rocprim.device_segmented_reduce" test_device_segmented_reduce.cpp)
 add_rocprim_test("rocprim.device_segmented_scan" test_device_segmented_scan.cpp)
 add_rocprim_test("rocprim.device_select" test_device_select.cpp)
