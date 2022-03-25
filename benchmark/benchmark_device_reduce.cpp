@@ -116,6 +116,7 @@ int main(int argc, char *argv[])
             stream);
         benchmarks.emplace_back(benchmark);
     }
+    benchmark::AddCustomContext("autotune_config_pattern", R"---((?P<algo>\S*)_benchmark\<(?P<datatype>\S*),\s*reduce_config\<(?P<block_size>[0-9]+),\s*(?P<items_per_thread>[0-9]+)\>\>)---");
 #else
     using custom_float2 = custom_type<float, float>;
     using custom_double2 = custom_type<double, double>;
