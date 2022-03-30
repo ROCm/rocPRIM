@@ -25,6 +25,7 @@
 #include <vector>
 #include <random>
 #include <type_traits>
+#include <string>
 
 #ifdef WIN32
 #include <numeric>
@@ -400,5 +401,19 @@ template <>
 inline const char* Traits<custom_type<char, double>>::name() { return "custom_char_double"; }
 template <>
 inline const char* Traits<custom_type<long long, double>>::name() { return "custom_longlong_double"; }
+
+inline void add_common_benchmark_info()
+{
+    hipDeviceProp_t   devProp;
+    int               device_id = 0;
+    HIP_CHECK(hipGetDevice(&device_id));
+    HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
+
+    benchmark::AddCustomContext("device_name", devProp.name);
+    benchmark::AddCustomContext("device_l2_size", std::to_string(devProp.l2CacheSize));
+    benchmark::AddCustomContext("device_total_global_mem", std::to_string(devProp.totalGlobalMem));
+    benchmark::AddCustomContext("device_shared_memory_per_block", std::to_string(devProp.sharedMemPerBlock));
+    benchmark::AddCustomContext("device_gcn_arch", std::to_string(devProp.gcnArch));
+}
 
 #endif // ROCPRIM_BENCHMARK_UTILS_HPP_
