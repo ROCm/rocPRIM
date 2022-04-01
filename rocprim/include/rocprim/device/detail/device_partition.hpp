@@ -783,7 +783,7 @@ void partition_kernel_impl(KeyIterator keys_input,
         ::rocprim::syncthreads(); // sync threads to reuse shared memory
 
         selected_in_block = prefix_op.get_reduction();
-        selected_prefix = prefix_op.get_exclusive_prefix();
+        selected_prefix   = prefix_op.get_prefix();
     }
 
     // Scatter selected and rejected values

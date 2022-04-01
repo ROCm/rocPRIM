@@ -29,6 +29,7 @@
 #include "../../block/block_scan.hpp"
 #include "../../block/block_store.hpp"
 #include "../../detail/match_result_type.hpp"
+#include "../../detail/various.hpp"
 #include "../../intrinsics/thread.hpp"
 
 #include "../../config.hpp"
@@ -156,6 +157,51 @@ struct discontinuity_helper
     }
 };
 
+template<typename ValueType, unsigned int BlockSize, unsigned int ItemsPerThread>
+struct scatter_helper
+{
+    using storage_type = detail::raw_storage<ValueType[BlockSize * ItemsPerThread]>;
+
+    template<typename ValueIterator, typename Flag, typename ValueFunction, typename IndexFunction>
+    ROCPRIM_DEVICE void scatter(ValueIterator   block_values,
+                                ValueFunction&& values,
+                                const Flag (&is_selected)[ItemsPerThread],
+                                IndexFunction&&    block_indices,
+                                const unsigned int selected_in_block,
+                                const unsigned int flat_thread_id,
+                                storage_type&      storage)
+    {
+        if(selected_in_block > BlockSize)
+        {
+            auto& scatter_storage = storage.get();
+            for(unsigned int i = 0; i < ItemsPerThread; ++i)
+            {
+                if(is_selected[i])
+                {
+                    scatter_storage[block_indices(i)] = values(i);
+                }
+            }
+            ::rocprim::syncthreads();
+
+            // Coalesced write from shared memory to global memory
+            for(unsigned int i = flat_thread_id; i < selected_in_block; i += BlockSize)
+            {
+                block_values[i] = scatter_storage[i];
+            }
+        }
+        else
+        {
+            for(unsigned int i = 0; i < ItemsPerThread; ++i)
+            {
+                if(is_selected[i])
+                {
+                    block_values[block_indices(i)] = values(i);
+                }
+            }
+        }
+    }
+};
+
 template<typename Iterator>
 using value_type = typename std::iterator_traits<Iterator>::value_type;
 
@@ -209,11 +255,10 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     using discontinuity_type = reduce_by_key::discontinuity_helper<key_type, block_size>;
     using block_scan_type    = rocprim::block_scan<wrapped_type, block_size>;
 
-    // TODO: Refactor to separate function
     // Modified binary operation that respects segment boundaries and counts segments
     auto wrapped_op = [&](const wrapped_type& lhs, const wrapped_type& rhs)
     {
-        return wrapped_type{!rocprim::get<1>(rhs)
+        return wrapped_type{rocprim::get<1>(rhs) == 0
                                 ? reduce_op(rocprim::get<0>(lhs), rocprim::get<0>(rhs))
                                 : rocprim::get<0>(rhs),
                             rocprim::get<1>(lhs) + rocprim::get<1>(rhs)};
@@ -221,6 +266,10 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     using prefix_op_type = detail::
         offset_lookback_scan_prefix_op<wrapped_type, decltype(scan_state), decltype(wrapped_op)>;
+
+    using scatter_keys_type = reduce_by_key::scatter_helper<key_type, block_size, items_per_thread>;
+    using scatter_values_type
+        = reduce_by_key::scatter_helper<accumulator_type, block_size, items_per_thread>;
 
     ROCPRIM_SHARED_MEMORY union
     {
@@ -232,6 +281,13 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
             typename prefix_op_type::storage_type  prefix;
             typename block_scan_type::storage_type scan;
         } scan;
+        struct
+        {
+            bool first_segment_starts_before_block;
+            bool last_segment_ends_after_block;
+        } block_boundary;
+        typename scatter_keys_type::storage_type   scatter_keys;
+        typename scatter_values_type::storage_type scatter_values;
     } storage;
 
     const unsigned int flat_thread_id = threadIdx.x;
@@ -280,28 +336,25 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     }
     ::rocprim::syncthreads();
 
-    unsigned int unique_prefix   = 0;
-    unsigned int unique_in_block = 0;
+    // TODO: Refactor scan to separate function
+    unsigned int segment_heads_before   = 0;
+    unsigned int segment_heads_in_block = 0;
     if(flat_block_id == 0)
     {
         // TODO: Handle previous grid launch, i.e. large indices
-        //if (comp(keys_input[-1], keys_input[0]) && flat_thread_id == 0) {
-        //    std::get<0>(wrapped_values) = reduce_op(rocprim::get<0>(previous_last_value), values[0]);
-        //}
         wrapped_type reduction;
         block_scan_type{}.inclusive_scan(wrapped_values,
                                          wrapped_values,
                                          reduction,
                                          storage.scan.scan,
                                          wrapped_op);
-        //rocprim::syncthreads();
 
         if(flat_thread_id == 0)
         {
             scan_state.set_complete(flat_block_id, reduction);
         }
 
-        unique_in_block = rocprim::get<1>(reduction);
+        segment_heads_in_block = rocprim::get<1>(reduction);
     }
     else
     {
@@ -314,33 +367,69 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                                          wrapped_op);
         rocprim::syncthreads();
 
-        unique_prefix   = rocprim::get<1>(prefix_op.get_exclusive_prefix());
-        unique_in_block = rocprim::get<1>(prefix_op.get_reduction());
+        segment_heads_before   = rocprim::get<1>(prefix_op.get_prefix());
+        segment_heads_in_block = rocprim::get<1>(prefix_op.get_reduction());
+    }
+    rocprim::syncthreads();
+
+    if(flat_thread_id == 0)
+    {
+        storage.block_boundary.first_segment_starts_before_block = head_flags[0] == 0;
     }
 
-    // TODO: Two phase scatter
-    for(unsigned int i = 0; i < items_per_thread; ++i)
+    if(!is_last_block && flat_thread_id == block_size - 1)
     {
-        // Calculated segment indices start at 1 because the first item is always flagged by
-        // block_discontinuity
-        // TODO: Handle large indices
-        const unsigned int segment_index = rocprim::get<1>(wrapped_values[i]) - 1;
-        // The first item in each segment saves the first key of the segment
-        if(head_flags[i])
-        {
-            unique_keys[segment_index] = keys[i];
-        }
-        // The last item in each segment has the reduction for the segment
-        if(tail_flags[i])
-        {
-            reductions[segment_index] = rocprim::get<0>(wrapped_values[i]);
-        }
+        storage.block_boundary.last_segment_ends_after_block = !tail_flags[items_per_thread - 1];
+    }
+    else if(is_last_block && flat_thread_id == 0)
+    {
+        storage.block_boundary.last_segment_ends_after_block = false;
+    }
+    rocprim::syncthreads();
+
+    const unsigned int segment_tails_in_block
+        = segment_heads_in_block
+          + (storage.block_boundary.first_segment_starts_before_block ? 1 : 0)
+          - (storage.block_boundary.last_segment_ends_after_block ? 1 : 0);
+
+    const unsigned int segment_tails_before
+        = segment_heads_before - (storage.block_boundary.first_segment_starts_before_block ? 1 : 0);
+    rocprim::syncthreads();
+
+    if(segment_heads_in_block > 0)
+    {
+        const auto get_segment_index_for_head = [&](const unsigned int i)
+        { return rocprim::get<1>(wrapped_values[i]) - segment_heads_before - head_flags[i]; };
+        scatter_keys_type{}.scatter(
+            unique_keys + segment_heads_before,
+            [&keys](unsigned int i) { return keys[i]; },
+            head_flags,
+            get_segment_index_for_head,
+            segment_heads_in_block,
+            flat_thread_id,
+            storage.scatter_keys);
+    }
+
+    if(segment_tails_in_block > 0)
+    {
+        rocprim::syncthreads();
+
+        const auto get_segment_index_for_tail = [&](const unsigned int i)
+        { return rocprim::get<1>(wrapped_values[i]) - segment_tails_before - 1; };
+        scatter_values_type{}.scatter(
+            reductions + segment_tails_before,
+            [&wrapped_values](unsigned int i) { return rocprim::get<0>(wrapped_values[i]); },
+            tail_flags,
+            get_segment_index_for_tail,
+            segment_tails_in_block,
+            flat_thread_id,
+            storage.scatter_values);
     }
 
     if(is_last_block && flat_thread_id == 0)
     {
         // TODO: Handle large indices
-        *unique_count = unique_prefix + unique_in_block;
+        *unique_count = segment_heads_before + segment_heads_in_block;
     }
 }
 } // namespace reduce_by_key

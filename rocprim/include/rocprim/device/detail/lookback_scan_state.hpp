@@ -466,7 +466,7 @@ private:
     struct storage_type_
     {
         T block_reduction;
-        T exclusive_prefix;
+        T prefix;
     };
 
 public:
@@ -485,7 +485,7 @@ public:
         if(::rocprim::lane_id() == 0)
         {
             storage_.get().block_reduction  = std::move(reduction);
-            storage_.get().exclusive_prefix = prefix;
+            storage_.get().prefix           = prefix;
         }
         return prefix;
     }
@@ -495,9 +495,9 @@ public:
         return storage_.get().block_reduction;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE T get_exclusive_prefix() const
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix() const
     {
-        return storage_.get().exclusive_prefix;
+        return storage_.get().prefix;
     }
 
 private:
