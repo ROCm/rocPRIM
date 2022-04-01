@@ -241,6 +241,11 @@ struct raw_storage
     {
         return reinterpret_cast<T&>(*this);
     }
+
+    ROCPRIM_HOST_DEVICE const T& get() const
+    {
+        return reinterpret_cast<const T&>(*this);
+    }
 };
 
 // Checks if two iterators have the same type and value

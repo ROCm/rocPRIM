@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,623 +21,331 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_DEVICE_REDUCE_BY_KEY_HPP_
 #define ROCPRIM_DEVICE_DETAIL_DEVICE_REDUCE_BY_KEY_HPP_
 
-#include <iterator>
-#include <utility>
-
-#include "../../config.hpp"
-#include "../../detail/various.hpp"
-
-#include "../../intrinsics.hpp"
-#include "../../functional.hpp"
+#include "lookback_scan_state.hpp"
+#include "ordered_block_id.hpp"
 
 #include "../../block/block_discontinuity.hpp"
-#include "../../block/block_load_func.hpp"
 #include "../../block/block_load.hpp"
-#include "../../block/block_store.hpp"
 #include "../../block/block_scan.hpp"
+#include "../../block/block_store.hpp"
+#include "../../detail/match_result_type.hpp"
+#include "../../intrinsics/thread.hpp"
+
+#include "../../config.hpp"
+
+#include <iterator>
+#include <utility>
 
 BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
 
-template<class Value>
-struct carry_out
+namespace reduce_by_key
 {
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    carry_out() = default;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    carry_out(const carry_out& rhs) = default;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    carry_out& operator=(const carry_out& rhs)
-    {
-        value = rhs.value;
-        destination = rhs.destination;
-        next_has_carry_in = rhs.next_has_carry_in;
-        return *this;
-    }
-
-    Value value; // carry-out of the current batch
-    unsigned int destination;
-    bool next_has_carry_in; // the next batch has carry-in (i.e. it continues the last segment from the current batch)
-};
-
-template<class Value>
-struct scan_by_key_pair
+template<typename KeyType,
+         typename AccumulatorType,
+         unsigned int      BlockSize,
+         unsigned int      ItemsPerThread,
+         block_load_method load_keys_method,
+         block_load_method load_values_method>
+struct load_helper
 {
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    scan_by_key_pair() = default;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    scan_by_key_pair(const scan_by_key_pair& rhs) = default;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    scan_by_key_pair& operator=(const scan_by_key_pair& rhs)
+    using block_load_keys = block_load<KeyType, BlockSize, ItemsPerThread, load_keys_method>;
+    using block_load_values
+        = block_load<AccumulatorType, BlockSize, ItemsPerThread, load_values_method>;
+    union storage_type
     {
-        key = rhs.key;
-        value = rhs.value;
-        return *this;
-    }
+        typename block_load_keys::storage_type   keys;
+        typename block_load_values::storage_type values;
+    };
 
-    unsigned int key;
-    Value value;
-};
-
-// Special operator which allows to calculate scan-by-key using block_scan.
-// block_scan supports non-commutative scan operators.
-// Initial values of pairs' keys must be 1 for the first item (head) of segment and 0 otherwise.
-// As a result key contains the current segment's index and value contains segmented scan result.
-template<class Pair, class BinaryFunction>
-struct scan_by_key_op
-{
-    BinaryFunction reduce_op;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    scan_by_key_op(BinaryFunction reduce_op)
-        : reduce_op(reduce_op)
-    {}
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    Pair operator()(const Pair& a, const Pair& b)
+    template<typename KeyIterator, typename ValueIterator>
+    ROCPRIM_DEVICE void load_keys_values(KeyIterator        block_keys,
+                                         ValueIterator      block_values,
+                                         const bool         is_last_block,
+                                         const unsigned int valid_in_last_block,
+                                         KeyType (&keys)[ItemsPerThread],
+                                         AccumulatorType (&values)[ItemsPerThread],
+                                         storage_type& storage)
     {
-        Pair c;
-        c.key = a.key + b.key;
-        c.value = b.key != 0
-            ? b.value
-            : reduce_op(a.value, b.value);
-        return c;
-    }
-};
-
-// Wrappers that reverse results of key comparizon functions to use them as flag_op of block_discontinuity
-// (for example, equal_to will work as not_equal_to and divide items into segments by keys)
-template<class Key, class KeyCompareFunction>
-struct key_flag_op
-{
-    KeyCompareFunction key_compare_op;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    key_flag_op(KeyCompareFunction key_compare_op)
-        : key_compare_op(key_compare_op)
-    {}
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const Key& a, const Key& b)
-    {
-        return !key_compare_op(a, b);
-    }
-};
-
-// This wrapper processes only part of items and flags (valid_count - 1)th item (for tails)
-// and (valid_count)th item (for heads), all items after valid_count are unflagged.
-template<class Key, class KeyCompareFunction>
-struct guarded_key_flag_op
-{
-    KeyCompareFunction key_compare_op;
-    unsigned int valid_count;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    guarded_key_flag_op(KeyCompareFunction key_compare_op, unsigned int valid_count)
-        : key_compare_op(key_compare_op), valid_count(valid_count)
-    {}
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const Key& a, const Key& b, unsigned int b_index)
-    {
-        return (b_index < valid_count && !key_compare_op(a, b)) || b_index == valid_count;
-    }
-};
-
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class KeysInputIterator,
-    class KeyCompareFunction
->
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-void fill_unique_counts(KeysInputIterator keys_input,
-                        unsigned int size,
-                        unsigned int * unique_counts,
-                        KeyCompareFunction key_compare_op,
-                        unsigned int blocks_per_full_batch,
-                        unsigned int full_batches)
-{
-    constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
-    constexpr unsigned int warp_size = ::rocprim::device_warp_size();
-    constexpr unsigned int warps_no = BlockSize / warp_size;
-
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-
-    using keys_load_type = ::rocprim::block_load<
-        key_type, BlockSize, ItemsPerThread,
-        ::rocprim::block_load_method::block_load_transpose>;
-    using discontinuity_type = ::rocprim::block_discontinuity<key_type, BlockSize>;
-
-    ROCPRIM_SHARED_MEMORY struct
-    {
-        union
+        if(!is_last_block)
         {
-            typename keys_load_type::storage_type keys_load;
-            typename discontinuity_type::storage_type discontinuity;
-        };
-        unsigned int unique_counts[warps_no];
-    } storage;
-
-    const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-    const unsigned int batch_id = ::rocprim::detail::block_id<0>();
-    const unsigned int lane_id = ::rocprim::lane_id();
-    const unsigned int warp_id = ::rocprim::warp_id<0, 1, 1>();
-
-    unsigned int block_offset;
-    unsigned int blocks_per_batch;
-    if(batch_id < full_batches)
-    {
-        blocks_per_batch = blocks_per_full_batch;
-        block_offset = batch_id * blocks_per_batch;
-    }
-    else
-    {
-        blocks_per_batch = blocks_per_full_batch - 1;
-        block_offset = batch_id * blocks_per_batch + full_batches;
-    }
-    block_offset *= items_per_block;
-
-    unsigned int warp_unique_count = 0;
-
-    for(unsigned int bi = 0; bi < blocks_per_batch; bi++)
-    {
-        const bool is_last_block = (block_offset + items_per_block >= size);
-
-        key_type keys[ItemsPerThread];
-        unsigned int valid_count;
-        ::rocprim::syncthreads();
-        if(is_last_block)
-        {
-            valid_count = size - block_offset;
-            keys_load_type().load(keys_input + block_offset, keys, valid_count, storage.keys_load);
+            block_load_keys{}.load(block_keys, keys, storage.keys);
+            ::rocprim::syncthreads();
+            block_load_values{}.load(block_values, values, storage.values);
         }
         else
         {
-            valid_count = items_per_block;
-            keys_load_type().load(keys_input + block_offset, keys, storage.keys_load);
-        }
+            block_load_keys{}.load(
+                block_keys,
+                keys,
+                valid_in_last_block,
+                *block_keys, // Any value is okay, so discontinuity doesn't access undefined items
+                storage.keys);
+            ::rocprim::syncthreads();
 
-        bool tail_flags[ItemsPerThread];
-        key_type successor_key = keys[ItemsPerThread - 1];
-        ::rocprim::syncthreads();
-        if(is_last_block)
+            block_load_values{}.load(block_values, values, valid_in_last_block, storage.values);
+        }
+    }
+};
+
+template<typename KeyType, unsigned int BlockSize>
+struct discontinuity_helper
+{
+    using block_discontinuity_type = block_discontinuity<KeyType, BlockSize>;
+    using storage_type             = typename block_discontinuity_type::storage_type;
+
+    template<typename KeyIterator, typename CompareFunction, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE void flag_heads_and_tails(KeyIterator block_keys,
+                                             const KeyType (&keys)[ItemsPerThread],
+                                             CompareFunction compare,
+                                             unsigned int (&head_flags)[ItemsPerThread],
+                                             bool (&tail_flags)[ItemsPerThread],
+                                             const bool         is_first_block,
+                                             const bool         is_last_block,
+                                             const unsigned int valid_in_last_block,
+                                             const unsigned int flat_thread_id,
+                                             storage_type&      storage)
+    {
+        static constexpr auto items_per_block = BlockSize * ItemsPerThread;
+
+        auto not_equal = [compare](const auto& a, const auto& b) mutable { return !compare(a, b); };
+
+        if(!is_first_block)
         {
-            discontinuity_type().flag_tails(
-                tail_flags, successor_key, keys,
-                guarded_key_flag_op<key_type, KeyCompareFunction>(key_compare_op, valid_count),
-                storage.discontinuity
-            );
+            const KeyType tile_predecessor = block_keys[-1];
+            block_discontinuity_type{}.flag_heads(head_flags,
+                                                  tile_predecessor,
+                                                  keys,
+                                                  not_equal,
+                                                  storage);
         }
         else
         {
-            if(flat_id == BlockSize - 1)
+            block_discontinuity_type{}.flag_heads(head_flags, keys, not_equal, storage);
+        }
+        ::rocprim::syncthreads();
+
+        if(!is_last_block)
+        {
+            const KeyType tile_successor = block_keys[items_per_block];
+            block_discontinuity_type{}.flag_tails(tail_flags,
+                                                  tile_successor,
+                                                  keys,
+                                                  not_equal,
+                                                  storage);
+        }
+        else
+        {
+            block_discontinuity_type{}.flag_tails(tail_flags, keys, not_equal, storage);
+            for(unsigned int i = 0; i < ItemsPerThread; ++i)
             {
-                successor_key = keys_input[block_offset + items_per_block];
+                const unsigned int index = flat_thread_id * ItemsPerThread + i;
+                if(index == valid_in_last_block - 1)
+                {
+                    tail_flags[i] = true; // Very last item is the end of a sequence, must be saved
+                }
+                else if(index >= valid_in_last_block)
+                {
+                    head_flags[i] = 0;
+                    tail_flags[i] = false;
+                }
             }
-            discontinuity_type().flag_tails(
-                tail_flags, successor_key, keys,
-                key_flag_op<key_type, KeyCompareFunction>(key_compare_op),
-                storage.discontinuity
-            );
         }
-
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
-        {
-            warp_unique_count += ::rocprim::bit_count(::rocprim::ballot(tail_flags[i]));
-        }
-
-        block_offset += items_per_block;
     }
+};
 
-    if(lane_id == 0)
-    {
-        storage.unique_counts[warp_id] = warp_unique_count;
-    }
-    ::rocprim::syncthreads();
+template<typename Iterator>
+using value_type = typename std::iterator_traits<Iterator>::value_type;
 
-    if(flat_id == 0)
-    {
-        unsigned int batch_unique_count = 0;
-        for(unsigned int w = 0; w < warps_no; w++)
-        {
-            batch_unique_count += storage.unique_counts[w];
-        }
-        unique_counts[batch_id] = batch_unique_count;
-    }
-}
+template<typename Iterator>
+using prev_value_type = rocprim::tuple<value_type<Iterator>, std::size_t>;
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class UniqueCountOutputIterator
->
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-void scan_unique_counts(unsigned int * unique_counts,
-                        UniqueCountOutputIterator unique_count_output,
-                        unsigned int batches)
+template<typename Config,
+         typename KeyIterator,
+         typename ValueIterator,
+         typename UniqueIterator,
+         typename ReductionIterator,
+         typename UniqueCountIterator,
+         typename CompareFunction,
+         typename BinaryOp,
+         typename LookBackScanState>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+    kernel_impl(const KeyIterator              keys_input,
+                const ValueIterator            values_input,
+                UniqueIterator                 unique_keys,
+                ReductionIterator              reductions,
+                UniqueCountIterator            unique_count,
+                BinaryOp                       reduce_op,
+                const CompareFunction          compare,
+                LookBackScanState              scan_state,
+                ordered_block_id<unsigned int> ordered_bid,
+                const std::size_t              starting_block,
+                const std::size_t              number_of_blocks,
+                const std::size_t              size //,
+                /*const prev_value_type<KeyIterator> previous_last_value*/)
 {
-    using load_type = ::rocprim::block_load<
-        unsigned int, BlockSize, ItemsPerThread,
-        ::rocprim::block_load_method::block_load_transpose>;
-    using store_type = ::rocprim::block_store<
-        unsigned int, BlockSize, ItemsPerThread,
-        ::rocprim::block_store_method::block_store_transpose>;
-    using scan_type = typename ::rocprim::block_scan<unsigned int, BlockSize>;
+    using accumulator_type =
+        typename detail::match_result_type<value_type<ValueIterator>, BinaryOp>::type;
+
+    static constexpr unsigned int block_size       = Config::block_size;
+    static constexpr unsigned int items_per_thread = Config::items_per_thread;
+    static constexpr unsigned int items_per_block  = block_size * items_per_thread;
+
+    static constexpr block_load_method load_keys_method   = Config::load_keys_method;
+    static constexpr block_load_method load_values_method = Config::load_values_method;
+
+    using key_type     = value_type<KeyIterator>;
+    using wrapped_type = rocprim::tuple<accumulator_type, unsigned int>;
+
+    using load_type = reduce_by_key::load_helper<key_type,
+                                                 accumulator_type,
+                                                 block_size,
+                                                 items_per_thread,
+                                                 load_keys_method,
+                                                 load_values_method>;
+
+    using discontinuity_type = reduce_by_key::discontinuity_helper<key_type, block_size>;
+    using block_scan_type    = rocprim::block_scan<wrapped_type, block_size>;
+
+    // TODO: Refactor to separate function
+    // Modified binary operation that respects segment boundaries and counts segments
+    auto wrapped_op = [&](const wrapped_type& lhs, const wrapped_type& rhs)
+    {
+        return wrapped_type{!rocprim::get<1>(rhs)
+                                ? reduce_op(rocprim::get<0>(lhs), rocprim::get<0>(rhs))
+                                : rocprim::get<0>(rhs),
+                            rocprim::get<1>(lhs) + rocprim::get<1>(rhs)};
+    };
+
+    using prefix_op_type = detail::
+        offset_lookback_scan_prefix_op<wrapped_type, decltype(scan_state), decltype(wrapped_op)>;
 
     ROCPRIM_SHARED_MEMORY union
     {
-        typename load_type::storage_type load;
-        typename store_type::storage_type store;
-        typename scan_type::storage_type scan;
-    } storage;
-
-    const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-
-    unsigned int values[ItemsPerThread];
-    load_type().load(unique_counts, values, batches, 0, storage.load);
-
-    unsigned int unique_count;
-    ::rocprim::syncthreads();
-    scan_type().exclusive_scan(values, values, 0, unique_count);
-
-    ::rocprim::syncthreads();
-    store_type().store(unique_counts, values, batches, storage.store);
-
-    if(flat_id == 0)
-    {
-        *unique_count_output = unique_count;
-    }
-}
-
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class KeysInputIterator,
-    class ValuesInputIterator,
-    class Result,
-    class UniqueOutputIterator,
-    class AggregatesOutputIterator,
-    class KeyCompareFunction,
-    class BinaryFunction
->
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-void reduce_by_key(KeysInputIterator keys_input,
-                   ValuesInputIterator values_input,
-                   unsigned int size,
-                   const unsigned int * unique_starts,
-                   carry_out<Result> * carry_outs,
-                   Result * leading_aggregates,
-                   UniqueOutputIterator unique_output,
-                   AggregatesOutputIterator aggregates_output,
-                   KeyCompareFunction key_compare_op,
-                   BinaryFunction reduce_op,
-                   unsigned int blocks_per_full_batch,
-                   unsigned int full_batches)
-{
-    constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
-
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using result_type = Result;
-
-    using keys_load_type = ::rocprim::block_load<
-        key_type, BlockSize, ItemsPerThread,
-        ::rocprim::block_load_method::block_load_transpose>;
-    using values_load_type = ::rocprim::block_load<
-        result_type, BlockSize, ItemsPerThread,
-        ::rocprim::block_load_method::block_load_transpose>;
-    using discontinuity_type = ::rocprim::block_discontinuity<key_type, BlockSize>;
-    using scan_type = ::rocprim::block_scan<scan_by_key_pair<result_type>, BlockSize>;
-
-    ROCPRIM_SHARED_MEMORY struct
-    {
-        union
+        typename ordered_block_id<unsigned int>::storage_type block_id;
+        typename load_type::storage_type                      load;
+        typename discontinuity_type::storage_type             flags;
+        struct
         {
-            typename keys_load_type::storage_type keys_load;
-            typename values_load_type::storage_type values_load;
-            typename discontinuity_type::storage_type discontinuity;
-            typename scan_type::storage_type scan;
-        };
-        unsigned int unique_count;
-        bool has_carry_in;
-        detail::raw_storage<result_type> carry_in;
+            typename prefix_op_type::storage_type  prefix;
+            typename block_scan_type::storage_type scan;
+        } scan;
     } storage;
 
-    const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-    const unsigned int batch_id = ::rocprim::detail::block_id<0>();
+    const unsigned int flat_thread_id = threadIdx.x;
+    const unsigned int flat_block_id  = ordered_bid.get(flat_thread_id, storage.block_id);
 
-    unsigned int block_offset;
-    unsigned int blocks_per_batch;
-    if(batch_id < full_batches)
+    const bool         is_first_block = starting_block + flat_block_id == 0;
+    const bool         is_last_block  = starting_block + flat_block_id == number_of_blocks - 1;
+    const unsigned int valid_in_last_block
+        = static_cast<unsigned int>(size - (number_of_blocks - 1) * items_per_block);
+
+    const unsigned int  block_offset = flat_block_id * items_per_block;
+    const KeyIterator   block_keys   = keys_input + block_offset;
+    const ValueIterator block_values = values_input + block_offset;
+
+    key_type         keys[items_per_thread];
+    accumulator_type values[items_per_thread];
+
+    ::rocprim::syncthreads();
+    load_type{}.load_keys_values(block_keys,
+                                 block_values,
+                                 is_last_block,
+                                 valid_in_last_block,
+                                 keys,
+                                 values,
+                                 storage.load);
+    ::rocprim::syncthreads();
+
+    unsigned int head_flags[items_per_thread];
+    bool         tail_flags[items_per_thread];
+    discontinuity_type{}.flag_heads_and_tails(block_keys,
+                                              keys,
+                                              compare,
+                                              head_flags,
+                                              tail_flags,
+                                              is_first_block,
+                                              is_last_block,
+                                              valid_in_last_block,
+                                              flat_thread_id,
+                                              storage.flags);
+
+    wrapped_type wrapped_values[items_per_thread];
+    for(unsigned int i = 0; i < items_per_thread; ++i)
     {
-        blocks_per_batch = blocks_per_full_batch;
-        block_offset = batch_id * blocks_per_batch;
+        rocprim::get<0>(wrapped_values[i]) = values[i];
+        rocprim::get<1>(wrapped_values[i]) = head_flags[i];
+    }
+    ::rocprim::syncthreads();
+
+    unsigned int unique_prefix   = 0;
+    unsigned int unique_in_block = 0;
+    if(flat_block_id == 0)
+    {
+        // TODO: Handle previous grid launch, i.e. large indices
+        //if (comp(keys_input[-1], keys_input[0]) && flat_thread_id == 0) {
+        //    std::get<0>(wrapped_values) = reduce_op(rocprim::get<0>(previous_last_value), values[0]);
+        //}
+        wrapped_type reduction;
+        block_scan_type{}.inclusive_scan(wrapped_values,
+                                         wrapped_values,
+                                         reduction,
+                                         storage.scan.scan,
+                                         wrapped_op);
+        //rocprim::syncthreads();
+
+        if(flat_thread_id == 0)
+        {
+            scan_state.set_complete(flat_block_id, reduction);
+        }
+
+        unique_in_block = rocprim::get<1>(reduction);
     }
     else
     {
-        blocks_per_batch = blocks_per_full_batch - 1;
-        block_offset = batch_id * blocks_per_batch + full_batches;
-    }
-    block_offset *= items_per_block;
+        auto prefix_op = prefix_op_type{flat_block_id, scan_state, storage.scan.prefix, wrapped_op};
 
-    const unsigned int batch_start = unique_starts[batch_id];
-    unsigned int block_start = batch_start;
+        block_scan_type{}.inclusive_scan(wrapped_values,
+                                         wrapped_values,
+                                         storage.scan.scan,
+                                         prefix_op,
+                                         wrapped_op);
+        rocprim::syncthreads();
 
-    if(flat_id == 0)
-    {
-        storage.has_carry_in =
-            (block_offset > 0) &&
-            key_compare_op(keys_input[block_offset - 1], keys_input[block_offset]);
+        unique_prefix   = rocprim::get<1>(prefix_op.get_exclusive_prefix());
+        unique_in_block = rocprim::get<1>(prefix_op.get_reduction());
     }
 
-    for(unsigned int bi = 0; bi < blocks_per_batch; bi++)
+    // TODO: Two phase scatter
+    for(unsigned int i = 0; i < items_per_thread; ++i)
     {
-        const bool is_last_block = (block_offset + items_per_block >= size);
-
-        key_type keys[ItemsPerThread];
-        result_type values[ItemsPerThread];
-        unsigned int valid_count;
-        if(is_last_block)
+        // Calculated segment indices start at 1 because the first item is always flagged by
+        // block_discontinuity
+        // TODO: Handle large indices
+        const unsigned int segment_index = rocprim::get<1>(wrapped_values[i]) - 1;
+        // The first item in each segment saves the first key of the segment
+        if(head_flags[i])
         {
-            valid_count = size - block_offset;
-            keys_load_type().load(keys_input + block_offset, keys, valid_count, storage.keys_load);
-            ::rocprim::syncthreads();
-            values_load_type().load(values_input + block_offset, values, valid_count, storage.values_load);
+            unique_keys[segment_index] = keys[i];
         }
-        else
-        {
-            valid_count = items_per_block;
-            keys_load_type().load(keys_input + block_offset, keys, storage.keys_load);
-            ::rocprim::syncthreads();
-            values_load_type().load(values_input + block_offset, values, storage.values_load);
-        }
-
-        if(bi > 0 && flat_id == 0 && storage.has_carry_in)
-        {
-            // Apply carry-out of the previous block as carry-in for the first segment
-            values[0] = reduce_op(storage.carry_in.get(), values[0]);
-        }
-
-        bool head_flags[ItemsPerThread];
-        bool tail_flags[ItemsPerThread];
-        key_type successor_key = keys[ItemsPerThread - 1];
-        ::rocprim::syncthreads();
-        if(is_last_block)
-        {
-            discontinuity_type().flag_heads_and_tails(
-                head_flags, tail_flags, successor_key, keys,
-                guarded_key_flag_op<key_type, KeyCompareFunction>(key_compare_op, valid_count),
-                storage.discontinuity
-            );
-        }
-        else
-        {
-            if(flat_id == BlockSize - 1)
-            {
-                successor_key = keys_input[block_offset + items_per_block];
-            }
-            discontinuity_type().flag_heads_and_tails(
-                head_flags, tail_flags, successor_key, keys,
-                key_flag_op<key_type, KeyCompareFunction>(key_compare_op),
-                storage.discontinuity
-            );
-        }
-
-        // Build pairs and run non-commutative inclusive scan to calculate scan-by-key
-        // and indices (ranks) of each segment:
-        // input:
-        //   keys          | 1 1 1 2 3 3 4 4 |
-        //   head_flags    | +     + +   +   |
-        //   values        | 2 0 1 4 2 3 1 5 |
-        // result:
-        //   scan values   | 2 2 3 4 2 5 1 6 |
-        //   scan keys     | 1 1 1 2 3 3 4 4 |
-        //   ranks (key-1) | 0 0 0 1 2 2 3 3 |
-        scan_by_key_pair<result_type> pairs[ItemsPerThread];
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
-        {
-            pairs[i].key = head_flags[i];
-            pairs[i].value = values[i];
-        }
-        scan_by_key_op<scan_by_key_pair<result_type>, BinaryFunction> scan_op(reduce_op);
-        ::rocprim::syncthreads();
-        scan_type().inclusive_scan(pairs, pairs, storage.scan, scan_op);
-
-        unsigned int ranks[ItemsPerThread];
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
-        {
-            ranks[i] = pairs[i].key - 1; // The first item is always flagged as head, so indices start from 1
-            values[i] = pairs[i].value;
-        }
-
-        if(flat_id == BlockSize - 1)
-        {
-            storage.unique_count = ranks[ItemsPerThread - 1] + (tail_flags[ItemsPerThread - 1] ? 1 : 0);
-        }
-
-        ::rocprim::syncthreads();
-        const unsigned int unique_count = storage.unique_count;
-        if(flat_id == 0)
-        {
-            // The first item must be written only if it is the first item of the current segment
-            // (otherwise it is written by one of previous blocks)
-            head_flags[0] = !storage.has_carry_in;
-        }
-        if(is_last_block)
-        {
-            // Unflag the head after the last segment as it will be written out of bounds
-            for(unsigned int i = 0; i < ItemsPerThread; i++)
-            {
-                if(ranks[i] >= unique_count)
-                {
-                    head_flags[i] = false;
-                }
-            }
-        }
-
-        ::rocprim::syncthreads();
-        if(flat_id == BlockSize - 1)
-        {
-            if(bi == blocks_per_batch - 1)
-            {
-                // Save carry-out of the last block of the current batch
-                carry_outs[batch_id].value = values[ItemsPerThread - 1];
-                carry_outs[batch_id].destination = block_start + ranks[ItemsPerThread - 1];
-                carry_outs[batch_id].next_has_carry_in = !tail_flags[ItemsPerThread - 1];
-            }
-            else
-            {
-                // Save carry-out to use it as carry-in for the next block of the current batch
-                storage.has_carry_in = !tail_flags[ItemsPerThread - 1];
-                storage.carry_in.get() = values[ItemsPerThread - 1];
-            }
-        }
-        if(batch_id > 0 && block_start == batch_start)
-        {
-            for(unsigned int i = 0; i < ItemsPerThread; i++)
-            {
-                // Write the scanned value of the last item of the first segment of the current batch
-                // (the leading possible incomplete aggregate) to calculate the final aggregate in the next kernel.
-                // The intermediate array is used instead of aggregates_output because
-                // aggregates_output may be write-only.
-                if(tail_flags[i] && ranks[i] == 0)
-                {
-                    leading_aggregates[batch_id - 1] = values[i];
-                }
-            }
-        }
-
-        // Save unique keys and aggregates (some aggregates contains partial values
-        // and will be updated later by calculating scan-by-key of carry-outs)
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
-        {
-            if(head_flags[i])
-            {
-                // Write the key of the first item of the segment as a unique key
-                unique_output[block_start + ranks[i]] = keys[i];
-            }
-            if(tail_flags[i])
-            {
-                // Write the scanned value of the last item of the segment as an aggregate (reduction of the segment)
-                aggregates_output[block_start + ranks[i]] = values[i];
-            }
-        }
-
-        block_offset += items_per_block;
-        block_start += unique_count;
-    }
-}
-
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class Result,
-    class AggregatesOutputIterator,
-    class BinaryFunction
->
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-void scan_and_scatter_carry_outs(const carry_out<Result> * carry_outs,
-                                 const Result * leading_aggregates,
-                                 AggregatesOutputIterator aggregates_output,
-                                 BinaryFunction reduce_op,
-                                 unsigned int batches)
-{
-    using result_type = Result;
-
-    using discontinuity_type = ::rocprim::block_discontinuity<unsigned int, BlockSize>;
-    using scan_type = ::rocprim::block_scan<scan_by_key_pair<result_type>, BlockSize>;
-
-    ROCPRIM_SHARED_MEMORY struct
-    {
-        typename discontinuity_type::storage_type discontinuity;
-        typename scan_type::storage_type scan;
-    } storage;
-
-    const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-
-    carry_out<result_type> cs[ItemsPerThread];
-    block_load_direct_blocked(flat_id, carry_outs, cs, batches - 1);
-
-    unsigned int destinations[ItemsPerThread];
-    result_type values[ItemsPerThread];
-    for(unsigned int i = 0; i < ItemsPerThread; i++)
-    {
-        destinations[i] = cs[i].destination;
-        values[i] = cs[i].value;
-    }
-
-    bool head_flags[ItemsPerThread];
-    bool tail_flags[ItemsPerThread];
-    ::rocprim::equal_to<unsigned int> compare_op;
-    // If a carry-out of the current batch has the same destination as previous batches,
-    // then we need to scan its value with values of those previous batches.
-    discontinuity_type().flag_heads_and_tails(
-        head_flags, tail_flags,
-        destinations[ItemsPerThread - 1], // Do not always flag the last item in the block
-        destinations,
-        guarded_key_flag_op<unsigned int, decltype(compare_op)>(compare_op, batches - 1),
-        storage.discontinuity
-    );
-
-    scan_by_key_pair<result_type> pairs[ItemsPerThread];
-    for(unsigned int i = 0; i < ItemsPerThread; i++)
-    {
-        pairs[i].key = head_flags[i];
-        pairs[i].value = values[i];
-    }
-
-    scan_by_key_op<scan_by_key_pair<result_type>, BinaryFunction> scan_op(reduce_op);
-    scan_type().inclusive_scan(pairs, pairs, storage.scan, scan_op);
-
-    // Scatter the last carry-out of each segment as carry-ins
-    for(unsigned int i = 0; i < ItemsPerThread; i++)
-    {
+        // The last item in each segment has the reduction for the segment
         if(tail_flags[i])
         {
-            const unsigned int dst = destinations[i];
-            const result_type aggregate = pairs[i].value;
-            if(cs[i].next_has_carry_in)
-            {
-                // The next batch continues the last segment from the current batch,
-                // combine two partial aggregates
-                aggregates_output[dst] = reduce_op(aggregate, leading_aggregates[flat_id * ItemsPerThread + i]);
-            }
-            else
-            {
-                // Overwrite the aggregate because the next batch starts with a different key
-                aggregates_output[dst] = aggregate;
-            }
+            reductions[segment_index] = rocprim::get<0>(wrapped_values[i]);
         }
     }
-}
 
-} // end of detail namespace
+    if(is_last_block && flat_thread_id == 0)
+    {
+        // TODO: Handle large indices
+        *unique_count = unique_prefix + unique_in_block;
+    }
+}
+} // namespace reduce_by_key
+
+} // namespace detail
 
 END_ROCPRIM_NAMESPACE
 
