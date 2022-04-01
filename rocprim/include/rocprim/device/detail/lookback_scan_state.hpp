@@ -23,9 +23,10 @@
 
 #include <type_traits>
 
+#include "../../functional.hpp"
 #include "../../intrinsics.hpp"
-#include "../../types.hpp"
 #include "../../type_traits.hpp"
+#include "../../types.hpp"
 
 #include "../../warp/detail/warp_reduce_crosslane.hpp"
 #include "../../warp/detail/warp_scan_crosslane.hpp"
@@ -454,6 +455,54 @@ inline hipError_t is_sleep_scan_state_used(bool& use_sleep)
     use_sleep = prop.gcnArch == 908 && asicRevision < 2;
     return hipSuccess;
 }
+
+template<class T, class LookbackScanState, class BinaryOp = ::rocprim::plus<T>>
+class offset_lookback_scan_prefix_op
+    : public lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>
+{
+private:
+    using base_type = lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>;
+
+    struct storage_type_
+    {
+        T block_reduction;
+        T exclusive_prefix;
+    };
+
+public:
+    using storage_type = detail::raw_storage<storage_type_>;
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE offset_lookback_scan_prefix_op(unsigned int       block_id,
+                                                                 LookbackScanState& state,
+                                                                 storage_type&      storage,
+                                                                 BinaryOp binary_op = BinaryOp())
+        : base_type(block_id, BinaryOp(std::move(binary_op)), state), storage_(storage)
+    {}
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE T operator()(T reduction)
+    {
+        auto prefix = base_type::operator()(reduction);
+        if(::rocprim::lane_id() == 0)
+        {
+            storage_.get().block_reduction  = std::move(reduction);
+            storage_.get().exclusive_prefix = prefix;
+        }
+        return prefix;
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_reduction() const
+    {
+        return storage_.get().block_reduction;
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_exclusive_prefix() const
+    {
+        return storage_.get().exclusive_prefix;
+    }
+
+private:
+    storage_type& storage_;
+};
 
 } // end of detail namespace
 
