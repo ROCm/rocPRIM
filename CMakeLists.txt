@@ -23,11 +23,11 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 cmake_policy(VERSION 3.16...3.21)
 
-# rocPRIM project
-project(rocprim LANGUAGES CXX)
-
 # Install prefix
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended onto install directories")
+
+# rocPRIM project
+project(rocprim LANGUAGES CXX)
 
 #Adding CMAKE_PREFIX_PATH
 list(APPEND CMAKE_PREFIX_PATH /opt/rocm)
@@ -57,6 +57,7 @@ endif()
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE CACHE BOOL "Add paths to linker search and installed rpath")
 
 set(BUILD_SHARED_LIBS OFF) # don't build client dependencies as shared
+set(ROCM_SYMLINK_LIBS OFF)
 if(NOT USE_HIP_CPU)
   # Get dependencies (required here to get rocm-cmake)
   include(cmake/Dependencies.cmake)
