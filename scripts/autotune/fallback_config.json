@@ -1,0 +1,38 @@
+{
+    "datatype_size_fallback": [
+        {
+            "datatype": "double",
+            "floating_point": true,
+            "size_fallback_lower": 6
+        },
+        {
+            "datatype": "float",
+            "floating_point": true,
+            "size_fallback_lower": 2,
+            "size_fallback_upper": 6
+        },
+        {
+            "datatype": "rocprim::half",
+            "floating_point": true,
+            "size_fallback_lower": 0,
+            "size_fallback_upper": 2
+        },
+        {
+            "datatype": "int64_t",
+            "floating_point": false,
+            "size_fallback_lower": 6
+        },
+        {
+            "datatype": "int",
+            "floating_point": false,
+            "size_fallback_lower": 2,
+            "size_fallback_upper": 6
+        },
+        {
+            "datatype": "int8_t",
+            "floating_point": true,
+            "size_fallback_lower": 0,
+            "size_fallback_upper": 2
+        }
+    ]
+}

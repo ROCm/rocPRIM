@@ -35,6 +35,28 @@ def tokenize_test_name(input_name, name_regex):
     data_dict = match.groupdict()
     return data_dict
 
+def translate_settings_to_cpp_metaprogramming(config_dict):
+    """
+    Translates the entry of the fallback configuration to cpp metaprograming idioms
+    """
+    
+    setting_list = []
+    begin = "std::enable_if<("
+    end = ")>"
+
+    for config_setting, value in config_dict.items():
+        if config_setting == "floating_point":
+            negation = "" if value else "!"
+            output = negation + "bool(rocprim::is_floating_point<Value>::value)"
+            setting_list.append(output)
+
+        elif config_setting == "size_fallback_lower":
+            setting_list.append(f"(sizeof(Value) > {value})")
+        elif config_setting == "size_fallback_upper":
+            setting_list.append(f"(sizeof(Value) <= {value})")
+    
+    return begin + " && ".join(setting_list) + end
+
 
 class BenchmarksOfArchitecture:
     def __init__(self, arch_name):
@@ -76,6 +98,9 @@ class Algorithm:
         self.name = algorithm_name
         self.architectures = {}
         self.configuration_lines = []
+        self.abs_path_to_script_dir=os.path.dirname(os.path.abspath(__file__))
+        self.abs_path_to_template=os.path.join(self.abs_path_to_script_dir, "config_template")
+        self.abs_path_to_fallback_config=os.path.join(self.abs_path_to_script_dir, "fallback_config.json")
     
     def architecture_exists(self, architecture_name):
         return architecture_name in self.architectures.keys()
@@ -105,10 +130,7 @@ class Algorithm:
 
         configuration= '\n'.join(self.configuration_lines)
 
-        abs_path_to_script_dir=os.path.dirname(os.path.abspath(__file__))
-        path_to_template=(os.path.join(abs_path_to_script_dir, "config_template"))
-
-        with open(path_to_template) as template_file:
+        with open(self.abs_path_to_template) as template_file:
             template_file_content = template_file.read()
             generated_config_file_content=template_file_content.format(guard=self.name.upper(), config_body=configuration)
         return generated_config_file_content
@@ -123,21 +145,45 @@ class Algorithm:
         for benchmarks_of_architecture in self.architectures.values():
             self.configuration_lines.append(self._create_base_case_for_arch(benchmarks_of_architecture))
             self.configuration_lines += self._create_specialized_cases_for_arch(benchmarks_of_architecture)
-        
+            self.configuration_lines += self._create_fallback_cases_non_fp_based_on_size_for_arch(benchmarks_of_architecture)
+
+
 class AlgorithmDeviceReduce(Algorithm):
     def _create_general_base_case(self):
         #Hardcode some configurations in case non of the specializations can be instantiated
-        return "template<unsigned int arch, class Value> struct default_reduce_config  : reduce_config<256, 4, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };"
+        return "template<unsigned int arch, class Value, class enable = void> struct default_reduce_config  : reduce_config<256, 4, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };"
 
     def _create_base_case_for_arch(self, arch):
         measurement = arch.base_config_case
-        return f"template<class Value> struct default_reduce_config<{arch.name}, Value>  : reduce_config<{measurement['block_size']}, {measurement['items_per_thread']}, ::rocprim::block_reduce_algorithm::using_warp_reduce> {{ }};"
+        return f"template<class Value> struct default_reduce_config<{arch.name}, Value>  :" +  self.__create_device_reduce_configuration_template(measurement)
 
     def _create_specialized_cases_for_arch(self, arch):
         out = []
-        for key, measurement in arch.specialized_config_cases.items():
-            out.append(f"template<> struct default_reduce_config<{arch.name}, {key}> : reduce_config<{measurement['block_size']}, {measurement['items_per_thread']}, ::rocprim::block_reduce_algorithm::using_warp_reduce> {{ }};")
+        for data_type, measurement in arch.specialized_config_cases.items():
+            out.append(f"template<> struct default_reduce_config<{arch.name}, {data_type}> :" + self.__create_device_reduce_configuration_template(measurement) )
         return out
+
+    def _create_fallback_cases_non_fp_based_on_size_for_arch(self, arch):
+        """
+        Generates fallback configuration based on the input present in the fallback_config.json
+        """
+        
+        out=[]
+        data=[]
+        with open(self.abs_path_to_fallback_config) as fallback_config_settings:
+            data = json.load(fallback_config_settings)
+        
+        data = data['datatype_size_fallback']
+        for fallback_settings_entry in data:
+            config_line = f"template<class Value> struct default_reduce_config<{arch.name}, Value, {translate_settings_to_cpp_metaprogramming(fallback_settings_entry)}> :"
+            measurement_entry = next((i for i in arch.specialized_config_cases.values() if i['datatype'] == fallback_settings_entry['datatype']), None)
+            if(measurement_entry != None):
+                config_line += self.__create_device_reduce_configuration_template(measurement_entry)
+                out.append(config_line)
+        return out
+
+    def __create_device_reduce_configuration_template(self, measurement):
+        return f" reduce_config<{measurement['block_size']}, {measurement['items_per_thread']}, ::rocprim::block_reduce_algorithm::using_warp_reduce> {{ }};"
 
 class AlgorithmFactory:
     def create_algorithm(self, algorithm_name):
