@@ -50,7 +50,7 @@ namespace detail
 template<unsigned int TargetArch, class Key, class Value>
 struct default_reduce_by_key_config
     : reduce_by_key_config<256,
-                           8,
+                           15,
                            block_load_method::block_load_transpose,
                            block_load_method::block_load_transpose>
 {};
