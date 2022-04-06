@@ -30,6 +30,9 @@ import re
 import argparse
 import os
 
+abs_path_to_script_dir=os.path.dirname(os.path.abspath(__file__))
+abs_path_to_fallback_config=os.path.join(abs_path_to_script_dir, "fallback_config.json")
+
 def tokenize_test_name(input_name, name_regex):
     match = re.search(name_regex, input_name)
     data_dict = match.groupdict()
@@ -98,9 +101,7 @@ class Algorithm:
         self.name = algorithm_name
         self.architectures = {}
         self.configuration_lines = []
-        self.abs_path_to_script_dir=os.path.dirname(os.path.abspath(__file__))
-        self.abs_path_to_template=os.path.join(self.abs_path_to_script_dir, "config_template")
-        self.abs_path_to_fallback_config=os.path.join(self.abs_path_to_script_dir, "fallback_config.json")
+
     
     def architecture_exists(self, architecture_name):
         return architecture_name in self.architectures.keys()
@@ -145,10 +146,14 @@ class Algorithm:
         for benchmarks_of_architecture in self.architectures.values():
             self.configuration_lines.append(self._create_base_case_for_arch(benchmarks_of_architecture))
             self.configuration_lines += self._create_specialized_cases_for_arch(benchmarks_of_architecture)
-            self.configuration_lines += self._create_fallback_cases_non_fp_based_on_size_for_arch(benchmarks_of_architecture)
+            self.configuration_lines += self._create_fallback_cases(benchmarks_of_architecture)
 
 
 class AlgorithmDeviceReduce(Algorithm):
+    def __init__(self, algorithm_name):
+        self.abs_path_to_template=os.path.join(abs_path_to_script_dir, "config_template")
+        Algorithm.__init__(self, algorithm_name)
+
     def _create_general_base_case(self):
         #Hardcode some configurations in case non of the specializations can be instantiated
         return "template<unsigned int arch, class Value, class enable = void> struct default_reduce_config  : reduce_config<256, 4, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };"
@@ -163,14 +168,14 @@ class AlgorithmDeviceReduce(Algorithm):
             out.append(f"template<> struct default_reduce_config<{arch.name}, {data_type}> :" + self.__create_device_reduce_configuration_template(measurement) )
         return out
 
-    def _create_fallback_cases_non_fp_based_on_size_for_arch(self, arch):
+    def _create_fallback_cases(self, arch):
         """
         Generates fallback configuration based on the input present in the fallback_config.json
         """
         
         out=[]
         data=[]
-        with open(self.abs_path_to_fallback_config) as fallback_config_settings:
+        with open(abs_path_to_fallback_config) as fallback_config_settings:
             data = json.load(fallback_config_settings)
         
         data = data['datatype_size_fallback']
@@ -245,13 +250,17 @@ def main():
     parser = argparse.ArgumentParser(description="Tool for generating optimized launch parameters for rocPRIM based on benchmark results")
     parser.add_argument('-b','--benchmark_files', nargs='+', help="Benchmarked architectures listed int the form <arch-id>:<path_to_benchmark>.json")
     parser.add_argument("-p", "--out_basedir", type=str, help="Base dir for the output files, for each algorithm a new file will be created in this directory", required=True)
+    parser.add_argument("-c", "--fallback_configuration", type=str, help="Absolute path to configuration file for fallbacks for not tested datatypes")
     args = parser.parse_args()
+
+    if args.fallback_configuration != None:
+        abs_path_to_fallback_config = args.fallback_configuration
 
     benchmark_manager = BenchmarkDataManager()
     for benchmark_run_file_and_arch in args.benchmark_files:
         arch_id, bench_path = benchmark_run_file_and_arch.split(":")
         benchmark_manager.add_run(bench_path, arch_id)
-
+    
     benchmark_manager.write_configs_to_files(args.out_basedir)
 
 if __name__ == '__main__':
