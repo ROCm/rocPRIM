@@ -50,7 +50,7 @@ build_freorg_bkwdcomp=true
 # check if we have a modern version of getopt that can handle whitespace and long parameters
 getopt -T
 if [[ $? -eq 4 ]]; then
-    GETOPT_PARSE=$(getopt --name "${0}" --longoptions help,install,clients,debug,hip-clang,test,benchmark,package,relocatable,relwithdebinfo,codecoverage,address-sanitizer,rm-legacy-include-dir --options hicdtbpgrk -- "$@")
+    GETOPT_PARSE=$(getopt --name "${0}" --longoptions help,install,clients,debug,hip-clang,test,benchmark,package,relocatable,relwithdebinfo,codecoverage,address-sanitizer,benchmark-config-tuning,rm-legacy-include-dir --options hicdtbpgrk -- "$@")
 else
     echo "Need a new version of getopt"
     exit 1
@@ -113,6 +113,9 @@ while true; do
         --address-sanitizer)
             build_address_sanitizer=true
             shift ;;
+        --benchmark-config-tuning)
+            enable_benchmark_config_tuning=true
+            shift ;;	    
         --rm-legacy-include-dir)
             build_freorg_bkwdcomp=false
             shift ;;
@@ -159,6 +162,11 @@ if [[ "${build_benchmark}" == true ]]; then
     benchmark="ON"
 fi
 
+benchmark_config_tuning="OFF"
+if [[ "${enable_benchmark_config_tuning}" == true ]]; then
+    benchmark_config_tuning="ON"
+fi
+
 clients="OFF"
 if [[ "${build_clients}" == true ]]; then
     clients="ON"
@@ -190,11 +198,12 @@ if [[ "${build_relocatable}" == true ]]; then
     CXX=${rocm_path}/bin/${compiler} ${cmake_executable} ${cmake_common_options} \
        -DCMAKE_INSTALL_PREFIX=${rocm_path} -DBUILD_BENCHMARK=${benchmark} \
        -DCMAKE_PREFIX_PATH="${rocm_path}  ${rocm_path}/hip" \
-       -DBUILD_BENCHMARK=${benchmark} -DBUILD_TEST=${clients} \
+       -DBUILD_BENCHMARK=${benchmark} -DBENCHMARK_CONFIG_TUNING=${benchmark_config_tuning1} \
+       -DBUILD_TEST=${clients} \
        -DCMAKE_MODULE_PATH="${rocm_path}/lib/cmake/hip ${rocm_path}/hip/cmake" ../../.     # or cmake-gui ../.
 else
     CXX=${rocm_path}/bin/${compiler} ${cmake_executable} ${cmake_common_options} -DBUILD_BENCHMARK=${benchmark} \
-       -DBUILD_TEST=${clients} -DCMAKE_BUILD_TYPE=${build_type} -DBUILD_CODE_COVERAGE=${codecoverage}  ../../. # or cmake-gui ../.
+	-DBENCHMARK_CONFIG_TUNING=${benchmark_config_tuning} -DBUILD_TEST=${clients} -DCMAKE_BUILD_TYPE=${build_type} -DBUILD_CODE_COVERAGE=${codecoverage}  ../../. # or cmake-gui ../.
 fi
 
 # Build

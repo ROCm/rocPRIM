@@ -35,6 +35,7 @@ list(APPEND CMAKE_PREFIX_PATH /opt/rocm)
 # Build options
 option(BUILD_TEST "Build tests (requires googletest)" OFF)
 option(BUILD_BENCHMARK "Build benchmarks" OFF)
+option(BENCHMARK_CONFIG_TUNING "Enable benchmark config tuning" OFF)
 option(BUILD_EXAMPLE "Build examples" OFF)
 option(USE_HIP_CPU "Prefer HIP-CPU runtime instead of HW acceleration" OFF)
 # Disables building tests, benchmarks, examples
