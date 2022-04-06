@@ -46,17 +46,19 @@ def translate_settings_to_cpp_metaprogramming(config_dict):
     setting_list = []
     begin = "std::enable_if<("
     end = ")>"
+    if "floating_point" in config_dict.keys():
+        negation = "" if config_dict['floating_point'] else "!"
+        output = negation + "bool(rocprim::is_floating_point<Value>::value)"
+        setting_list.append(output)
 
-    for config_setting, value in config_dict.items():
-        if config_setting == "floating_point":
-            negation = "" if value else "!"
-            output = negation + "bool(rocprim::is_floating_point<Value>::value)"
-            setting_list.append(output)
+    for config_setting, value in config_dict['sizeof'].items():
 
-        elif config_setting == "size_fallback_lower":
+        if config_setting == "min":
             setting_list.append(f"(sizeof(Value) > {value})")
-        elif config_setting == "size_fallback_upper":
+        elif config_setting == "max_inclusive":
             setting_list.append(f"(sizeof(Value) <= {value})")
+        else:
+            print(f"WARNING: {config_setting} is not known")
     
     return begin + " && ".join(setting_list) + end
 
@@ -181,7 +183,7 @@ class AlgorithmDeviceReduce(Algorithm):
         data = data['datatype_size_fallback']
         for fallback_settings_entry in data:
             config_line = f"template<class Value> struct default_reduce_config<{arch.name}, Value, {translate_settings_to_cpp_metaprogramming(fallback_settings_entry)}> :"
-            measurement_entry = next((i for i in arch.specialized_config_cases.values() if i['datatype'] == fallback_settings_entry['datatype']), None)
+            measurement_entry = next((i for i in arch.specialized_config_cases.values() if i['datatype'] == fallback_settings_entry['based_on']['datatype']), None)
             if(measurement_entry != None):
                 config_line += self.__create_device_reduce_configuration_template(measurement_entry)
                 out.append(config_line)
