@@ -1,38 +1,62 @@
 {
     "datatype_size_fallback": [
         {
-            "datatype": "double",
-            "floating_point": true,
-            "size_fallback_lower": 6
+            "based_on": {
+                "datatype":"double"
+            },
+            "sizeof": {
+                 "min": 4
+            },
+            "floating_point": true
         },
         {
-            "datatype": "float",
-            "floating_point": true,
-            "size_fallback_lower": 2,
-            "size_fallback_upper": 6
+            "based_on": {
+                "datatype":"float"
+            },
+            "sizeof": {
+                 "max_inclusive": 4,
+                 "min": 2
+            },
+             "floating_point": true
         },
         {
-            "datatype": "rocprim::half",
-            "floating_point": true,
-            "size_fallback_lower": 0,
-            "size_fallback_upper": 2
+            "based_on": {
+                "datatype":"rocprim::half"
+            },
+            "sizeof": {
+                 "max_inclusive": 2,
+                 "min": 0
+            },
+             "floating_point": true
         },
         {
-            "datatype": "int64_t",
-            "floating_point": false,
-            "size_fallback_lower": 6
+            "based_on": {
+                "datatype":"int64_t"
+            },
+            "sizeof": {
+                 "min": 4
+            },
+            "floating_point": false
         },
         {
-            "datatype": "int",
-            "floating_point": false,
-            "size_fallback_lower": 2,
-            "size_fallback_upper": 6
+            "based_on": {
+                "datatype":"int"
+            },
+            "sizeof": {
+                 "max_inclusive": 4,
+                 "min": 2
+            },
+             "floating_point": false
         },
         {
-            "datatype": "int8_t",
-            "floating_point": true,
-            "size_fallback_lower": 0,
-            "size_fallback_upper": 2
+            "based_on": {
+                "datatype":"int8_t"
+            },
+            "sizeof": {
+                 "max_inclusive": 2,
+                 "min": 0
+            },
+             "floating_point": false
         }
     ]
 }
