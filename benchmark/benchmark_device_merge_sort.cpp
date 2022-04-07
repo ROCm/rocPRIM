@@ -265,7 +265,7 @@ struct name_prefix_fn
 {
     auto operator()()
     {
-        return std::string {"sort_pairs<"} + Traits<Key>::name + ", " + Traits<Value>::name;
+        return std::string {"sort_pairs<"} + Traits<Key>::name() + ", " + Traits<Value>::name();
     };
 };
 
@@ -274,7 +274,7 @@ struct name_prefix_fn<Key, rp::empty_type>
 {
     auto operator()()
     {
-        return std::string {"sort_keys<"} + Traits<Key>::name;
+        return std::string {"sort_keys<"} + Traits<Key>::name();
     };
 };
 
