@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +36,14 @@ stages:
 
 variables:
   PACKAGE_DIR: $BUILD_DIR/package
+
+.main_or_manual:
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "develop_stream" || $CI_COMMIT_REF_NAME == "develop"
+           || $CI_COMMIT_REF_NAME == "master"'
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+      allow_failure: true
 
 .deps:doc:
   stage: test:doc
@@ -144,12 +152,6 @@ build:benchmark:
   extends:
     - .cmake-latest
     - .gpus:rocm-gpus
-  only:
-    - ci-benchmark-extend
-    - internal_benchmark
-    - develop_stream
-    - develop
-    - master
   script:
     - mkdir build
     - cd build
@@ -220,20 +222,14 @@ test:doc:
     - cd doc
     - doxygen Doxyfile
 
-benchmark_view:
+run_benchmark:
   stage: benchmark
   extends:
     - .cmake-latest
     - .gpus:rocm
+    - .main_or_manual
   needs:
     - build:benchmark
-  when: manual
-  only:
-    - ci-benchmark-extend
-    - internal_benchmark
-    - develop_stream
-    - develop
-    - master
   script:
     - cmake
       -D BENCHMARK_BINARY_DIR=build/benchmark
