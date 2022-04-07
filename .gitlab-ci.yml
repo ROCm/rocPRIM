@@ -37,14 +37,6 @@ stages:
 variables:
   PACKAGE_DIR: $BUILD_DIR/package
 
-.main_or_manual:
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "develop_stream" || $CI_COMMIT_REF_NAME == "develop"
-           || $CI_COMMIT_REF_NAME == "master"'
-    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
-      when: manual
-      allow_failure: true
-
 .deps:doc:
   stage: test:doc
   before_script:
@@ -227,9 +219,12 @@ run_benchmark:
   extends:
     - .cmake-latest
     - .gpus:rocm
-    - .main_or_manual
   needs:
     - build:benchmark
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+      allow_failure: true
   script:
     - cmake
       -D BENCHMARK_BINARY_DIR=build/benchmark
