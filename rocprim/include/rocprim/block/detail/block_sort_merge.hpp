@@ -36,45 +36,6 @@ BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
-    // Details of the Merge-Path Algorithm can be found in:
-    // S. Odeh, O. Green, Z. Mwassi, O. Shmueli, Y. Birk, " Merge Path - Parallel
-    // Merging Made Simple", Multithreaded Architectures and Applications (MTAAP)
-    // Workshop, IEEE 26th International Parallel & Distributed Processing
-    // Symposium (IPDPS), 2012
-    template <typename KeyT,
-              typename KeyIteratorT,
-              typename OffsetT,
-              typename BinaryPred>
-    ROCPRIM_DEVICE
-    OffsetT merge_path(KeyIteratorT keys1,
-                       KeyIteratorT keys2,
-                       const OffsetT keys1_count,
-                       const OffsetT keys2_count,
-                       const OffsetT diag,
-                       BinaryPred binary_pred)
-    {
-        OffsetT keys1_begin = diag < keys2_count ? 0 : diag - keys2_count;
-        OffsetT keys1_end   = rocprim::min(diag, keys1_count);
-
-        while (keys1_begin < keys1_end)
-        {
-            const OffsetT mid = midpoint<OffsetT>(keys1_begin, keys1_end);
-            const KeyT key1   = keys1[mid];
-            const KeyT key2   = keys2[diag - 1 - mid];
-            bool pred   = binary_pred(key2, key1);
-
-            if (pred)
-            {
-                keys1_end = mid;
-            }
-            else
-            {
-                keys1_begin = mid + 1;
-            }
-        }
-        return keys1_begin;
-    }
-
     template <typename KeyT, typename KeyIteratorT, typename CompareOp, unsigned int ItemsPerThread>
     ROCPRIM_DEVICE
     void merge_serial(KeyIteratorT keys_shared,

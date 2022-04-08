@@ -42,7 +42,6 @@ namespace detail
               unsigned int MergeImplMPPartitionBlockSize,
               unsigned int MergeImplMPBlockSize,
               unsigned int MergeImplMPItemsPerThread,
-              bool         MergeImplMPSkipReg,
               unsigned int MinInputSizeMergepath>
     struct merge_sort_config_impl
     {
@@ -51,7 +50,6 @@ namespace detail
         using merge_mergepath_partition_config = kernel_config<MergeImplMPPartitionBlockSize, 1>;
         using merge_mergepath_config
             = kernel_config<MergeImplMPBlockSize, MergeImplMPItemsPerThread>;
-        static constexpr bool         merge_mergepath_skipreg  = MergeImplMPSkipReg;
         static constexpr unsigned int min_input_size_mergepath = MinInputSizeMergepath;
     };
 }
@@ -64,7 +62,6 @@ namespace detail
 /// \tparam MergeImplMPPartitionBlockSize - block size of the partition kernel in the block merge step using mergepath impl
 /// \tparam MergeImplMPBlockSize - block size in the block merge step using mergepath impl
 /// \tparam MergeImplMPItemsPerThread - ItemsPerThread in the block merge step using mergepath impl
-/// \tparam MergeImplMPSkipReg - Skip registers for values in the block merge step using mergepath impl
 /// \tparam MinInputSizeMergepath - breakpoint of input-size to use mergepath impl for block merge step
 template <unsigned int MergeImpl1BlockSize           = 512,
           unsigned int SortBlockSize                 = MergeImpl1BlockSize,
@@ -72,7 +69,6 @@ template <unsigned int MergeImpl1BlockSize           = 512,
           unsigned int MergeImplMPPartitionBlockSize = 128,
           unsigned int MergeImplMPBlockSize          = 128,
           unsigned int MergeImplMPItemsPerThread     = SortBlockSize * SortItemsPerThread / MergeImplMPBlockSize,
-          bool         MergeImplMPSkipReg            = false,
           unsigned int MinInputSizeMergepath         = 200000>
 using merge_sort_config = detail::merge_sort_config_impl<SortBlockSize,
                                                          SortItemsPerThread,
@@ -80,7 +76,6 @@ using merge_sort_config = detail::merge_sort_config_impl<SortBlockSize,
                                                          MergeImplMPPartitionBlockSize,
                                                          MergeImplMPBlockSize,
                                                          MergeImplMPItemsPerThread,
-                                                         MergeImplMPSkipReg,
                                                          MinInputSizeMergepath>;
 
 namespace detail

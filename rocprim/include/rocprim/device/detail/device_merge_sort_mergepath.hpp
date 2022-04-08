@@ -34,6 +34,7 @@
 #include "../../detail/various.hpp"
 
 #include "device_merge_sort.hpp"
+#include "device_merge.hpp"
 #include "../../block/detail/block_sort_merge.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -90,7 +91,6 @@ namespace detail
         unsigned int BlockSize,
         unsigned int ItemsPerThread,
         bool IsIncompleteTile,
-        bool SkipReg,
         class KeysInputIterator,
         class KeysOutputIterator,
         class ValuesInputIterator,
@@ -104,9 +104,14 @@ namespace detail
                                   ValuesInputIterator values_input,
                                   ValuesOutputIterator values_output,
                                   const OffsetT input_size,
-                                  const unsigned int sorted_block_size,
+                                  const OffsetT sorted_block_size,
                                   BinaryFunction compare_function,
-                                  const OffsetT* merge_partitions) -> std::enable_if_t<!SkipReg, void>
+                                  const OffsetT* merge_partitions) -> std::enable_if_t<
+            (rocprim::is_floating_point<
+                 typename std::iterator_traits<ValuesInputIterator>::value_type>::value
+             || std::is_integral<
+                 typename std::iterator_traits<ValuesInputIterator>::value_type>::value),
+            void>
     {
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
         using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
@@ -127,10 +132,10 @@ namespace detail
         auto& keys_shared = storage.keys.get();
         auto& values_shared = storage.values.get();
 
-        const unsigned short flat_id = ::rocprim::detail::block_thread_id<0>();
-        const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
+        const unsigned short flat_id = block_thread_id<0>();
+        const unsigned int flat_block_id = block_id<0>();
 
-        const OffsetT partition_beg = merge_partitions[flat_block_id + 0];
+        const OffsetT partition_beg = merge_partitions[flat_block_id];
         const OffsetT partition_end = merge_partitions[flat_block_id + 1];
 
         const unsigned int merged_tiles_number = sorted_block_size / items_per_tile;
@@ -177,12 +182,12 @@ namespace detail
 
         const unsigned int diag0_local = rocprim::min(num_keys1 + num_keys2, ItemsPerThread * flat_id);
 
-        const unsigned int keys1_beg_local = merge_path<key_type>(keys_shared,
-                                                                  &keys_shared[num_keys1],
-                                                                  num_keys1,
-                                                                  num_keys2,
-                                                                  diag0_local,
-                                                                  compare_function);
+        const unsigned int keys1_beg_local = merge_path(keys_shared,
+                                                        &keys_shared[num_keys1],
+                                                        num_keys1,
+                                                        num_keys2,
+                                                        diag0_local,
+                                                        compare_function);
         const unsigned int keys1_end_local = num_keys1;
         const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
         const unsigned int keys2_end_local = num_keys2;
@@ -231,7 +236,6 @@ namespace detail
         unsigned int BlockSize,
         unsigned int ItemsPerThread,
         bool IsIncompleteTile,
-        bool SkipReg,
         class KeysInputIterator,
         class KeysOutputIterator,
         class ValuesInputIterator,
@@ -245,9 +249,14 @@ namespace detail
                                  ValuesInputIterator values_input,
                                  ValuesOutputIterator values_output,
                                  const OffsetT input_size,
-                                 const unsigned int sorted_block_size,
+                                 const OffsetT sorted_block_size,
                                  BinaryFunction compare_function,
-                                 const OffsetT* merge_partitions) -> std::enable_if_t<SkipReg, void>
+                                 const OffsetT* merge_partitions) -> std::enable_if_t<
+            (!rocprim::is_floating_point<
+                 typename std::iterator_traits<ValuesInputIterator>::value_type>::value
+             && !std::is_integral<
+                 typename std::iterator_traits<ValuesInputIterator>::value_type>::value),
+            void>
     {
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
         using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
@@ -268,8 +277,8 @@ namespace detail
         auto& keys_shared = storage.keys.get();
         auto& values_shared = storage.values.get();
 
-        const unsigned short flat_id = ::rocprim::detail::block_thread_id<0>();
-        const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
+        const unsigned short flat_id = block_thread_id<0>();
+        const unsigned int flat_block_id = block_id<0>();
 
         const OffsetT partition_beg = merge_partitions[flat_block_id + 0];
         const OffsetT partition_end = merge_partitions[flat_block_id + 1];
@@ -310,12 +319,12 @@ namespace detail
 
         const unsigned int diag0_local = rocprim::min(num_keys1 + num_keys2, ItemsPerThread * flat_id);
 
-        const unsigned int keys1_beg_local = merge_path<key_type>(keys_shared,
-                                                                  &keys_shared[num_keys1],
-                                                                  num_keys1,
-                                                                  num_keys2,
-                                                                  diag0_local,
-                                                                  compare_function);
+        const unsigned int keys1_beg_local = merge_path(keys_shared,
+                                                        &keys_shared[num_keys1],
+                                                        num_keys1,
+                                                        num_keys2,
+                                                        diag0_local,
+                                                        compare_function);
         const unsigned int keys1_end_local = num_keys1;
         const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
         const unsigned int keys2_end_local = num_keys2;
@@ -346,13 +355,14 @@ namespace detail
                 for (unsigned int item = 0; item < ItemsPerThread; ++item)
                 {
                     unsigned int idx = BlockSize * item + threadIdx.x;
-                    if (idx < num_keys1 + num_keys2)
+
+                    if(idx < num_keys1)
                     {
-                        if(idx < num_keys1){
-                            __builtin_memcpy(&values_shared[idx], &input1[idx], sizeof(value_type));
-                        }else{
-                            __builtin_memcpy(&values_shared[idx], &input2[idx - num_keys1], sizeof(value_type));
-                        }
+                        __builtin_memcpy(&values_shared[idx], &input1[idx], sizeof(value_type));
+                    }
+                    else if (idx - num_keys1 < num_keys2)
+                    {
+                        __builtin_memcpy(&values_shared[idx], &input2[idx - num_keys1], sizeof(value_type));
                     }
                 }
 
@@ -363,9 +373,12 @@ namespace detail
                 for (unsigned int item = 0; item < ItemsPerThread; ++item)
                 {
                     unsigned int idx = BlockSize * item + threadIdx.x;
-                    if(idx < num_keys1){
+                    if(idx < num_keys1)
+                    {
                         __builtin_memcpy(&values_shared[idx], &input1[idx], sizeof(value_type));
-                    }else{
+                    }
+                    else
+                    {
                         __builtin_memcpy(&values_shared[idx], &input2[idx - num_keys1], sizeof(value_type));
                     }
                 }
@@ -397,7 +410,6 @@ namespace detail
     template<
         unsigned int BlockSize,
         unsigned int ItemsPerThread,
-        bool SkipReg,
         class KeysInputIterator,
         class KeysOutputIterator,
         class ValuesInputIterator,
@@ -411,7 +423,7 @@ namespace detail
                                  ValuesInputIterator values_input,
                                  ValuesOutputIterator values_output,
                                  const OffsetT input_size,
-                                 unsigned int sorted_block_size,
+                                 const OffsetT sorted_block_size,
                                  BinaryFunction compare_function,
                                  const OffsetT* merge_partitions)
     {
@@ -419,7 +431,7 @@ namespace detail
         const unsigned int flat_block_id = block_id<0>();
         if(flat_block_id == (input_size / items_per_tile))
         {
-            block_merge_process_tile<BlockSize, ItemsPerThread, true, SkipReg>(keys_input,
+            block_merge_process_tile<BlockSize, ItemsPerThread, true>(keys_input,
                                                                       keys_output,
                                                                       values_input,
                                                                       values_output,
@@ -430,7 +442,7 @@ namespace detail
         }
         else
         {
-            block_merge_process_tile<BlockSize, ItemsPerThread, false, SkipReg>(keys_input,
+            block_merge_process_tile<BlockSize, ItemsPerThread, false>(keys_input,
                                                                        keys_output,
                                                                        values_input,
                                                                        values_output,

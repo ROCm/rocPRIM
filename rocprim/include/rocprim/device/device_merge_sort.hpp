@@ -27,6 +27,7 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
+#include "detail/device_merge.hpp"
 #include "detail/device_merge_sort.hpp"
 #include "detail/device_merge_sort_mergepath.hpp"
 #include "../block/detail/block_sort_merge.hpp"
@@ -97,7 +98,6 @@ void block_merge_kernel(KeysInputIterator keys_input,
 template<
     unsigned int BlockSize,
     unsigned int ItemsPerThread,
-    bool SkipReg,
     class KeysInputIterator,
     class KeysOutputIterator,
     class ValuesInputIterator,
@@ -116,7 +116,7 @@ void block_merge_kernel(KeysInputIterator keys_input,
                         BinaryFunction compare_function,
                         const OffsetT* merge_partitions)
 {
-    block_merge_kernel_impl<BlockSize, ItemsPerThread, SkipReg>(keys_input,
+    block_merge_kernel_impl<BlockSize, ItemsPerThread>(keys_input,
                                                        keys_output,
                                                        values_input,
                                                        values_output,
@@ -154,12 +154,12 @@ void block_merge_kernel(KeysInputIterator keys_input,
 
 template <unsigned int BlockSize, // BlockSize of the partition kernel
           unsigned int ItemsPerTile, // ItemsPerTile of the block merge kernel
+          typename KeysInputIterator,
           typename OffsetT,
-          typename CompareOpT,
-          typename KeyT>
+          typename CompareOpT>
 ROCPRIM_KERNEL
 __launch_bounds__(BlockSize)
-void device_mergepath_partition_kernel(const KeyT *keys,
+void device_mergepath_partition_kernel(KeysInputIterator keys,
                              const OffsetT input_size,
                              const unsigned int num_partitions,
                              OffsetT *merge_partitions,
@@ -188,12 +188,12 @@ void device_mergepath_partition_kernel(const KeyT *keys,
 
     const OffsetT partition_at = rocprim::min<OffsetT>(keys2_end - keys1_beg, ItemsPerTile * local_tile_id);
 
-    const OffsetT partition_diag = ::rocprim::detail::merge_path<KeyT>(keys + keys1_beg,
-                                                              keys + keys2_beg,
-                                                              keys1_end - keys1_beg,
-                                                              keys2_end - keys2_beg,
-                                                              partition_at,
-                                                              compare_op);
+    const OffsetT partition_diag = ::rocprim::detail::merge_path(keys + keys1_beg,
+                                                                 keys + keys2_beg,
+                                                                 keys1_end - keys1_beg,
+                                                                 keys2_end - keys2_beg,
+                                                                 partition_at,
+                                                                 compare_op);
 
     merge_partitions[partition_id] = keys1_beg + partition_diag;
 }
@@ -316,10 +316,10 @@ hipError_t merge_sort_impl(void * temporary_storage,
     {
         temporary_store = !temporary_store;
 
-        const auto merge_step = [&](const key_type*   keys_input_,
-                                    key_type*         keys_output_,
-                                    const value_type* values_input_,
-                                    value_type*       values_output_) -> hipError_t {
+        const auto merge_step = [&](auto keys_input_,
+                                    auto keys_output_,
+                                    auto values_input_,
+                                    auto values_output_) -> hipError_t {
             if(use_mergepath)
             {
                 if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
@@ -331,7 +331,7 @@ hipError_t merge_sort_impl(void * temporary_storage,
 
                 if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
                 hipLaunchKernelGGL(
-                    HIP_KERNEL_NAME(block_merge_kernel<merge_mergepath_block_size, merge_mergepath_items_per_thread, config::merge_mergepath_skipreg>),
+                    HIP_KERNEL_NAME(block_merge_kernel<merge_mergepath_block_size, merge_mergepath_items_per_thread>),
                     dim3(merge_mergepath_number_of_blocks), dim3(merge_mergepath_block_size), 0, stream,
                     keys_input_, keys_output_, values_input_, values_output_,
                     size, block, compare_function, d_merge_partitions
