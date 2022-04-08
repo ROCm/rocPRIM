@@ -23,7 +23,7 @@
 function(add_configured_source)
   cmake_parse_arguments(PARSE_ARGV 0 ARG "" "INPUT;TARGET;OUTPUT_PATTERN" "NAMES;VALUES")
   list(LENGTH ARG_NAMES NAMES_LEN)
-  list(LENGTH ARG_LISTS VALS_LEN)
+  list(LENGTH ARG_VALUES VALS_LEN)
   if (NOT NAMES_LEN EQUAL VALS_LEN)
     message("NAMES_LEN: ${NAMES_LEN}, VALS_LEN: ${VALS_LEN}")
     message(FATAL_ERROR "The same number of names and values must be provided!")
