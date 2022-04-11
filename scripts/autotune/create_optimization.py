@@ -97,11 +97,12 @@ class Algorithm:
     the configuration file
     """
 
-    def __init__(self, algorithm_name):
+    def __init__(self, algorithm_name, abs_path_to_script_dir, abs_path_to_fallback):
         self.name = algorithm_name
         self.architectures = {}
         self.configuration_lines = []
-
+        self.abs_path_to_script_dir = abs_path_to_script_dir
+        self.abs_path_to_fallback = abs_path_to_fallback
     
     def architecture_exists(self, architecture_name):
         return architecture_name in self.architectures.keys()
@@ -150,9 +151,10 @@ class Algorithm:
 
 
 class AlgorithmDeviceReduce(Algorithm):
-    def __init__(self, algorithm_name):
-        self.abs_path_to_template=os.path.join(benchmark_manager.path_to_script_dir, "config_template")
-        Algorithm.__init__(self, algorithm_name)
+    def __init__(self, algorithm_name, abs_path_to_script_dir, abs_path_to_fallback):
+        Algorithm.__init__(self, algorithm_name, abs_path_to_script_dir, abs_path_to_fallback)
+        self.abs_path_to_template=os.path.join(self.abs_path_to_script_dir, "config_template")
+
 
     def _create_general_base_case(self):
         #Hardcode some configurations in case non of the specializations can be instantiated
@@ -175,7 +177,7 @@ class AlgorithmDeviceReduce(Algorithm):
         
         out=[]
         data=[]
-        with open(benchmark_manager.path_to_fallback_config) as fallback_config_settings:
+        with open(self.abs_path_to_fallback) as fallback_config_settings:
             data = json.load(fallback_config_settings)
         
         data = data['datatype_size_fallback']
@@ -191,9 +193,9 @@ class AlgorithmDeviceReduce(Algorithm):
         return f" reduce_config<{measurement['block_size']}, {measurement['items_per_thread']}, ::rocprim::block_reduce_algorithm::using_warp_reduce> {{ }};"
 
 class AlgorithmFactory:
-    def create_algorithm(self, algorithm_name):
+    def create_algorithm(self, algorithm_name, abs_path_to_script_dir, abs_path_to_fallback):
         if algorithm_name == 'device_reduce':
-            return AlgorithmDeviceReduce(algorithm_name)
+            return AlgorithmDeviceReduce(algorithm_name, abs_path_to_script_dir, abs_path_to_fallback)
         else:
             raise(KeyError)
 
@@ -229,7 +231,7 @@ class BenchmarkDataManager:
                 outfile.write(config)
 
     def add_new_algorithm(self, algo_name):
-        self.algorithms[algo_name] = self.algo_factory.create_algorithm(algo_name)
+        self.algorithms[algo_name] = self.algo_factory.create_algorithm(algo_name, self.abs_path_to_script_dir, self.abs_path_to_fallback_config)
 
     def algorithm_exists(self, algo_name):
         return algo_name in self.algorithms.keys()
