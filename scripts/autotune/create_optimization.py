@@ -149,6 +149,10 @@ class Algorithm:
             self.configuration_lines += self._create_specialized_cases_for_arch(benchmarks_of_architecture)
             self.configuration_lines += self._create_fallback_cases(benchmarks_of_architecture)
 
+    def get_best_case_of_datatype(self, arch, datatype):
+        for best_configuration_case in arch.specialized_config_cases.values():
+            if best_configuration_case['datatype']  == datatype:
+                return best_configuration_case
 
 class AlgorithmDeviceReduce(Algorithm):
     def __init__(self, algorithm_name, abs_path_to_script_dir, abs_path_to_fallback):
@@ -179,14 +183,20 @@ class AlgorithmDeviceReduce(Algorithm):
         data=[]
         with open(self.abs_path_to_fallback) as fallback_config_settings:
             data = json.load(fallback_config_settings)
+        #measurement_entry = next((i for i in arch.specialized_config_cases.values() if i['datatype'] == fallback_settings_entry['based_on']['datatype']), None)
         
         data = data['fallback_cases']
         for fallback_settings_entry in data:
             config_line = f"template<class Value> struct default_reduce_config<{arch.name}, Value, {translate_settings_to_cpp_metaprogramming(fallback_settings_entry)}> :"
-            measurement_entry = next((i for i in arch.specialized_config_cases.values() if i['datatype'] == fallback_settings_entry['based_on']['datatype']), None)
-            if(measurement_entry != None):
-                config_line += self.__create_device_reduce_configuration_template(measurement_entry)
-                out.append(config_line)
+            if('datatype' in fallback_settings_entry['based_on'].keys()):
+                measurement_entry = self.get_best_case_of_datatype(arch, fallback_settings_entry['based_on']['datatype'])
+                if(measurement_entry != None):
+                    config_line += self.__create_device_reduce_configuration_template(measurement_entry)
+                    out.append(config_line)
+                else:
+                    print(f"WARNING: No measurement found for creating fallback configuration entry for {fallback_settings_entry['based_on']['datatype']}")
+            else:
+                print(f"WARNING: Currently only fallbacks based on datatype are implemented")
         return out
 
     def __create_device_reduce_configuration_template(self, measurement):
