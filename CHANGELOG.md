@@ -2,7 +2,12 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [rocPRIM-2.10.13 for ROCm 5.1.0]
+## [Unreleased rocPRIM-2.10.14 for ROCm 5.2.0]
+### Added
+- Packages for tests and benchmark executable on all supported OSes using CPack.
+- Added File/Folder Reorg Changes and Enabled Backward compatibility support using wrapper headers.
+
+## [Released rocPRIM-2.10.13 for ROCm 5.1.0]
 ### Fixed
 - Fixed radix sort int64_t bug introduced in [2.10.11]
 ### Added
@@ -13,7 +18,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 ### Known issues
 - device_segmented_radix_sort unit test failing for HIP on Windows
 
-## [Unreleased rocPRIM-2.10.12 for ROCm 5.0.0]
+## [Released rocPRIM-2.10.12 for ROCm 5.0.0]
 ### Fixed
 - Enable bfloat16 tests and reduce threshold for bfloat16
 - Fix device scan limit_size feature
@@ -41,7 +46,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - device_segmented_radix_sort, device_scan unit tests failing for HIP on Windows
 - ReduceEmptyInput cause random faulire with bfloat16
 
-## [Unreleased rocPRIM-2.10.11 for ROCm 4.5.0]
+## [rocPRIM-2.10.11 for ROCm 4.5.0]
 ### Added
 - Initial HIP on Windows support. See README for instructions on how to build and install.
 - bfloat16 support added.
@@ -53,7 +58,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 ### Deprecated
 - The warp_size() function is now deprecated; please switch to host_warp_size() and device_warp_size() for host and device references respectively.
 
-## [Unreleased rocPRIM-2.10.11 for ROCm 4.4.0]
+## [rocPRIM-2.10.11 for ROCm 4.4.0]
 ### Added
 - Code coverage tools build option
 - Address sanitizer build option
@@ -65,7 +70,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 ### Deprecated
 - The warp_size() function is now deprecated; please switch to host_warp_size() and device_warp_size() for host and device references respectively.
 
-## [Unreleased rocPRIM-2.10.10 for ROCm 4.3.0]
+## [rocPRIM-2.10.10 for ROCm 4.3.0]
 ### Fixed
 - Bugfix & minor performance improvement for merge_sort when input and output storage are the same.
 ### Added
