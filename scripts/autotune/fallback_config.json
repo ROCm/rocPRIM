@@ -1,5 +1,5 @@
 {
-    "datatype_size_fallback": [
+    "fallback_cases": [
         {
             "based_on": {
                 "datatype":"double"
