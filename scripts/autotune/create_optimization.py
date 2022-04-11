@@ -180,7 +180,7 @@ class AlgorithmDeviceReduce(Algorithm):
         with open(self.abs_path_to_fallback) as fallback_config_settings:
             data = json.load(fallback_config_settings)
         
-        data = data['datatype_size_fallback']
+        data = data['fallback_cases']
         for fallback_settings_entry in data:
             config_line = f"template<class Value> struct default_reduce_config<{arch.name}, Value, {translate_settings_to_cpp_metaprogramming(fallback_settings_entry)}> :"
             measurement_entry = next((i for i in arch.specialized_config_cases.values() if i['datatype'] == fallback_settings_entry['based_on']['datatype']), None)
@@ -263,9 +263,10 @@ class BenchmarkDataManager:
             out[key] = algo.create_config_file_content()
         return out
 
-benchmark_manager = BenchmarkDataManager()
+
 
 def main():
+    benchmark_manager = BenchmarkDataManager()
     parser = argparse.ArgumentParser(description="Tool for generating optimized launch parameters for rocPRIM based on benchmark results")
     parser.add_argument('-b','--benchmark_files', nargs='+', help="Benchmarked architectures listed int the form <arch-id>:<path_to_benchmark>.json")
     parser.add_argument("-p", "--out_basedir", type=str, help="Base dir for the output files, for each algorithm a new file will be created in this directory", required=True)
