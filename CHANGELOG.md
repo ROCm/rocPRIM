@@ -5,17 +5,18 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 ## [Unreleased rocPRIM-2.10.14 for ROCm 5.2.0]
 ### Added
 - Packages for tests and benchmark executable on all supported OSes using CPack.
+- Added File/Folder Reorg Changes and Enabled Backward compatibility support using wrapper headers.
+- Added File/Folder Reorg Changes and Enabled Backward compatibility support using wrapper headers.
+- New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
+  on pairs of adjacent items distributed between threads in a block.
+- New device level `adjacent_difference` primitives.
 
-## [Unreleased rocPRIM-2.10.13 for ROCm 5.1.0]
+## [Released rocPRIM-2.10.13 for ROCm 5.1.0]
 ### Fixed
 - Fixed radix sort int64_t bug introduced in [2.10.11]
 ### Added
 - Future value
 - Added device partition_three_way to partition input to three output iterators based on two predicates
-- Added File/Folder Reorg Changes and Enabled Backward compatibility support using wrapper headers.
-- New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
-  on pairs of adjacent items distributed between threads in a block.
-- New device level `adjacent_difference` primitives.
 ### Changed
 - The reduce/scan algorithm precision issues in the tests has been resolved for half types.
 - The device radix sort algorithm supports indexing with 64 bit unsigned integers.
