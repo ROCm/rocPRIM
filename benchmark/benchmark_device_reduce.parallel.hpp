@@ -56,7 +56,7 @@
 template<
     class T,
     class BinaryFunction,
-    class Config = rocprim::detail::default_reduce_config<0, T>
+    class Config = rocprim::detail::default_reduce_config<ROCPRIM_TARGET_ARCH, T>
 >
 struct device_reduce_benchmark : public config_autotune_interface
 {
