@@ -16,11 +16,11 @@ if [ "x$SOURCE_COMMIT" = "x" ]; then
 fi
 
 # Force colored diff output
-DIFF_COLOR_SAVED="$(git config --local --get diff.color)"
+DIFF_COLOR_SAVED="$(git config --local --get color.diff)"
 if [ "x$DIFF_COLOR_SAVED" != "x" ]; then
-    git config --local --replace-all "diff.color" "always"
+    git config --local --replace-all "color.diff" "always"
 else
-    git config --local --add "diff.color" "always"
+    git config --local --add "color.diff" "always"
 fi
 
 GIT_CLANG_FORMAT="${GIT_CLANG_FORMAT:-git-clang-format}"
@@ -28,9 +28,9 @@ CLANG_FORMAT_OUTPUT="$("$GIT_CLANG_FORMAT" --style=file --diff "$@" "$SOURCE_COM
 
 # Restore setting
 if [ "x$DIFF_COLOR_SAVED" != "x" ]; then
-    git config --local --replace-all "diff.color" "$DIFF_COLOR_SAVED"
+    git config --local --replace-all "color.diff" "$DIFF_COLOR_SAVED"
 else
-    git config --local --unset "diff.color"
+    git config --local --unset "color.diff"
 fi
 
 # Check for no-ops
