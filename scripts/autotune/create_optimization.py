@@ -51,7 +51,7 @@ def translate_settings_to_cpp_metaprogramming(config_dict):
 
     for config_setting, value in config_dict['sizeof'].items():
 
-        if config_setting == "min":
+        if config_setting == "min_exclusive":
             setting_list.append(f"(sizeof(Value) > {value})")
         elif config_setting == "max_inclusive":
             setting_list.append(f"(sizeof(Value) <= {value})")
@@ -183,7 +183,6 @@ class AlgorithmDeviceReduce(Algorithm):
         data=[]
         with open(self.abs_path_to_fallback) as fallback_config_settings:
             data = json.load(fallback_config_settings)
-        #measurement_entry = next((i for i in arch.specialized_config_cases.values() if i['datatype'] == fallback_settings_entry['based_on']['datatype']), None)
         
         data = data['fallback_cases']
         for fallback_settings_entry in data:
