@@ -180,9 +180,7 @@ class AlgorithmDeviceReduce(Algorithm):
         """
         
         out=[]
-        data=[]
-        with open(self.abs_path_to_fallback) as fallback_config_settings:
-            data = json.load(fallback_config_settings)
+        data = json.load(self.abs_path_to_fallback)
         
         data = data['fallback_cases']
         for fallback_settings_entry in data:
@@ -214,11 +212,11 @@ class BenchmarkDataManager:
     with different configurations.
     """
     
-    def __init__(self):
+    def __init__(self, fallback_config_file):
         self.algorithms={}
         self.algo_factory = AlgorithmFactory()
         self.abs_path_to_script_dir=os.path.dirname(os.path.abspath(__file__))
-        self.abs_path_to_fallback_config=os.path.join(self.abs_path_to_script_dir, "fallback_config.json")
+        self.fallback_config_file=fallback_config_file
 
 
     def add_run(self, benchmark_run_file_path, arch):
@@ -240,7 +238,7 @@ class BenchmarkDataManager:
                 outfile.write(config)
 
     def add_new_algorithm(self, algo_name):
-        self.algorithms[algo_name] = self.algo_factory.create_algorithm(algo_name, self.abs_path_to_script_dir, self.abs_path_to_fallback_config)
+        self.algorithms[algo_name] = self.algo_factory.create_algorithm(algo_name, self.abs_path_to_script_dir, self.fallback_config_file)
 
     def algorithm_exists(self, algo_name):
         return algo_name in self.algorithms.keys()
@@ -251,14 +249,6 @@ class BenchmarkDataManager:
     @property
     def path_to_script_dir(self):
         return self.abs_path_to_script_dir
-
-    @property
-    def path_to_fallback_config(self):
-        return self.abs_path_to_fallback_config
-
-    @path_to_fallback_config.setter
-    def path_to_fallback_config(self, new_path):
-        self.abs_path_to_fallback_config = new_path
 
     def __add_measurement(self, single_benchmark_data):
         algorithm_name = single_benchmark_data['algo']
@@ -272,20 +262,17 @@ class BenchmarkDataManager:
             out[key] = algo.create_config_file_content()
         return out
 
-
-
 def main():
-    benchmark_manager = BenchmarkDataManager()
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
     parser = argparse.ArgumentParser(description="Tool for generating optimized launch parameters for rocPRIM based on benchmark results")
     parser.add_argument('-b','--benchmark_files', nargs='+', help="Benchmarked architectures listed int the form <arch-id>:<path_to_benchmark>.json")
     parser.add_argument("-p", "--out_basedir", type=str, help="Base dir for the output files, for each algorithm a new file will be created in this directory", required=True)
-    parser.add_argument("-c", "--fallback_configuration", type=str, help="Absolute path to configuration file for fallbacks for not tested datatypes")
+    parser.add_argument("-c", "--fallback_configuration", type=argparse.FileType('r'), default=os.path.join(current_dir, "fallback_config.json"), help="Absolute path to configuration file for fallbacks for not tested datatypes")
     args = parser.parse_args()
 
-    if args.fallback_configuration != None:
-        benchmark_manager.path_to_fallback_config = args.fallback_configuration
+    benchmark_manager = BenchmarkDataManager(args.fallback_configuration)
 
-    
     for benchmark_run_file_and_arch in args.benchmark_files:
         arch_id, bench_path = benchmark_run_file_and_arch.split(":")
         benchmark_manager.add_run(bench_path, arch_id)
