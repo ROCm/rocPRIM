@@ -31,12 +31,25 @@ include:
       - /rules.yaml
 
 stages:
+  - lint
   - build
   - test
   - benchmark
 
 variables:
   PACKAGE_DIR: $BUILD_DIR/package
+
+clang-format:
+  extends:
+    - .deps:rocm
+  stage: lint
+  variables:
+    CLANG_FORMAT: "/opt/rocm/llvm/bin/clang-format"
+    GIT_CLANG_FORMAT: "/opt/rocm/llvm/bin/git-clang-format --binary $CLANG_FORMAT"
+  only:
+    - merge_requests
+  script:
+    - scripts/code-format/check-format-ci.sh
 
 .cmake-latest:
   extends:
