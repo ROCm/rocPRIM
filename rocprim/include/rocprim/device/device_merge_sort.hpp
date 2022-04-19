@@ -30,7 +30,6 @@
 #include "detail/device_merge.hpp"
 #include "detail/device_merge_sort.hpp"
 #include "detail/device_merge_sort_mergepath.hpp"
-#include "../block/detail/block_sort_merge.hpp"
 #include "device_transform.hpp"
 #include "device_merge_sort_config.hpp"
 

@@ -35,7 +35,6 @@
 
 #include "device_merge_sort.hpp"
 #include "device_merge.hpp"
-#include "../../block/detail/block_sort_merge.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -191,22 +190,18 @@ namespace detail
         const unsigned int keys1_end_local = num_keys1;
         const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
         const unsigned int keys2_end_local = num_keys2;
-
-        const unsigned int num_keys1_local = keys1_end_local - keys1_beg_local;
-        const unsigned int num_keys2_local = keys2_end_local - keys2_beg_local;
+        range_t range_local = {keys1_beg_local,
+                               keys1_end_local,
+                               keys2_beg_local + keys1_end_local,
+                               keys2_end_local + keys1_end_local};
 
         unsigned int indices[ItemsPerThread];
 
-        merge_serial<key_type>(keys_shared,
-                               keys1_beg_local,
-                               keys2_beg_local + num_keys1,
-                               num_keys1_local,
-                               num_keys2_local,
-                               keys,
-                               indices,
-                               compare_function);
-
-        rocprim::syncthreads();
+        serial_merge(keys_shared,
+                     keys,
+                     indices,
+                     range_local,
+                     compare_function);
 
         if ROCPRIM_IF_CONSTEXPR(with_values){
             reg_to_shared<BlockSize, ItemsPerThread>(values_shared, values);
@@ -328,22 +323,18 @@ namespace detail
         const unsigned int keys1_end_local = num_keys1;
         const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
         const unsigned int keys2_end_local = num_keys2;
-
-        const unsigned int num_keys1_local = keys1_end_local - keys1_beg_local;
-        const unsigned int num_keys2_local = keys2_end_local - keys2_beg_local;
+        range_t range_local = {keys1_beg_local,
+                               keys1_end_local,
+                               keys2_beg_local + keys1_end_local,
+                               keys2_end_local + keys1_end_local};
 
         unsigned int indices[ItemsPerThread];
 
-        merge_serial<key_type>(keys_shared,
-                               keys1_beg_local,
-                               keys2_beg_local + num_keys1,
-                               num_keys1_local,
-                               num_keys2_local,
-                               keys,
-                               indices,
-                               compare_function);
-
-        rocprim::syncthreads();
+        serial_merge(keys_shared,
+                     keys,
+                     indices,
+                     range_local,
+                     compare_function);
 
         if ROCPRIM_IF_CONSTEXPR(with_values)
         {

@@ -46,13 +46,13 @@ struct range_t
     unsigned int end2;
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int count1()
+    constexpr unsigned int count1() const
     {
         return end1 - begin1;
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int count2()
+    constexpr unsigned int count2() const
     {
         return end2 - begin2;
     }
