@@ -42,7 +42,7 @@ auto sort_keys_add_benchmark(
 {
     benchmarks.push_back(
         benchmark::RegisterBenchmark(
-            (std::string("sort_keys") + "<" + Traits<Key>::TYPE_NAME + ", radix_sort_single_config<" +
+            (std::string("sort_keys") + "<" + std::string(Traits<Key>::name()) + ", radix_sort_single_config<" +
              ", kernel_config<" + std::to_string(BlockSize) + ", " + std::to_string(ItemsPerThread) + ">>>").c_str(),
             [=](benchmark::State& state) {
                 run_sort_keys_benchmark<
@@ -53,6 +53,8 @@ auto sort_keys_add_benchmark(
                         rocprim::kernel_config<256U, 2>,
                         rocprim::kernel_config<256U, 10>,
                         rocprim::kernel_config<BlockSize, ItemsPerThread>,
+                        rocprim::kernel_config<1024, 1>,
+                        1024U,
                         true
                     >
                 >(state, stream, size);
@@ -75,7 +77,7 @@ auto sort_keys_add_benchmark(
 {
     benchmarks.push_back(
         benchmark::RegisterBenchmark(
-            (std::string("sort_pairs") + "<" + Traits<Key>::TYPE_NAME + "," + Traits<Value>::TYPE_NAME +
+            (std::string("sort_pairs") + "<" + std::string(Traits<Key>::name()) + "," + std::string(Traits<Value>::name()) +
              ", kernel_config<" + std::to_string(BlockSize) + ", " + std::to_string(ItemsPerThread) + ">>>").c_str(),
             [=](benchmark::State& state) {
                 run_sort_pairs_benchmark<
@@ -86,6 +88,8 @@ auto sort_keys_add_benchmark(
                         rocprim::kernel_config<256U, 2>,
                         rocprim::kernel_config<256U, 10>,
                         rocprim::kernel_config<BlockSize, ItemsPerThread>,
+                        rocprim::kernel_config<1024, 1>,
+                        1024U,
                         true
                     >
                 >(state, stream, size);

@@ -44,7 +44,7 @@ auto sort_keys_add_benchmark(
 {
     benchmarks.push_back(
         benchmark::RegisterBenchmark(
-            (std::string("sort_keys") + "<" + Traits<Key>::TYPE_NAME + ",radix_sort_config<" +
+            (std::string("sort_keys") + "<" + std::string(Traits<Key>::name()) + ",radix_sort_config<" +
              std::to_string(LRB) + ", " + std::to_string(SRB) + ", kernel_config<" +
              std::to_string(BlockSize1) + ", " + std::to_string(ItemsPerThread1) + ">, kernel_config<" +
              std::to_string(BlockSize2) + ", " + std::to_string(ItemsPerThread2) + ">>>").c_str(),
@@ -79,7 +79,7 @@ auto sort_keys_add_benchmark(
 {
     benchmarks.push_back(
         benchmark::RegisterBenchmark(
-            (std::string("sort_pairs") + "<" + Traits<Key>::TYPE_NAME + "," + Traits<Value>::TYPE_NAME +
+            (std::string("sort_pairs") + "<" + std::string(Traits<Key>::name()) + "," + std::string(Traits<Value>::name()) +
              ",radix_sort_config<" + std::to_string(LRB) + ", " + std::to_string(SRB) + ", kernel_config<" +
              std::to_string(BlockSize1) + ", " + std::to_string(ItemsPerThread1) + ">, kernel_config<" +
              std::to_string(BlockSize2) + ", " + std::to_string(ItemsPerThread2) + ">>>").c_str(),
