@@ -24,7 +24,7 @@ else
 fi
 
 GIT_CLANG_FORMAT="${GIT_CLANG_FORMAT:-git-clang-format}"
-CLANG_FORMAT_OUTPUT="$("$GIT_CLANG_FORMAT" --style=file --diff "$@" "$SOURCE_COMMIT")"
+CLANG_FORMAT_OUTPUT="$($GIT_CLANG_FORMAT --style=file --diff "$@" "$SOURCE_COMMIT")"
 
 # Restore setting
 if [ "x$DIFF_COLOR_SAVED" != "x" ]; then

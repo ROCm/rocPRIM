@@ -49,7 +49,9 @@ clang-format:
   only:
     - merge_requests
   script:
-    - scripts/code-format/check-format-ci.sh
+    - cd $CI_PROJECT_DIR
+    - git config --global --add safe.directory $CI_PROJECT_DIR
+    - scripts/code-format/check-format.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA
 
 .cmake-latest:
   extends:
