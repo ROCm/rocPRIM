@@ -46,13 +46,13 @@ struct range_t
     unsigned int end2;
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int count1()
+    constexpr unsigned int count1() const
     {
         return end1 - begin1;
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int count2()
+    constexpr unsigned int count2() const
     {
         return end2 - begin2;
     }
@@ -72,28 +72,24 @@ range_t compute_range(const unsigned int id,
     return range_t{p1, p2, diag1 - p1, diag2 - p2};
 }
 
-template<
-    class KeysInputIterator1,
-    class KeysInputIterator2,
-    class BinaryFunction
->
+template <class KeysInputIterator, class OffsetT, class BinaryFunction>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-unsigned int merge_path(KeysInputIterator1 keys_input1,
-                        KeysInputIterator2 keys_input2,
-                        const size_t input1_size,
-                        const size_t input2_size,
-                        const unsigned int diag,
-                        BinaryFunction compare_function)
+OffsetT merge_path(KeysInputIterator keys_input1,
+                   KeysInputIterator keys_input2,
+                   const OffsetT input1_size,
+                   const OffsetT input2_size,
+                   const OffsetT diag,
+                   BinaryFunction compare_function)
 {
-    using key_type = typename std::iterator_traits<KeysInputIterator1>::value_type;
+    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
-    int begin = max((int)0, (int)diag - (int)input2_size);
-    int end = min((int)diag, (int)input1_size);
+    OffsetT begin = diag < input2_size ? 0u : diag - input2_size;
+    OffsetT end = min(diag, input1_size);
 
     while(begin < end)
     {
-        unsigned int a = (begin + end) / 2;
-        unsigned int b = diag - 1 - a;
+        OffsetT a = (begin + end) / 2;
+        OffsetT b = diag - 1 - a;
         key_type input_a = keys_input1[a];
         key_type input_b = keys_input2[b];
         if(!compare_function(input_b, input_a))
@@ -131,7 +127,7 @@ void partition_kernel_impl(IndexIterator indices,
     unsigned int id = flat_block_id * flat_block_size + flat_id;
 
     unsigned int partition_id = id * spacing;
-    unsigned int diag = min(partition_id, (unsigned int)(input1_size + input2_size));
+    size_t diag = min(static_cast<size_t>(partition_id), input1_size + input2_size);
 
     unsigned int begin =
         merge_path(
@@ -178,11 +174,7 @@ void load(unsigned int flat_id,
     ::rocprim::syncthreads();
 }
 
-template<
-    class KeyType,
-    unsigned int ItemsPerThread,
-    class BinaryFunction
->
+template <class KeyType, unsigned int ItemsPerThread, class BinaryFunction>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 void serial_merge(KeyType * keys_shared,
                   KeyType (&inputs)[ItemsPerThread],
