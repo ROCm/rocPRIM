@@ -43,6 +43,9 @@ clang-format:
   extends:
     - .deps:rocm
   stage: lint
+  needs: []
+  tags:
+    - rocm-build
   variables:
     CLANG_FORMAT: "/opt/rocm/llvm/bin/clang-format"
     GIT_CLANG_FORMAT: "/opt/rocm/llvm/bin/git-clang-format --binary $CLANG_FORMAT"
@@ -106,6 +109,7 @@ clang-format:
 
 build:cmake-latest:
   stage: build
+  needs: []
   extends:
     - .cmake-latest
     - .build:common
@@ -119,6 +123,7 @@ build:cmake-minimum:
 
 build:package:
   stage: build
+  needs: []
   tags:
     - rocm-build
   extends:
@@ -143,6 +148,7 @@ build:package:
 
 build:benchmark:
   stage: build
+  needs: []
   tags:
     - rocm-build
   extends:
