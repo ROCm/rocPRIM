@@ -97,9 +97,7 @@ build:cmake-latest:
 
 build:cmake-minimum:
   stage: build
-  needs:
-    - job: build:cmake-latest
-      artifacts: false
+  needs: []
   extends:
     - .cmake-minimum
     - .build:common
