@@ -36,6 +36,7 @@
 
 #include "../block/block_load.hpp"
 #include "../iterator/counting_iterator.hpp"
+#include "../iterator/reverse_iterator.hpp"
 #include "device_segmented_radix_sort_config.hpp"
 #include "device_partition.hpp"
 #include "detail/device_segmented_radix_sort.hpp"
@@ -254,14 +255,14 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
 
     const size_t keys_bytes = ::rocprim::detail::align_size(size * sizeof(key_type));
     const size_t values_bytes = with_values ? ::rocprim::detail::align_size(size * sizeof(value_type)) : 0;
-    const size_t large_segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
-    const size_t medium_segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
+    const size_t large_and_medium_segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
     const size_t small_segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
     const size_t large_and_medium_segment_count_bytes = ::rocprim::detail::align_size(2 * sizeof(segment_index_type));
 
     segment_index_type* large_segment_indices_output{};
-    // TODO reverse iterator
-    segment_index_type* medium_segment_indices_output{};
+    // The total number of large and medium segments is not above the number of segments
+    // The same buffer is filled with the large and medium indices from both directions
+    auto medium_segment_indices_output = make_reverse_iterator(large_segment_indices_output + segments);
     segment_index_type* small_segment_indices_output{};
     segment_index_type* large_and_medium_segment_count_output{};
     size_t partition_storage_size{};
@@ -271,8 +272,7 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         storage_size = with_double_buffer ? 0 : (keys_bytes + values_bytes);
         if(do_partitioning)
         {
-            storage_size += large_segment_indices_bytes;
-            storage_size += medium_segment_indices_bytes;
+            storage_size += large_and_medium_segment_indices_bytes;
             storage_size += small_segment_indices_bytes;
             storage_size += large_and_medium_segment_count_bytes;
             const auto partition_result = partition_three_way(
@@ -325,9 +325,8 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         ptr += values_bytes;
     }
     large_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += large_segment_indices_bytes;
-    medium_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += medium_segment_indices_bytes;
+    ptr += large_and_medium_segment_indices_bytes;
+    medium_segment_indices_output = make_reverse_iterator(large_segment_indices_output + segments);
     small_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);;
     ptr += small_segment_indices_bytes;
     large_and_medium_segment_count_output = reinterpret_cast<segment_index_type*>(ptr);
