@@ -39,6 +39,7 @@
 #include "../../warp/warp_sort.hpp"
 #include "../../warp/warp_store.hpp"
 
+#include "../device_segmented_radix_sort_config.hpp"
 #include "device_radix_sort.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -470,46 +471,36 @@ public:
     }
 };
 
-template<
-    unsigned int LogicalWarpSize,
-    unsigned int ItemsPerThread,
-    unsigned int BlockSize
->
+template<unsigned int LogicalWarpSize, unsigned int ItemsPerThread, unsigned int BlockSize>
 struct WarpSortHelperConfig
 {
     static constexpr unsigned int logical_warp_size = LogicalWarpSize;
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    static constexpr unsigned int block_size = BlockSize;
+    static constexpr unsigned int items_per_thread  = ItemsPerThread;
+    static constexpr unsigned int block_size        = BlockSize;
 };
 
 struct DisabledWarpSortHelperConfig
 {
     static constexpr unsigned int logical_warp_size = 1;
-    static constexpr unsigned int items_per_thread = 1;
-    static constexpr unsigned int block_size = 1;
+    static constexpr unsigned int items_per_thread  = 1;
+    static constexpr unsigned int block_size        = 1;
 };
 
 template<class Config>
-using select_warp_sort_helper_config_small_t = std::conditional_t<
-    std::is_same<DisabledWarpSortConfig, Config>::value,
-    DisabledWarpSortHelperConfig,
-    WarpSortHelperConfig<
-        Config::logical_warp_size_small,
-        Config::items_per_thread_small,
-        Config::block_size_small
-    >
->;
+using select_warp_sort_helper_config_small_t
+    = std::conditional_t<std::is_same<DisabledWarpSortConfig, Config>::value,
+                         DisabledWarpSortHelperConfig,
+                         WarpSortHelperConfig<Config::logical_warp_size_small,
+                                              Config::items_per_thread_small,
+                                              Config::block_size_small>>;
 
 template<class Config>
-using select_warp_sort_helper_config_medium_t = std::conditional_t<
-    std::is_same<DisabledWarpSortConfig, Config>::value,
-    DisabledWarpSortHelperConfig,
-    WarpSortHelperConfig<
-        Config::logical_warp_size_medium,
-        Config::items_per_thread_medium,
-        Config::block_size_medium
-    >
->;
+using select_warp_sort_helper_config_medium_t
+    = std::conditional_t<std::is_same<DisabledWarpSortConfig, Config>::value,
+                         DisabledWarpSortHelperConfig,
+                         WarpSortHelperConfig<Config::logical_warp_size_medium,
+                                              Config::items_per_thread_medium,
+                                              Config::block_size_medium>>;
 
 template<
     class Config,
@@ -530,13 +521,12 @@ struct segmented_warp_sort_helper
     }
 };
 
-template<
-    class Config,
-    class Key,
-    class Value,
-    bool Descending
->
-class segmented_warp_sort_helper<Config, Key, Value, Descending,
+template<class Config, class Key, class Value, bool Descending>
+class segmented_warp_sort_helper<
+    Config,
+    Key,
+    Value,
+    Descending,
     std::enable_if_t<!std::is_same<DisabledWarpSortHelperConfig, Config>::value>>
 {
     static constexpr unsigned int logical_warp_size = Config::logical_warp_size;
@@ -741,8 +731,10 @@ void segmented_sort(KeysInputIterator keys_input,
         short_radix_bits, Descending
     >;
     using warp_sort_helper_type = segmented_warp_sort_helper<
-        select_warp_sort_helper_config_small_t<typename Config::warp_sort_config>, key_type, value_type, Descending
-    >;
+        select_warp_sort_helper_config_small_t<typename Config::warp_sort_config>,
+        key_type,
+        value_type,
+        Descending>;
     static constexpr unsigned int items_per_warp = warp_sort_helper_type::items_per_warp;
 
     ROCPRIM_SHARED_MEMORY union

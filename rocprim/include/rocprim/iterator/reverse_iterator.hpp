@@ -21,8 +21,8 @@
 #ifndef ROCPRIM_ITERATOR_REVERSE_ITERATOR_HPP_
 #define ROCPRIM_ITERATOR_REVERSE_ITERATOR_HPP_
 
-#include <iterator>
 #include <cstddef>
+#include <iterator>
 #include <type_traits>
 
 #include "../config.hpp"
@@ -47,12 +47,9 @@ class reverse_iterator
 {
 public:
     static_assert(
-        std::is_base_of<
-            std::random_access_iterator_tag,
-            typename std::iterator_traits<SourceIterator>::iterator_category
-        >::value,
-        "SourceIterator must be a random access iterator"
-    );
+        std::is_base_of<std::random_access_iterator_tag,
+                        typename std::iterator_traits<SourceIterator>::iterator_category>::value,
+        "SourceIterator must be a random access iterator");
 
     /// The type of the value that can be obtained by dereferencing the iterator.
     using value_type = typename std::iterator_traits<SourceIterator>::value_type;
@@ -66,10 +63,7 @@ public:
     using iterator_category = std::random_access_iterator_tag;
 
     ROCPRIM_HOST_DEVICE
-    reverse_iterator(SourceIterator source_iterator)
-        : source_iterator_(source_iterator)
-    {
-    }
+    reverse_iterator(SourceIterator source_iterator) : source_iterator_(source_iterator) {}
 
     //! \skip_doxy_start
     ROCPRIM_HOST_DEVICE
@@ -189,10 +183,9 @@ private:
 };
 
 template<class SourceIterator>
-ROCPRIM_HOST_DEVICE
-reverse_iterator<SourceIterator>
-operator+(typename reverse_iterator<SourceIterator>::difference_type distance,
-          const reverse_iterator<SourceIterator>& iterator)
+ROCPRIM_HOST_DEVICE reverse_iterator<SourceIterator>
+                    operator+(typename reverse_iterator<SourceIterator>::difference_type distance,
+              const reverse_iterator<SourceIterator>&                    iterator)
 {
     return iterator + distance;
 }
@@ -204,9 +197,8 @@ operator+(typename reverse_iterator<SourceIterator>::difference_type distance,
 /// \param source_iterator - the iterator to wrap in the created \p reverse_iterator.
 /// \return A \p reverse_iterator that wraps \p source_iterator.
 template<class SourceIterator>
-ROCPRIM_HOST_DEVICE
-reverse_iterator<SourceIterator>
-make_reverse_iterator(SourceIterator source_iterator)
+ROCPRIM_HOST_DEVICE reverse_iterator<SourceIterator>
+                    make_reverse_iterator(SourceIterator source_iterator)
 {
     return reverse_iterator<SourceIterator>(source_iterator);
 }

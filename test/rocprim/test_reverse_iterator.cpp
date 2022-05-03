@@ -28,7 +28,7 @@
 
 TEST(RocprimReverseIteratorTests, HostVector)
 {
-    using T = int;
+    using T                      = int;
     static constexpr size_t size = 100;
 
     std::vector<T> v(size);
@@ -37,7 +37,7 @@ TEST(RocprimReverseIteratorTests, HostVector)
     std::reverse(v_reversed.begin(), v_reversed.end());
 
     auto rev_it = rocprim::make_reverse_iterator(v.end());
-    for (size_t i = 0; i < size; i++, rev_it++)
+    for(size_t i = 0; i < size; i++, rev_it++)
     {
         ASSERT_EQ(v_reversed[i], *rev_it);
     }
@@ -46,15 +46,15 @@ TEST(RocprimReverseIteratorTests, HostVector)
 
 TEST(RocprimReverseIteratorTests, DeviceVector)
 {
-    using T = int;
-    static constexpr size_t size = 100;
-    static constexpr int seed_value = 7;
+    using T                            = int;
+    static constexpr size_t size       = 100;
+    static constexpr int    seed_value = 7;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    auto input = test_utils::get_random_data<T>(size, 0, 100, seed_value);
+    auto           input    = test_utils::get_random_data<T>(size, 0, 100, seed_value);
     std::vector<T> expected = input;
     std::sort(expected.rbegin(), expected.rend());
     std::vector<T> output(size);
@@ -67,23 +67,15 @@ TEST(RocprimReverseIteratorTests, DeviceVector)
 
     auto d_output_it = rocprim::make_reverse_iterator(d_output + size);
 
-    void* d_temp_storage{};
+    void*  d_temp_storage{};
     size_t temp_storage_bytes;
 
     HIP_CHECK(
-        rocprim::radix_sort_keys(
-            d_temp_storage, temp_storage_bytes,
-            d_input, d_output_it, size
-        )
-    );
+        rocprim::radix_sort_keys(d_temp_storage, temp_storage_bytes, d_input, d_output_it, size));
     ASSERT_NE(temp_storage_bytes, static_cast<size_t>(0));
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_bytes));
     HIP_CHECK(
-        rocprim::radix_sort_keys(
-            d_temp_storage, temp_storage_bytes,
-            d_input, d_output_it, size
-        )
-    );
+        rocprim::radix_sort_keys(d_temp_storage, temp_storage_bytes, d_input, d_output_it, size));
     HIP_CHECK(hipMemcpy(output.data(), d_output, size * sizeof(T), hipMemcpyDeviceToHost));
 
     ASSERT_EQ(expected, output);
@@ -95,7 +87,7 @@ TEST(RocprimReverseIteratorTests, DeviceVector)
 
 TEST(RocprimReverseIteratorTests, TestIncrement)
 {
-    using T = int;
+    using T                      = int;
     static constexpr size_t size = 5;
 
     std::vector<T> data(size);
@@ -126,7 +118,7 @@ TEST(RocprimReverseIteratorTests, TestIncrement)
 
 TEST(RocprimReverseIteratorTests, TestDecrement)
 {
-    using T = int;
+    using T                      = int;
     static constexpr size_t size = 5;
 
     std::vector<T> data(size);
@@ -150,7 +142,7 @@ TEST(RocprimReverseIteratorTests, TestDecrement)
 
 TEST(RocprimReverseIteratorTests, TestDereference)
 {
-    using T = int;
+    using T                      = int;
     static constexpr size_t size = 5;
 
     std::vector<T> data(size);
@@ -166,14 +158,14 @@ TEST(RocprimReverseIteratorTests, TestDereference)
 
 TEST(RocprimReverseIteratorTests, TestComparison)
 {
-    using T = int;
+    using T                      = int;
     static constexpr size_t size = 5;
 
     std::vector<T> data(size);
     std::iota(data.begin(), data.end(), T(0));
 
     auto begin_it = rocprim::make_reverse_iterator(data.end());
-    auto end_it = rocprim::make_reverse_iterator(data.begin());
+    auto end_it   = rocprim::make_reverse_iterator(data.begin());
 
     ASSERT_GT(end_it, begin_it);
     ASSERT_GE(end_it, begin_it);
@@ -191,13 +183,13 @@ TEST(RocprimReverseIteratorTests, TestComparison)
 
 TEST(RocprimReverseIteratorTests, TestPtrDifference)
 {
-    using T = int;
+    using T                      = int;
     static constexpr size_t size = 5;
 
     std::vector<T> data(size);
 
     auto begin_it = rocprim::make_reverse_iterator(data.end());
-    auto end_it = rocprim::make_reverse_iterator(data.begin());
+    auto end_it   = rocprim::make_reverse_iterator(data.begin());
 
     ASSERT_EQ(size, end_it - begin_it);
 }

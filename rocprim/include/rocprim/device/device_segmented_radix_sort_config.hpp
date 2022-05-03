@@ -52,20 +52,20 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam ItemsPerThreadMedium - number of items processed by a thread in the kernel that processes
 /// medium segments.
 /// \tparam BlockSizeMedium - number of threads per block in the kernel which processes the medium segments.
-template<
-    unsigned int LogicalWarpSizeSmall,
-    unsigned int ItemsPerThreadSmall,
-    unsigned int BlockSizeSmall = 256,
-    unsigned int PartitioningThreshold = 3000,
-    bool EnableUnpartitionedWarpSort = true,
-    unsigned int LogicalWarpSizeMedium = std::max(32u, LogicalWarpSizeSmall),
-    unsigned int ItemsPerThreadMedium = std::max(4u, ItemsPerThreadSmall),
-    unsigned int BlockSizeMedium = 256
->
+template<unsigned int LogicalWarpSizeSmall,
+         unsigned int ItemsPerThreadSmall,
+         unsigned int BlockSizeSmall              = 256,
+         unsigned int PartitioningThreshold       = 3000,
+         bool         EnableUnpartitionedWarpSort = true,
+         unsigned int LogicalWarpSizeMedium       = std::max(32u, LogicalWarpSizeSmall),
+         unsigned int ItemsPerThreadMedium        = std::max(4u, ItemsPerThreadSmall),
+         unsigned int BlockSizeMedium             = 256>
 struct WarpSortConfig
 {
-    static_assert(LogicalWarpSizeSmall * ItemsPerThreadSmall <= LogicalWarpSizeMedium * ItemsPerThreadMedium,
-        "The number of items processed by a small warp cannot be larger than the number of items processed by a medium warp");
+    static_assert(LogicalWarpSizeSmall * ItemsPerThreadSmall
+                      <= LogicalWarpSizeMedium * ItemsPerThreadMedium,
+                  "The number of items processed by a small warp cannot be larger than the number "
+                  "of items processed by a medium warp");
     /// \brief The number of threads in the logical warp in the small segment processing kernel.
     static constexpr unsigned int logical_warp_size_small = LogicalWarpSizeSmall;
     /// \brief The number of items processed by a thread in the small segment processing kernel.
@@ -115,21 +115,18 @@ struct DisabledWarpSortConfig
 /// \tparam Key - the type of the sorted keys.
 /// \tparam MediumWarpSize - the logical warp size of the medium segment processing kernel.
 template<class Key, unsigned int MediumWarpSize = ROCPRIM_WARP_SIZE_32>
-using select_warp_sort_config_t =
-    std::conditional_t<
-        sizeof(Key) < 2,
-        DisabledWarpSortConfig,
-        WarpSortConfig<
-            32,                 //< logical warp size - small kernel
-            4,                  //< items per thread - small kernel
-            256,                //< block size - small kernel
-            3000,               //< partitioning threshold
-            (sizeof(Key) > 2),  //< enable unpartitioned warp sort
-            MediumWarpSize,     //< logical warp size - medium kernel
-            4,                  //< items per thread - medium kernel
-            256                 //< block size - medium kernel
-        >
-    >;
+using select_warp_sort_config_t
+    = std::conditional_t<sizeof(Key) < 2,
+                         DisabledWarpSortConfig,
+                         WarpSortConfig<32, //< logical warp size - small kernel
+                                        4, //< items per thread - small kernel
+                                        256, //< block size - small kernel
+                                        3000, //< partitioning threshold
+                                        (sizeof(Key) > 2), //< enable unpartitioned warp sort
+                                        MediumWarpSize, //< logical warp size - medium kernel
+                                        4, //< items per thread - medium kernel
+                                        256 //< block size - medium kernel
+                                        >>;
 
 /// \brief Configuration of device-level segmented radix sort operation.
 ///
@@ -249,32 +246,62 @@ struct segmented_radix_sort_config_90a
     using type = select_type<
         select_type_case<
             (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<4, 4, kernel_config<256, 10>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> >
-        >,
+            segmented_radix_sort_config<4,
+                                        4,
+                                        kernel_config<256, 10>,
+                                        select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>,
         select_type_case<
             (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<6, 5, kernel_config<256, 10>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> >
-        >,
+            segmented_radix_sort_config<6,
+                                        5,
+                                        kernel_config<256, 10>,
+                                        select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>,
         select_type_case<
             (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> >
-        >,
+            segmented_radix_sort_config<7,
+                                        6,
+                                        kernel_config<256, 15>,
+                                        select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>,
         select_type_case<
             (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            segmented_radix_sort_config<7, 6, kernel_config<256, 15>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> >
-        >,
-        segmented_radix_sort_config<7, 6, kernel_config<256, ::rocprim::max(1u, 15u / item_scale)>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> >
-    >;
+            segmented_radix_sort_config<7,
+                                        6,
+                                        kernel_config<256, 15>,
+                                        select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>,
+        segmented_radix_sort_config<7,
+                                    6,
+                                    kernel_config<256, ::rocprim::max(1u, 15u / item_scale)>,
+                                    select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>;
 };
 
 template<class Key>
 struct segmented_radix_sort_config_90a<Key, empty_type>
     : select_type<
-        select_type_case<sizeof(Key) == 1, segmented_radix_sort_config<4, 3, kernel_config<256, 10>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> > >,
-        select_type_case<sizeof(Key) == 2, segmented_radix_sort_config<6, 5, kernel_config<256, 10>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> > >,
-        select_type_case<sizeof(Key) == 4, segmented_radix_sort_config<7, 6, kernel_config<256, 17>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> > >,
-        select_type_case<sizeof(Key) == 8, segmented_radix_sort_config<7, 6, kernel_config<256, 15>, select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64> > >
-    > { };
+          select_type_case<
+              sizeof(Key) == 1,
+              segmented_radix_sort_config<4,
+                                          3,
+                                          kernel_config<256, 10>,
+                                          select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>,
+          select_type_case<
+              sizeof(Key) == 2,
+              segmented_radix_sort_config<6,
+                                          5,
+                                          kernel_config<256, 10>,
+                                          select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>,
+          select_type_case<
+              sizeof(Key) == 4,
+              segmented_radix_sort_config<7,
+                                          6,
+                                          kernel_config<256, 17>,
+                                          select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>,
+          select_type_case<
+              sizeof(Key) == 8,
+              segmented_radix_sort_config<7,
+                                          6,
+                                          kernel_config<256, 15>,
+                                          select_warp_sort_config_t<Key, ROCPRIM_WARP_SIZE_64>>>>
+{};
 
 template<class Key, class Value>
 struct segmented_radix_sort_config_1030
@@ -315,15 +342,15 @@ struct segmented_radix_sort_config_1030<Key, empty_type>
 template<unsigned int TargetArch, class Key, class Value>
 struct default_segmented_radix_sort_config
     : select_arch<
-        TargetArch,
-        select_arch_case<803, detail::segmented_radix_sort_config_803<Key, Value> >,
-        select_arch_case<900, detail::segmented_radix_sort_config_900<Key, Value> >,
-        select_arch_case<906, detail::segmented_radix_sort_config_90a<Key, Value> >,
-        select_arch_case<908, detail::segmented_radix_sort_config_90a<Key, Value> >,
-        select_arch_case<ROCPRIM_ARCH_90a, detail::segmented_radix_sort_config_90a<Key, Value> >,
-        select_arch_case<1030, detail::segmented_radix_sort_config_1030<Key, Value> >,
-        detail::segmented_radix_sort_config_900<Key, Value>
-    > { };
+          TargetArch,
+          select_arch_case<803, detail::segmented_radix_sort_config_803<Key, Value>>,
+          select_arch_case<900, detail::segmented_radix_sort_config_900<Key, Value>>,
+          select_arch_case<906, detail::segmented_radix_sort_config_90a<Key, Value>>,
+          select_arch_case<908, detail::segmented_radix_sort_config_90a<Key, Value>>,
+          select_arch_case<ROCPRIM_ARCH_90a, detail::segmented_radix_sort_config_90a<Key, Value>>,
+          select_arch_case<1030, detail::segmented_radix_sort_config_1030<Key, Value>>,
+          detail::segmented_radix_sort_config_900<Key, Value>>
+{};
 
 } // end namespace detail
 
