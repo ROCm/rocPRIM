@@ -48,13 +48,13 @@ clang-format:
     - rocm-build
   variables:
     CLANG_FORMAT: "/opt/rocm/llvm/bin/clang-format"
-    GIT_CLANG_FORMAT: "/opt/rocm/llvm/bin/git-clang-format --binary $CLANG_FORMAT"
+    GIT_CLANG_FORMAT: "/opt/rocm/llvm/bin/git-clang-format"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   script:
     - cd $CI_PROJECT_DIR
     - git config --global --add safe.directory $CI_PROJECT_DIR
-    - scripts/code-format/check-format.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA
+    - scripts/code-format/check-format.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA --binary "$CLANG_FORMAT"
 
 .cmake-latest:
   extends:
