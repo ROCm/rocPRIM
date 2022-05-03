@@ -62,19 +62,33 @@ using config_semi_custom = rocprim::segmented_radix_sort_config<
     3, //< long radix bits
     2, //< short radix bits
     rocprim::kernel_config<128, 4>, //< sort block size, items per thread
-    rocprim::WarpSortConfig<16, //< logical warp size
-                            8 //< items per thread
+    rocprim::WarpSortConfig<16, //< logical warp size small
+                            8 //< items per thread small
+                            >>;
+
+using config_semi_custom_warp_config = rocprim::segmented_radix_sort_config<
+    3, //< long radix bits
+    2, //< short radix bits
+    rocprim::kernel_config<128, 4>, //< sort block size, items per thread
+    rocprim::WarpSortConfig<16, //< logical warp size small
+                            2, //< items per thread small
+                            512, //< block size small
+                            0, //< partitioning threshold
+                            true //< enable unpartitioned sort
                             >>;
 
 using config_custom = rocprim::segmented_radix_sort_config<
     3, //< long radix bits
     2, //< short radix bits
     rocprim::kernel_config<128, 4>, //< sort block size, items per thread
-    rocprim::WarpSortConfig<16, //< logical warp size
-                            8, //< items per thread
-                            512, //< block size
+    rocprim::WarpSortConfig<16, //< logical warp size small
+                            2, //< items per thread small
+                            512, //< block size small
                             0, //< partitioning threshold
-                            true //< enable unpartitioned sort
+                            true, //< enable unpartitioned sort
+                            32, //< logical warp size medium
+                            4, //< items per thread medium
+                            256 //< block size medium
                             >>;
 
 template<class Params>
