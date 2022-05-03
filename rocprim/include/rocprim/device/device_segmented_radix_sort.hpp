@@ -133,22 +133,21 @@ template<
 >
 ROCPRIM_KERNEL
 __launch_bounds__(BlockSize)
-void segmented_sort_small_kernel(KeysInputIterator keys_input,
-                                 typename std::iterator_traits<KeysInputIterator>::value_type * keys_tmp,
-                                 KeysOutputIterator keys_output,
-                                 ValuesInputIterator values_input,
-                                 typename std::iterator_traits<ValuesInputIterator>::value_type * values_tmp,
-                                 ValuesOutputIterator values_output,
-                                 bool to_output,
-                                 unsigned int num_segments,
-                                 SegmentIndexIterator segment_indices,
-                                 OffsetIterator begin_offsets,
-                                 OffsetIterator end_offsets,
-                                 unsigned int begin_bit,
-                                 unsigned int end_bit)
+void segmented_sort_small_or_medium_kernel(KeysInputIterator keys_input,
+                                           typename std::iterator_traits<KeysInputIterator>::value_type * keys_tmp,
+                                           KeysOutputIterator keys_output,
+                                           ValuesInputIterator values_input,
+                                           typename std::iterator_traits<ValuesInputIterator>::value_type * values_tmp,
+                                           ValuesOutputIterator values_output,
+                                           bool to_output,
+                                           unsigned int num_segments,
+                                           SegmentIndexIterator segment_indices,
+                                           OffsetIterator begin_offsets,
+                                           OffsetIterator end_offsets,
+                                           unsigned int begin_bit,
+                                           unsigned int end_bit)
 {
-    using config = select_warp_sort_helper_config_small_t<Config>;
-    segmented_sort_small<config, Descending>(
+    segmented_sort_small<Config, Descending>(
         keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output,
         to_output, num_segments, segment_indices,
         begin_offsets, end_offsets,
@@ -225,7 +224,16 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         config::warp_sort_config::items_per_thread_small * config::warp_sort_config::logical_warp_size_small;
     static constexpr unsigned int small_segments_per_block =
         config::warp_sort_config::block_size_small / config::warp_sort_config::logical_warp_size_small;
+    static constexpr unsigned int max_medium_segment_length =
+        config::warp_sort_config::items_per_thread_medium * config::warp_sort_config::logical_warp_size_medium;
+    static constexpr unsigned int medium_segments_per_block =
+        config::warp_sort_config::block_size_medium / config::warp_sort_config::logical_warp_size_medium;
     const auto large_segment_selector = [=](const unsigned int segment_index) mutable -> bool
+    {
+        const unsigned int segment_length = end_offsets[segment_index] - begin_offsets[segment_index];
+        return segment_length > max_medium_segment_length;
+    };
+    const auto medium_segment_selector = [=](const unsigned int segment_index) -> bool
     {
         const unsigned int segment_length = end_offsets[segment_index] - begin_offsets[segment_index];
         return segment_length > max_small_segment_length;
@@ -246,22 +254,33 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
 
     const size_t keys_bytes = ::rocprim::detail::align_size(size * sizeof(key_type));
     const size_t values_bytes = with_values ? ::rocprim::detail::align_size(size * sizeof(value_type)) : 0;
-    const size_t segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
-    const size_t large_segment_count_bytes = ::rocprim::detail::align_size(sizeof(segment_index_type));
+    const size_t large_segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
+    const size_t medium_segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
+    const size_t small_segment_indices_bytes = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
+    const size_t large_and_medium_segment_count_bytes = ::rocprim::detail::align_size(2 * sizeof(segment_index_type));
 
     segment_index_type* large_segment_indices_output{};
-    segment_index_type* large_segment_count_output{};
+    // TODO reverse iterator
+    segment_index_type* medium_segment_indices_output{};
+    segment_index_type* small_segment_indices_output{};
+    segment_index_type* large_and_medium_segment_count_output{};
     size_t partition_storage_size{};
+    void* partition_temporary_storage{};
     if(temporary_storage == nullptr)
     {
         storage_size = with_double_buffer ? 0 : (keys_bytes + values_bytes);
         if(do_partitioning)
         {
-            storage_size += segment_indices_bytes + large_segment_count_bytes;
-            const auto partition_result = partition(
-                nullptr, partition_storage_size, segment_index_iterator{},
-                large_segment_indices_output, large_segment_count_output, segments,
-                large_segment_selector, stream, debug_synchronous
+            storage_size += large_segment_indices_bytes;
+            storage_size += medium_segment_indices_bytes;
+            storage_size += small_segment_indices_bytes;
+            storage_size += large_and_medium_segment_count_bytes;
+            const auto partition_result = partition_three_way(
+                partition_temporary_storage, partition_storage_size, segment_index_iterator{},
+                large_segment_indices_output, medium_segment_indices_output, small_segment_indices_output,
+                large_and_medium_segment_count_output, segments,
+                large_segment_selector, medium_segment_selector,
+                stream, debug_synchronous
             );
             if(hipSuccess != partition_result)
             {
@@ -306,27 +325,34 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         ptr += values_bytes;
     }
     large_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += segment_indices_bytes;
-    large_segment_count_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += large_segment_count_bytes;
-    auto* partition_storage = ptr;
+    ptr += large_segment_indices_bytes;
+    medium_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
+    ptr += medium_segment_indices_bytes;
+    small_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);;
+    ptr += small_segment_indices_bytes;
+    large_and_medium_segment_count_output = reinterpret_cast<segment_index_type*>(ptr);
+    ptr += large_and_medium_segment_count_bytes;
+    partition_temporary_storage = ptr;
+    ptr += partition_storage_size;
 
     if(do_partitioning)
     {
-        hipError_t result = partition(
-            partition_storage, partition_storage_size, segment_index_iterator{},
-            large_segment_indices_output, large_segment_count_output, segments,
-            large_segment_selector, stream, debug_synchronous
+        hipError_t result = partition_three_way(
+            partition_temporary_storage, partition_storage_size, segment_index_iterator{},
+            large_segment_indices_output, medium_segment_indices_output, small_segment_indices_output,
+            large_and_medium_segment_count_output, segments,
+            large_segment_selector, medium_segment_selector,
+            stream, debug_synchronous
         );
         if(hipSuccess != result)
         {
             return result;
         }
-        segment_index_type large_segment_count{};
+        segment_index_type large_and_medium_segment_count[2]{};
         result = hipMemcpyAsync(
-            &large_segment_count,
-            large_segment_count_output,
-            sizeof(segment_index_type),
+            &large_and_medium_segment_count,
+            large_and_medium_segment_count_output,
+            2 * sizeof(segment_index_type),
             hipMemcpyDeviceToHost,
             stream
         );
@@ -338,6 +364,15 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         if(hipSuccess != result)
         {
             return result;
+        }
+        const auto large_segment_count = large_and_medium_segment_count[0];
+        const auto medium_segment_count = large_and_medium_segment_count[1];
+        const auto small_segment_count = segments - large_segment_count - medium_segment_count;
+        if(debug_synchronous)
+        {
+            std::cout << "large_segment_count " << large_segment_count << '\n';
+            std::cout << "medium_segment_count " << medium_segment_count << '\n';
+            std::cout << "small_segment_count " << small_segment_count << '\n';
         }
         if(large_segment_count > 0)
         {
@@ -356,7 +391,31 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
                                                         large_segment_count,
                                                         start)
         }
-        const auto small_segment_count = segments - large_segment_count;
+        if(medium_segment_count > 0)
+        {
+            const auto medium_segment_grid_size = ::rocprim::detail::ceiling_div(medium_segment_count,
+                                                                                 medium_segments_per_block);
+            std::chrono::high_resolution_clock::time_point start;
+            if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+            hipLaunchKernelGGL(
+                HIP_KERNEL_NAME(
+                    segmented_sort_small_or_medium_kernel<
+                        select_warp_sort_helper_config_medium_t<typename config::warp_sort_config>,
+                        Descending,
+                        config::warp_sort_config::block_size_medium
+                    >
+                ),
+                dim3(medium_segment_grid_size), dim3(config::warp_sort_config::block_size_medium), 0, stream,
+                keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output,
+                is_result_in_output,
+                medium_segment_count, medium_segment_indices_output,
+                begin_offsets, end_offsets,
+                begin_bit, end_bit
+            );
+            ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("segmented_sort:medium_segments",
+                                                        medium_segment_count,
+                                                        start)
+        }
         if(small_segment_count > 0)
         {
             const auto small_segment_grid_size = ::rocprim::detail::ceiling_div(small_segment_count,
@@ -365,8 +424,8 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
             if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(
-                    segmented_sort_small_kernel<
-                        typename config::warp_sort_config,
+                    segmented_sort_small_or_medium_kernel<
+                        select_warp_sort_helper_config_small_t<typename config::warp_sort_config>,
                         Descending,
                         config::warp_sort_config::block_size_small
                     >
@@ -374,7 +433,7 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
                 dim3(small_segment_grid_size), dim3(config::warp_sort_config::block_size_small), 0, stream,
                 keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output,
                 is_result_in_output,
-                small_segment_count, large_segment_indices_output + large_segment_count,
+                small_segment_count, small_segment_indices_output,
                 begin_offsets, end_offsets,
                 begin_bit, end_bit
             );
