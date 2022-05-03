@@ -63,13 +63,14 @@ namespace detail
 /// \tparam MergeImplMPBlockSize - block size in the block merge step using mergepath impl
 /// \tparam MergeImplMPItemsPerThread - ItemsPerThread in the block merge step using mergepath impl
 /// \tparam MinInputSizeMergepath - breakpoint of input-size to use mergepath impl for block merge step
-template <unsigned int MergeImpl1BlockSize           = 512,
-          unsigned int SortBlockSize                 = MergeImpl1BlockSize,
-          unsigned int SortItemsPerThread            = 1,
-          unsigned int MergeImplMPPartitionBlockSize = 128,
-          unsigned int MergeImplMPBlockSize          = 128,
-          unsigned int MergeImplMPItemsPerThread     = SortBlockSize * SortItemsPerThread / MergeImplMPBlockSize,
-          unsigned int MinInputSizeMergepath         = 200000>
+template<unsigned int     MergeImpl1BlockSize           = 512,
+         unsigned int     SortBlockSize                 = MergeImpl1BlockSize,
+         unsigned int     SortItemsPerThread            = 1,
+         unsigned int     MergeImplMPPartitionBlockSize = 128,
+         unsigned int     MergeImplMPBlockSize          = std::min(SortBlockSize, 128u),
+         unsigned int     MergeImplMPItemsPerThread
+         = SortBlockSize* SortItemsPerThread / MergeImplMPBlockSize,
+         unsigned int     MinInputSizeMergepath = 200000>
 using merge_sort_config = detail::merge_sort_config_impl<SortBlockSize,
                                                          SortItemsPerThread,
                                                          MergeImpl1BlockSize,
