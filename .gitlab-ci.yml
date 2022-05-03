@@ -31,12 +31,30 @@ include:
       - /rules.yaml
 
 stages:
+  - lint
   - build
   - test
   - benchmark
 
 variables:
   PACKAGE_DIR: $BUILD_DIR/package
+
+clang-format:
+  extends:
+    - .deps:rocm
+  stage: lint
+  needs: []
+  tags:
+    - rocm-build
+  variables:
+    CLANG_FORMAT: "/opt/rocm/llvm/bin/clang-format"
+    GIT_CLANG_FORMAT: "/opt/rocm/llvm/bin/git-clang-format --binary $CLANG_FORMAT"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - cd $CI_PROJECT_DIR
+    - git config --global --add safe.directory $CI_PROJECT_DIR
+    - scripts/code-format/check-format.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA
 
 .cmake-latest:
   extends:
@@ -91,6 +109,7 @@ variables:
 
 build:cmake-latest:
   stage: build
+  needs: []
   extends:
     - .cmake-latest
     - .build:common
@@ -104,6 +123,7 @@ build:cmake-minimum:
 
 build:package:
   stage: build
+  needs: []
   tags:
     - rocm-build
   extends:
@@ -128,6 +148,7 @@ build:package:
 
 build:benchmark:
   stage: build
+  needs: []
   tags:
     - rocm-build
   extends:
