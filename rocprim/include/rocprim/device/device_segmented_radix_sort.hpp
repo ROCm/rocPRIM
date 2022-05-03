@@ -147,7 +147,8 @@ void segmented_sort_small_kernel(KeysInputIterator keys_input,
                                  unsigned int begin_bit,
                                  unsigned int end_bit)
 {
-    segmented_sort_small<Config, Descending>(
+    using config = select_warp_sort_helper_config_small_t<Config>;
+    segmented_sort_small<config, Descending>(
         keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output,
         to_output, num_segments, segment_indices,
         begin_offsets, end_offsets,
@@ -221,9 +222,9 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
     static constexpr bool partitioning_allowed =
         !std::is_same<typename config::warp_sort_config, DisabledWarpSortConfig>::value;
     static constexpr unsigned int max_small_segment_length =
-        config::warp_sort_config::items_per_thread * config::warp_sort_config::logical_warp_size;
+        config::warp_sort_config::items_per_thread_small * config::warp_sort_config::logical_warp_size_small;
     static constexpr unsigned int small_segments_per_block =
-        config::warp_sort_config::block_size / config::warp_sort_config::logical_warp_size;
+        config::warp_sort_config::block_size_small / config::warp_sort_config::logical_warp_size_small;
     const auto large_segment_selector = [=](const unsigned int segment_index) mutable -> bool
     {
         const unsigned int segment_length = end_offsets[segment_index] - begin_offsets[segment_index];
@@ -367,10 +368,10 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
                     segmented_sort_small_kernel<
                         typename config::warp_sort_config,
                         Descending,
-                        config::warp_sort_config::block_size
+                        config::warp_sort_config::block_size_small
                     >
                 ),
-                dim3(small_segment_grid_size), dim3(config::warp_sort_config::block_size), 0, stream,
+                dim3(small_segment_grid_size), dim3(config::warp_sort_config::block_size_small), 0, stream,
                 keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output,
                 is_result_in_output,
                 small_segment_count, large_segment_indices_output + large_segment_count,
