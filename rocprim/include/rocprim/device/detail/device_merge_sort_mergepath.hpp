@@ -349,23 +349,21 @@ namespace detail
 
         if ROCPRIM_IF_CONSTEXPR(with_values)
         {
-            const auto input1 = values_input + keys1_beg;
-            const auto input2 = values_input + keys2_beg;
+            const ValuesInputIterator input1 = values_input + keys1_beg;
+            const ValuesInputIterator input2 = values_input + keys2_beg;
             if(IsIncompleteTile)
             {
                 ROCPRIM_UNROLL
                 for (unsigned int item = 0; item < ItemsPerThread; ++item)
                 {
                     unsigned int idx = BlockSize * item + threadIdx.x;
-
                     if(idx < num_keys1)
                     {
-                        __builtin_memcpy(&values_shared[idx], &input1[idx], sizeof(value_type));
+                        values_shared[idx] = input1[idx];
                     }
                     else if(idx - num_keys1 < num_keys2)
                     {
-                        __builtin_memcpy(
-                            &values_shared[idx], &input2[idx - num_keys1], sizeof(value_type));
+                        values_shared[idx] = input2[idx - num_keys1];
                     }
                 }
             }
@@ -377,11 +375,11 @@ namespace detail
                     unsigned int idx = BlockSize * item + threadIdx.x;
                     if(idx < num_keys1)
                     {
-                        __builtin_memcpy(&values_shared[idx], &input1[idx], sizeof(value_type));
+                        values_shared[idx] = input1[idx];
                     }
                     else
                     {
-                        __builtin_memcpy(&values_shared[idx], &input2[idx - num_keys1], sizeof(value_type));
+                        values_shared[idx] = input2[idx - num_keys1];
                     }
                 }
             }
@@ -392,7 +390,7 @@ namespace detail
             ROCPRIM_UNROLL
             for (unsigned int item = 0; item < ItemsPerThread; ++item)
             {
-                __builtin_memcpy(&values_output[offset + item], &values_shared[indices[item]], sizeof(value_type));
+                values_output[offset + item] = values_shared[indices[item]];
             }
 
             rocprim::syncthreads();
