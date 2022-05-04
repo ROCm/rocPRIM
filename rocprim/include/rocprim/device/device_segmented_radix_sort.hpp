@@ -339,7 +339,6 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
     ptr += large_and_medium_segment_indices_bytes;
     medium_segment_indices_output = make_reverse_iterator(large_segment_indices_output + segments);
     small_segment_indices_output  = reinterpret_cast<segment_index_type*>(ptr);
-    ;
     ptr += small_segment_indices_bytes;
     large_and_medium_segment_count_output = reinterpret_cast<segment_index_type*>(ptr);
     ptr += large_and_medium_segment_count_bytes;
