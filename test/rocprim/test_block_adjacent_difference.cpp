@@ -23,10 +23,10 @@
 #include "common_test_header.hpp"
 
 // required rocprim headers
-#include <rocprim/config.hpp>
 #include <rocprim/block/block_adjacent_difference.hpp>
 #include <rocprim/block/block_load.hpp>
 #include <rocprim/block/block_store.hpp>
+#include <rocprim/config.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
@@ -44,4 +44,13 @@ struct Integral;
 
 #include "test_block_adjacent_difference.hpp"
 
+#undef suite_name
+#undef warp_params
+#undef name_suffix
 
+struct Floating;
+#define suite_name RocprimBlockAdjacentDifference
+#define warp_params BlockDiscParamsFloating
+#define name_suffix Floating
+
+#include "test_block_adjacent_difference.hpp"
