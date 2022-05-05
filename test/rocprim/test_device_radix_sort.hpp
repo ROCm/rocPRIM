@@ -20,6 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#ifndef TEST_DEVICE_RADIX_SORT_HPP_
+#define TEST_DEVICE_RADIX_SORT_HPP_
+
 #include "common_test_header.hpp"
 
 // required rocprim headers
@@ -52,71 +55,20 @@ public:
     using params = Params;
 };
 
-typedef ::testing::Types<params<signed char, double, true>,
-                         params<int, short>,
-                         params<short, int, true>,
-                         params<long long, char>,
-                         params<double, unsigned int>,
-                         params<double, int, true>,
-                         params<float, int>,
-                         params<rocprim::half, long long>,
-                         params<rocprim::bfloat16, long long>,
-                         params<int8_t, int8_t>,
-                         params<uint8_t, uint8_t>,
-                         params<rocprim::half, rocprim::half>,
-                         params<rocprim::bfloat16, rocprim::bfloat16>,
-                         params<int, test_utils::custom_test_type<float>>,
-
-                         // start_bit and end_bit
-                         params<unsigned char, int, true, 0, 7>,
-                         params<unsigned short, int, true, 4, 10>,
-                         params<unsigned int, short, false, 3, 22>,
-                         params<uint8_t, int8_t, true, 0, 7>,
-                         params<uint8_t, uint8_t, true, 4, 10>,
-                         params<unsigned int, double, true, 4, 21>,
-                         params<unsigned int, rocprim::half, true, 0, 15>,
-                         params<unsigned short, rocprim::half, false, 3, 22>,
-                         params<unsigned int, rocprim::bfloat16, true, 0, 12>,
-                         params<unsigned short, rocprim::bfloat16, false, 3, 11>,
-                         params<unsigned long long, char, false, 8, 20>,
-                         params<unsigned short, test_utils::custom_test_type<double>, false, 8, 11>,
-                         // some params used by PyTorch's Randperm()
-                         params<int64_t, int64_t, false, 0, 34>,
-                         params<int64_t, float, true, 0, 34>,
-                         params<int64_t, rocprim::half, true, 0, 34>,
-                         params<int64_t, int64_t, false, 0, 34, true>,
-
-                         // large sizes to check correctness of more than 1 block per batch
-                         params<int, char, false, 0, 32, true>,
-                         params<int, char, true, 0, 32, true>,
-                         params<float, char, false, 0, 32, true>,
-                         params<float, char, true, 0, 32, true>>
-    Params;
-
-TYPED_TEST_SUITE(RocprimDeviceRadixSort, Params);
+TYPED_TEST_SUITE_P(RocprimDeviceRadixSort);
 
 inline std::vector<unsigned int> get_sizes(int seed_value)
 {
-    std::vector<unsigned int>       sizes = {0,
-                                       1,
-                                       10,
-                                       53,
-                                       211,
-                                       1024,
-                                       2049,
-                                       2345,
-                                       4096,
-                                       8196,
-                                       34567,
-                                       (1 << 16) - 1220,
-                                       (1 << 23) - 76543};
+    std::vector<unsigned int> sizes = { 0, 1, 10, 53, 211, 1024, 2049, 2345, 4096, 8196, 34567, (1 << 16) - 1220, (1 << 23) - 76543 };
+
     const std::vector<unsigned int> random_sizes
         = test_utils::get_random_data<unsigned int>(10, 1, 100000, seed_value);
     sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
     return sizes;
 }
 
-TYPED_TEST(RocprimDeviceRadixSort, SortKeys)
+template<typename TestFixture>
+inline void sort_keys()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -261,7 +213,8 @@ TYPED_TEST(RocprimDeviceRadixSort, SortKeys)
     }
 }
 
-TYPED_TEST(RocprimDeviceRadixSort, SortPairs)
+template<typename TestFixture>
+inline void sort_pairs()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -451,7 +404,8 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairs)
     }
 }
 
-TYPED_TEST(RocprimDeviceRadixSort, SortKeysDoubleBuffer)
+template<typename TestFixture>
+inline void sort_keys_double_buffer()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -575,7 +529,8 @@ TYPED_TEST(RocprimDeviceRadixSort, SortKeysDoubleBuffer)
     }
 }
 
-TYPED_TEST(RocprimDeviceRadixSort, SortPairsDoubleBuffer)
+template<typename TestFixture>
+inline void sort_pairs_double_buffer()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -741,7 +696,7 @@ TYPED_TEST(RocprimDeviceRadixSort, SortPairsDoubleBuffer)
     }
 }
 
-TEST(RocprimDeviceRadixSort, SortKeysOver4G)
+inline void sort_keys_over_4g()
 {
     using key_type                                 = uint8_t;
     constexpr unsigned int start_bit               = 0;
@@ -819,3 +774,5 @@ TEST(RocprimDeviceRadixSort, SortKeysOver4G)
     HIP_CHECK(hipFree(d_keys_input_output));
     HIP_CHECK(hipFree(d_temporary_storage));
 }
+
+#endif // TEST_DEVICE_RADIX_SORT_HPP_

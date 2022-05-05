@@ -20,6 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#ifndef TEST_DEVICE_SEGMENTED_RADIX_SORT_HPP_
+#define TEST_DEVICE_SEGMENTED_RADIX_SORT_HPP_
+
 #include "common_test_header.hpp"
 
 // required rocprim headers
@@ -54,62 +57,26 @@ public:
     using params = Params;
 };
 
-typedef ::testing::Types<
-    params<signed char, double, true, 0, 8, 0, 1000>,
-    params<int, short, false, 0, 32, 0, 100>,
-    params<short, int, true, 0, 16, 0, 10000>,
-    params<long long, test_utils::custom_test_type<char>, false, 0, 64, 4000, 8000>,
-    params<double, unsigned int, false, 0, 64, 2, 10>,
-    params<int8_t, int8_t, true, 0, 8, 2000, 10000>,
-    params<int8_t, int8_t, false, 0, 8, 0, 1000>,
-    params<uint8_t, uint8_t, true, 0, 8, 2000, 10000>,
-    params<uint8_t, uint8_t, false, 0, 8, 0, 1000>,
-    params<rocprim::half, rocprim::half, true, 0, 16, 2000, 10000>,
-    params<rocprim::half, rocprim::half, false, 0, 16, 0, 1000>,
-    params<rocprim::bfloat16, rocprim::bfloat16, true, 0, 16, 2000, 10000>,
-    params<rocprim::bfloat16, rocprim::bfloat16, false, 0, 16, 0, 1000>,
-    params<float, int, false, 0, 32, 0, 1000>,
-
-    // start_bit and end_bit
-    params<uint8_t, uint8_t, true, 2, 5, 0, 10000>,
-    params<uint8_t, uint8_t, false, 2, 6, 1000, 10000>,
-    params<unsigned short, rocprim::half, true, 4, 10, 0, 10000>,
-    params<unsigned short, rocprim::bfloat16, true, 4, 10, 0, 10000>,
-    params<unsigned char, int, true, 2, 5, 0, 100>,
-    params<unsigned short, int, true, 4, 10, 0, 10000>,
-    params<unsigned int, short, false, 3, 22, 1000, 10000>,
-    params<unsigned int, double, true, 4, 21, 100, 100000>,
-    params<unsigned int, short, true, 0, 15, 100000, 200000>,
-    params<unsigned long long, char, false, 8, 20, 0, 1000>,
-    params<unsigned short, test_utils::custom_test_type<double>, false, 8, 11, 50, 200>>
-    Params;
-
-TYPED_TEST_SUITE(RocprimDeviceSegmentedRadixSort, Params);
+TYPED_TEST_SUITE_P(RocprimDeviceSegmentedRadixSort);
 
 inline std::vector<size_t> get_sizes(int seed_value)
 {
-    std::vector<size_t>       sizes = {1024,
-                                 2048,
-                                 4096,
-                                 1792,
-                                 0,
-                                 1,
-                                 10,
-                                 53,
-                                 211,
-                                 500,
-                                 2345,
-                                 11001,
-                                 34567,
-                                 1000000,
-                                 (1 << 16) - 1220};
+    std::vector<size_t> sizes = {
+        1024, 2048, 4096, 1792,
+        0, 1, 10, 53, 211, 500,
+        2345, 11001, 34567,
+        1000000,
+        (1 << 16) - 1220
+    };
+
     const std::vector<size_t> random_sizes
         = test_utils::get_random_data<size_t>(5, 1, 100000, seed_value);
     sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
     return sizes;
 }
 
-TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortKeys)
+template<typename TestFixture>
+inline void sort_keys()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -273,7 +240,8 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortKeys)
     }
 }
 
-TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortPairs)
+template<typename TestFixture>
+inline void sort_pairs()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -483,7 +451,8 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortPairs)
     }
 }
 
-TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortKeysDoubleBuffer)
+template<typename TestFixture>
+inline void sort_keys_double_buffer()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -653,7 +622,8 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortKeysDoubleBuffer)
     }
 }
 
-TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortPairsDoubleBuffer)
+template<typename TestFixture>
+inline void sort_pairs_double_buffer()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
@@ -859,3 +829,5 @@ TYPED_TEST(RocprimDeviceSegmentedRadixSort, SortPairsDoubleBuffer)
         }
     }
 }
+
+#endif // TEST_DEVICE_SEGMENTED_RADIX_SORT_HPP_

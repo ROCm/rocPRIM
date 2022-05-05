@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,37 +23,36 @@
 #include "common_test_header.hpp"
 
 // required rocprim headers
+#include <rocprim/block/block_adjacent_difference.hpp>
 #include <rocprim/block/block_load.hpp>
 #include <rocprim/block/block_store.hpp>
-#include <rocprim/block/block_scan.hpp>
+#include <rocprim/config.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
 
 // kernel definitions
-#include "test_block_scan.kernels.hpp"
+#include "test_block_adjacent_difference.kernels.hpp"
 
 // Start stamping out tests
-struct RocprimBlockScanSingleValueTests;
-struct RocprimBlockScanInputArrayTests;
+struct RocprimBlockAdjacentDifference;
+
+#cmakedefine ROCPRIM_TEST_SLICE @ROCPRIM_TEST_SLICE@
+
+#if   ROCPRIM_TEST_SLICE == 0
 
 struct Integral;
-#define suite_name_single RocprimBlockScanSingleValueTests
-#define suite_name_array RocprimBlockScanInputArrayTests
-#define block_params BlockParamsIntegral
+#define suite_name RocprimBlockAdjacentDifference
+#define warp_params BlockDiscParamsIntegral
 #define name_suffix Integral
 
-#include "test_block_scan.hpp"
-
-#undef suite_name_single
-#undef suite_name_array
-#undef block_params
-#undef name_suffix
+#elif ROCPRIM_TEST_SLICE == 1
 
 struct Floating;
-#define suite_name_single RocprimBlockScanSingleValueTests
-#define suite_name_array RocprimBlockScanInputArrayTests
-#define block_params BlockExchParamsFloating
+#define suite_name RocprimBlockAdjacentDifference
+#define warp_params BlockDiscParamsFloating
 #define name_suffix Floating
 
-#include "test_block_scan.hpp"
+#endif
+
+#include "test_block_adjacent_difference.hpp"
