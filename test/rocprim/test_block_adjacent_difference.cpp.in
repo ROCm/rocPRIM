@@ -23,10 +23,10 @@
 #include "common_test_header.hpp"
 
 // required rocprim headers
-#include <rocprim/config.hpp>
 #include <rocprim/block/block_adjacent_difference.hpp>
 #include <rocprim/block/block_load.hpp>
 #include <rocprim/block/block_store.hpp>
+#include <rocprim/config.hpp>
 
 // required test headers
 #include "test_utils_types.hpp"
@@ -37,11 +37,22 @@
 // Start stamping out tests
 struct RocprimBlockAdjacentDifference;
 
+#cmakedefine ROCPRIM_TEST_SLICE @ROCPRIM_TEST_SLICE@
+
+#if   ROCPRIM_TEST_SLICE == 0
+
 struct Integral;
 #define suite_name RocprimBlockAdjacentDifference
 #define warp_params BlockDiscParamsIntegral
 #define name_suffix Integral
 
+#elif ROCPRIM_TEST_SLICE == 1
+
+struct Floating;
+#define suite_name RocprimBlockAdjacentDifference
+#define warp_params BlockDiscParamsFloating
+#define name_suffix Floating
+
+#endif
+
 #include "test_block_adjacent_difference.hpp"
-
-
