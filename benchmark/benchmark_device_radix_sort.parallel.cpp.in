@@ -27,5 +27,7 @@
 
 namespace {
     auto benchmarks = config_autotune_register::create_bulk(
-        device_radix_sort_benchmark_generator<@LongRadixBits_ShortRadixBits@, @KeyType_ValueType@>::create);
+        device_radix_sort_benchmark_generator<@LongRadixBits_ShortRadixBits@, 
+                                              @ItemsPerThread2@, 
+                                              @KeyType_ValueType@>::create);
 }

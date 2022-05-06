@@ -311,6 +311,7 @@ inline constexpr unsigned int get_max_items_per_thread(size_t key_bytes, size_t 
 }
 template<unsigned int LongRadixBits,
          unsigned int ShortRadixBits,
+         unsigned int ItemsPerThread2,
          typename Key,
          typename Value = rocprim::empty_type>
 struct device_radix_sort_benchmark_generator
@@ -318,27 +319,16 @@ struct device_radix_sort_benchmark_generator
     template<unsigned int ItemsPerThread1>
     struct create_ipt1
     {
-        template<unsigned int ItemsPerThread2Exponent>
-        struct create_ipt2
-        {
-            void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-            {
-                static constexpr unsigned int items_per_thread_2 = 1u << ItemsPerThread2Exponent;
-                storage.emplace_back(std::make_unique<device_radix_sort_benchmark<
-                                         Key,
-                                         Value,
-                                         rocprim::radix_sort_config<
-                                             LongRadixBits,
-                                             ShortRadixBits,
-                                             rocprim::kernel_config<256u, ItemsPerThread1>,
-                                             rocprim::kernel_config<256u, items_per_thread_2>>>>());
-            }
-        };
-
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
         {
-            // 1, 2, 4, 8
-            static_for_each<make_index_range<unsigned int, 0, 3>, create_ipt2>(storage);
+            storage.emplace_back(
+                std::make_unique<device_radix_sort_benchmark<
+                    Key,
+                    Value,
+                    rocprim::radix_sort_config<LongRadixBits,
+                                               ShortRadixBits,
+                                               rocprim::kernel_config<256u, ItemsPerThread1>,
+                                               rocprim::kernel_config<256u, ItemsPerThread2>>>>());
         }
     };
 
@@ -351,49 +341,37 @@ struct device_radix_sort_benchmark_generator
     }
 };
 
-template<typename Key, typename Value = rocprim::empty_type>
+template<unsigned int BlockSize, typename Key, typename Value = rocprim::empty_type>
 struct device_radix_sort_single_benchmark_generator
 {
-    template<unsigned int BlockSizeExponent>
-    struct create_block_size
+    template<unsigned int ItemsPerThread>
+    struct create_ipt
     {
-        static constexpr unsigned int block_size = 1u << BlockSizeExponent;
-
-        template<unsigned int ItemsPerThread>
-        struct create_ipt
-        {
-            void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-            {
-                storage.emplace_back(std::make_unique<device_radix_sort_benchmark<
-                                         Key,
-                                         Value,
-                                         rocprim::radix_sort_config<
-                                             8,
-                                             7,
-                                             rocprim::kernel_config<256, 2>,
-                                             rocprim::kernel_config<256, 10>,
-                                             rocprim::kernel_config<block_size, ItemsPerThread>,
-                                             rocprim::kernel_config<1024, 1>,
-                                             1024,
-                                             true>>>());
-            }
-        };
-
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
         {
-            static constexpr unsigned int max_items_per_thread
-                = block_size < 512 ? get_max_items_per_thread(sizeof(Key), sizeof(Value))
-                                   : (block_size < 1024 ? 7 : 1);
-
-            static_for_each<make_index_range<unsigned int, 1, max_items_per_thread>, create_ipt>(
-                storage);
+            storage.emplace_back(
+                std::make_unique<device_radix_sort_benchmark<
+                    Key,
+                    Value,
+                    rocprim::radix_sort_config<8,
+                                               7,
+                                               rocprim::kernel_config<256, 2>,
+                                               rocprim::kernel_config<256, 10>,
+                                               rocprim::kernel_config<BlockSize, ItemsPerThread>,
+                                               rocprim::kernel_config<1024, 1>,
+                                               1024,
+                                               true>>>());
         }
     };
 
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
-        // 64, 128, 256, 512, 1024
-        static_for_each<make_index_range<unsigned int, 6, 10>, create_block_size>(storage);
+        static constexpr unsigned int max_items_per_thread
+            = BlockSize < 512 ? get_max_items_per_thread(sizeof(Key), sizeof(Value))
+                              : (BlockSize < 1024 ? 7 : 1);
+
+        static_for_each<make_index_range<unsigned int, 1, max_items_per_thread>, create_ipt>(
+            storage);
     }
 };
 

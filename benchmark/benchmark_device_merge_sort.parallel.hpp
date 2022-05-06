@@ -279,54 +279,47 @@ struct device_merge_sort_benchmark : public config_autotune_interface
 
 #ifdef BENCHMARK_CONFIG_TUNING
 
-template<unsigned int MergeBlockSizeExponent, typename Key, typename Value = rocprim::empty_type>
+template<unsigned int MergeBlockSizeExponent,
+         unsigned int SortBlockSizeExponent,
+         typename Key,
+         typename Value = rocprim::empty_type>
 struct device_merge_sort_benchmark_generator
 {
-    template<unsigned int SortBlockSizeExponent>
-    struct create_sort_block_size
+    template<unsigned int ItemsPerThreadExponent>
+    struct create_ipt
     {
-        template<unsigned int ItemsPerThreadExponent>
-        struct create_ipt
-        {
-            static constexpr unsigned int merge_block_size = 1u << MergeBlockSizeExponent;
-            static constexpr unsigned int sort_block_size  = 1u << SortBlockSizeExponent;
-            static constexpr unsigned int items_per_thread = 1u << ItemsPerThreadExponent;
-
-            void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-            {
-                storage.emplace_back(std::make_unique<device_merge_sort_benchmark<
-                                         Key,
-                                         Value,
-                                         rocprim::merge_sort_config<merge_block_size,
-                                                                    sort_block_size,
-                                                                    items_per_thread>>>());
-            }
-        };
+        static constexpr unsigned int merge_block_size = 1u << MergeBlockSizeExponent;
+        static constexpr unsigned int sort_block_size  = 1u << SortBlockSizeExponent;
+        static constexpr unsigned int items_per_thread = 1u << ItemsPerThreadExponent;
 
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
         {
-            // Sort items per block must be divisible by merge_block_size, so make
-            // the items per thread at least as large that the items_per_block
-            // is equal to merge_block_size.
-            static constexpr unsigned int min_items_per_thread_exponent
-                = MergeBlockSizeExponent - std::min(SortBlockSizeExponent, MergeBlockSizeExponent);
-
-            // Very large block sizes don't work with large items_per_blocks since
-            // shared memory is limited
-            static constexpr unsigned int max_items_per_thread_exponent
-                = std::min(4u, 11u - SortBlockSizeExponent);
-
-            static_for_each<make_index_range<unsigned int,
-                                             min_items_per_thread_exponent,
-                                             max_items_per_thread_exponent>,
-                            create_ipt>(storage);
+            storage.emplace_back(
+                std::make_unique<device_merge_sort_benchmark<
+                    Key,
+                    Value,
+                    rocprim::
+                        merge_sort_config<merge_block_size, sort_block_size, items_per_thread>>>());
         }
     };
 
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
-        // 128, 256, 512, 1024
-        static_for_each<make_index_range<unsigned int, 7, 10>, create_sort_block_size>(storage);
+        // Sort items per block must be divisible by merge_block_size, so make
+        // the items per thread at least as large that the items_per_block
+        // is equal to merge_block_size.
+        static constexpr unsigned int min_items_per_thread_exponent
+            = MergeBlockSizeExponent - std::min(SortBlockSizeExponent, MergeBlockSizeExponent);
+
+        // Very large block sizes don't work with large items_per_blocks since
+        // shared memory is limited
+        static constexpr unsigned int max_items_per_thread_exponent
+            = std::min(4u, 11u - SortBlockSizeExponent);
+
+        static_for_each<make_index_range<unsigned int,
+                                         min_items_per_thread_exponent,
+                                         max_items_per_thread_exponent>,
+                        create_ipt>(storage);
     }
 };
 

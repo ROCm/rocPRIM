@@ -210,33 +210,4 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
     }
 };
 
-#ifdef BENCHMARK_CONFIG_TUNING
-
-template<typename DataType, bool Left, bool InPlace, unsigned int BlockSize>
-struct device_adjacent_difference_benchmark_generator
-{
-    template<unsigned int ItemsPerThreadExponent>
-    struct create_ipt
-    {
-        void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-        {
-            static constexpr unsigned int items_per_thread = 1u << ItemsPerThreadExponent;
-            storage.emplace_back(
-                std::make_unique<device_adjacent_difference_benchmark<
-                    DataType,
-                    Left,
-                    InPlace,
-                    rocprim::adjacent_difference_config<BlockSize, items_per_thread>>>());
-        }
-    };
-
-    static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-    {
-        // 1, 2, 4, 8, 16
-        static_for_each<make_index_range<unsigned int, 0, 4>, create_ipt>(storage);
-    }
-};
-
-#endif
-
 #endif // ROCPRIM_BENCHMARK_DEVICE_ADJACENT_DIFFERENCE_PARALLEL_HPP_
