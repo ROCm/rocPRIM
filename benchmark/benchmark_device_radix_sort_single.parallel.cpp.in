@@ -27,5 +27,5 @@
 
 namespace {
     auto benchmarks = config_autotune_register::create_bulk(
-        device_radix_sort_single_benchmark_generator<@KeyType_ValueType@>::create);    
+        device_radix_sort_single_benchmark_generator<@BlockSize@, @KeyType_ValueType@>::create);    
 }

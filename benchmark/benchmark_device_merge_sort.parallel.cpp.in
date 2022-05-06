@@ -27,5 +27,7 @@
 
 namespace { 
     auto benchmarks = config_autotune_register::create_bulk(
-        device_merge_sort_benchmark_generator<@MergeBlockSizeExponent@, @KeyType_ValueType@>::create);    
+        device_merge_sort_benchmark_generator<@MergeBlockSizeExponent@, 
+                                              @SortBlockSizeExponent@,
+                                              @KeyType_ValueType@>::create);    
 }

@@ -26,6 +26,9 @@
 #include "benchmark_device_adjacent_difference.parallel.hpp"
 
 namespace {
-    auto benchmarks = config_autotune_register::create_bulk(
-        device_adjacent_difference_benchmark_generator<@DataType@, @Left@, @InPlace@, @BlockSize@>::create);
+    auto benchmarks = config_autotune_register::create<device_adjacent_difference_benchmark<
+        @DataType@, 
+        @Left@, 
+        @InPlace@,
+        rocprim::adjacent_difference_config<@BlockSize@, @ItemsPerThread@>>>();
 }
