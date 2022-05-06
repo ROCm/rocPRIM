@@ -38,7 +38,8 @@ template<class Key,
          unsigned int StartBit,
          unsigned int EndBit,
          unsigned int MinSegmentLength,
-         unsigned int MaxSegmentLength>
+         unsigned int MaxSegmentLength,
+         class Config = rocprim::default_config>
 struct params
 {
     using key_type                                   = Key;
@@ -48,7 +49,47 @@ struct params
     static constexpr unsigned int end_bit            = EndBit;
     static constexpr unsigned int min_segment_length = MinSegmentLength;
     static constexpr unsigned int max_segment_length = MaxSegmentLength;
+    using config                                     = Config;
 };
+
+using config_default = rocprim::segmented_radix_sort_config<
+    4, //< long radix bits
+    3, //< short radix bits
+    rocprim::kernel_config<256, 4> //< sort block size, items per thread
+    >;
+
+using config_semi_custom = rocprim::segmented_radix_sort_config<
+    3, //< long radix bits
+    2, //< short radix bits
+    rocprim::kernel_config<128, 4>, //< sort block size, items per thread
+    rocprim::WarpSortConfig<16, //< logical warp size small
+                            8 //< items per thread small
+                            >>;
+
+using config_semi_custom_warp_config = rocprim::segmented_radix_sort_config<
+    3, //< long radix bits
+    2, //< short radix bits
+    rocprim::kernel_config<128, 4>, //< sort block size, items per thread
+    rocprim::WarpSortConfig<16, //< logical warp size small
+                            2, //< items per thread small
+                            512, //< block size small
+                            0, //< partitioning threshold
+                            true //< enable unpartitioned sort
+                            >>;
+
+using config_custom = rocprim::segmented_radix_sort_config<
+    3, //< long radix bits
+    2, //< short radix bits
+    rocprim::kernel_config<128, 4>, //< sort block size, items per thread
+    rocprim::WarpSortConfig<16, //< logical warp size small
+                            2, //< items per thread small
+                            512, //< block size small
+                            0, //< partitioning threshold
+                            true, //< enable unpartitioned sort
+                            32, //< logical warp size medium
+                            4, //< items per thread medium
+                            256 //< block size medium
+                            >>;
 
 template<class Params>
 class RocprimDeviceSegmentedRadixSort : public ::testing::Test
@@ -83,6 +124,7 @@ inline void sort_keys()
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type                           = typename TestFixture::params::key_type;
+    using config                             = typename TestFixture::params::config;
     static constexpr bool         descending = TestFixture::params::descending;
     static constexpr unsigned int start_bit  = TestFixture::params::start_bit;
     static constexpr unsigned int end_bit    = TestFixture::params::end_bit;
@@ -176,16 +218,16 @@ inline void sort_keys()
             }
 
             size_t temporary_storage_bytes = 0;
-            HIP_CHECK(rocprim::segmented_radix_sort_keys(nullptr,
-                                                         temporary_storage_bytes,
-                                                         d_keys_input,
-                                                         d_keys_output,
-                                                         size,
-                                                         segments_count,
-                                                         d_offsets,
-                                                         d_offsets + 1,
-                                                         start_bit,
-                                                         end_bit));
+            HIP_CHECK(rocprim::segmented_radix_sort_keys<config>(nullptr,
+                                                                 temporary_storage_bytes,
+                                                                 d_keys_input,
+                                                                 d_keys_output,
+                                                                 size,
+                                                                 segments_count,
+                                                                 d_offsets,
+                                                                 d_offsets + 1,
+                                                                 start_bit,
+                                                                 end_bit));
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
@@ -195,33 +237,33 @@ inline void sort_keys()
 
             if(descending)
             {
-                HIP_CHECK(rocprim::segmented_radix_sort_keys_desc(d_temporary_storage,
-                                                                  temporary_storage_bytes,
-                                                                  d_keys_input,
-                                                                  d_keys_output,
-                                                                  size,
-                                                                  segments_count,
-                                                                  d_offsets,
-                                                                  d_offsets + 1,
-                                                                  start_bit,
-                                                                  end_bit,
-                                                                  stream,
-                                                                  debug_synchronous));
+                HIP_CHECK(rocprim::segmented_radix_sort_keys_desc<config>(d_temporary_storage,
+                                                                          temporary_storage_bytes,
+                                                                          d_keys_input,
+                                                                          d_keys_output,
+                                                                          size,
+                                                                          segments_count,
+                                                                          d_offsets,
+                                                                          d_offsets + 1,
+                                                                          start_bit,
+                                                                          end_bit,
+                                                                          stream,
+                                                                          debug_synchronous));
             }
             else
             {
-                HIP_CHECK(rocprim::segmented_radix_sort_keys(d_temporary_storage,
-                                                             temporary_storage_bytes,
-                                                             d_keys_input,
-                                                             d_keys_output,
-                                                             size,
-                                                             segments_count,
-                                                             d_offsets,
-                                                             d_offsets + 1,
-                                                             start_bit,
-                                                             end_bit,
-                                                             stream,
-                                                             debug_synchronous));
+                HIP_CHECK(rocprim::segmented_radix_sort_keys<config>(d_temporary_storage,
+                                                                     temporary_storage_bytes,
+                                                                     d_keys_input,
+                                                                     d_keys_output,
+                                                                     size,
+                                                                     segments_count,
+                                                                     d_offsets,
+                                                                     d_offsets + 1,
+                                                                     start_bit,
+                                                                     end_bit,
+                                                                     stream,
+                                                                     debug_synchronous));
             }
 
             std::vector<key_type> keys_output(size);
@@ -249,6 +291,7 @@ inline void sort_pairs()
 
     using key_type                    = typename TestFixture::params::key_type;
     using value_type                  = typename TestFixture::params::value_type;
+    using config                      = typename TestFixture::params::config;
     constexpr bool         descending = TestFixture::params::descending;
     constexpr unsigned int start_bit  = TestFixture::params::start_bit;
     constexpr unsigned int end_bit    = TestFixture::params::end_bit;
@@ -373,18 +416,18 @@ inline void sort_pairs()
 
             void*  d_temporary_storage     = nullptr;
             size_t temporary_storage_bytes = 0;
-            HIP_CHECK(rocprim::segmented_radix_sort_pairs(d_temporary_storage,
-                                                          temporary_storage_bytes,
-                                                          d_keys_input,
-                                                          d_keys_output,
-                                                          d_values_input,
-                                                          d_values_output,
-                                                          size,
-                                                          segments_count,
-                                                          d_offsets,
-                                                          d_offsets + 1,
-                                                          start_bit,
-                                                          end_bit));
+            HIP_CHECK(rocprim::segmented_radix_sort_pairs<config>(d_temporary_storage,
+                                                                  temporary_storage_bytes,
+                                                                  d_keys_input,
+                                                                  d_keys_output,
+                                                                  d_values_input,
+                                                                  d_values_output,
+                                                                  size,
+                                                                  segments_count,
+                                                                  d_offsets,
+                                                                  d_offsets + 1,
+                                                                  start_bit,
+                                                                  end_bit));
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
@@ -393,37 +436,37 @@ inline void sort_pairs()
 
             if(descending)
             {
-                HIP_CHECK(rocprim::segmented_radix_sort_pairs_desc(d_temporary_storage,
-                                                                   temporary_storage_bytes,
-                                                                   d_keys_input,
-                                                                   d_keys_output,
-                                                                   d_values_input,
-                                                                   d_values_output,
-                                                                   size,
-                                                                   segments_count,
-                                                                   d_offsets,
-                                                                   d_offsets + 1,
-                                                                   start_bit,
-                                                                   end_bit,
-                                                                   stream,
-                                                                   debug_synchronous));
+                HIP_CHECK(rocprim::segmented_radix_sort_pairs_desc<config>(d_temporary_storage,
+                                                                           temporary_storage_bytes,
+                                                                           d_keys_input,
+                                                                           d_keys_output,
+                                                                           d_values_input,
+                                                                           d_values_output,
+                                                                           size,
+                                                                           segments_count,
+                                                                           d_offsets,
+                                                                           d_offsets + 1,
+                                                                           start_bit,
+                                                                           end_bit,
+                                                                           stream,
+                                                                           debug_synchronous));
             }
             else
             {
-                HIP_CHECK(rocprim::segmented_radix_sort_pairs(d_temporary_storage,
-                                                              temporary_storage_bytes,
-                                                              d_keys_input,
-                                                              d_keys_output,
-                                                              d_values_input,
-                                                              d_values_output,
-                                                              size,
-                                                              segments_count,
-                                                              d_offsets,
-                                                              d_offsets + 1,
-                                                              start_bit,
-                                                              end_bit,
-                                                              stream,
-                                                              debug_synchronous));
+                HIP_CHECK(rocprim::segmented_radix_sort_pairs<config>(d_temporary_storage,
+                                                                      temporary_storage_bytes,
+                                                                      d_keys_input,
+                                                                      d_keys_output,
+                                                                      d_values_input,
+                                                                      d_values_output,
+                                                                      size,
+                                                                      segments_count,
+                                                                      d_offsets,
+                                                                      d_offsets + 1,
+                                                                      start_bit,
+                                                                      end_bit,
+                                                                      stream,
+                                                                      debug_synchronous));
             }
 
             std::vector<key_type> keys_output(size);
@@ -459,6 +502,7 @@ inline void sort_keys_double_buffer()
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type                    = typename TestFixture::params::key_type;
+    using config                      = typename TestFixture::params::config;
     constexpr bool         descending = TestFixture::params::descending;
     constexpr unsigned int start_bit  = TestFixture::params::start_bit;
     constexpr unsigned int end_bit    = TestFixture::params::end_bit;
@@ -553,13 +597,6 @@ inline void sort_keys_double_buffer()
 
             rocprim::double_buffer<key_type> d_keys(d_keys_input, d_keys_output);
 
-            // Use custom config
-            using config = rocprim::segmented_radix_sort_config<
-                7,
-                4,
-                rocprim::kernel_config<192, 5>,
-                rocprim::select_warp_sort_config_t<key_type>>;
-
             size_t temporary_storage_bytes = 0;
             HIP_CHECK(rocprim::segmented_radix_sort_keys<config>(nullptr,
                                                                  temporary_storage_bytes,
@@ -631,6 +668,7 @@ inline void sort_pairs_double_buffer()
 
     using key_type                    = typename TestFixture::params::key_type;
     using value_type                  = typename TestFixture::params::value_type;
+    using config                      = typename TestFixture::params::config;
     constexpr bool         descending = TestFixture::params::descending;
     constexpr unsigned int start_bit  = TestFixture::params::start_bit;
     constexpr unsigned int end_bit    = TestFixture::params::end_bit;
@@ -758,16 +796,16 @@ inline void sort_pairs_double_buffer()
 
             void*  d_temporary_storage     = nullptr;
             size_t temporary_storage_bytes = 0;
-            HIP_CHECK(rocprim::segmented_radix_sort_pairs(d_temporary_storage,
-                                                          temporary_storage_bytes,
-                                                          d_keys,
-                                                          d_values,
-                                                          size,
-                                                          segments_count,
-                                                          d_offsets,
-                                                          d_offsets + 1,
-                                                          start_bit,
-                                                          end_bit));
+            HIP_CHECK(rocprim::segmented_radix_sort_pairs<config>(d_temporary_storage,
+                                                                  temporary_storage_bytes,
+                                                                  d_keys,
+                                                                  d_values,
+                                                                  size,
+                                                                  segments_count,
+                                                                  d_offsets,
+                                                                  d_offsets + 1,
+                                                                  start_bit,
+                                                                  end_bit));
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
@@ -776,33 +814,33 @@ inline void sort_pairs_double_buffer()
 
             if(descending)
             {
-                HIP_CHECK(rocprim::segmented_radix_sort_pairs_desc(d_temporary_storage,
-                                                                   temporary_storage_bytes,
-                                                                   d_keys,
-                                                                   d_values,
-                                                                   size,
-                                                                   segments_count,
-                                                                   d_offsets,
-                                                                   d_offsets + 1,
-                                                                   start_bit,
-                                                                   end_bit,
-                                                                   stream,
-                                                                   debug_synchronous));
+                HIP_CHECK(rocprim::segmented_radix_sort_pairs_desc<config>(d_temporary_storage,
+                                                                           temporary_storage_bytes,
+                                                                           d_keys,
+                                                                           d_values,
+                                                                           size,
+                                                                           segments_count,
+                                                                           d_offsets,
+                                                                           d_offsets + 1,
+                                                                           start_bit,
+                                                                           end_bit,
+                                                                           stream,
+                                                                           debug_synchronous));
             }
             else
             {
-                HIP_CHECK(rocprim::segmented_radix_sort_pairs(d_temporary_storage,
-                                                              temporary_storage_bytes,
-                                                              d_keys,
-                                                              d_values,
-                                                              size,
-                                                              segments_count,
-                                                              d_offsets,
-                                                              d_offsets + 1,
-                                                              start_bit,
-                                                              end_bit,
-                                                              stream,
-                                                              debug_synchronous));
+                HIP_CHECK(rocprim::segmented_radix_sort_pairs<config>(d_temporary_storage,
+                                                                      temporary_storage_bytes,
+                                                                      d_keys,
+                                                                      d_values,
+                                                                      size,
+                                                                      segments_count,
+                                                                      d_offsets,
+                                                                      d_offsets + 1,
+                                                                      start_bit,
+                                                                      end_bit,
+                                                                      stream,
+                                                                      debug_synchronous));
             }
 
             std::vector<key_type> keys_output(size);
