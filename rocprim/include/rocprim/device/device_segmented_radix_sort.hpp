@@ -168,6 +168,77 @@ ROCPRIM_KERNEL __launch_bounds__(BlockSize) void segmented_sort_small_or_medium_
         } \
     }
 
+struct TwoWayPartitioner
+{
+    template<typename InputIterator,
+             typename FirstOutputIterator,
+             typename SecondOutputIterator,
+             typename UnselectedOutputIterator,
+             typename SelectedCountOutputIterator,
+             typename FirstUnaryPredicate,
+             typename SecondUnaryPredicate>
+    hipError_t operator()(void*               temporary_storage,
+                          size_t&             storage_size,
+                          InputIterator       input,
+                          FirstOutputIterator output_first_part,
+                          SecondOutputIterator /*output_second_part*/,
+                          UnselectedOutputIterator /*output_unselected*/,
+                          SelectedCountOutputIterator selected_count_output,
+                          const size_t                size,
+                          FirstUnaryPredicate         select_first_part_op,
+                          SecondUnaryPredicate /*select_second_part_op*/,
+                          const hipStream_t stream,
+                          const bool        debug_synchronous)
+    {
+        return partition(temporary_storage,
+                         storage_size,
+                         input,
+                         output_first_part,
+                         selected_count_output,
+                         size,
+                         select_first_part_op,
+                         stream,
+                         debug_synchronous);
+    }
+};
+
+struct ThreeWayPartitioner
+{
+    template<typename InputIterator,
+             typename FirstOutputIterator,
+             typename SecondOutputIterator,
+             typename UnselectedOutputIterator,
+             typename SelectedCountOutputIterator,
+             typename FirstUnaryPredicate,
+             typename SecondUnaryPredicate>
+    hipError_t operator()(void*                       temporary_storage,
+                          size_t&                     storage_size,
+                          InputIterator               input,
+                          FirstOutputIterator         output_first_part,
+                          SecondOutputIterator        output_second_part,
+                          UnselectedOutputIterator    output_unselected,
+                          SelectedCountOutputIterator selected_count_output,
+                          const size_t                size,
+                          FirstUnaryPredicate         select_first_part_op,
+                          SecondUnaryPredicate        select_second_part_op,
+                          const hipStream_t           stream,
+                          const bool                  debug_synchronous)
+    {
+        return partition_three_way(temporary_storage,
+                                   storage_size,
+                                   input,
+                                   output_first_part,
+                                   output_second_part,
+                                   output_unselected,
+                                   selected_count_output,
+                                   size,
+                                   select_first_part_op,
+                                   select_second_part_op,
+                                   stream,
+                                   debug_synchronous);
+    }
+};
+
 template<
     class Config,
     bool Descending,
@@ -230,6 +301,16 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
     static constexpr unsigned int medium_segments_per_block
         = config::warp_sort_config::block_size_medium
           / config::warp_sort_config::logical_warp_size_medium;
+    static_assert(
+        max_small_segment_length <= max_medium_segment_length,
+        "The max length of small segments cannot be higher than the max length of medium segments");
+    // Don't waste cycles on 3-way partitioning, if the small and medium segments are equal length
+    static constexpr bool three_way_partitioning
+        = max_small_segment_length < max_medium_segment_length;
+    using partitioner_type
+        = std::conditional_t<three_way_partitioning, ThreeWayPartitioner, TwoWayPartitioner>;
+    partitioner_type partitioner;
+
     const auto large_segment_selector = [=](const unsigned int segment_index) mutable -> bool
     {
         const unsigned int segment_length
@@ -257,42 +338,45 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
 
     const size_t keys_bytes = ::rocprim::detail::align_size(size * sizeof(key_type));
     const size_t values_bytes = with_values ? ::rocprim::detail::align_size(size * sizeof(value_type)) : 0;
-    const size_t large_and_medium_segment_indices_bytes
+    const size_t large_and_small_segment_indices_bytes
         = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
-    const size_t small_segment_indices_bytes
-        = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
-    const size_t large_and_medium_segment_count_bytes
-        = ::rocprim::detail::align_size(2 * sizeof(segment_index_type));
+    const size_t medium_segment_indices_bytes
+        = three_way_partitioning
+              ? ::rocprim::detail::align_size(segments * sizeof(segment_index_type))
+              : 0;
+    static constexpr size_t segment_count_output_size = three_way_partitioning ? 2 : 1;
+    const size_t            segment_count_output_bytes
+        = ::rocprim::detail::align_size(segment_count_output_size * sizeof(segment_index_type));
 
     segment_index_type* large_segment_indices_output{};
-    // The total number of large and medium segments is not above the number of segments
-    // The same buffer is filled with the large and medium indices from both directions
-    auto medium_segment_indices_output
+    // The total number of large and small segments is not above the number of segments
+    // The same buffer is filled with the large and small indices from both directions
+    auto small_segment_indices_output
         = make_reverse_iterator(large_segment_indices_output + segments);
-    segment_index_type* small_segment_indices_output{};
-    segment_index_type* large_and_medium_segment_count_output{};
-    size_t partition_storage_size{};
+    segment_index_type* medium_segment_indices_output{};
+    segment_index_type* segment_count_output{};
+    size_t              partition_storage_size{};
     void*               partition_temporary_storage{};
     if(temporary_storage == nullptr)
     {
         storage_size = with_double_buffer ? 0 : (keys_bytes + values_bytes);
         if(do_partitioning)
         {
-            storage_size += large_and_medium_segment_indices_bytes;
-            storage_size += small_segment_indices_bytes;
-            storage_size += large_and_medium_segment_count_bytes;
-            const auto partition_result = partition_three_way(partition_temporary_storage,
-                                                              partition_storage_size,
-                                                              segment_index_iterator{},
-                                                              large_segment_indices_output,
-                                                              medium_segment_indices_output,
-                                                              small_segment_indices_output,
-                                                              large_and_medium_segment_count_output,
-                                                              segments,
-                                                              large_segment_selector,
-                                                              medium_segment_selector,
-                                                              stream,
-                                                              debug_synchronous);
+            storage_size += large_and_small_segment_indices_bytes;
+            storage_size += medium_segment_indices_bytes;
+            storage_size += segment_count_output_bytes;
+            const auto partition_result = partitioner(partition_temporary_storage,
+                                                      partition_storage_size,
+                                                      segment_index_iterator{},
+                                                      large_segment_indices_output,
+                                                      medium_segment_indices_output,
+                                                      small_segment_indices_output,
+                                                      segment_count_output,
+                                                      segments,
+                                                      large_segment_selector,
+                                                      medium_segment_selector,
+                                                      stream,
+                                                      debug_synchronous);
             if(hipSuccess != partition_result)
             {
                 return partition_result;
@@ -336,37 +420,37 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         ptr += values_bytes;
     }
     large_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += large_and_medium_segment_indices_bytes;
-    medium_segment_indices_output = make_reverse_iterator(large_segment_indices_output + segments);
-    small_segment_indices_output  = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += small_segment_indices_bytes;
-    large_and_medium_segment_count_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += large_and_medium_segment_count_bytes;
+    ptr += large_and_small_segment_indices_bytes;
+    medium_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
+    ptr += medium_segment_indices_bytes;
+    small_segment_indices_output = make_reverse_iterator(large_segment_indices_output + segments);
+    segment_count_output         = reinterpret_cast<segment_index_type*>(ptr);
+    ptr += segment_count_output_bytes;
     partition_temporary_storage = ptr;
     ptr += partition_storage_size;
 
     if(do_partitioning)
     {
-        hipError_t result = partition_three_way(partition_temporary_storage,
-                                                partition_storage_size,
-                                                segment_index_iterator{},
-                                                large_segment_indices_output,
-                                                medium_segment_indices_output,
-                                                small_segment_indices_output,
-                                                large_and_medium_segment_count_output,
-                                                segments,
-                                                large_segment_selector,
-                                                medium_segment_selector,
-                                                stream,
-                                                debug_synchronous);
+        hipError_t result = partitioner(partition_temporary_storage,
+                                        partition_storage_size,
+                                        segment_index_iterator{},
+                                        large_segment_indices_output,
+                                        medium_segment_indices_output,
+                                        small_segment_indices_output,
+                                        segment_count_output,
+                                        segments,
+                                        large_segment_selector,
+                                        medium_segment_selector,
+                                        stream,
+                                        debug_synchronous);
         if(hipSuccess != result)
         {
             return result;
         }
-        segment_index_type large_and_medium_segment_count[2]{};
-        result = hipMemcpyAsync(&large_and_medium_segment_count,
-                                large_and_medium_segment_count_output,
-                                2 * sizeof(segment_index_type),
+        segment_index_type segment_counts[segment_count_output_size]{};
+        result = hipMemcpyAsync(&segment_counts,
+                                segment_count_output,
+                                segment_count_output_bytes,
                                 hipMemcpyDeviceToHost,
                                 stream);
         if(hipSuccess != result)
@@ -378,8 +462,8 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         {
             return result;
         }
-        const auto large_segment_count  = large_and_medium_segment_count[0];
-        const auto medium_segment_count = large_and_medium_segment_count[1];
+        const auto large_segment_count  = segment_counts[0];
+        const auto medium_segment_count = three_way_partitioning ? segment_counts[1] : 0;
         const auto small_segment_count  = segments - large_segment_count - medium_segment_count;
         if(debug_synchronous)
         {
@@ -404,7 +488,7 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
                                                         large_segment_count,
                                                         start)
         }
-        if(medium_segment_count > 0)
+        if(three_way_partitioning && medium_segment_count > 0)
         {
             const auto medium_segment_grid_size
                 = ::rocprim::detail::ceiling_div(medium_segment_count, medium_segments_per_block);
