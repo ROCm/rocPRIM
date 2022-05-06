@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 SOURCE_COMMIT="$1"
 if [ "$#" -gt 0 ]; then
@@ -23,19 +23,27 @@ else
     git config --local --add "color.diff" "always"
 fi
 
-GIT_CLANG_FORMAT="${GIT_CLANG_FORMAT:-git-clang-format}"
-CLANG_FORMAT_OUTPUT="$($GIT_CLANG_FORMAT --style=file --diff "$@" "$SOURCE_COMMIT")"
+scratch="$(mktemp -t check-format.XXXXXXXXXX)"
+finish () {
+    # Remove temporary file
+    rm -rf "$scratch"
+    # Restore setting
+    if [ "x$DIFF_COLOR_SAVED" != "x" ]; then
+        git config --local --replace-all "color.diff" "$DIFF_COLOR_SAVED"
+    else
+        git config --local --unset "color.diff"
+    fi
+}
+# The trap will be invoked whenever the script exits, even due to a signal, this is a bash only
+# feature
+trap finish EXIT
 
-# Restore setting
-if [ "x$DIFF_COLOR_SAVED" != "x" ]; then
-    git config --local --replace-all "color.diff" "$DIFF_COLOR_SAVED"
-else
-    git config --local --unset "color.diff"
-fi
+GIT_CLANG_FORMAT="${GIT_CLANG_FORMAT:-git-clang-format}"
+"$GIT_CLANG_FORMAT" --style=file --diff "$@" "$SOURCE_COMMIT" > "$scratch"
 
 # Check for no-ops
-echo "$CLANG_FORMAT_OUTPUT" | grep '^no modified files to format$'           > /dev/null && exit 0
-echo "$CLANG_FORMAT_OUTPUT" | grep '^clang-format did not modify any files$' > /dev/null && exit 0
+grep '^no modified files to format$\|^clang-format did not modify any files$' \
+    "$scratch" > /dev/null && exit 0
 
 # Dump formatting diff and signal failure
 printf \
@@ -43,5 +51,5 @@ printf \
 run '\033[33m%s --style=file %s %s'\033[0m to apply these formating changes\n\n" \
 "$GIT_CLANG_FORMAT" "$@" "$SOURCE_COMMIT"
 
-echo "$CLANG_FORMAT_OUTPUT"
+cat "$scratch"
 exit 1
