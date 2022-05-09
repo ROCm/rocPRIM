@@ -395,8 +395,8 @@ void merge_kernel_impl(IndexIterator indices,
     const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
     const unsigned int block_offset = flat_block_id * items_per_block;
     const unsigned int count = input1_size + input2_size;
-    const unsigned int number_of_blocks = (count + items_per_block - 1)/items_per_block;
-    const auto valid_in_last_block = count - items_per_block * (number_of_blocks - 1);
+    const unsigned int valid_in_last_block = count - block_offset;
+    const bool         is_incomplete_block = valid_in_last_block < items_per_block;
 
     const unsigned int p1 = indices[flat_block_id];
     const unsigned int p2 = indices[flat_block_id + 1];
@@ -415,7 +415,7 @@ void merge_kernel_impl(IndexIterator indices,
 
     ::rocprim::syncthreads();
 
-    if(flat_block_id == (number_of_blocks - 1)) // last block
+    if(is_incomplete_block) // # elements in last block may not equal items_per_block for the last block
     {
         keys_store_type().store(
             keys_output + block_offset,
