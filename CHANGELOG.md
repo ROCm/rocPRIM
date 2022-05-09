@@ -11,6 +11,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - Benchmarks collect and output more detailed system information
 - CMake functionality to improve build parallelism of the test suite that splits compilation units by
 function or by parameters.
+- Reverse iterator.
 ## Changed
 - Improved the performance of warp primitives using the swizzle operation on Navi
 - Improved build parallelism of the test suite by splitting up large compilation units
