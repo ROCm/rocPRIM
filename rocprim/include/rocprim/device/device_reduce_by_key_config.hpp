@@ -55,7 +55,7 @@ struct default_reduce_by_key_config
                            15,
                            block_load_method::block_load_transpose,
                            block_load_method::block_load_transpose,
-                           2>
+                           sizeof(Value) < 16 ? 1 : 2>
 {};
 
 } // end namespace detail

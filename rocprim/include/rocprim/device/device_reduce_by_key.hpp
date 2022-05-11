@@ -127,11 +127,8 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
                               const hipStream_t         stream,
                               const bool                debug_synchronous)
 {
-    using key_type         = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using accumulator_type = typename ::rocprim::detail::match_result_type<
-        typename std::iterator_traits<ValuesInputIterator>::value_type,
-        BinaryFunction>::type;
-    using wrapped_type = rocprim::tuple<accumulator_type, unsigned int>;
+    using key_type         = reduce_by_key::value_type_t<KeysInputIterator>;
+    using accumulator_type = reduce_by_key::accumulator_type_t<ValuesInputIterator, BinaryFunction>;
 
     using config = default_or_custom_config<
         Config,
@@ -141,7 +138,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     constexpr unsigned int tiles_per_block = config::tiles_per_block;
     constexpr unsigned int items_per_tile  = block_size * config::items_per_thread;
 
-    using scan_state_type = detail::lookback_scan_state<wrapped_type, false>;
+    using scan_state_type = reduce_by_key::lookback_scan_state_t<accumulator_type>;
     //using scan_state_with_sleep_type = detail::lookback_scan_state<wrapped_type, true>;
     using ordered_tile_id_type = detail::ordered_block_id<unsigned int>;
 
