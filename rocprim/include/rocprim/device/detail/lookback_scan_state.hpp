@@ -226,7 +226,7 @@ struct lookback_scan_state<T, UseSleep, false>
 {
 
 public:
-    using flag_type = char;
+    using flag_type  = unsigned int;
     using value_type = T;
 
     // temp_storage must point to allocation of get_storage_size(number_of_blocks) bytes
@@ -277,9 +277,9 @@ public:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-        store_volatile(&prefixes_partial_values[padding + block_id], value);
+        prefixes_partial_values[padding + block_id] = value;
         ::rocprim::detail::memory_fence_device();
-        store_volatile<flag_type>(&prefixes_flags[padding + block_id], PREFIX_PARTIAL);
+        ::rocprim::detail::atomic_exch(&prefixes_flags[padding + block_id], PREFIX_PARTIAL);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -287,9 +287,9 @@ public:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-        store_volatile(&prefixes_complete_values[padding + block_id], value);
+        prefixes_complete_values[padding + block_id] = value;
         ::rocprim::detail::memory_fence_device();
-        store_volatile<flag_type>(&prefixes_flags[padding + block_id], PREFIX_COMPLETE);
+        ::rocprim::detail::atomic_exch(&prefixes_flags[padding + block_id], PREFIX_COMPLETE);
     }
 
     // block_id must be > 0
@@ -301,7 +301,8 @@ public:
         const unsigned int SLEEP_MAX = 32;
         unsigned int times_through = 1;
 
-        flag = load_volatile(&prefixes_flags[padding + block_id]);
+        // atomic_add(..., 0) is used to load values atomically
+        flag = ::rocprim::detail::atomic_add(&prefixes_flags[padding + block_id], 0);
         ::rocprim::detail::memory_fence_device();
         while(flag == PREFIX_EMPTY)
         {
@@ -317,14 +318,14 @@ public:
                     times_through++;
             }
 
-            flag = load_volatile(&prefixes_flags[padding + block_id]);
+            flag = ::rocprim::detail::atomic_add(&prefixes_flags[padding + block_id], 0);
             ::rocprim::detail::memory_fence_device();
         }
 
         if(flag == PREFIX_PARTIAL)
-            value = load_volatile(&prefixes_partial_values[padding + block_id]);
+            value = prefixes_partial_values[padding + block_id];
         else
-            value = load_volatile(&prefixes_complete_values[padding + block_id]);
+            value = prefixes_complete_values[padding + block_id];
     }
 
 private:
