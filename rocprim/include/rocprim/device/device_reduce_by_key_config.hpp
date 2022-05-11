@@ -35,10 +35,12 @@ BEGIN_ROCPRIM_NAMESPACE
 template<unsigned int      BlockSize,
          unsigned int      ItemsPerThread,
          block_load_method LoadKeysMethod,
-         block_load_method LoadValuesMethod>
+         block_load_method LoadValuesMethod,
+         unsigned int      TilesPerBlock = 1>
 struct reduce_by_key_config
 {
     static constexpr unsigned int      block_size         = BlockSize;
+    static constexpr unsigned int      tiles_per_block    = TilesPerBlock;
     static constexpr unsigned int      items_per_thread   = ItemsPerThread;
     static constexpr block_load_method load_keys_method   = LoadKeysMethod;
     static constexpr block_load_method load_values_method = LoadValuesMethod;
@@ -52,7 +54,8 @@ struct default_reduce_by_key_config
     : reduce_by_key_config<256,
                            15,
                            block_load_method::block_load_transpose,
-                           block_load_method::block_load_transpose>
+                           block_load_method::block_load_transpose,
+                           2>
 {};
 
 } // end namespace detail

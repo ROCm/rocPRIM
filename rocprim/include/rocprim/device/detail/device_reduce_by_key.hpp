@@ -62,31 +62,31 @@ struct load_helper
     };
 
     template<typename KeyIterator, typename ValueIterator>
-    ROCPRIM_DEVICE void load_keys_values(KeyIterator        block_keys,
-                                         ValueIterator      block_values,
-                                         const bool         is_last_block,
-                                         const unsigned int valid_in_last_block,
+    ROCPRIM_DEVICE void load_keys_values(KeyIterator        tile_keys,
+                                         ValueIterator      tile_values,
+                                         const bool         is_last_tile,
+                                         const unsigned int valid_in_last_tile,
                                          KeyType (&keys)[ItemsPerThread],
                                          AccumulatorType (&values)[ItemsPerThread],
                                          storage_type& storage)
     {
-        if(!is_last_block)
+        if(!is_last_tile)
         {
-            block_load_keys{}.load(block_keys, keys, storage.keys);
+            block_load_keys{}.load(tile_keys, keys, storage.keys);
             ::rocprim::syncthreads();
-            block_load_values{}.load(block_values, values, storage.values);
+            block_load_values{}.load(tile_values, values, storage.values);
         }
         else
         {
             // Pad with the last valid value so out-of-bound items are not flagged
-            block_load_keys{}.load(block_keys,
+            block_load_keys{}.load(tile_keys,
                                    keys,
-                                   valid_in_last_block,
-                                   block_keys[valid_in_last_block - 1],
+                                   valid_in_last_tile,
+                                   tile_keys[valid_in_last_tile - 1],
                                    storage.keys);
             ::rocprim::syncthreads();
 
-            block_load_values{}.load(block_values, values, valid_in_last_block, storage.values);
+            block_load_values{}.load(tile_values, values, valid_in_last_tile, storage.values);
         }
     }
 };
@@ -98,18 +98,18 @@ struct discontinuity_helper
     using storage_type             = typename block_discontinuity_type::storage_type;
 
     template<typename KeyIterator, typename CompareFunction, unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE void flag_heads(KeyIterator block_keys,
+    ROCPRIM_DEVICE void flag_heads(KeyIterator tile_keys,
                                    const KeyType (&keys)[ItemsPerThread],
                                    CompareFunction compare,
                                    unsigned int (&head_flags)[ItemsPerThread],
-                                   const bool    is_first_block,
+                                   const bool    is_first_tile,
                                    storage_type& storage)
     {
         auto not_equal = [compare](const auto& a, const auto& b) mutable { return !compare(a, b); };
 
-        if(!is_first_block)
+        if(!is_first_tile)
         {
-            const KeyType tile_predecessor = block_keys[-1];
+            const KeyType tile_predecessor = tile_keys[-1];
             block_discontinuity_type{}.flag_heads(head_flags,
                                                   tile_predecessor,
                                                   keys,
@@ -129,15 +129,15 @@ struct scatter_helper
     using storage_type = detail::raw_storage<ValueType[BlockSize * ItemsPerThread]>;
 
     template<typename ValueIterator, typename Flag, typename ValueFunction, typename IndexFunction>
-    ROCPRIM_DEVICE void scatter(ValueIterator   block_values,
+    ROCPRIM_DEVICE void scatter(ValueIterator   tile_values,
                                 ValueFunction&& values,
                                 const Flag (&is_selected)[ItemsPerThread],
                                 IndexFunction&&    block_indices,
-                                const unsigned int selected_in_block,
+                                const unsigned int selected_in_tile,
                                 const unsigned int flat_thread_id,
                                 storage_type&      storage)
     {
-        if(selected_in_block >= BlockSize)
+        if(selected_in_tile >= BlockSize)
         {
             auto& scatter_storage = storage.get();
             for(unsigned int i = 0; i < ItemsPerThread; ++i)
@@ -150,9 +150,9 @@ struct scatter_helper
             ::rocprim::syncthreads();
 
             // Coalesced write from shared memory to global memory
-            for(unsigned int i = flat_thread_id; i < selected_in_block; i += BlockSize)
+            for(unsigned int i = flat_thread_id; i < selected_in_tile; i += BlockSize)
             {
-                block_values[i] = scatter_storage[i];
+                tile_values[i] = scatter_storage[i];
             }
         }
         else
@@ -161,8 +161,210 @@ struct scatter_helper
             {
                 if(is_selected[i])
                 {
-                    block_values[block_indices(i)] = values(i);
+                    tile_values[block_indices(i)] = values(i);
                 }
+            }
+        }
+    }
+};
+
+template<typename KeyType,
+         typename AccumulatorType,
+         unsigned int      BlockSize,
+         unsigned int      ItemsPerThread,
+         block_load_method load_keys_method,
+         block_load_method load_values_method>
+class tile_helper
+{
+private:
+    using load_type = reduce_by_key::load_helper<KeyType,
+                                                 AccumulatorType,
+                                                 BlockSize,
+                                                 ItemsPerThread,
+                                                 load_keys_method,
+                                                 load_values_method>;
+
+    using wrapped_type = rocprim::tuple<AccumulatorType, unsigned int>;
+
+    using discontinuity_type = reduce_by_key::discontinuity_helper<KeyType, BlockSize>;
+    using block_scan_type    = rocprim::block_scan<wrapped_type, BlockSize>;
+    using prefix_op_factory  = detail::offset_lookback_scan_factory<wrapped_type>;
+
+    using scatter_keys_type = reduce_by_key::scatter_helper<KeyType, BlockSize, ItemsPerThread>;
+    using scatter_values_type
+        = reduce_by_key::scatter_helper<AccumulatorType, BlockSize, ItemsPerThread>;
+
+public:
+    union storage_type
+    {
+        typename load_type::storage_type load;
+        struct
+        {
+            typename discontinuity_type::storage_type flags;
+            typename prefix_op_factory::storage_type  prefix;
+            typename block_scan_type::storage_type    scan;
+        } scan;
+        typename scatter_keys_type::storage_type   scatter_keys;
+        typename scatter_values_type::storage_type scatter_values;
+    };
+
+    template<typename KeyIterator,
+             typename ValueIterator,
+             typename UniqueIterator,
+             typename ReductionIterator,
+             typename UniqueCountIterator,
+             typename CompareFunction,
+             typename BinaryOp,
+             typename LookBackScanState>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void process_tile(const KeyIterator     tile_keys,
+                                                          const ValueIterator   tile_values,
+                                                          UniqueIterator        unique_keys,
+                                                          ReductionIterator     reductions,
+                                                          UniqueCountIterator   unique_count,
+                                                          BinaryOp              reduce_op,
+                                                          const CompareFunction compare,
+                                                          LookBackScanState     scan_state,
+                                                          const unsigned int    tile_id,
+                                                          const std::size_t     number_of_tiles,
+                                                          const std::size_t     size,
+                                                          storage_type&         storage)
+    {
+        static constexpr unsigned int items_per_tile = BlockSize * ItemsPerThread;
+
+        auto wrapped_op = [&](const wrapped_type& lhs, const wrapped_type& rhs)
+        {
+            return wrapped_type{rocprim::get<1>(rhs) == 0
+                                    ? reduce_op(rocprim::get<0>(lhs), rocprim::get<0>(rhs))
+                                    : rocprim::get<0>(rhs),
+                                rocprim::get<1>(lhs) + rocprim::get<1>(rhs)};
+        };
+
+        const bool         is_first_tile = tile_id == 0;
+        const bool         is_last_tile  = tile_id == number_of_tiles - 1;
+        const unsigned int valid_in_last_tile
+            = static_cast<unsigned int>(size - ((number_of_tiles - 1) * items_per_tile));
+
+        const unsigned int flat_thread_id = threadIdx.x;
+
+        KeyType         keys[ItemsPerThread];
+        AccumulatorType values[ItemsPerThread];
+
+        load_type{}.load_keys_values(tile_keys,
+                                     tile_values,
+                                     is_last_tile,
+                                     valid_in_last_tile,
+                                     keys,
+                                     values,
+                                     storage.load);
+        ::rocprim::syncthreads();
+
+        unsigned int head_flags[ItemsPerThread];
+        // TODO: very first tile only when large indices
+        discontinuity_type{}
+            .flag_heads(tile_keys, keys, compare, head_flags, is_first_tile, storage.scan.flags);
+
+        wrapped_type wrapped_values[ItemsPerThread];
+        for(unsigned int i = 0; i < ItemsPerThread; ++i)
+        {
+            rocprim::get<0>(wrapped_values[i]) = values[i];
+            rocprim::get<1>(wrapped_values[i]) = head_flags[i];
+        }
+
+        unsigned int segment_heads_before   = 0;
+        unsigned int segment_heads_in_block = 0;
+        wrapped_type reduction;
+        // TODO: there is a very first tile and first tile of this launch when large indices
+        // support is added. This branch must be taken for the first tile in each launch
+        if(is_first_tile)
+        {
+            // TODO: Handle previous grid launch, i.e. large indices
+            block_scan_type{}.exclusive_scan(wrapped_values,
+                                             wrapped_values,
+                                             rocprim::make_tuple(values[0], 0),
+                                             reduction,
+                                             storage.scan.scan,
+                                             wrapped_op);
+
+            if(flat_thread_id == 0)
+            {
+                scan_state.set_complete(0, reduction);
+            }
+
+            segment_heads_in_block = rocprim::get<1>(reduction);
+        }
+        else
+        {
+            auto lookback_op = detail::lookback_scan_prefix_op<wrapped_type,
+                                                               decltype(wrapped_op),
+                                                               decltype(scan_state)>{tile_id,
+                                                                                     wrapped_op,
+                                                                                     scan_state};
+
+            auto offset_lookback_op = prefix_op_factory::create(lookback_op, storage.scan.prefix);
+
+            block_scan_type{}.exclusive_scan(wrapped_values,
+                                             wrapped_values,
+                                             storage.scan.scan,
+                                             offset_lookback_op,
+                                             wrapped_op);
+            rocprim::syncthreads();
+
+            segment_heads_before
+                = rocprim::get<1>(prefix_op_factory::get_prefix(storage.scan.prefix));
+            segment_heads_in_block
+                = rocprim::get<1>(prefix_op_factory::get_reduction(storage.scan.prefix));
+            reduction = wrapped_op(prefix_op_factory::get_prefix(storage.scan.prefix),
+                                   prefix_op_factory::get_reduction(storage.scan.prefix));
+        }
+        rocprim::syncthreads();
+
+        // At this point each item that is flagged as segment head has
+        // - The first key of the segment
+        // - The number of segments before it (exclusive scan of head_flags)
+        // - The reduction of the previous segment
+        scatter_keys_type{}.scatter(
+            unique_keys + segment_heads_before,
+            [&keys](unsigned int i) { return keys[i]; },
+            head_flags,
+            [&](const unsigned int i)
+            { return rocprim::get<1>(wrapped_values[i]) - segment_heads_before; },
+            segment_heads_in_block,
+            flat_thread_id,
+            storage.scatter_keys);
+        ::rocprim::syncthreads();
+
+        // The first item in the first block does not have a reduction
+        // The first out of bounds item in the last block has the reduction for the last segment
+        const unsigned int reductions_in_block
+            = segment_heads_in_block - (is_first_tile ? 1 : 0)
+              + (is_last_tile && valid_in_last_tile != items_per_tile ? 1 : 0);
+
+        if(is_first_tile && flat_thread_id == 0)
+        {
+            head_flags[0] = 0;
+        }
+        if(is_last_tile && flat_thread_id == valid_in_last_tile / ItemsPerThread)
+        {
+            head_flags[valid_in_last_tile - flat_thread_id * ItemsPerThread] = 1;
+        }
+        scatter_values_type{}.scatter(
+            reductions + segment_heads_before - (!is_first_tile ? 1 : 0),
+            [&wrapped_values](unsigned int i) { return rocprim::get<0>(wrapped_values[i]); },
+            head_flags,
+            [&, offset = segment_heads_before + (is_first_tile ? 1 : 0)](const unsigned int i)
+            { return rocprim::get<1>(wrapped_values[i]) - offset; },
+            reductions_in_block,
+            flat_thread_id,
+            storage.scatter_values);
+
+        if(is_last_tile && flat_thread_id == BlockSize - 1)
+        {
+            // TODO: Handle large indices
+            const unsigned int total_segment_heads = segment_heads_before + segment_heads_in_block;
+            *unique_count                          = total_segment_heads;
+            if(valid_in_last_tile == items_per_tile)
+            {
+                reductions[total_segment_heads - 1] = rocprim::get<0>(reduction);
             }
         }
     }
@@ -183,194 +385,73 @@ template<typename Config,
          typename CompareFunction,
          typename BinaryOp,
          typename LookBackScanState>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
-    kernel_impl(const KeyIterator     keys_input,
-                const ValueIterator   values_input,
-                UniqueIterator        unique_keys,
-                ReductionIterator     reductions,
-                UniqueCountIterator   unique_count,
-                BinaryOp              reduce_op,
-                const CompareFunction compare,
-                LookBackScanState     scan_state,
-                ordered_block_id<unsigned int> /*ordered_bid*/,
-                const std::size_t starting_block,
-                const std::size_t number_of_blocks,
-                const std::size_t size //,
-                /*const prev_value_type<KeyIterator> previous_last_value*/)
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(const KeyIterator              keys_input,
+                                                     const ValueIterator            values_input,
+                                                     UniqueIterator                 unique_keys,
+                                                     ReductionIterator              reductions,
+                                                     UniqueCountIterator            unique_count,
+                                                     BinaryOp                       reduce_op,
+                                                     const CompareFunction          compare,
+                                                     LookBackScanState              scan_state,
+                                                     ordered_block_id<unsigned int> ordered_tile_id,
+                                                     const std::size_t              starting_tile,
+                                                     const std::size_t              number_of_tiles,
+                                                     const std::size_t              size)
 {
+    static constexpr unsigned int      block_size         = Config::block_size;
+    static constexpr unsigned int      items_per_thread   = Config::items_per_thread;
+    static constexpr unsigned int      tiles_per_block    = Config::tiles_per_block;
+    static constexpr block_load_method load_keys_method   = Config::load_keys_method;
+    static constexpr block_load_method load_values_method = Config::load_values_method;
+    static constexpr unsigned int      items_per_tile     = block_size * items_per_thread;
+
+    using key_type = value_type<KeyIterator>;
     using accumulator_type =
         typename detail::match_result_type<value_type<ValueIterator>, BinaryOp>::type;
 
-    static constexpr unsigned int block_size       = Config::block_size;
-    static constexpr unsigned int items_per_thread = Config::items_per_thread;
-    static constexpr unsigned int items_per_block  = block_size * items_per_thread;
-
-    static constexpr block_load_method load_keys_method   = Config::load_keys_method;
-    static constexpr block_load_method load_values_method = Config::load_values_method;
-
-    using key_type     = value_type<KeyIterator>;
-    using wrapped_type = rocprim::tuple<accumulator_type, unsigned int>;
-
-    using load_type = reduce_by_key::load_helper<key_type,
-                                                 accumulator_type,
-                                                 block_size,
-                                                 items_per_thread,
-                                                 load_keys_method,
-                                                 load_values_method>;
-
-    using discontinuity_type = reduce_by_key::discontinuity_helper<key_type, block_size>;
-    using block_scan_type    = rocprim::block_scan<wrapped_type, block_size>;
-
-    // Modified binary operation that respects segment boundaries and counts segments
-    auto wrapped_op = [&](const wrapped_type& lhs, const wrapped_type& rhs)
-    {
-        return wrapped_type{rocprim::get<1>(rhs) == 0
-                                ? reduce_op(rocprim::get<0>(lhs), rocprim::get<0>(rhs))
-                                : rocprim::get<0>(rhs),
-                            rocprim::get<1>(lhs) + rocprim::get<1>(rhs)};
-    };
-
-    using prefix_op_type = detail::
-        offset_lookback_scan_prefix_op<wrapped_type, decltype(scan_state), decltype(wrapped_op)>;
-
-    using scatter_keys_type = reduce_by_key::scatter_helper<key_type, block_size, items_per_thread>;
-    using scatter_values_type
-        = reduce_by_key::scatter_helper<accumulator_type, block_size, items_per_thread>;
+    using tile_processor = tile_helper<key_type,
+                                       accumulator_type,
+                                       block_size,
+                                       items_per_thread,
+                                       load_keys_method,
+                                       load_values_method>;
 
     ROCPRIM_SHARED_MEMORY union
     {
-        typename load_type::storage_type load;
-        struct
-        {
-            typename discontinuity_type::storage_type flags;
-            typename prefix_op_type::storage_type     prefix;
-            typename block_scan_type::storage_type    scan;
-        } scan;
-        typename scatter_keys_type::storage_type   scatter_keys;
-        typename scatter_values_type::storage_type scatter_values;
+        typename decltype(ordered_tile_id)::storage_type tile_id;
+        typename tile_processor::storage_type            tile;
     } storage;
 
-    const unsigned int flat_thread_id = threadIdx.x;
-    const unsigned int flat_block_id  = blockIdx.x;
-
-    const bool         is_first_block = starting_block + flat_block_id == 0;
-    const bool         is_last_block  = starting_block + flat_block_id == number_of_blocks - 1;
-    const unsigned int valid_in_last_block
-        = static_cast<unsigned int>(size - (number_of_blocks - 1) * items_per_block);
-
-    const unsigned int  block_offset = flat_block_id * items_per_block;
-    const KeyIterator   block_keys   = keys_input + block_offset;
-    const ValueIterator block_values = values_input + block_offset;
-
-    key_type         keys[items_per_thread];
-    accumulator_type values[items_per_thread];
-
-    load_type{}.load_keys_values(block_keys,
-                                 block_values,
-                                 is_last_block,
-                                 valid_in_last_block,
-                                 keys,
-                                 values,
-                                 storage.load);
-    ::rocprim::syncthreads();
-
-    unsigned int head_flags[items_per_thread];
-    discontinuity_type{}
-        .flag_heads(block_keys, keys, compare, head_flags, is_first_block, storage.scan.flags);
-
-    wrapped_type wrapped_values[items_per_thread];
-    for(unsigned int i = 0; i < items_per_thread; ++i)
+    for(unsigned int i = 0; i < tiles_per_block; ++i)
     {
-        rocprim::get<0>(wrapped_values[i]) = values[i];
-        rocprim::get<1>(wrapped_values[i]) = head_flags[i];
-    }
-
-    unsigned int segment_heads_before   = 0;
-    unsigned int segment_heads_in_block = 0;
-    wrapped_type reduction;
-    if(flat_block_id == 0)
-    {
-        // TODO: Handle previous grid launch, i.e. large indices
-        block_scan_type{}.exclusive_scan(wrapped_values,
-                                         wrapped_values,
-                                         rocprim::make_tuple(values[0], 0),
-                                         reduction,
-                                         storage.scan.scan,
-                                         wrapped_op);
-
-        if(flat_thread_id == 0)
-        {
-            scan_state.set_complete(flat_block_id, reduction);
-        }
-
-        segment_heads_in_block = rocprim::get<1>(reduction);
-    }
-    else
-    {
-        auto prefix_op = prefix_op_type{flat_block_id, scan_state, storage.scan.prefix, wrapped_op};
-
-        block_scan_type{}.exclusive_scan(wrapped_values,
-                                         wrapped_values,
-                                         storage.scan.scan,
-                                         prefix_op,
-                                         wrapped_op);
         rocprim::syncthreads();
-
-        segment_heads_before   = rocprim::get<1>(prefix_op.get_prefix());
-        segment_heads_in_block = rocprim::get<1>(prefix_op.get_reduction());
-        reduction              = wrapped_op(prefix_op.get_prefix(), prefix_op.get_reduction());
-    }
-    rocprim::syncthreads();
-
-    // At this point each item that is flagged as segment head has
-    // - The first key of the segment
-    // - The number of segments before it (exclusive scan of head_flags)
-    // - The reduction of the previous segment
-    scatter_keys_type{}.scatter(
-        unique_keys + segment_heads_before,
-        [&keys](unsigned int i) { return keys[i]; },
-        head_flags,
-        [&](const unsigned int i)
-        { return rocprim::get<1>(wrapped_values[i]) - segment_heads_before; },
-        segment_heads_in_block,
-        flat_thread_id,
-        storage.scatter_keys);
-    ::rocprim::syncthreads();
-
-    // The first item in the first block does not have a reduction
-    // The first out of bounds item in the last block has the reduction for the last segment
-    const auto reductions_in_block
-        = segment_heads_in_block - (is_first_block ? 1 : 0)
-          + (is_last_block && valid_in_last_block != items_per_block ? 1 : 0);
-    if(is_first_block && flat_thread_id == 0)
-    {
-        head_flags[0] = 0;
-    }
-    if(is_last_block && flat_thread_id == valid_in_last_block / items_per_thread)
-    {
-        head_flags[valid_in_last_block - flat_thread_id * items_per_thread] = 1;
-    }
-    scatter_values_type{}.scatter(
-        reductions + segment_heads_before - (!is_first_block ? 1 : 0),
-        [&wrapped_values](unsigned int i) { return rocprim::get<0>(wrapped_values[i]); },
-        head_flags,
-        [&, offset = segment_heads_before + (is_first_block ? 1 : 0)](const unsigned int i)
-        { return rocprim::get<1>(wrapped_values[i]) - offset; },
-        reductions_in_block,
-        flat_thread_id,
-        storage.scatter_values);
-
-    if(is_last_block && flat_thread_id == block_size - 1)
-    {
-        // TODO: Handle large indices
-        const unsigned int total_segment_heads = segment_heads_before + segment_heads_in_block;
-        *unique_count                          = total_segment_heads;
-        if(valid_in_last_block == items_per_block)
+        const std::size_t tile_id
+            = starting_tile + ordered_tile_id.get(threadIdx.x, storage.tile_id);
+        if(tile_id >= number_of_tiles)
         {
-            reductions[total_segment_heads - 1] = rocprim::get<0>(reduction);
+            return;
         }
+
+        const std::size_t   tile_offset = tile_id * items_per_tile;
+        const KeyIterator   tile_keys   = keys_input + tile_offset;
+        const ValueIterator tile_values = values_input + tile_offset;
+
+        rocprim::syncthreads();
+        tile_processor{}.process_tile(tile_keys,
+                                      tile_values,
+                                      unique_keys,
+                                      reductions,
+                                      unique_count,
+                                      reduce_op,
+                                      compare,
+                                      scan_state,
+                                      tile_id,
+                                      number_of_tiles,
+                                      size,
+                                      storage.tile);
     }
 }
+
 } // namespace reduce_by_key
 
 } // namespace detail
