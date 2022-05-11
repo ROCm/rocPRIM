@@ -44,6 +44,21 @@ namespace detail
 
 namespace reduce_by_key
 {
+
+template<typename Iterator>
+using value_type_t = typename std::iterator_traits<Iterator>::value_type;
+
+template<typename ValueIterator, typename BinaryOp>
+using accumulator_type_t =
+    typename detail::match_result_type<reduce_by_key::value_type_t<ValueIterator>, BinaryOp>::type;
+
+template<typename AccumulatorType>
+using wrapped_type_t = rocprim::tuple<unsigned int, AccumulatorType>;
+
+template<typename AccumulatorType, bool UseSleep = false>
+using lookback_scan_state_t
+    = detail::lookback_scan_state<wrapped_type_t<AccumulatorType>, UseSleep>;
+
 template<typename KeyType,
          typename AccumulatorType,
          unsigned int      BlockSize,
@@ -184,7 +199,7 @@ private:
                                                  load_keys_method,
                                                  load_values_method>;
 
-    using wrapped_type = rocprim::tuple<AccumulatorType, unsigned int>;
+    using wrapped_type = reduce_by_key::wrapped_type_t<AccumulatorType>;
 
     using discontinuity_type = reduce_by_key::discontinuity_helper<KeyType, BlockSize>;
     using block_scan_type    = rocprim::block_scan<wrapped_type, BlockSize>;
@@ -233,10 +248,10 @@ public:
 
         auto wrapped_op = [&](const wrapped_type& lhs, const wrapped_type& rhs)
         {
-            return wrapped_type{rocprim::get<1>(rhs) == 0
-                                    ? reduce_op(rocprim::get<0>(lhs), rocprim::get<0>(rhs))
-                                    : rocprim::get<0>(rhs),
-                                rocprim::get<1>(lhs) + rocprim::get<1>(rhs)};
+            return wrapped_type{rocprim::get<0>(lhs) + rocprim::get<0>(rhs),
+                                rocprim::get<0>(rhs) == 0
+                                    ? reduce_op(rocprim::get<1>(lhs), rocprim::get<1>(rhs))
+                                    : rocprim::get<1>(rhs)};
         };
 
         const bool         is_first_tile = tile_id == 0;
@@ -266,8 +281,8 @@ public:
         wrapped_type wrapped_values[ItemsPerThread];
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
-            rocprim::get<0>(wrapped_values[i]) = values[i];
-            rocprim::get<1>(wrapped_values[i]) = head_flags[i];
+            rocprim::get<0>(wrapped_values[i]) = head_flags[i];
+            rocprim::get<1>(wrapped_values[i]) = values[i];
         }
 
         unsigned int segment_heads_before   = 0;
@@ -280,7 +295,7 @@ public:
             // TODO: Handle previous grid launch, i.e. large indices
             block_scan_type{}.exclusive_scan(wrapped_values,
                                              wrapped_values,
-                                             rocprim::make_tuple(values[0], 0),
+                                             rocprim::make_tuple(0u, values[0]),
                                              reduction,
                                              storage.scan.scan,
                                              wrapped_op);
@@ -290,7 +305,7 @@ public:
                 scan_state.set_complete(0, reduction);
             }
 
-            segment_heads_in_block = rocprim::get<1>(reduction);
+            segment_heads_in_block = rocprim::get<0>(reduction);
         }
         else
         {
@@ -310,9 +325,9 @@ public:
             rocprim::syncthreads();
 
             segment_heads_before
-                = rocprim::get<1>(prefix_op_factory::get_prefix(storage.scan.prefix));
+                = rocprim::get<0>(prefix_op_factory::get_prefix(storage.scan.prefix));
             segment_heads_in_block
-                = rocprim::get<1>(prefix_op_factory::get_reduction(storage.scan.prefix));
+                = rocprim::get<0>(prefix_op_factory::get_reduction(storage.scan.prefix));
             reduction = wrapped_op(prefix_op_factory::get_prefix(storage.scan.prefix),
                                    prefix_op_factory::get_reduction(storage.scan.prefix));
         }
@@ -327,7 +342,7 @@ public:
             [&keys](unsigned int i) { return keys[i]; },
             head_flags,
             [&](const unsigned int i)
-            { return rocprim::get<1>(wrapped_values[i]) - segment_heads_before; },
+            { return rocprim::get<0>(wrapped_values[i]) - segment_heads_before; },
             segment_heads_in_block,
             flat_thread_id,
             storage.scatter_keys);
@@ -349,10 +364,10 @@ public:
         }
         scatter_values_type{}.scatter(
             reductions + segment_heads_before - (!is_first_tile ? 1 : 0),
-            [&wrapped_values](unsigned int i) { return rocprim::get<0>(wrapped_values[i]); },
+            [&wrapped_values](unsigned int i) { return rocprim::get<1>(wrapped_values[i]); },
             head_flags,
             [&, offset = segment_heads_before + (is_first_tile ? 1 : 0)](const unsigned int i)
-            { return rocprim::get<1>(wrapped_values[i]) - offset; },
+            { return rocprim::get<0>(wrapped_values[i]) - offset; },
             reductions_in_block,
             flat_thread_id,
             storage.scatter_values);
@@ -364,17 +379,11 @@ public:
             *unique_count                          = total_segment_heads;
             if(valid_in_last_tile == items_per_tile)
             {
-                reductions[total_segment_heads - 1] = rocprim::get<0>(reduction);
+                reductions[total_segment_heads - 1] = rocprim::get<1>(reduction);
             }
         }
     }
 };
-
-template<typename Iterator>
-using value_type = typename std::iterator_traits<Iterator>::value_type;
-
-template<typename Iterator>
-using prev_value_type = rocprim::tuple<value_type<Iterator>, std::size_t>;
 
 template<typename Config,
          typename KeyIterator,
@@ -405,9 +414,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(const KeyIterator          
     static constexpr block_load_method load_values_method = Config::load_values_method;
     static constexpr unsigned int      items_per_tile     = block_size * items_per_thread;
 
-    using key_type = value_type<KeyIterator>;
-    using accumulator_type =
-        typename detail::match_result_type<value_type<ValueIterator>, BinaryOp>::type;
+    using key_type         = reduce_by_key::value_type_t<KeyIterator>;
+    using accumulator_type = reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>;
 
     using tile_processor = tile_helper<key_type,
                                        accumulator_type,
