@@ -31,8 +31,8 @@
 #include "../../warp/detail/warp_reduce_crosslane.hpp"
 #include "../../warp/detail/warp_scan_crosslane.hpp"
 
-#include "../../detail/various.hpp"
 #include "../../detail/binary_op_wrappers.hpp"
+#include "../../detail/various.hpp"
 
 extern "C"
 {
@@ -457,13 +457,10 @@ inline hipError_t is_sleep_scan_state_used(bool& use_sleep)
     return hipSuccess;
 }
 
-template<class T, class LookbackScanState, class BinaryOp = ::rocprim::plus<T>>
-class offset_lookback_scan_prefix_op
-    : public lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>
+template<typename T>
+class offset_lookback_scan_factory
 {
 private:
-    using base_type = lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>;
-
     struct storage_type_
     {
         T block_reduction;
@@ -473,36 +470,72 @@ private:
 public:
     using storage_type = detail::raw_storage<storage_type_>;
 
+    template<typename PrefixOp>
+    static ROCPRIM_DEVICE auto create(PrefixOp& prefix_op, storage_type& storage)
+    {
+        return [&](T reduction) mutable
+        {
+            auto prefix = prefix_op(reduction);
+            if(::rocprim::lane_id() == 0)
+            {
+                storage.get().block_reduction = std::move(reduction);
+                storage.get().prefix          = prefix;
+            }
+            return prefix;
+        };
+    }
+
+    static ROCPRIM_DEVICE T get_reduction(const storage_type& storage)
+    {
+        return storage.get().block_reduction;
+    }
+
+    static ROCPRIM_DEVICE T get_prefix(const storage_type& storage)
+    {
+        return storage.get().prefix;
+    }
+};
+
+template<class T, class LookbackScanState, class BinaryOp = ::rocprim::plus<T>>
+class offset_lookback_scan_prefix_op
+    : public lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>
+{
+private:
+    using base_type = lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>;
+    using factory   = detail::offset_lookback_scan_factory<T>;
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE base_type& base()
+    {
+        return *this;
+    }
+
+public:
+    using storage_type = typename factory::storage_type;
+
     ROCPRIM_DEVICE ROCPRIM_INLINE offset_lookback_scan_prefix_op(unsigned int       block_id,
                                                                  LookbackScanState& state,
                                                                  storage_type&      storage,
                                                                  BinaryOp binary_op = BinaryOp())
-        : base_type(block_id, BinaryOp(std::move(binary_op)), state), storage_(storage)
+        : base_type(block_id, BinaryOp(std::move(binary_op)), state), storage(storage)
     {}
 
     ROCPRIM_DEVICE ROCPRIM_INLINE T operator()(T reduction)
     {
-        auto prefix = base_type::operator()(reduction);
-        if(::rocprim::lane_id() == 0)
-        {
-            storage_.get().block_reduction  = std::move(reduction);
-            storage_.get().prefix           = prefix;
-        }
-        return prefix;
+        return factory::create(base(), storage)(reduction);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE T get_reduction() const
     {
-        return storage_.get().block_reduction;
+        return factory::get_reduction(storage);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix() const
     {
-        return storage_.get().prefix;
+        return factory::get_prefix(storage);
     }
 
 private:
-    storage_type& storage_;
+    storage_type& storage;
 };
 
 } // end of detail namespace

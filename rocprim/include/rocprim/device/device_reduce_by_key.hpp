@@ -68,9 +68,9 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
     const BinaryOp                       reduce_op,
     const CompareFunction                compare,
     const LookBackScanState              scan_state,
-    const ordered_block_id<unsigned int> ordered_bid,
-    const std::size_t                    starting_block,
-    const std::size_t                    number_of_blocks,
+    const ordered_block_id<unsigned int> ordered_tile_id,
+    const std::size_t                    starting_tile,
+    const std::size_t                    number_of_tiles,
     const std::size_t                    size)
 {
     reduce_by_key::kernel_impl<Config>(keys_input,
@@ -81,9 +81,9 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
                                        reduce_op,
                                        compare,
                                        scan_state,
-                                       ordered_bid,
-                                       starting_block,
-                                       number_of_blocks,
+                                       ordered_tile_id,
+                                       starting_tile,
+                                       number_of_tiles,
                                        size);
 }
 
@@ -138,42 +138,47 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
         default_reduce_by_key_config<ROCPRIM_TARGET_ARCH, key_type, accumulator_type>>;
 
     constexpr unsigned int block_size      = config::block_size;
-    constexpr unsigned int items_per_block = block_size * config::items_per_thread;
+    constexpr unsigned int tiles_per_block = config::tiles_per_block;
+    constexpr unsigned int items_per_tile  = block_size * config::items_per_thread;
 
     using scan_state_type = detail::lookback_scan_state<wrapped_type, false>;
     //using scan_state_with_sleep_type = detail::lookback_scan_state<wrapped_type, true>;
-    using ordered_block_id_type = detail::ordered_block_id<unsigned int>;
+    using ordered_tile_id_type = detail::ordered_block_id<unsigned int>;
 
-    const std::size_t number_of_blocks = detail::ceiling_div(size, items_per_block);
+    const std::size_t  number_of_tiles  = detail::ceiling_div(size, items_per_tile);
+    const unsigned int number_of_blocks = static_cast<unsigned int>(
+        detail::ceiling_div<std::size_t>(number_of_tiles, tiles_per_block));
 
     // Calculate required temporary storage
     // This is valid even with scan_state_with_sleep_type
     const std::size_t scan_state_bytes
-        = detail::align_size(scan_state_type::get_storage_size(number_of_blocks));
+        = detail::align_size(scan_state_type::get_storage_size(number_of_tiles));
     if(temporary_storage == nullptr)
     {
-        const std::size_t ordered_block_id_bytes = ordered_block_id_type::get_storage_size();
+        const std::size_t ordered_block_id_bytes = ordered_tile_id_type::get_storage_size();
         // storage_size is never zero
         storage_size = scan_state_bytes + ordered_block_id_bytes;
 
         return hipSuccess;
     }
 
-    auto scan_state = scan_state_type::create(temporary_storage, number_of_blocks);
+    auto scan_state = scan_state_type::create(temporary_storage, number_of_tiles);
     // TODO: FIX for gfx908 with asicRevision < 2 (scan_state with sleep)
     //auto scan_state_with_sleep
     //    = scan_state_with_sleep_type::create(temporary_storage, number_of_blocks);
     auto* temp_storage_ptr = static_cast<char*>(temporary_storage);
-    auto  ordered_bid      = ordered_block_id_type::create(
-        reinterpret_cast<ordered_block_id_type::id_type*>(temp_storage_ptr + scan_state_bytes));
+    auto  ordered_bid      = ordered_tile_id_type::create(
+        reinterpret_cast<ordered_tile_id_type::id_type*>(temp_storage_ptr + scan_state_bytes));
 
     std::chrono::high_resolution_clock::time_point start;
     if(debug_synchronous)
     {
         std::cout << "size:             " << size << '\n';
         std::cout << "block_size:       " << block_size << '\n';
-        std::cout << "number of blocks: " << number_of_blocks << '\n';
-        std::cout << "items_per_block:  " << items_per_block << '\n';
+        std::cout << "tile_per_block:   " << tiles_per_block << '\n';
+        std::cout << "number_of_tiles:  " << number_of_tiles << '\n';
+        std::cout << "number_of_blocks: " << number_of_blocks << '\n';
+        std::cout << "items_per_tile:   " << items_per_tile << '\n';
         start = std::chrono::high_resolution_clock::now();
     }
 
@@ -189,17 +194,17 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     }
 
     // TODO: Large indices support
-    const unsigned int init_grid_size = detail::ceiling_div(number_of_blocks, block_size);
+    const unsigned int init_grid_size = detail::ceiling_div(number_of_tiles, block_size);
     hipLaunchKernelGGL(init_lookback_scan_state_kernel,
                        dim3(init_grid_size),
                        dim3(block_size),
                        0,
                        stream,
                        scan_state,
-                       number_of_blocks,
+                       number_of_tiles,
                        ordered_bid);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_lookback_scan_state_kernel",
-                                                number_of_blocks,
+                                                number_of_tiles,
                                                 start);
 
     hipLaunchKernelGGL(reduce_by_key::kernel<config>,
@@ -216,8 +221,8 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
                        key_compare_op,
                        scan_state,
                        ordered_bid,
-                       0,
-                       number_of_blocks,
+                       /*starting_tile=*/0,
+                       number_of_tiles,
                        size);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("reduce_by_key_kernel", size, start);
 
