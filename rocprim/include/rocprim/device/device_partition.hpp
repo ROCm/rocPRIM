@@ -201,13 +201,17 @@ hipError_t partition_impl(void * temporary_storage,
 
     size_t* selected_count = reinterpret_cast<size_t*>(ptr + offset_scan_state_bytes
                                                        + ordered_block_id_bytes);
-    size_t* prev_selected_count = reinterpret_cast<size_t*>(ptr + offset_scan_state_bytes
-                                                            + ordered_block_id_bytes + sizeof(size_t*));
+    size_t* prev_selected_count
+        = reinterpret_cast<size_t*>(ptr + offset_scan_state_bytes + ordered_block_id_bytes
+                                    + (is_three_way ? 2 : 1) * sizeof(size_t));
 
     hipError_t error;
 
     // Memset selected_count and prev_selected_count at once
-    error = hipMemsetAsync(selected_count, 0, sizeof(*selected_count) * 2 * (is_three_way ? 2 : 1));
+    error = hipMemsetAsync(selected_count,
+                           0,
+                           sizeof(*selected_count) * 2 * (is_three_way ? 2 : 1),
+                           stream);
     if (error != hipSuccess) return error;
 
     hipDeviceProp_t prop;
