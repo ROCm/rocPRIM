@@ -69,7 +69,6 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
     const CompareFunction                compare,
     const LookBackScanState              scan_state,
     const ordered_block_id<unsigned int> ordered_tile_id,
-    const std::size_t                    starting_tile,
     const std::size_t                    number_of_tiles,
     const std::size_t                    size)
 {
@@ -82,7 +81,6 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
                                        compare,
                                        scan_state,
                                        ordered_tile_id,
-                                       starting_tile,
                                        number_of_tiles,
                                        size);
 }
@@ -130,16 +128,19 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     using key_type         = reduce_by_key::value_type_t<KeysInputIterator>;
     using accumulator_type = reduce_by_key::accumulator_type_t<ValuesInputIterator, BinaryFunction>;
 
-    using config = default_or_custom_config<
+    using config = detail::default_or_custom_config<
         Config,
-        default_reduce_by_key_config<ROCPRIM_TARGET_ARCH, key_type, accumulator_type>>;
+        reduce_by_key::default_config<ROCPRIM_TARGET_ARCH, key_type, accumulator_type>>;
 
     constexpr unsigned int block_size      = config::block_size;
     constexpr unsigned int tiles_per_block = config::tiles_per_block;
     constexpr unsigned int items_per_tile  = block_size * config::items_per_thread;
 
-    using scan_state_type = reduce_by_key::lookback_scan_state_t<accumulator_type>;
-    //using scan_state_with_sleep_type = detail::lookback_scan_state<wrapped_type, true>;
+    using scan_state_type
+        = reduce_by_key::lookback_scan_state_t<accumulator_type, /*UseSleep=*/false>;
+    using scan_state_with_sleep_type
+        = reduce_by_key::lookback_scan_state_t<accumulator_type, /*UseSleep=*/true>;
+
     using ordered_tile_id_type = detail::ordered_block_id<unsigned int>;
 
     const std::size_t  number_of_tiles  = detail::ceiling_div(size, items_per_tile);
@@ -159,10 +160,29 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
         return hipSuccess;
     }
 
-    auto scan_state = scan_state_type::create(temporary_storage, number_of_tiles);
-    // TODO: FIX for gfx908 with asicRevision < 2 (scan_state with sleep)
-    //auto scan_state_with_sleep
-    //    = scan_state_with_sleep_type::create(temporary_storage, number_of_blocks);
+    bool             use_sleep;
+    const hipError_t result = detail::is_sleep_scan_state_used(use_sleep);
+    if(result != hipSuccess)
+    {
+        return result;
+    }
+    auto with_scan_state
+        = [use_sleep,
+           scan_state = scan_state_type::create(temporary_storage, number_of_tiles),
+           scan_state_with_sleep
+           = scan_state_with_sleep_type::create(temporary_storage, number_of_tiles)](
+              auto&& func) mutable -> decltype(auto)
+    {
+        if(use_sleep)
+        {
+            return func(scan_state_with_sleep);
+        }
+        else
+        {
+            return func(scan_state);
+        }
+    };
+
     auto* temp_storage_ptr = static_cast<char*>(temporary_storage);
     auto  ordered_bid      = ordered_tile_id_type::create(
         reinterpret_cast<ordered_tile_id_type::id_type*>(temp_storage_ptr + scan_state_bytes));
@@ -172,7 +192,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     {
         std::cout << "size:             " << size << '\n';
         std::cout << "block_size:       " << block_size << '\n';
-        std::cout << "tile_per_block:   " << tiles_per_block << '\n';
+        std::cout << "tiles_per_block:  " << tiles_per_block << '\n';
         std::cout << "number_of_tiles:  " << number_of_tiles << '\n';
         std::cout << "number_of_blocks: " << number_of_blocks << '\n';
         std::cout << "items_per_tile:   " << items_per_tile << '\n';
@@ -192,35 +212,42 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 
     // TODO: Large indices support
     const unsigned int init_grid_size = detail::ceiling_div(number_of_tiles, block_size);
-    hipLaunchKernelGGL(init_lookback_scan_state_kernel,
-                       dim3(init_grid_size),
-                       dim3(block_size),
-                       0,
-                       stream,
-                       scan_state,
-                       number_of_tiles,
-                       ordered_bid);
+    with_scan_state(
+        [&](const auto scan_state)
+        {
+            hipLaunchKernelGGL(init_lookback_scan_state_kernel,
+                               dim3(init_grid_size),
+                               dim3(block_size),
+                               0,
+                               stream,
+                               scan_state,
+                               number_of_tiles,
+                               ordered_bid);
+        });
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_lookback_scan_state_kernel",
                                                 number_of_tiles,
                                                 start);
 
-    hipLaunchKernelGGL(reduce_by_key::kernel<config>,
-                       dim3(number_of_blocks),
-                       dim3(block_size),
-                       0,
-                       stream,
-                       keys_input,
-                       values_input,
-                       unique_output,
-                       aggregates_output,
-                       unique_count_output,
-                       reduce_op,
-                       key_compare_op,
-                       scan_state,
-                       ordered_bid,
-                       /*starting_tile=*/0,
-                       number_of_tiles,
-                       size);
+    with_scan_state(
+        [&](const auto scan_state)
+        {
+            hipLaunchKernelGGL(reduce_by_key::kernel<config>,
+                               dim3(number_of_blocks),
+                               dim3(block_size),
+                               0,
+                               stream,
+                               keys_input,
+                               values_input,
+                               unique_output,
+                               aggregates_output,
+                               unique_count_output,
+                               reduce_op,
+                               key_compare_op,
+                               scan_state,
+                               ordered_bid,
+                               number_of_tiles,
+                               size);
+        });
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("reduce_by_key_kernel", size, start);
 
     return hipSuccess;
@@ -234,10 +261,10 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 
 /// \brief Parallel reduce-by-key primitive for device level.
 ///
-/// reduce_by_key function performs a device-wide reduction operation of groups
+/// reduce_by_key function performs a device-wide reduction operation on groups
 /// of consecutive values having the same key using binary \p reduce_op operator. The first key of each group
-/// is copied to \p unique_output and reduction of the group is written to \p aggregates_output.
-/// The total number of group is written to \p unique_count_output.
+/// is copied to \p unique_output and the reduction of the group is written to \p aggregates_output.
+/// The total number of groups is written to \p unique_count_output.
 ///
 /// \par Overview
 /// * Supports non-commutative reduction operators. However, a reduction operator should be
@@ -250,8 +277,8 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 /// * Ranges specified by \p unique_output and \p aggregates_output must have at least
 /// <tt>*unique_count_output</tt> (i.e. the number of unique keys) elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p reduce_by_key_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It can be `reduce_by_key_config_v2`
+/// or `default_config`
 /// \tparam KeysInputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam ValuesInputIterator - random-access iterator type of the input range. Must meet the
@@ -282,7 +309,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 /// <tt>T f(const T &a, const T &b);</tt>. The signature does not need to have
 /// <tt>const &</tt>, but function object must not modify the objects passed to it.
 /// Default is BinaryFunction().
-/// \param [in] key_compare_op - binary operation function object that will be used to determine keys equality.
+/// \param [in] key_compare_op - binary operation function object that will be used to determine key equality.
 /// The signature of the function should be equivalent to the following:
 /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
 /// <tt>const &</tt>, but function object must not modify the objects passed to it.
