@@ -38,15 +38,6 @@
 
 #include "benchmark_utils.hpp"
 
-#define HIP_CHECK(condition)         \
-  {                                  \
-    hipError_t error = condition;    \
-    if(error != hipSuccess){         \
-        std::cout << "HIP error: " << error << " line: " << __LINE__ << std::endl; \
-        exit(error); \
-    } \
-  }
-
 template<typename T              = int,
          typename BinaryFunction = rocprim::plus<T>,
          typename Config         = rocprim::detail::default_reduce_config<ROCPRIM_TARGET_ARCH, T>>
