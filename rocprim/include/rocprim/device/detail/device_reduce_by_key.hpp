@@ -185,10 +185,11 @@ struct scatter_helper
 
 template<typename KeyType,
          typename AccumulatorType,
-         unsigned int      BlockSize,
-         unsigned int      ItemsPerThread,
-         block_load_method load_keys_method,
-         block_load_method load_values_method>
+         unsigned int         BlockSize,
+         unsigned int         ItemsPerThread,
+         block_load_method    load_keys_method,
+         block_load_method    load_values_method,
+         block_scan_algorithm scan_algorithm>
 class tile_helper
 {
 private:
@@ -202,7 +203,7 @@ private:
     using wrapped_type = reduce_by_key::wrapped_type_t<AccumulatorType>;
 
     using discontinuity_type = reduce_by_key::discontinuity_helper<KeyType, BlockSize>;
-    using block_scan_type    = rocprim::block_scan<wrapped_type, BlockSize>;
+    using block_scan_type    = rocprim::block_scan<wrapped_type, BlockSize, scan_algorithm>;
     using prefix_op_factory  = detail::offset_lookback_scan_factory<wrapped_type>;
 
     using scatter_keys_type = reduce_by_key::scatter_helper<KeyType, BlockSize, ItemsPerThread>;
@@ -394,25 +395,25 @@ template<typename Config,
          typename CompareFunction,
          typename BinaryOp,
          typename LookBackScanState>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(const KeyIterator              keys_input,
-                                                     const ValueIterator            values_input,
-                                                     UniqueIterator                 unique_keys,
-                                                     ReductionIterator              reductions,
-                                                     UniqueCountIterator            unique_count,
-                                                     BinaryOp                       reduce_op,
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(KeyIterator                    keys_input,
+                                                     ValueIterator                  values_input,
+                                                     const UniqueIterator           unique_keys,
+                                                     const ReductionIterator        reductions,
+                                                     const UniqueCountIterator      unique_count,
+                                                     const BinaryOp                 reduce_op,
                                                      const CompareFunction          compare,
-                                                     LookBackScanState              scan_state,
+                                                     const LookBackScanState        scan_state,
                                                      ordered_block_id<unsigned int> ordered_tile_id,
-                                                     const std::size_t              starting_tile,
                                                      const std::size_t              number_of_tiles,
                                                      const std::size_t              size)
 {
-    static constexpr unsigned int      block_size         = Config::block_size;
-    static constexpr unsigned int      items_per_thread   = Config::items_per_thread;
-    static constexpr unsigned int      tiles_per_block    = Config::tiles_per_block;
-    static constexpr block_load_method load_keys_method   = Config::load_keys_method;
-    static constexpr block_load_method load_values_method = Config::load_values_method;
-    static constexpr unsigned int      items_per_tile     = block_size * items_per_thread;
+    static constexpr unsigned int         block_size         = Config::block_size;
+    static constexpr unsigned int         items_per_thread   = Config::items_per_thread;
+    static constexpr unsigned int         tiles_per_block    = Config::tiles_per_block;
+    static constexpr block_load_method    load_keys_method   = Config::load_keys_method;
+    static constexpr block_load_method    load_values_method = Config::load_values_method;
+    static constexpr block_scan_algorithm scan_algorithm     = Config::scan_algorithm;
+    static constexpr unsigned int         items_per_tile     = block_size * items_per_thread;
 
     using key_type         = reduce_by_key::value_type_t<KeyIterator>;
     using accumulator_type = reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>;
@@ -422,7 +423,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(const KeyIterator          
                                        block_size,
                                        items_per_thread,
                                        load_keys_method,
-                                       load_values_method>;
+                                       load_values_method,
+                                       scan_algorithm>;
 
     ROCPRIM_SHARED_MEMORY union
     {
@@ -433,8 +435,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(const KeyIterator          
     for(unsigned int i = 0; i < tiles_per_block; ++i)
     {
         rocprim::syncthreads();
-        const std::size_t tile_id
-            = starting_tile + ordered_tile_id.get(threadIdx.x, storage.tile_id);
+        const std::size_t tile_id = ordered_tile_id.get(threadIdx.x, storage.tile_id);
         if(tile_id >= number_of_tiles)
         {
             return;
