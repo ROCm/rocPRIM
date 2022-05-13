@@ -311,13 +311,13 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         = std::conditional_t<three_way_partitioning, ThreeWayPartitioner, TwoWayPartitioner>;
     partitioner_type partitioner;
 
-    const auto large_segment_selector = [=](const unsigned int segment_index) -> bool
+    const auto large_segment_selector = [=](const unsigned int segment_index) mutable -> bool
     {
         const unsigned int segment_length
             = end_offsets[segment_index] - begin_offsets[segment_index];
         return segment_length > max_medium_segment_length;
     };
-    const auto medium_segment_selector = [=](const unsigned int segment_index) -> bool
+    const auto medium_segment_selector = [=](const unsigned int segment_index) mutable -> bool
     {
         const unsigned int segment_length = end_offsets[segment_index] - begin_offsets[segment_index];
         return segment_length > max_small_segment_length;
