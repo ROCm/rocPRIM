@@ -41,15 +41,6 @@
 // rocPRIM
 #include <rocprim/rocprim.hpp>
 
-#define HIP_CHECK(condition)         \
-  {                                  \
-    hipError_t error = condition;    \
-    if(error != hipSuccess){         \
-        std::cout << "HIP error: " << error << " line: " << __LINE__ << std::endl; \
-        exit(error); \
-    } \
-  }
-
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 128;
 #endif
@@ -280,13 +271,13 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         CREATE_BENCHMARK_ITEMS(int, 256,  4),
         CREATE_BENCHMARK_ITEMS(int, 512,  2),
         CREATE_BENCHMARK_ITEMS(int, 1024, 1),
-        CREATE_BENCHMARK_ITEMS(int, 256, 8),
-        CREATE_BENCHMARK_ITEMS(int, 512, 4),
+        CREATE_BENCHMARK_ITEMS(int, 256,  8),
+        CREATE_BENCHMARK_ITEMS(int, 512,  4),
         CREATE_BENCHMARK_ITEMS(int, 1024, 2),
-        CREATE_BENCHMARK_ITEMS(int, 512, 8),
+        CREATE_BENCHMARK_ITEMS(int, 512,  8),
         CREATE_BENCHMARK_ITEMS(int, 1024, 4),
         CREATE_BENCHMARK_ITEMS(int, 1024, 8),
-        
+
         CREATE_BENCHMARK_ITEMS(int8_t, 64, 1),
         CREATE_BENCHMARK_ITEMS(int8_t, 64,  2),
         CREATE_BENCHMARK_ITEMS(int8_t, 128, 1),
@@ -301,10 +292,10 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         CREATE_BENCHMARK_ITEMS(int8_t, 256,  4),
         CREATE_BENCHMARK_ITEMS(int8_t, 512,  2),
         CREATE_BENCHMARK_ITEMS(int8_t, 1024, 1),
-        CREATE_BENCHMARK_ITEMS(int8_t, 256, 8),
-        CREATE_BENCHMARK_ITEMS(int8_t, 512, 4),
+        CREATE_BENCHMARK_ITEMS(int8_t, 256,  8),
+        CREATE_BENCHMARK_ITEMS(int8_t, 512,  4),
         CREATE_BENCHMARK_ITEMS(int8_t, 1024, 2),
-        CREATE_BENCHMARK_ITEMS(int8_t, 512, 8),
+        CREATE_BENCHMARK_ITEMS(int8_t, 512,  8),
         CREATE_BENCHMARK_ITEMS(int8_t, 1024, 4),
         CREATE_BENCHMARK_ITEMS(int8_t, 1024, 8),
 
@@ -322,10 +313,10 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         CREATE_BENCHMARK_ITEMS(uint8_t, 256,  4),
         CREATE_BENCHMARK_ITEMS(uint8_t, 512,  2),
         CREATE_BENCHMARK_ITEMS(uint8_t, 1024, 1),
-        CREATE_BENCHMARK_ITEMS(uint8_t, 256, 8),
-        CREATE_BENCHMARK_ITEMS(uint8_t, 512, 4),
+        CREATE_BENCHMARK_ITEMS(uint8_t, 256,  8),
+        CREATE_BENCHMARK_ITEMS(uint8_t, 512,  4),
         CREATE_BENCHMARK_ITEMS(uint8_t, 1024, 2),
-        CREATE_BENCHMARK_ITEMS(uint8_t, 512, 8),
+        CREATE_BENCHMARK_ITEMS(uint8_t, 512,  8),
         CREATE_BENCHMARK_ITEMS(uint8_t, 1024, 4),
         CREATE_BENCHMARK_ITEMS(uint8_t, 1024, 8),
 
@@ -343,10 +334,10 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         CREATE_BENCHMARK_ITEMS(rocprim::half, 256,  4),
         CREATE_BENCHMARK_ITEMS(rocprim::half, 512,  2),
         CREATE_BENCHMARK_ITEMS(rocprim::half, 1024, 1),
-        CREATE_BENCHMARK_ITEMS(rocprim::half, 256, 8),
-        CREATE_BENCHMARK_ITEMS(rocprim::half, 512, 4),
+        CREATE_BENCHMARK_ITEMS(rocprim::half, 256,  8),
+        CREATE_BENCHMARK_ITEMS(rocprim::half, 512,  4),
         CREATE_BENCHMARK_ITEMS(rocprim::half, 1024, 2),
-        CREATE_BENCHMARK_ITEMS(rocprim::half, 512, 8),
+        CREATE_BENCHMARK_ITEMS(rocprim::half, 512,  8),
         CREATE_BENCHMARK_ITEMS(rocprim::half, 1024, 4),
         CREATE_BENCHMARK_ITEMS(rocprim::half, 1024, 8),
 
@@ -364,10 +355,10 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         CREATE_BENCHMARK_ITEMS(long long, 256,  4),
         CREATE_BENCHMARK_ITEMS(long long, 512,  2),
         CREATE_BENCHMARK_ITEMS(long long, 1024, 1),
-        CREATE_BENCHMARK_ITEMS(long long, 256, 8),
-        CREATE_BENCHMARK_ITEMS(long long, 512, 4),
+        CREATE_BENCHMARK_ITEMS(long long, 256,  8),
+        CREATE_BENCHMARK_ITEMS(long long, 512,  4),
         CREATE_BENCHMARK_ITEMS(long long, 1024, 2),
-        CREATE_BENCHMARK_ITEMS(long long, 512, 8),
+        CREATE_BENCHMARK_ITEMS(long long, 512,  8),
         CREATE_BENCHMARK_ITEMS(long long, 1024, 4)
     };
 
