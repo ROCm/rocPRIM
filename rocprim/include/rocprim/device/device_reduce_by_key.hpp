@@ -58,7 +58,7 @@ template<typename Config,
          typename UniqueCountIterator,
          typename CompareFunction,
          typename BinaryOp,
-         typename LookBackScanState>
+         typename LookbackScanState>
 ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
     const KeyIterator                    keys_input,
     const ValueIterator                  values_input,
@@ -67,7 +67,7 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
     const UniqueCountIterator            unique_count,
     const BinaryOp                       reduce_op,
     const CompareFunction                compare,
-    const LookBackScanState              scan_state,
+    const LookbackScanState              scan_state,
     const ordered_block_id<unsigned int> ordered_tile_id,
     const std::size_t                    number_of_tiles,
     const std::size_t                    size)
