@@ -231,7 +231,7 @@ public:
              typename UniqueCountIterator,
              typename CompareFunction,
              typename BinaryOp,
-             typename LookBackScanState>
+             typename LookbackScanState>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void process_tile(const KeyIterator     tile_keys,
                                                           const ValueIterator   tile_values,
                                                           UniqueIterator        unique_keys,
@@ -239,7 +239,7 @@ public:
                                                           UniqueCountIterator   unique_count,
                                                           BinaryOp              reduce_op,
                                                           const CompareFunction compare,
-                                                          LookBackScanState     scan_state,
+                                                          LookbackScanState     scan_state,
                                                           const unsigned int    tile_id,
                                                           const std::size_t     number_of_tiles,
                                                           const std::size_t     size,
@@ -394,7 +394,7 @@ template<typename Config,
          typename UniqueCountIterator,
          typename CompareFunction,
          typename BinaryOp,
-         typename LookBackScanState>
+         typename LookbackScanState>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(KeyIterator                    keys_input,
                                                      ValueIterator                  values_input,
                                                      const UniqueIterator           unique_keys,
@@ -402,7 +402,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(KeyIterator                
                                                      const UniqueCountIterator      unique_count,
                                                      const BinaryOp                 reduce_op,
                                                      const CompareFunction          compare,
-                                                     const LookBackScanState        scan_state,
+                                                     const LookbackScanState        scan_state,
                                                      ordered_block_id<unsigned int> ordered_tile_id,
                                                      const std::size_t              number_of_tiles,
                                                      const std::size_t              size)
