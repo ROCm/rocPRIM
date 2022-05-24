@@ -143,6 +143,18 @@ struct wrapped_reduce_config<default_config, Value>
     };
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+template<typename ReduceConfig, typename Value>
+template<target_arch Arch>
+constexpr reduce_config_params
+    wrapped_reduce_config<ReduceConfig, Value>::architecture_config<Arch>::params;
+
+template<typename Value>
+template<target_arch Arch>
+constexpr reduce_config_params
+    wrapped_reduce_config<default_config, Value>::architecture_config<Arch>::params;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 } // namespace detail
 
 END_ROCPRIM_NAMESPACE
