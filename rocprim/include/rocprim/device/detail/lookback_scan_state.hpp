@@ -534,6 +534,12 @@ public:
         return factory::get_prefix(storage);
     }
 
+    // rocThrust uses this implementation detail of rocPRIM, required for backwards compatibility
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_exclusive_prefix() const
+    {
+        return get_prefix();
+    }
+
 private:
     storage_type& storage;
 };
