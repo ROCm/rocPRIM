@@ -31,6 +31,8 @@ def runTestCommand (platform, project)
 
     def testCommand = "ctest${centos} --output-on-failure "
     def testCommandExclude = "--exclude-regex rocprim.warp_reduce"
+    def hmmExcludeRegex = /(rocprim.warp_reduce|rocprim.device_scan)/
+    def hmmTestCommandExclude = "--exclude-regex \"${hmmExcludeRegex}\""
     def hmmTestCommand = ''
     if (platform.jenkinsLabel.contains('gfx90a'))
     {
@@ -48,7 +50,7 @@ def runTestCommand (platform, project)
                 if (( \$? != 0 )); then
                     exit 1
                 fi
-                ${hmmTestCommand} ${testCommandExclude}
+                ${hmmTestCommand} ${hmmTestCommandExclude}
             """
 
     platform.runCommand(this, command)
