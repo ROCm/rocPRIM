@@ -39,14 +39,14 @@ def runTestCommand (platform, project)
         hmmTestCommand = """
                             export HSA_XNACK=1
                             export ROCPRIM_USE_HMM=1
-                            ${testCommand} ${testCommandExclude}
+                            ${testCommand} ${hmmTestCommandExclude}
                          """
     }
     def command = """#!/usr/bin/env bash
                 set -x
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
-                ${testCommand}
+                ${testCommand} ${testCommandExclude}
                 if (( \$? != 0 )); then
                     exit 1
                 fi
