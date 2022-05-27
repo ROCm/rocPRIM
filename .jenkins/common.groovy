@@ -50,7 +50,7 @@ def runTestCommand (platform, project)
                 if (( \$? != 0 )); then
                     exit 1
                 fi
-                ${hmmTestCommand} ${hmmTestCommandExclude}
+                ${hmmTestCommand}
             """
 
     platform.runCommand(this, command)
