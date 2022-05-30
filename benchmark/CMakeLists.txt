@@ -24,6 +24,27 @@ option(BENCHMARK_CONFIG_TUNING "Benchmark device-level functions using various c
 include(../cmake/ConfigAutotune.cmake)
 include(ConfigAutotuneSettings.cmake)
 
+if(BENCHMARK_CONFIG_TUNING)
+  add_custom_target("BENCHMARK_CONFIG_TUNING")
+endif()
+
+function(dll_copy_check BENCHMARK_TARGET)
+  if (WIN32 AND NOT DEFINED DLLS_COPIED)
+    set(DLLS_COPIED "YES")
+    set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
+    # for now adding in all .dll as dependency chain is not cmake based on win32
+    file( GLOB third_party_dlls
+    LIST_DIRECTORIES ON
+    CONFIGURE_DEPENDS
+    ${HIP_DIR}/bin/*.dll
+    ${CMAKE_SOURCE_DIR}/rtest.*
+    )
+    foreach( file_i ${third_party_dlls})
+      add_custom_command( TARGET ${BENCHMARK_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/benchmark )
+    endforeach( file_i )
+  endif()
+endfunction()
+
 function(add_rocprim_benchmark BENCHMARK_SOURCE)
   get_filename_component(BENCHMARK_TARGET ${BENCHMARK_SOURCE} NAME_WE)
 
@@ -70,30 +91,24 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK_TARGET}.parallel.cpp.in")
       message(STATUS "found ${BENCHMARK_TARGET}.parallel.cpp.in file, compiling in parallel.")
       read_config_autotune_settings(${BENCHMARK_TARGET} list_across_names list_across output_pattern_suffix)
-      add_matrix(TARGET ${BENCHMARK_TARGET}
-              SHARDS 1
-              CURRENT_SHARD 0
-              INPUT "${BENCHMARK_TARGET}.parallel.cpp.in"
-              OUTPUT_PATTERN "${BENCHMARK_TARGET}_${output_pattern_suffix}"
-              NAMES ${list_across_names}
-              LISTS ${list_across})
+      #make sure that variables are not empty, i.e. there actually is an entry for that benchmark in benchmark/ConfigAutotuneSettings.cmake
+      if(list_across_names)
+        add_matrix(TARGET ${BENCHMARK_TARGET}
+                SHARDS 1
+                CURRENT_SHARD 0
+                INPUT "${BENCHMARK_TARGET}.parallel.cpp.in"
+                OUTPUT_PATTERN "${BENCHMARK_TARGET}_${output_pattern_suffix}"
+                NAMES ${list_across_names}
+                LISTS ${list_across})
+        add_dependencies(BENCHMARK_CONFIG_TUNING ${BENCHMARK_TARGET})
+      endif()
     endif()
+    rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
+    dll_copy_check(BENCHMARK_TARGET)
+  else()
+    rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
+    dll_copy_check(BENCHMARK_TARGET)
   endif()
-  rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
-  if (WIN32 AND NOT DEFINED DLLS_COPIED)
-    set(DLLS_COPIED "YES")
-    set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
-    # for now adding in all .dll as dependency chain is not cmake based on win32
-    file( GLOB third_party_dlls
-    LIST_DIRECTORIES ON
-    CONFIGURE_DEPENDS
-    ${HIP_DIR}/bin/*.dll
-    ${CMAKE_SOURCE_DIR}/rtest.*
-    )
-    foreach( file_i ${third_party_dlls})
-      add_custom_command( TARGET ${BENCHMARK_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/benchmark )
-    endforeach( file_i )
-  endif()  
 endfunction()
 
 # ****************************************************************************
