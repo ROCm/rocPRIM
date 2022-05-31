@@ -25,7 +25,7 @@ include(../cmake/ConfigAutotune.cmake)
 include(ConfigAutotuneSettings.cmake)
 
 if(BENCHMARK_CONFIG_TUNING)
-  add_custom_target("BENCHMARK_CONFIG_TUNING")
+  add_custom_target("benchmark_config_tuning")
 endif()
 
 function(dll_copy_check BENCHMARK_TARGET)
@@ -100,7 +100,7 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
                 OUTPUT_PATTERN "${BENCHMARK_TARGET}_${output_pattern_suffix}"
                 NAMES ${list_across_names}
                 LISTS ${list_across})
-        add_dependencies(BENCHMARK_CONFIG_TUNING ${BENCHMARK_TARGET})
+        add_dependencies(benchmark_config_tuning ${BENCHMARK_TARGET})
       endif()
     endif()
     rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
