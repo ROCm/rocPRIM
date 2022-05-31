@@ -48,7 +48,33 @@ endfunction()
 function(add_rocprim_benchmark BENCHMARK_SOURCE)
   get_filename_component(BENCHMARK_TARGET ${BENCHMARK_SOURCE} NAME_WE)
 
-  add_executable(${BENCHMARK_TARGET} ${BENCHMARK_SOURCE})
+  if(BENCHMARK_CONFIG_TUNING)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK_TARGET}.parallel.cpp.in")
+      message(STATUS "found ${BENCHMARK_TARGET}.parallel.cpp.in file, compiling in parallel.")
+      read_config_autotune_settings(${BENCHMARK_TARGET} list_across_names list_across output_pattern_suffix)
+      #make sure that variables are not empty, i.e. there actually is an entry for that benchmark in benchmark/ConfigAutotuneSettings.cmake
+      if(list_across_names)
+        add_executable(${BENCHMARK_TARGET} ${BENCHMARK_SOURCE})
+        target_compile_definitions(${BENCHMARK_TARGET} PRIVATE BENCHMARK_CONFIG_TUNING)
+        add_matrix(TARGET ${BENCHMARK_TARGET}
+                SHARDS 1
+                CURRENT_SHARD 0
+                INPUT "${BENCHMARK_TARGET}.parallel.cpp.in"
+                OUTPUT_PATTERN "${BENCHMARK_TARGET}_${output_pattern_suffix}"
+                NAMES ${list_across_names}
+                LISTS ${list_across})
+        add_dependencies(benchmark_config_tuning ${BENCHMARK_TARGET})
+      else()
+        message(WARNING "No config-tuning entry in benchmark/ConfigAutotuneSettings.cmake for ${BENCHMARK_TARGET}!")
+        return()
+      endif()
+    else()
+      #do nothing if BENCHMARK_CONFIG_TUNING is ON but no ${BENCHMARK_TARGET}.parallel.cpp.in exists
+      return()
+    endif()
+  else()
+    add_executable(${BENCHMARK_TARGET} ${BENCHMARK_SOURCE})
+  endif()
 
   target_link_libraries(${BENCHMARK_TARGET}
     PRIVATE
@@ -85,30 +111,9 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmark"
   )
-  if(BENCHMARK_CONFIG_TUNING)
-    target_compile_definitions(${BENCHMARK_TARGET} PRIVATE BENCHMARK_CONFIG_TUNING)
 
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK_TARGET}.parallel.cpp.in")
-      message(STATUS "found ${BENCHMARK_TARGET}.parallel.cpp.in file, compiling in parallel.")
-      read_config_autotune_settings(${BENCHMARK_TARGET} list_across_names list_across output_pattern_suffix)
-      #make sure that variables are not empty, i.e. there actually is an entry for that benchmark in benchmark/ConfigAutotuneSettings.cmake
-      if(list_across_names)
-        add_matrix(TARGET ${BENCHMARK_TARGET}
-                SHARDS 1
-                CURRENT_SHARD 0
-                INPUT "${BENCHMARK_TARGET}.parallel.cpp.in"
-                OUTPUT_PATTERN "${BENCHMARK_TARGET}_${output_pattern_suffix}"
-                NAMES ${list_across_names}
-                LISTS ${list_across})
-        add_dependencies(benchmark_config_tuning ${BENCHMARK_TARGET})
-      endif()
-    endif()
-    rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
-    dll_copy_check(BENCHMARK_TARGET)
-  else()
-    rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
-    dll_copy_check(BENCHMARK_TARGET)
-  endif()
+  rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
+  dll_copy_check(BENCHMARK_TARGET)
 endfunction()
 
 # ****************************************************************************
