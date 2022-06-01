@@ -28,23 +28,6 @@ if(BENCHMARK_CONFIG_TUNING)
   add_custom_target("benchmark_config_tuning")
 endif()
 
-function(dll_copy_check BENCHMARK_TARGET)
-  if (WIN32 AND NOT DEFINED DLLS_COPIED)
-    set(DLLS_COPIED "YES")
-    set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
-    # for now adding in all .dll as dependency chain is not cmake based on win32
-    file( GLOB third_party_dlls
-    LIST_DIRECTORIES ON
-    CONFIGURE_DEPENDS
-    ${HIP_DIR}/bin/*.dll
-    ${CMAKE_SOURCE_DIR}/rtest.*
-    )
-    foreach( file_i ${third_party_dlls})
-      add_custom_command( TARGET ${BENCHMARK_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/benchmark )
-    endforeach( file_i )
-  endif()
-endfunction()
-
 function(add_rocprim_benchmark BENCHMARK_SOURCE)
   get_filename_component(BENCHMARK_TARGET ${BENCHMARK_SOURCE} NAME_WE)
 
@@ -113,7 +96,20 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
   )
 
   rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
-  dll_copy_check(BENCHMARK_TARGET)
+  if (WIN32 AND NOT DEFINED DLLS_COPIED)
+    set(DLLS_COPIED "YES")
+    set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
+    # for now adding in all .dll as dependency chain is not cmake based on win32
+    file( GLOB third_party_dlls
+    LIST_DIRECTORIES ON
+    CONFIGURE_DEPENDS
+    ${HIP_DIR}/bin/*.dll
+    ${CMAKE_SOURCE_DIR}/rtest.*
+    )
+    foreach( file_i ${third_party_dlls})
+      add_custom_command( TARGET ${BENCHMARK_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${file_i} ${PROJECT_BINARY_DIR}/benchmark )
+    endforeach( file_i )
+  endif()
 endfunction()
 
 # ****************************************************************************
