@@ -153,7 +153,7 @@ TEST(RocprimReverseIteratorTests, TestDereference)
     ASSERT_EQ(4, *it);
     ASSERT_EQ(4, it[0]);
     ASSERT_EQ(2, it[2]);
-    ASSERT_EQ(0, it[5]);
+    ASSERT_EQ(0, it[4]);
 }
 
 TEST(RocprimReverseIteratorTests, TestComparison)
