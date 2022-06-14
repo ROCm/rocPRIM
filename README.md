@@ -243,10 +243,19 @@ It can also be build using the following commands
 # go to rocPRIM doc directory
 cd rocPRIM; cd doc
 
-# run doxygen
+# run doxygen to generate:
+# * the XML files for Sphinx
+# * the HTML files to enjoy how Doxygen presents the
+#   functions and classes hierarchy.
 doxygen Doxyfile
 
 # open html/index.html
+
+# Python dependencies
+pip install sphinx breathe
+
+# build the documentation
+sphinx-build -b html source build
 ```
 
 ## hipCUB
