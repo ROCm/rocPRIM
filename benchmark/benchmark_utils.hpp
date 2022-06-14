@@ -210,7 +210,9 @@ struct custom_type
     ROCPRIM_HOST_DEVICE inline
     bool operator<(const custom_type& rhs) const
     {
-        return (x < rhs.x || (x == rhs.x && y < rhs.y));
+        // intentionally suboptimal choice for short-circuting,
+        // required to generate more performant device code
+        return ((x == rhs.x && y < rhs.y) || x < rhs.x);
     }
 
     ROCPRIM_HOST_DEVICE inline
