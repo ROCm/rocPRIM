@@ -101,11 +101,11 @@ enum class block_store_method
 ///
 /// \par Overview
 /// * The \p block_store class has a number of different methods to store data:
-///   * [block_store_direct](\ref ::block_store_method::block_store_direct)
-///   * [block_store_striped](\ref ::block_store_method::block_store_striped)
-///   * [block_store_vectorize](\ref ::block_store_method::block_store_vectorize)
-///   * [block_store_transpose](\ref ::block_store_method::block_store_transpose)
-///   * [block_store_warp_transpose](\ref ::block_store_method::block_store_warp_transpose)
+///   * \p ::block_store_method::block_store_direct
+///   * \p ::block_store_method::block_store_striped
+///   * \p ::block_store_method::block_store_vectorize
+///   * \p ::block_store_method::block_store_transpose
+///   * \p ::block_store_method::block_store_warp_transpose
 ///
 /// \par Example:
 /// \parblock

@@ -94,7 +94,7 @@ struct select_block_histogram_impl<block_histogram_algorithm::using_sort>
 ///
 /// \par Overview
 /// * block_histogram has two alternative implementations: \p block_histogram_algorithm::using_atomic
-///   and block_histogram_algorithm::using_sort.
+///   and \p block_histogram_algorithm::using_sort.
 ///
 /// \par Examples
 /// \parblock

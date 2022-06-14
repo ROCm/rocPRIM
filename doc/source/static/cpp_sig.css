@@ -1,0 +1,11 @@
+.desc-parameterlist {
+    list-style: square;
+    text-indent: 0;
+    margin-left: 2em;
+    display: block;
+}
+
+.template-params {
+    font-size: 0.8em;
+}
+
