@@ -295,7 +295,7 @@ namespace detail
 /// * Ranges specified by \p keys_input, \p values_input, and \p values_output must have
 /// at least \p size elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p scan_config or
+/// \tparam Config - [optional] configuration of the primitive. It can be \p scan_by_key_config or
 /// a custom class with the same members.
 /// \tparam KeysInputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
@@ -426,7 +426,7 @@ inline hipError_t inclusive_scan_by_key(void* const                temporary_sto
 /// * Ranges specified by \p keys_input, \p values_input, and \p values_output must have
 /// at least \p size elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p scan_config or
+/// \tparam Config - [optional] configuration of the primitive. It can be \p scan_by_key_config or
 /// a custom class with the same members.
 /// \tparam KeysInputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
