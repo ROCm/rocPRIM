@@ -7,7 +7,6 @@ Class
 .. doxygenclass:: block_scan
    :members:
 
-
 Algorithms
 ..........
 

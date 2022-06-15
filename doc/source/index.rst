@@ -10,7 +10,7 @@
 
    devicemodule/index
    blockmodule/index
-   warpmodule
+   warpmodule/index
    threadmodule
 
    iterators

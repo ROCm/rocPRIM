@@ -1,7 +1,6 @@
 Data movement functions
 -----------------------
 
-
 Direct Blocked
 ~~~~~~~~~~~~~~
 
@@ -62,4 +61,3 @@ Store
 
 .. doxygenfunction:: block_store_direct_warp_striped (unsigned int flat_id, OutputIterator block_output, T(&items)[ItemsPerThread])
 .. doxygenfunction:: block_store_direct_warp_striped (unsigned int flat_id, OutputIterator block_output, T(&items)[ItemsPerThread], unsigned int valid)
-
