@@ -45,4 +45,3 @@ Other operations
 
 * ``run_length_encode`` generates a compact representation of a sequence
 * ``binary_search``
-

@@ -22,6 +22,7 @@ The scope has a direct influence on how the data will be subdivided into chunks 
 .. the source of the following image can be found in the doc/svg directory
 
 .. figure:: static/gpu_hierarchy_draft.png
+   :align: center
 
    Computing hierarchy of a GPU
 
@@ -34,5 +35,3 @@ This point dictates how synchronization should be done to wait for completion:
 
 * *Device/Grid* Synchronization is done via wait lists and queue barriers (``stream``).
 * *Block/Wrap/Thread* it is in the same control flow of the callee threads. Synchronization is done via memory barriers.
-
-

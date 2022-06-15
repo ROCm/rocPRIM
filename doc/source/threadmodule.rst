@@ -19,4 +19,3 @@ inclusive
 .. doxygenfunction:: thread_scan_inclusive (T(&input)[LENGTH], T(&output)[LENGTH], ScanOp scan_op)
 .. doxygenfunction:: thread_scan_inclusive (T *input, T *output, ScanOp scan_op, T prefix, bool apply_prefix=true)
 .. doxygenfunction:: thread_scan_inclusive (T(&input)[LENGTH], T(&output)[LENGTH], ScanOp scan_op, T prefix, bool apply_prefix=true)
-
