@@ -1,23 +1,76 @@
 Iterators
 =========
 
-Pairing Value with Indices
---------------------------
-
-.. doxygenclass:: arg_index_iterator
-   :members:
-
 Constant
 --------
 
 .. doxygenclass:: constant_iterator
    :members:
 
+
+.. note::
+
+   For example, ``constant_iterator(20)`` generates the infinite sequence::
+
+     20
+     20
+     20
+     ...
+
 Counting
 --------
 
 .. doxygenclass:: counting_iterator
    :members:
+
+.. note::
+   For example, ``counting_iterator(20)`` generates the infinite sequence::
+
+     20
+     21
+     22
+     23
+     ...
+
+Transform
+---------
+
+.. doxygenclass:: transform_iterator
+   :members:
+
+.. note::
+
+   ``transform_iterator(sequence, transform)`` shoud generate the sequence::
+
+     transform(sequence(0))
+     transform(sequence(1))
+     ...
+
+Pairing Values with Indices
+---------------------------
+
+.. doxygenclass:: arg_index_iterator
+   :members:
+
+.. note::
+   ``arg_index_iterator(sequence)`` generates the sequence of tuples::
+
+     (0, sequence[0])
+     (1, sequence[1])
+     ...
+
+Zip
+---
+
+.. doxygenclass:: zip_iterator
+   :members:
+
+.. note::
+   ``zip_iterator(sequence_X, sequence_Y)`` generates the sequence of tuples::
+
+     (sequence_X[0], sequence_Y[0])
+     (sequence_X[1], sequence_Y[1])
+     ...
 
 Discard
 -------
@@ -29,16 +82,4 @@ Texture Cache
 -------------
 
 .. doxygenclass:: texture_cache_iterator
-   :members:
-
-Transform
----------
-
-.. doxygenclass:: transform_iterator
-   :members:
-
-Zip
----
-
-.. doxygenclass:: zip_iterator
    :members:
