@@ -5,7 +5,7 @@
 .. toctree::
    :hidden:
 
-   introduction
+   intro
    operations
 
    devicemodule/index
