@@ -18,8 +18,8 @@ Aggregation
 Differenciation
 ---------------
 
-* ``adjacent_difference``
-* ``discontinuity``
+* ``adjacent_difference`` computes the difference between the current element and the previous or next one in the sequence.
+* ``discontinuity`` detects value change between the current element and the previous or next one in the sequence.
 
 Rearrangement
 -------------
@@ -44,4 +44,4 @@ Other operations
 ----------------
 
 * ``run_length_encode`` generates a compact representation of a sequence
-* ``binary_search``
+* ``binary_search`` finds for each element the index of an element with the same value in another sequence (which has to be sorted).
