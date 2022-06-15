@@ -22,7 +22,9 @@ The ``rocPRIM`` is a header-only library providing HIP parallel primitives to ea
 
 As it is the ROCM dual of Nvidia CUB ( https://github.com/NVIDIA/cub ), looking at the CUB documentation could be also interesting for you: https://nvlabs.github.io/cub/index.html
 
-.. figure:: https://upload.wikimedia.org/wikipedia/commons/8/80/DNA_icon.svg
+.. the source of the following image can be found in the doc/svg directory
+
+.. figure:: static/dna_icon.png
    :align: center
    :width: 20%
 
