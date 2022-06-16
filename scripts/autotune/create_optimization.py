@@ -504,17 +504,18 @@ class BenchmarkDataManager:
         # these are mirrored from the target_arch enum in device/config_types.hpp
         target_arch = ['gfx803', 'gfx900', 'gfx906', 'gfx908', 'gfx90a', 'gfx1030']
         context_name = benchmark_run_data['context']['hdp_gcn_arch_name']
-        arch = 'target_arch::unknown'
+        arch = 'unknown'
         for name in target_arch:
             if name in context_name:
                 arch = 'target_arch::' + name
                 break
+        if arch == 'unknown':
+            raise RuntimeError(f"ERROR: unknown hdp_gcn_arch_name: {context_name}")
         name_regex = benchmark_run_data['context']['autotune_config_pattern']
         for single_benchmark in benchmark_run_data['benchmarks']:
             tokenized_name = tokenize_benchmark_name(single_benchmark['name'], name_regex)
             if not tokenized_name:
-                print(f"ERROR: cannot tokenize \"{single_benchmark['name']}\" with regex:\n{name_regex}")
-                raise(RuntimeError)
+                raise RuntimeError(f"ERROR: cannot tokenize \"{single_benchmark['name']}\" with regex:\n{name_regex}")
             single_benchmark: Dict[str, str] = dict(single_benchmark, **tokenized_name)
             single_benchmark['arch'] = arch
 
