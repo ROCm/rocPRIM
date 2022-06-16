@@ -493,7 +493,7 @@ class BenchmarkDataManager:
                 print(f"WARNING: Currently only fallbacks based on datatype are implemented, ignoring \"{fallback_settings_entry['based_on']}\"")
         self.fallback_entries: List[Dict] = processed_fallback_entries
 
-    def add_run(self, benchmark_run_file_path: str, arch: str):
+    def add_run(self, benchmark_run_file_path: str):
         """
         Adds a single file containing the results of benchmarks executed on a single architecture.
         The benchmarks within the file may belong to different algorithms.
@@ -501,6 +501,14 @@ class BenchmarkDataManager:
 
         with open(benchmark_run_file_path) as file_handle:
             benchmark_run_data = json.load(file_handle)
+        # these are mirrored from the target_arch enum in device/config_types.hpp
+        target_arch = ['gfx803', 'gfx900', 'gfx906', 'gfx908', 'gfx90a', 'gfx1030']
+        context_name = benchmark_run_data['context']['hdp_gcn_arch_name']
+        arch = 'target_arch::unknown'
+        for name in target_arch:
+            if name in context_name:
+                arch = 'target_arch::' + name
+                break
         name_regex = benchmark_run_data['context']['autotune_config_pattern']
         for single_benchmark in benchmark_run_data['benchmarks']:
             tokenized_name = tokenize_benchmark_name(single_benchmark['name'], name_regex)
@@ -530,16 +538,16 @@ def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
     parser = argparse.ArgumentParser(description="Tool for generating optimized launch parameters for rocPRIM based on benchmark results")
-    parser.add_argument('-b','--benchmark_files', nargs='+', help="Benchmarked architectures listed in the form <arch-id>:<path_to_benchmark>.json")
+    parser.add_argument('-b','--benchmark_files', nargs='+', help="Benchmark files listed in the form <path_to_benchmark>.json")
     parser.add_argument("-p", "--out_basedir", type=str, help="Base dir for the output files, for each algorithm a new file will be created in this directory", required=True)
     parser.add_argument("-c", "--fallback_configuration", type=argparse.FileType('r'), default=os.path.join(current_dir, "fallback_config.json"), help="Configuration for fallbacks for not tested datatypes")
     args = parser.parse_args()
 
     benchmark_manager = BenchmarkDataManager(args.fallback_configuration)
 
-    for benchmark_run_file_and_arch in args.benchmark_files:
-        arch_id, bench_path = benchmark_run_file_and_arch.split(":")
-        benchmark_manager.add_run(bench_path, arch_id)
+    for benchmark_run_file in args.benchmark_files:
+        bench_path = benchmark_run_file
+        benchmark_manager.add_run(bench_path)
     
     benchmark_manager.write_configs_to_files(args.out_basedir)
 
