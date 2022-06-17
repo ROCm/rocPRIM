@@ -79,13 +79,13 @@ struct load_helper
     template<typename KeyIterator, typename ValueIterator>
     ROCPRIM_DEVICE void load_keys_values(KeyIterator        tile_keys,
                                          ValueIterator      tile_values,
-                                         const bool         is_last_tile,
-                                         const unsigned int valid_in_last_tile,
+                                         const bool         is_global_last_tile,
+                                         const unsigned int valid_in_global_last_tile,
                                          KeyType (&keys)[ItemsPerThread],
                                          AccumulatorType (&values)[ItemsPerThread],
                                          storage_type& storage)
     {
-        if(!is_last_tile)
+        if(!is_global_last_tile)
         {
             block_load_keys{}.load(tile_keys, keys, storage.keys);
             ::rocprim::syncthreads();
@@ -96,12 +96,15 @@ struct load_helper
             // Pad with the last valid value so out-of-bound items are not flagged
             block_load_keys{}.load(tile_keys,
                                    keys,
-                                   valid_in_last_tile,
-                                   tile_keys[valid_in_last_tile - 1],
+                                   valid_in_global_last_tile,
+                                   tile_keys[valid_in_global_last_tile - 1],
                                    storage.keys);
             ::rocprim::syncthreads();
 
-            block_load_values{}.load(tile_values, values, valid_in_last_tile, storage.values);
+            block_load_values{}.load(tile_values,
+                                     values,
+                                     valid_in_global_last_tile,
+                                     storage.values);
         }
     }
 };
@@ -117,12 +120,12 @@ struct discontinuity_helper
                                    const KeyType (&keys)[ItemsPerThread],
                                    CompareFunction compare,
                                    unsigned int (&head_flags)[ItemsPerThread],
-                                   const bool    is_first_tile,
+                                   const bool    is_global_first_tile,
                                    storage_type& storage)
     {
         auto not_equal = [compare](const auto& a, const auto& b) mutable { return !compare(a, b); };
 
-        if(!is_first_tile)
+        if(!is_global_first_tile)
         {
             const KeyType tile_predecessor = tile_keys[-1];
             block_discontinuity_type{}.flag_heads(head_flags,
@@ -232,18 +235,22 @@ public:
              typename CompareFunction,
              typename BinaryOp,
              typename LookbackScanState>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void process_tile(const KeyIterator     tile_keys,
-                                                          const ValueIterator   tile_values,
-                                                          UniqueIterator        unique_keys,
-                                                          ReductionIterator     reductions,
-                                                          UniqueCountIterator   unique_count,
-                                                          BinaryOp              reduce_op,
-                                                          const CompareFunction compare,
-                                                          LookbackScanState     scan_state,
-                                                          const unsigned int    tile_id,
-                                                          const std::size_t     number_of_tiles,
-                                                          const std::size_t     size,
-                                                          storage_type&         storage)
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void process_tile(
+        const KeyIterator     tile_keys,
+        const ValueIterator   tile_values,
+        UniqueIterator        unique_keys,
+        ReductionIterator     reductions,
+        UniqueCountIterator   unique_count,
+        BinaryOp              reduce_op,
+        const CompareFunction compare,
+        LookbackScanState     scan_state,
+        const unsigned int    tile_id,
+        const std::size_t     starting_tile,
+        const std::size_t     number_of_tiles,
+        const std::size_t     size,
+        storage_type&         storage,
+        const wrapped_type_t<reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>>* const
+            previous_last_value)
     {
         static constexpr unsigned int items_per_tile = BlockSize * ItemsPerThread;
 
@@ -255,9 +262,14 @@ public:
                                     : rocprim::get<1>(rhs)};
         };
 
-        const bool         is_first_tile = tile_id == 0;
-        const bool         is_last_tile  = tile_id == number_of_tiles - 1;
-        const unsigned int valid_in_last_tile
+        const std::size_t global_tile_id = starting_tile + tile_id;
+        // first and last tiles across all launches
+        const bool is_global_first_tile = global_tile_id == 0;
+        const bool is_global_last_tile  = global_tile_id == number_of_tiles - 1;
+        // first tile in this launch
+        const bool is_first_tile = tile_id == 0;
+
+        const unsigned int valid_in_global_last_tile
             = static_cast<unsigned int>(size - ((number_of_tiles - 1) * items_per_tile));
 
         const unsigned int flat_thread_id = threadIdx.x;
@@ -267,17 +279,20 @@ public:
 
         load_type{}.load_keys_values(tile_keys,
                                      tile_values,
-                                     is_last_tile,
-                                     valid_in_last_tile,
+                                     is_global_last_tile,
+                                     valid_in_global_last_tile,
                                      keys,
                                      values,
                                      storage.load);
         ::rocprim::syncthreads();
 
         unsigned int head_flags[ItemsPerThread];
-        // TODO: very first tile only when large indices
-        discontinuity_type{}
-            .flag_heads(tile_keys, keys, compare, head_flags, is_first_tile, storage.scan.flags);
+        discontinuity_type{}.flag_heads(tile_keys,
+                                        keys,
+                                        compare,
+                                        head_flags,
+                                        is_global_first_tile,
+                                        storage.scan.flags);
 
         wrapped_type wrapped_values[ItemsPerThread];
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
@@ -289,11 +304,21 @@ public:
         unsigned int segment_heads_before   = 0;
         unsigned int segment_heads_in_block = 0;
         wrapped_type reduction;
-        // TODO: there is a very first tile and first tile of this launch when large indices
-        // support is added. This branch must be taken for the first tile in each launch
+
+        // This branch is taken for the first tile in each launch when
+        // multiple launches occur due to large indices
         if(is_first_tile)
         {
-            // TODO: Handle previous grid launch, i.e. large indices
+            // previous_last_value is used to pass the value from the previous launch
+            if(previous_last_value != nullptr)
+            {
+                segment_heads_before = rocprim::get<0>(*previous_last_value);
+                if(flat_thread_id == 0)
+                {
+                    wrapped_values[0] = wrapped_op(*previous_last_value, wrapped_values[0]);
+                }
+            }
+
             block_scan_type{}.exclusive_scan(wrapped_values,
                                              wrapped_values,
                                              rocprim::make_tuple(0u, values[0]),
@@ -307,6 +332,11 @@ public:
             }
 
             segment_heads_in_block = rocprim::get<0>(reduction);
+            // prevent counting the same segment heads two times
+            if(previous_last_value != nullptr)
+            {
+                segment_heads_in_block -= segment_heads_before;
+            }
         }
         else
         {
@@ -349,36 +379,35 @@ public:
             storage.scatter_keys);
         ::rocprim::syncthreads();
 
-        // The first item in the first block does not have a reduction
-        // The first out of bounds item in the last block has the reduction for the last segment
+        // The first item in the global first tile does not have a reduction
+        // The first out of bounds item in the global last tile has the reduction for the last segment
         const unsigned int reductions_in_block
-            = segment_heads_in_block - (is_first_tile ? 1 : 0)
-              + (is_last_tile && valid_in_last_tile != items_per_tile ? 1 : 0);
+            = segment_heads_in_block - (is_global_first_tile ? 1 : 0)
+              + (is_global_last_tile && valid_in_global_last_tile != items_per_tile ? 1 : 0);
 
-        if(is_first_tile && flat_thread_id == 0)
+        if(is_global_first_tile && flat_thread_id == 0)
         {
             head_flags[0] = 0;
         }
-        if(is_last_tile && flat_thread_id == valid_in_last_tile / ItemsPerThread)
+        if(is_global_last_tile && flat_thread_id == valid_in_global_last_tile / ItemsPerThread)
         {
-            head_flags[valid_in_last_tile - flat_thread_id * ItemsPerThread] = 1;
+            head_flags[valid_in_global_last_tile - flat_thread_id * ItemsPerThread] = 1;
         }
         scatter_values_type{}.scatter(
-            reductions + segment_heads_before - (!is_first_tile ? 1 : 0),
+            reductions + segment_heads_before - (!is_global_first_tile ? 1 : 0),
             [&wrapped_values](unsigned int i) { return rocprim::get<1>(wrapped_values[i]); },
             head_flags,
-            [&, offset = segment_heads_before + (is_first_tile ? 1 : 0)](const unsigned int i)
-            { return rocprim::get<0>(wrapped_values[i]) - offset; },
+            [&, offset = segment_heads_before + (is_global_first_tile ? 1 : 0)](
+                const unsigned int i) { return rocprim::get<0>(wrapped_values[i]) - offset; },
             reductions_in_block,
             flat_thread_id,
             storage.scatter_values);
 
-        if(is_last_tile && flat_thread_id == BlockSize - 1)
+        if(is_global_last_tile && flat_thread_id == BlockSize - 1)
         {
-            // TODO: Handle large indices
             const unsigned int total_segment_heads = segment_heads_before + segment_heads_in_block;
             *unique_count                          = total_segment_heads;
-            if(valid_in_last_tile == items_per_tile)
+            if(valid_in_global_last_tile == items_per_tile)
             {
                 reductions[total_segment_heads - 1] = rocprim::get<1>(reduction);
             }
@@ -395,17 +424,21 @@ template<typename Config,
          typename CompareFunction,
          typename BinaryOp,
          typename LookbackScanState>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(KeyIterator                    keys_input,
-                                                     ValueIterator                  values_input,
-                                                     const UniqueIterator           unique_keys,
-                                                     const ReductionIterator        reductions,
-                                                     const UniqueCountIterator      unique_count,
-                                                     const BinaryOp                 reduce_op,
-                                                     const CompareFunction          compare,
-                                                     const LookbackScanState        scan_state,
-                                                     ordered_block_id<unsigned int> ordered_tile_id,
-                                                     const std::size_t              number_of_tiles,
-                                                     const std::size_t              size)
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(
+    KeyIterator                    keys_input,
+    ValueIterator                  values_input,
+    const UniqueIterator           unique_keys,
+    const ReductionIterator        reductions,
+    const UniqueCountIterator      unique_count,
+    const BinaryOp                 reduce_op,
+    const CompareFunction          compare,
+    const LookbackScanState        scan_state,
+    ordered_block_id<unsigned int> ordered_tile_id,
+    const std::size_t              starting_tile,
+    const std::size_t              number_of_tiles,
+    const std::size_t              size,
+    const wrapped_type_t<reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>>* const
+        previous_last_value)
 {
     static constexpr unsigned int         block_size         = Config::block_size;
     static constexpr unsigned int         items_per_thread   = Config::items_per_thread;
@@ -455,9 +488,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(KeyIterator                
                                       compare,
                                       scan_state,
                                       tile_id,
+                                      starting_tile,
                                       number_of_tiles,
                                       size,
-                                      storage.tile);
+                                      storage.tile,
+                                      previous_last_value);
     }
 }
 
