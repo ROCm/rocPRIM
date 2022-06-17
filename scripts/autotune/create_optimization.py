@@ -502,15 +502,12 @@ class BenchmarkDataManager:
         with open(benchmark_run_file_path) as file_handle:
             benchmark_run_data = json.load(file_handle)
         # these are mirrored from the target_arch enum in device/config_types.hpp
-        target_arch = ['gfx803', 'gfx900', 'gfx906', 'gfx908', 'gfx90a', 'gfx1030']
-        context_name = benchmark_run_data['context']['hdp_gcn_arch_name']
-        arch = 'unknown'
-        for name in target_arch:
-            if name in context_name:
-                arch = 'target_arch::' + name
-                break
-        if arch == 'unknown':
-            raise RuntimeError(f"ERROR: unknown hdp_gcn_arch_name: {context_name}")
+        target_architectures = ['gfx803', 'gfx900', 'gfx906', 'gfx908', 'gfx90a', 'gfx1030']
+        name_from_context = benchmark_run_data['context']['hdp_gcn_arch_name'].split(":")[0]
+        if name_from_context in target_architectures:
+            arch = f'target_arch::{name_from_context}'
+        else:
+            raise RuntimeError(f"ERROR: unknown hdp_gcn_arch_name: {name_from_context}")
         name_regex = benchmark_run_data['context']['autotune_config_pattern']
         for single_benchmark in benchmark_run_data['benchmarks']:
             tokenized_name = tokenize_benchmark_name(single_benchmark['name'], name_regex)
