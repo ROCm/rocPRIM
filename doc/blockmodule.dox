@@ -9,3 +9,13 @@
  * \ingroup primitivesmodule
  *
  */
+
+/**
+ * \defgroup blockmodule_warp_load_functions
+ * \ingroup blockmodule
+ */
+
+/**
+ * \defgroup blockmodule_warp_store_functions
+ * \ingroup blockmodule
+ */
