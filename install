@@ -185,6 +185,8 @@ if [[ "${build_codecoverage}" == true ]]; then
     codecoverage="ON"
 fi
 
+#Setting default GNU LIBDIR in build scripts as per architecture board decision
+cmake_common_options="${cmake_common_options} -DCMAKE_INSTALL_LIBDIR=lib"
 
 if [[ "${build_relocatable}" == true ]]; then
     CXX=${rocm_path}/bin/${compiler} ${cmake_executable} ${cmake_common_options} \
