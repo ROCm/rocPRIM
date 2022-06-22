@@ -1,5 +1,5 @@
 Adjacent difference
 ~~~~~~~~~~~~~~~~~~~
 
-.. doxygenclass:: block_adjacent_difference
+.. doxygenclass:: rocprim::block_adjacent_difference
    :members:

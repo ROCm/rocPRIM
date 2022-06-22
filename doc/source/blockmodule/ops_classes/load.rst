@@ -4,10 +4,10 @@ Load
 Class
 .....
 
-.. doxygenclass:: block_load
+.. doxygenclass:: rocprim::block_load
    :members:
 
 Algorithms
 ..........
 
-.. doxygenenum:: block_load_method
+.. doxygenenum:: rocprim::block_load_method

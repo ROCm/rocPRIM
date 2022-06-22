@@ -4,10 +4,10 @@ Store
 Class
 .....
 
-.. doxygenclass:: block_store
+.. doxygenclass:: rocprim::block_store
    :members:
 
 Algorithms
 ..........
 
-.. doxygenenum:: block_store_method
+.. doxygenenum:: rocprim::block_store_method

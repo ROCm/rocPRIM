@@ -4,10 +4,10 @@ Reduce
 Class
 .....
 
-.. doxygenclass:: block_reduce
+.. doxygenclass:: rocprim::block_reduce
    :members:
 
 Algorithms
 ..........
 
-.. doxygenenum:: block_reduce_algorithm
+.. doxygenenum:: rocprim::block_reduce_algorithm

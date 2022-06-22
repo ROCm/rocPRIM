@@ -1,5 +1,5 @@
 Exchange
 ~~~~~~~~
 
-.. doxygenclass:: block_exchange
+.. doxygenclass:: rocprim::block_exchange
    :members:

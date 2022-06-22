@@ -65,6 +65,14 @@ highlight_language = "cpp"
 pygments_style = "sphinx"
 pygments_dark_style = "material"
 
+# Make sphinx not choke on CUDA / HIP attributes
+cpp_id_attributes = [
+    "__device__",
+    "__global__",
+    "__host__"
+]
+cpp_index_common_prefix = ["rocprim::"]
+
 breathe_projects = {
     "rocprim": "../xml",
 }

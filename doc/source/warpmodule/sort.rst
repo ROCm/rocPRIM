@@ -1,5 +1,5 @@
 Sort
 ----
 
-.. doxygenclass:: warp_sort
+.. doxygenclass:: rocprim::warp_sort
    :members:

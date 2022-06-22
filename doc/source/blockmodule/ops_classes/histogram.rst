@@ -3,10 +3,10 @@ Histogram
 Class
 .....
 
-.. doxygenclass:: block_histogram
+.. doxygenclass:: rocprim::block_histogram
    :members:
 
 Algorithms
 ..........
 
-.. doxygenenum:: block_histogram_algorithm
+.. doxygenenum:: rocprim::block_histogram_algorithm

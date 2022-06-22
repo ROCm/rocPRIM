@@ -1,5 +1,5 @@
 Exchange
 --------
 
-.. doxygenclass:: warp_exchange
+.. doxygenclass:: rocprim::warp_exchange
    :members:

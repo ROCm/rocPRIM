@@ -4,7 +4,7 @@ Iterators
 Constant
 --------
 
-.. doxygenclass:: constant_iterator
+.. doxygenclass:: rocprim::constant_iterator
    :members:
 
 
@@ -20,7 +20,7 @@ Constant
 Counting
 --------
 
-.. doxygenclass:: counting_iterator
+.. doxygenclass:: rocprim::counting_iterator
    :members:
 
 .. note::
@@ -35,7 +35,7 @@ Counting
 Transform
 ---------
 
-.. doxygenclass:: transform_iterator
+.. doxygenclass:: rocprim::transform_iterator
    :members:
 
 .. note::
@@ -49,7 +49,7 @@ Transform
 Pairing Values with Indices
 ---------------------------
 
-.. doxygenclass:: arg_index_iterator
+.. doxygenclass:: rocprim::arg_index_iterator
    :members:
 
 .. note::
@@ -62,7 +62,7 @@ Pairing Values with Indices
 Zip
 ---
 
-.. doxygenclass:: zip_iterator
+.. doxygenclass:: rocprim::zip_iterator
    :members:
 
 .. note::
@@ -75,11 +75,11 @@ Zip
 Discard
 -------
 
-.. doxygenclass:: discard_iterator
+.. doxygenclass:: rocprim::discard_iterator
    :members:
 
 Texture Cache
 -------------
 
-.. doxygenclass:: texture_cache_iterator
+.. doxygenclass:: rocprim::texture_cache_iterator
    :members:

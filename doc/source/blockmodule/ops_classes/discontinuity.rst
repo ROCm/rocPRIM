@@ -1,5 +1,5 @@
 Discontinuity
 ~~~~~~~~~~~~~
 
-.. doxygenclass:: block_discontinuity
+.. doxygenclass:: rocprim::block_discontinuity
    :members:

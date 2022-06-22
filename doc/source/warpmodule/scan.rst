@@ -1,5 +1,5 @@
 Scan
 ----
 
-.. doxygenclass:: warp_scan
+.. doxygenclass:: rocprim::warp_scan
    :members:

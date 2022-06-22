@@ -1,5 +1,5 @@
 Shuffle
 ~~~~~~~
 
-.. doxygenclass:: block_shuffle
+.. doxygenclass:: rocprim::block_shuffle
    :members:
