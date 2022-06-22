@@ -4,10 +4,10 @@ Scan
 Class
 .....
 
-.. doxygenclass:: block_scan
+.. doxygenclass:: rocprim::block_scan
    :members:
 
 Algorithms
 ..........
 
-.. doxygenenum:: block_scan_algorithm
+.. doxygenenum:: rocprim::block_scan_algorithm

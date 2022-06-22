@@ -5,13 +5,13 @@ generic
 .......
 
 
-.. doxygenclass:: block_sort
+.. doxygenclass:: rocprim::block_sort
    :members:
 
-.. doxygenenum:: block_sort_algorithm
+.. doxygenenum:: rocprim::block_sort_algorithm
 
 radix sort
 ..........
 
-.. doxygenclass:: block_radix_sort
+.. doxygenclass:: rocprim::block_radix_sort
    :members:

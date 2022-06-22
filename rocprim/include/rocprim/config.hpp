@@ -33,23 +33,27 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_bfloat16.h>
 
-#ifndef ROCPRIM_DEVICE
+#if !defined(ROCPRIM_DEVICE) || defined(DOXYGEN_DOCUMENTATION_BUILD)
     #define ROCPRIM_DEVICE __device__
     #define ROCPRIM_HOST __host__
     #define ROCPRIM_HOST_DEVICE __host__ __device__
     #define ROCPRIM_SHARED_MEMORY __shared__
+
     #ifdef WIN32
-    #define ROCPRIM_KERNEL __global__ static
+        #define ROCPRIM_KERNEL __global__ static
     #else
-    #define ROCPRIM_KERNEL __global__
+        #define ROCPRIM_KERNEL __global__
     #endif
+
     // TODO: These paremeters should be tuned for NAVI in the close future.
     #ifndef ROCPRIM_DEFAULT_MAX_BLOCK_SIZE
         #define ROCPRIM_DEFAULT_MAX_BLOCK_SIZE 256
     #endif
+
     #ifndef ROCPRIM_DEFAULT_MIN_WARPS_PER_EU
         #define ROCPRIM_DEFAULT_MIN_WARPS_PER_EU 1
     #endif
+
     // Currently HIP on Windows has a bug involving inline device functions generating
     // local memory/register allocation errors during compilation.  Current workaround is to
     // use __attribute__((always_inline)) for the affected functions
@@ -58,7 +62,13 @@
     #else
       #define ROCPRIM_INLINE inline
     #endif
-    #define ROCPRIM_FORCE_INLINE __attribute__((always_inline))
+    
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS
+        #define ROCPRIM_FORCE_INLINE __attribute__((always_inline))
+    #else
+        #define ROCPRIM_FORCE_INLINE inline
+    #endif
+#endif
 #endif
 
 #ifndef ROCPRIM_DISABLE_DPP

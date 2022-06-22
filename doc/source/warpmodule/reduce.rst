@@ -1,5 +1,5 @@
 Reduce
 ------
 
-.. doxygenclass:: warp_reduce
+.. doxygenclass:: rocprim::warp_reduce
    :members:

@@ -4,10 +4,10 @@ Load
 Class
 .....
 
-.. doxygenclass:: warp_load
+.. doxygenclass:: rocprim::warp_load
    :members:
 
 Algorithms
 ..........
 
-.. doxygenenum:: warp_load_method
+.. doxygenenum:: rocprim::warp_load_method

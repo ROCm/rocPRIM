@@ -5,13 +5,13 @@ A kernel config is a way to select the grid/block dimensions, but also
 how the data will be fetched and stored (the algorithms used for
 ``load``/``store`` ) for the operations using them (such as ``select``).
 
-.. doxygenstruct:: kernel_config
+.. doxygenstruct:: rocprim::kernel_config
 
 Setting the configuration is important to better tune the kernel to a given GPU model.
 ``rocPRIM`` uses a placeholder type to let the macros select the default configuration for
 the GPU model
 
-.. doxygenstruct:: default_config
+.. doxygenstruct:: rocprim::default_config
 
 .. warning::
 
