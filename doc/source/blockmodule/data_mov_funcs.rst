@@ -52,12 +52,11 @@ Direct Warp Striped
 Load
 ....
 
-.. doxygenfunction:: block_load_direct_warp_striped (unsigned int flat_id, InputIterator block_input, T(&items)[ItemsPerThread])
-.. doxygenfunction:: block_load_direct_warp_striped (unsigned int flat_id, InputIterator block_input, T(&items)[ItemsPerThread], unsigned int valid)
-.. doxygenfunction:: block_load_direct_warp_striped (unsigned int flat_id, InputIterator block_input, T(&items)[ItemsPerThread], unsigned int valid, Default out_of_bounds)
+.. doxygengroup:: blockmodule_warp_load_functions
+   :content-only:
 
 Store
 .....
 
-.. doxygenfunction:: block_store_direct_warp_striped (unsigned int flat_id, OutputIterator block_output, T(&items)[ItemsPerThread])
-.. doxygenfunction:: block_store_direct_warp_striped (unsigned int flat_id, OutputIterator block_output, T(&items)[ItemsPerThread], unsigned int valid)
+.. doxygengroup:: blockmodule_warp_store_functions
+   :content-only:

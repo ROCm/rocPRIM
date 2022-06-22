@@ -18,32 +18,14 @@ Warp size
 Lane and Warp ID
 ----------------
 
-.. doxygenfunction:: lane_id ()
-
-.. doxygenfunction:: warp_id (unsigned int flat_id)
-
-..
-   issue with breathe with template function
-
-   .. doxygenfunction:: warp_id ()
-   .. doxygenfunction:: template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ> warp_id ()
-
-.. cpp:function:: unsigned int warp_id()
-
-   Returns warp id in a block (tile).
-
-.. cpp:function:: template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ> warp_id ()
-
-   Returns warp id in a block (tile). Use template parameters to
-   optimize 1D or 2D kernels.
+.. doxygengroup:: intrinsicsmodule_warp_id
+   :content-only:
 
 Flat ID
 -------
 
-.. doxygenfunction:: flat_block_thread_id() -> typename std::enable_if<(BlockSizeY == 1 && BlockSizeZ == 1), unsigned int>::type
-.. doxygenfunction:: flat_block_thread_id ()
-.. doxygenfunction:: flat_block_id ()
-.. doxygenfunction:: flat_block_id () -> typename std::enable_if<(BlockSizeY==1 &&BlockSizeZ==1), unsigned int >::type
+.. doxygengroup:: intrinsicsmodule_flat_id 
+   :content-only:
 
 Flat Size
 ---------
