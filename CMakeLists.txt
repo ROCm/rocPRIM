@@ -90,7 +90,7 @@ option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg wit
 if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
   rocm_wrap_header_dir(
     "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
-    WRAPPER_LOCATIONS rocprim/include/rocprim
+    WRAPPER_LOCATIONS rocprim/${CMAKE_INSTALL_INCLUDEDIR}/rocprim
     OUTPUT_LOCATIONS rocprim/wrapper/include/rocprim
     PATTERNS *.hpp
   )
