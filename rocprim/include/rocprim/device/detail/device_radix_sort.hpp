@@ -944,121 +944,158 @@ struct radix_merge_compare<Descending,
     bool operator()(const T&, const T&) const { return false; }
 };
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class BinaryFunction
->
-ROCPRIM_DEVICE ROCPRIM_INLINE
-void radix_block_merge_impl(KeysInputIterator keys_input,
-                            KeysOutputIterator keys_output,
-                            ValuesInputIterator values_input,
-                            ValuesOutputIterator values_output,
-                            const size_t input_size,
-                            const unsigned int merge_items_per_block_size,
-                            BinaryFunction compare_function)
+template<unsigned int BlockSize,
+         unsigned int ItemsPerThread,
+         class KeysInputIterator,
+         class KeysOutputIterator,
+         class ValuesInputIterator,
+         class ValuesOutputIterator,
+         class OffsetT,
+         class BinaryFunction>
+ROCPRIM_DEVICE ROCPRIM_INLINE void radix_block_merge_impl(KeysInputIterator    keys_input,
+                                                          KeysOutputIterator   keys_output,
+                                                          ValuesInputIterator  values_input,
+                                                          ValuesOutputIterator values_output,
+                                                          const OffsetT        input_size,
+                                                          const OffsetT        sorted_block_size,
+                                                          BinaryFunction       compare_function)
 {
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
+    using key_type             = typename std::iterator_traits<KeysInputIterator>::value_type;
+    using value_type           = typename std::iterator_traits<ValuesInputIterator>::value_type;
     constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
 
-    constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
-    const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-    const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
-    const unsigned int block_offset = flat_block_id * items_per_block;
-    const unsigned int number_of_blocks = (input_size + items_per_block - 1) / items_per_block;
-    const bool last_block = flat_block_id == (number_of_blocks - 1);
-    auto valid_in_last_block = last_block ? input_size - items_per_block * (number_of_blocks - 1) : items_per_block;
+    constexpr unsigned int items_per_block     = BlockSize * ItemsPerThread;
+    const unsigned int     flat_id             = ::rocprim::detail::block_thread_id<0>();
+    const unsigned int     flat_block_id       = ::rocprim::detail::block_id<0>();
+    const bool             is_incomplete_block = flat_block_id == (input_size / items_per_block);
+    // ^ bounds-checking: if input_size is not a multiple of items_per_block: true, false otherwise
+    const OffsetT block_offset        = flat_block_id * items_per_block;
+    const OffsetT valid_in_last_block = input_size - block_offset;
 
-    unsigned int start_id = (flat_block_id * items_per_block) + flat_id * ItemsPerThread;
-    if (start_id >= input_size)
+    OffsetT block_thread_offset = block_offset + flat_id * ItemsPerThread;
+    if(block_thread_offset >= input_size)
     {
         return;
     }
 
-
     key_type keys[ItemsPerThread];
     value_type values[ItemsPerThread];
 
-    block_load_radix_impl<with_values>(
-        flat_id,
-        block_offset,
-        valid_in_last_block,
-        last_block,
-        keys_input,
-        values_input,
-        keys,
-        values
-    );
+    block_load_radix_impl<with_values>(flat_id,
+                                       block_offset,
+                                       valid_in_last_block,
+                                       is_incomplete_block,
+                                       keys_input,
+                                       values_input,
+                                       keys,
+                                       values);
 
-    ROCPRIM_UNROLL
-    for(unsigned int i = 0; i < ItemsPerThread; i++)
+    const unsigned int merged_tiles_number = sorted_block_size / items_per_block;
+    const unsigned int mask                = merged_tiles_number - 1;
+    // tilegroup_id is the id of the input sorted_block
+    const unsigned int tilegroup_id = ~mask & flat_block_id;
+    const unsigned int block_is_odd = merged_tiles_number & tilegroup_id;
+    const OffsetT      block_start  = tilegroup_id * items_per_block;
+    const OffsetT      next_block_start_
+        = block_is_odd ? block_start - sorted_block_size : block_start + sorted_block_size;
+    const OffsetT next_block_start = min(next_block_start_, input_size);
+    const OffsetT next_block_end   = min(next_block_start + sorted_block_size, input_size);
+
+    if(next_block_start == input_size)
     {
-        if( flat_id * ItemsPerThread + i < valid_in_last_block )
+        // In this case, no merging needs to happen and
+        // block_is_odd will always be false here
+        if(is_incomplete_block)
         {
-            const unsigned int id = start_id + i;
-            const unsigned int block_id = id / merge_items_per_block_size;
-            const bool block_id_is_odd = block_id & 1;
-            const unsigned int next_block_id = block_id_is_odd ? block_id - 1 :
-                                                                 block_id + 1;
-            const unsigned int block_start = min(block_id * merge_items_per_block_size, (unsigned int) input_size);
-            const unsigned int next_block_start = min(next_block_id * merge_items_per_block_size, (unsigned int) input_size);
-            const unsigned int next_block_end = min((next_block_id + 1) * merge_items_per_block_size, (unsigned int) input_size);
-
-            if(next_block_start == input_size)
+            ROCPRIM_UNROLL
+            for(unsigned int i = 0; i < ItemsPerThread; i++)
             {
-                keys_output[id] = keys[i];
-                if(with_values)
+                const unsigned int id = block_thread_offset + i;
+                if ROCPRIM_IF_CONSTEXPR(id < input_size)
+                {
+                    keys_output[id] = keys[i];
+                    if(with_values)
+                    {
+                        values_output[id] = values[i];
+                    }
+                }
+            }
+        }
+        else
+        {
+            ROCPRIM_UNROLL
+            for(unsigned int i = 0; i < ItemsPerThread; i++)
+            {
+                const unsigned int id = block_thread_offset + i;
+                keys_output[id]       = keys[i];
+                if ROCPRIM_IF_CONSTEXPR(with_values)
                 {
                     values_output[id] = values[i];
                 }
             }
+        }
+        return;
+    }
 
-            unsigned int left_id = next_block_start;
-            unsigned int right_id = next_block_end;
+    const auto merge_function = [&](OffsetT i)
+    {
+        OffsetT left_id  = next_block_start;
+        OffsetT right_id = next_block_end;
 
-            while(left_id < right_id)
+        while(left_id < right_id)
+        {
+            OffsetT  mid_id  = (left_id + right_id) / 2;
+            key_type mid_key = keys_input[mid_id];
+            bool     smaller = compare_function(mid_key, keys[i]);
+            left_id          = smaller ? mid_id + 1 : left_id;
+            right_id         = smaller ? right_id : mid_id;
+        }
+
+        right_id = next_block_end;
+        if(block_is_odd && left_id != right_id)
+        {
+            key_type upper_key = keys_input[left_id];
+            while(!compare_function(upper_key, keys[i]) && !compare_function(keys[i], upper_key)
+                  && left_id < right_id)
             {
-                unsigned int mid_id = (left_id + right_id) / 2;
+                OffsetT  mid_id  = (left_id + right_id) / 2;
                 key_type mid_key = keys_input[mid_id];
-                bool smaller = compare_function(mid_key, keys[i]);
-                left_id = smaller ? mid_id + 1 : left_id;
-                right_id = smaller ? right_id : mid_id;
+                bool     equal
+                    = !compare_function(mid_key, keys[i]) && !compare_function(keys[i], mid_key);
+                left_id   = equal ? mid_id + 1 : left_id + 1;
+                right_id  = equal ? right_id : mid_id;
+                upper_key = keys_input[left_id];
             }
+        }
 
+        OffsetT offset = min(block_start, next_block_start); // get start of resulting merged block
+        offset += left_id - next_block_start; // add offset of found position in other block
+        offset += block_thread_offset + i - block_start; // add offset of position in current block
 
-            right_id = next_block_end;
-            if(block_id_is_odd && left_id != right_id)
+        keys_output[offset] = keys[i];
+        if ROCPRIM_IF_CONSTEXPR(with_values)
+        {
+            values_output[offset] = values[i];
+        }
+    };
+
+    if(is_incomplete_block)
+    {
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            if(block_thread_offset + i < input_size)
             {
-                key_type upper_key = keys_input[left_id];
-                while(!compare_function(upper_key, keys[i]) &&
-                      !compare_function(keys[i], upper_key) &&
-                      left_id < right_id)
-                {
-                    unsigned int mid_id = (left_id + right_id) / 2;
-                    key_type mid_key = keys_input[mid_id];
-                    bool equal = !compare_function(mid_key, keys[i]) &&
-                                 !compare_function(keys[i], mid_key);
-                    left_id = equal ? mid_id + 1 : left_id + 1;
-                    right_id = equal ? right_id : mid_id;
-                    upper_key = keys_input[left_id];
-                }
+                merge_function(i);
             }
-
-            unsigned int offset = 0;
-            offset += id - block_start;
-            offset += left_id - next_block_start;
-            offset += min(block_start, next_block_start);
-
-            keys_output[offset] = keys[i];
-            if(with_values)
-            {
-                values_output[offset] = values[i];
-            }
+        }
+    }
+    else
+    {
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            merge_function(i);
         }
     }
 }
