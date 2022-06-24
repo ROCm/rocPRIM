@@ -252,7 +252,7 @@ doxygen Doxyfile
 # open html/index.html
 
 # Python dependencies
-pip install sphinx breathe sphinx-rtd-theme
+pip install -r doc/source/requirements.txt
 
 # build the documentation
 sphinx-build -b html source build
