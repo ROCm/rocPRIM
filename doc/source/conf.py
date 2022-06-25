@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'rocPRIM'
-# copyright = ''
+copyright = ''
 author = ''
 
 
@@ -58,6 +58,9 @@ html_static_path = ['static']
 html_css_files = [
     "cpp_sig.css"
 ]
+html_show_copyright = False
+html_show_sphinx = False
+html_copy_source = False
 
 primary_domain = "cpp"
 highlight_language = "cpp"
@@ -77,7 +80,3 @@ breathe_projects = {
     "rocprim": "../xml",
 }
 breathe_default_project = "rocprim"
-
-html_show_copyright = False
-html_show_sphinx = False
-html_copy_source = False
