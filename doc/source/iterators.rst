@@ -40,7 +40,7 @@ Transform
 
 .. note::
 
-   ``transform_iterator(sequence, transform)`` shoud generate the sequence::
+   ``transform_iterator(sequence, transform)`` should generate the sequence::
 
      transform(sequence(0))
      transform(sequence(1))

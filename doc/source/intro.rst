@@ -4,7 +4,7 @@ Introduction
 Operations and Sequences
 ------------------------
 
-A ``rocPRIM`` operation is a computation over a sequence of objects returning one value (eg ``sum``) , another sequence (eg ``sort``) or multiple sequences (eg ``partition``). The elements of the sequence could be of any type or class, although template specialisation allows ``rocPRIM`` to optimise the computations over the usual numerical datatypes. Operations handle sequences by expecting ``iterators`` as input and mutable ones as output.
+A ``rocPRIM`` operation is a computation over a sequence of objects returning one value (e.g. ``reduce``) , another sequence (e.g. ``sort``) or multiple sequences (e.g. ``partition``). The elements of the sequence could be of any type or class, although template specialization allows ``rocPRIM`` to optimize the computations over the usual numerical datatypes. Operations handle sequences by expecting ``iterators`` as input and mutable ones as output.
 
 A high level view of the available operations could be consulted there: :doc:`/operations`. As you can see, those are really generic operations that are difficult to avoid on a day to day basis.
 
@@ -31,7 +31,7 @@ The scope has an impact on how the operation is initiated:
 * *Device/Grid* it is a kernel, thus it is dispatched with its own grid/block dimensions.
 * *Block/Wrap/Thread* it is a function call, and inherits the dimensions of the current kernel.
 
-This point dictates how synchronisation should be done to wait for completion:
+This point dictates how synchronization should be done to wait for completion:
 
-* *Device/Grid* Synchronisation is done via wait lists and queue barriers (``stream``).
-* *Block/Wrap/Thread* it is in the same control flow of the callee threads. Synchronization is done via memory barriers.
+* *Device/Grid* Synchronization is done via wait lists and queue barriers (``stream``).
+* *Block/Wrap/Thread* it is in the same control flow of the caller threads. Synchronization is done via memory barriers.
