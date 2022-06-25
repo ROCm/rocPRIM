@@ -24,7 +24,7 @@ Lane and Warp ID
 Flat ID
 -------
 
-.. doxygengroup:: intrinsicsmodule_flat_id 
+.. doxygengroup:: intrinsicsmodule_flat_id
    :content-only:
 
 Flat Size
