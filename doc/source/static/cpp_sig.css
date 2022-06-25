@@ -1,11 +1,6 @@
 ul.desc-parameterlist {
-    text-indent: 0;
     margin-left: 2em;
-    display: block;
-}
-
-ul.desc-parameterlist li.desc-parameter {
-    list-style: square;
+    margin-bottom: 0 !important;
 }
 
 .template-params {
