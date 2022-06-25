@@ -19,13 +19,6 @@ The scope has a direct influence on how the data will be subdivided into chunks 
 * :term:`Warp` as above but with a warp and a VALU.
 * *Thread* The operation will take place sequentially in the same thread. We also call those thread-wide operations *Utilities* since it perfectly coincides to utility functions we use on a CPU.
 
-.. the source of the following image can be found in the doc/svg directory
-
-.. figure:: static/gpu_hierarchy_draft.png
-   :align: center
-
-   Computing hierarchy of a GPU
-
 The scope has an impact on how the operation is initiated:
 
 * *Device/Grid* it is a kernel, thus it is dispatched with its own grid/block dimensions.
