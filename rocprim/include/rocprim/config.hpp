@@ -56,21 +56,20 @@
         #define ROCPRIM_DEFAULT_MIN_WARPS_PER_EU 1
     #endif
 
-    // Currently HIP on Windows has a bug involving inline device functions generating
-    // local memory/register allocation errors during compilation.  Current workaround is to
-    // use __attribute__((always_inline)) for the affected functions
-    #ifdef WIN32
-      #define ROCPRIM_INLINE inline __attribute__((always_inline))
+    #ifndef DOXYGEN_DOCUMENTATION_BUILD
+        // Currently HIP on Windows has a bug involving inline device functions generating
+        // local memory/register allocation errors during compilation.  Current workaround is to
+        // use __attribute__((always_inline)) for the affected functions
+        #ifdef WIN32
+          #define ROCPRIM_INLINE inline __attribute__((always_inline))
+        #else
+          #define ROCPRIM_INLINE inline
+        #endif
     #else
-      #define ROCPRIM_INLINE inline
-    #endif
-    
-    #ifndef DOXYGEN_SHOULD_SKIP_THIS
-        #define ROCPRIM_FORCE_INLINE __attribute__((always_inline))
-    #else
+        // Prefer simpler signatures to let Sphinx/Breathe parse them
         #define ROCPRIM_FORCE_INLINE inline
+        #define ROCPRIM_INLINE inline
     #endif
-#endif
 #endif
 
 #ifndef ROCPRIM_DISABLE_DPP
