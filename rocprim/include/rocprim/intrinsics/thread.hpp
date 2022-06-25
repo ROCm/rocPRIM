@@ -101,6 +101,7 @@ unsigned int lane_id()
 }
 
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional block (tile).
+/// \ingroup intrinsicsmodule_flat_id
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int flat_block_thread_id()
 {
@@ -143,6 +144,7 @@ unsigned int flat_tile_thread_id()
 }
 
 /// \brief Returns warp id in a block (tile).
+/// \ingroup intrinsicsmodule_warp_id
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id()
 {
@@ -156,6 +158,7 @@ unsigned int warp_id(unsigned int flat_id)
 }
 
 /// \brief Returns warp id in a block (tile). Use template parameters to optimize 1D or 2D kernels.
+/// \ingroup intrinsicsmodule_warp_id
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id()
@@ -163,7 +166,9 @@ unsigned int warp_id()
     return flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>()/device_warp_size();
 }
 
+
 /// \brief Returns flat (linear, 1D) block identifier in a multidimensional grid.
+/// \ingroup intrinsicsmodule_flat_id
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int flat_block_id()
 {
