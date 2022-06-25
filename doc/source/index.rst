@@ -8,10 +8,10 @@
    intro
    operations
 
-   devicemodule/index
-   blockmodule/index
-   warpmodule/index
-   threadmodule
+   device_ops/index
+   block_ops/index
+   warp_ops/index
+   thread_ops
 
    iterators
    intrinsics
