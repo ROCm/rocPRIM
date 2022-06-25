@@ -6,7 +6,7 @@
    :hidden:
 
    intro
-   operations
+   ops_summary
 
    device_ops/index
    block_ops/index

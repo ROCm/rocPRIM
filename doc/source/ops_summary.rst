@@ -1,5 +1,5 @@
-High Level view of the operations
-=================================
+Summary of the Operations
+=========================
 
 Basics
 ------
