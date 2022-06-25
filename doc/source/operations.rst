@@ -15,7 +15,7 @@ Aggregation
 * ``reduce`` traverses the sequence while accumulating some data, equivalent to the functional operation ``fold_left``.
 * ``scan`` is the cumulative version of ``reduce`` which returns the sequence of the intermediate values taken by the accumulator.
 
-Differenciation
+Differentiation
 ---------------
 
 * ``adjacent_difference`` computes the difference between the current element and the previous or next one in the sequence.
@@ -37,7 +37,7 @@ Partition/Merge
 Data Movement
 -------------
 
-* ``store`` stores the sequence to a continuous memory zone. There are variations to use an optimised path or to specify how to store the sequence to better fit the access patterns of the CUs.
+* ``store`` stores the sequence to a continuous memory zone. There are variations to use an optimized path or to specify how to store the sequence to better fit the access patterns of the CUs.
 * ``load`` the complementary operations of the above ones.
 
 Other operations

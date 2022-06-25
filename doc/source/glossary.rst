@@ -16,7 +16,7 @@ Terminologies
        Refers to the number of threads in a warp defined by the user, which can be equal to or less than the size of the hardware warp size.
 
    Lane ID
-       Refers to the thread identifier within the warp. A logical lane ID refers to the thread identifer in a "logical
+       Refers to the thread identifier within the warp. A logical lane ID refers to the thread identifier in a "logical
        warp", which can be smaller than a hardware warp size (And can be defined as ``lane_id() % WarpSize``).
 
    Warp ID

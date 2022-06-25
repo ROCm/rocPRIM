@@ -51,7 +51,7 @@ Flat Size
 .. doxygenfunction:: flat_block_size ()
 .. doxygenfunction:: flat_tile_size ()
 
-Synchronisation
+Synchronization
 ---------------
 
 .. doxygenfunction:: syncthreads ()
