@@ -19,6 +19,10 @@ function or by parameters.
 - `device_segmented_radix_sort` now partitions segments to groups small, medium and large segments.
   Each segment group can be sorted by specialized kernels to improve throughput.
 - Improved performance of histogram for the case of highly uneven sample distribution.
+### Removed
+- `block_sort::sort()` overload for keys and values with a dynamic size. This overload was documented but the
+  implementation is missing. To avoid further confusion the documentation is removed until a decision is made on
+  implementing the function.
 
 ## [Unreleased rocPRIM-2.10.14 for ROCm 5.2.0]
 ### Added
