@@ -168,6 +168,13 @@ if [[ "${build_address_sanitizer}" == true ]]; then
     CFLAGS="${CLFAGS} -fsanitize=address -shared-libasan"
     CXXFLAGS="${CXXFLAGS} -fsanitize=address -shared-libasan"
     LDFLAGS="${LDFLAGS} -fuse-ld=lld -fsanitize=address -shared-libasan"
+
+    #Setting default GNU LIBDIR in build scripts as per architecture board decision
+    #Default LIBDIR set to libasan when address sanitizer is enabled
+    cmake_common_options="${cmake_common_options} -DCMAKE_INSTALL_LIBDIR=lib"
+else
+    #Default LIBDIR set to lib when address sanitizer is not enabled
+    cmake_common_options="${cmake_common_options} -DCMAKE_INSTALL_LIBDIR=lib"
 fi
 
 if [[ "${build_freorg_bkwdcomp}" == true ]]; then
@@ -184,9 +191,6 @@ if [[ "${build_codecoverage}" == true ]]; then
     fi
     codecoverage="ON"
 fi
-
-#Setting default GNU LIBDIR in build scripts as per architecture board decision
-cmake_common_options="${cmake_common_options} -DCMAKE_INSTALL_LIBDIR=lib"
 
 if [[ "${build_relocatable}" == true ]]; then
     CXX=${rocm_path}/bin/${compiler} ${cmake_executable} ${cmake_common_options} \
