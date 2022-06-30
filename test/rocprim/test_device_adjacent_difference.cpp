@@ -385,7 +385,7 @@ private:
             }
             if(current_index_ % 10000 == 0)
             {
-                size_t i = atomicAdd(counter_, 1);
+                atomicAdd(counter_, 1);
             }
             return *this;
         }
