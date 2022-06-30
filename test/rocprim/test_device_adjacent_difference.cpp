@@ -363,11 +363,117 @@ struct discard_write
     }
 };
 
+template <bool is_left>
+class check_output_iterator
+{
+private:
+    class check_output
+    {
+    public:
+        ROCPRIM_HOST_DEVICE check_output(unsigned int* incorrect_flag, size_t current_index, size_t* const counter)
+        : current_index_(current_index), incorrect_flag_(incorrect_flag), counter_(counter)
+        {
+        }
+
+        ROCPRIM_DEVICE check_output& operator=(size_t value)
+        {
+            bool is_correct = value == current_index_ ;
+
+            if (!is_correct)
+            { 
+                rocprim::detail::atomic_exch(incorrect_flag_, 1);
+            }
+            if (current_index_ % 10000 == 0)
+            {
+                size_t i = atomicAdd(counter_, 1);
+            }
+            return *this;
+        }
+
+    private:
+        size_t        current_index_;
+        unsigned int* incorrect_flag_;
+        size_t*       counter_;
+    };
+
+public:
+    using value_type        = size_t;
+    using reference         = check_output;
+    using pointer           = check_output*;
+    using iterator_category = std::random_access_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+
+    ROCPRIM_HOST_DEVICE
+    check_output_iterator(unsigned int* const incorrect_flag, size_t* const counter)
+        : current_index_(0), incorrect_flag_(incorrect_flag), counter_(counter)
+    {}
+
+    ROCPRIM_HOST_DEVICE bool operator==(const check_output_iterator& rhs)
+    {
+        return current_index_ == rhs.current_index_;
+    }
+    ROCPRIM_HOST_DEVICE bool operator!=(const check_output_iterator& rhs)
+    {
+        return !(*this == rhs);
+    }
+    ROCPRIM_HOST_DEVICE reference operator*()
+    {
+        return reference(incorrect_flag_, current_index_, counter_);
+    }
+    ROCPRIM_HOST_DEVICE reference operator[](const difference_type distance)
+    {
+        return *(*this + distance);
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator& operator+=(const difference_type rhs)
+    {
+        current_index_ += rhs;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator& operator-=(const difference_type rhs)
+    {
+        current_index_ -= rhs;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE difference_type operator-(const check_output_iterator& rhs) const
+    {
+        return current_index_ - rhs.current_index_;
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator operator+(const difference_type rhs) const
+    {
+        return check_output_iterator(*this) += rhs;
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator operator-(const difference_type rhs) const
+    {
+        return check_output_iterator(*this) -= rhs;
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator& operator++()
+    {
+        ++current_index_;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator& operator--()
+    {
+        --current_index_;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator operator++(int)
+    {
+        return ++check_output_iterator{*this};
+    }
+    ROCPRIM_HOST_DEVICE check_output_iterator operator--(int)
+    {
+        return --check_output_iterator{*this};
+    }
+
+private:
+    size_t        current_index_;
+    unsigned int* incorrect_flag_;
+    size_t*       counter_;
+};
+
 using RocprimDeviceAdjacentDifferenceLargeTestsParams
     = ::testing::Types<DeviceAdjacentDifferenceLargeParams<true, false>,
-                       DeviceAdjacentDifferenceLargeParams<true, true>,
-                       DeviceAdjacentDifferenceLargeParams<false, false>,
-                       DeviceAdjacentDifferenceLargeParams<false, true>>;
+                       DeviceAdjacentDifferenceLargeParams<false, false>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceLargeTests,
                  RocprimDeviceAdjacentDifferenceLargeTestsParams);
@@ -379,12 +485,12 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T                                 = size_t;
-    using OutputIterator                    = rocprim::discard_iterator;
-    static constexpr bool left              = TestFixture::left;
-    static constexpr bool in_place          = TestFixture::in_place;
+    static constexpr bool is_left           = TestFixture::left;
+    static constexpr bool is_in_place       = TestFixture::in_place;
     const bool            debug_synchronous = TestFixture::debug_synchronous;
+    using OutputIterator                    = check_output_iterator<is_left>;
 
-    SCOPED_TRACE(testing::Message() << "left = " << left << ", in_place = " << in_place);
+    SCOPED_TRACE(testing::Message() << "is_left = " << is_left << ", is_in_place = " << is_in_place);
 
     static constexpr hipStream_t stream = 0; // default
 
@@ -400,20 +506,19 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-            const OutputIterator output;
+            unsigned int* d_incorrect_flag;
+            size_t* d_counter;
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_incorrect_flag, sizeof(*d_incorrect_flag)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_counter, sizeof(*d_counter)));
+            HIP_CHECK(hipMemset(d_incorrect_flag, 0, sizeof(*d_incorrect_flag)));
+            HIP_CHECK(hipMemset(d_counter, 0, sizeof(*d_counter)));
+            OutputIterator output(d_incorrect_flag, d_counter);
 
             // A transform iterator that can be written to (because in-place adjacent diff writes
             // to the input).
             // The conversion to T is used by flag_expected to actually perform the test
-            const auto input = rocprim::make_transform_iterator(
-                rocprim::make_counting_iterator(T {0}), [] __device__(const T i) {
-                    return discard_write<T> {i};
-                });
-
-            int  flags[2] = {0, 0};
-            int* d_flags  = nullptr;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_flags, sizeof(flags)));
-            HIP_CHECK(hipMemcpy(d_flags, flags, sizeof(flags), hipMemcpyHostToDevice));
+            const auto input = 
+                rocprim::make_counting_iterator(T {0});
 
             const T expected            = test_utils::get_random_value<T>(1, size - 2, seed_value);
             static constexpr auto limit = ROCPRIM_GRID_SIZE_LIMIT;
@@ -425,34 +530,13 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             SCOPED_TRACE(testing::Message() << "expected = " << expected);
             SCOPED_TRACE(testing::Message() << "expected_above_limit = " << expected_above_limit);
 
-            const auto flag_expected = [=] __device__(const T& minuend, const T& subtrahend) {
-                if(left)
-                {
-                    if(minuend == expected && subtrahend == expected - 1)
-                    {
-                        ++d_flags[0];
-                    }
-                    if(minuend == expected_above_limit && subtrahend == expected_above_limit - 1)
-                    {
-                        ++d_flags[1];
-                    }
-                }
-                else
-                {
-                    if(minuend == expected && subtrahend == expected + 1)
-                    {
-                        ++d_flags[0];
-                    }
-                    if(minuend == expected_above_limit && subtrahend == expected_above_limit + 1)
-                    {
-                        ++d_flags[1];
-                    }
-                }
-                return 0;
+            const auto make_sum = [](const auto& minuend, const auto& subtrahend)
+            {
+                return (minuend + subtrahend) / 2  + (is_left ? 1 : 0);
             };
 
-            static constexpr auto left_tag     = rocprim::detail::bool_constant<left> {};
-            static constexpr auto in_place_tag = rocprim::detail::bool_constant<in_place> {};
+            static constexpr auto left_tag     = rocprim::detail::bool_constant<is_left> {};
+            static constexpr auto in_place_tag = rocprim::detail::bool_constant<is_in_place> {};
 
             // Allocate temporary storage
             std::size_t temp_storage_size;
@@ -464,7 +548,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    input,
                                                    output,
                                                    size,
-                                                   flag_expected,
+                                                   make_sum,
                                                    stream,
                                                    debug_synchronous));
 
@@ -480,18 +564,22 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    input,
                                                    output,
                                                    size,
-                                                   flag_expected,
+                                                   make_sum,
                                                    stream,
                                                    debug_synchronous));
 
             // Copy output to host
-            HIP_CHECK(hipMemcpy(flags, d_flags, sizeof(flags), hipMemcpyDeviceToHost));
+            unsigned int incorrect_flag;
+            size_t counter;
+            HIP_CHECK(hipMemcpy(&incorrect_flag, d_incorrect_flag, sizeof(incorrect_flag), hipMemcpyDeviceToHost));
+            HIP_CHECK(hipMemcpy(&counter, d_counter, sizeof(counter), hipMemcpyDeviceToHost));
 
-            ASSERT_EQ(flags[0], 1);
-            ASSERT_EQ(flags[1], 1);
+            ASSERT_EQ(incorrect_flag, 0);
+            ASSERT_EQ(counter, rocprim::detail::ceiling_div(size, 10000u));
 
             hipFree(d_temp_storage);
-            hipFree(d_flags);
+            hipFree(d_incorrect_flag);
+            hipFree(d_counter);
         }
     }
 }
