@@ -363,27 +363,27 @@ struct discard_write
     }
 };
 
-template <bool is_left>
+template<bool is_left>
 class check_output_iterator
 {
 private:
     class check_output
     {
     public:
-        ROCPRIM_HOST_DEVICE check_output(unsigned int* incorrect_flag, size_t current_index, size_t* const counter)
-        : current_index_(current_index), incorrect_flag_(incorrect_flag), counter_(counter)
-        {
-        }
+        ROCPRIM_HOST_DEVICE
+        check_output(unsigned int* incorrect_flag, size_t current_index, size_t* const counter)
+            : current_index_(current_index), incorrect_flag_(incorrect_flag), counter_(counter)
+        {}
 
         ROCPRIM_DEVICE check_output& operator=(size_t value)
         {
-            bool is_correct = value == current_index_ ;
+            bool is_correct = value == current_index_;
 
-            if (!is_correct)
-            { 
+            if(!is_correct)
+            {
                 rocprim::detail::atomic_exch(incorrect_flag_, 1);
             }
-            if (current_index_ % 10000 == 0)
+            if(current_index_ % 10000 == 0)
             {
                 size_t i = atomicAdd(counter_, 1);
             }
@@ -490,7 +490,8 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
     const bool            debug_synchronous = TestFixture::debug_synchronous;
     using OutputIterator                    = check_output_iterator<is_left>;
 
-    SCOPED_TRACE(testing::Message() << "is_left = " << is_left << ", is_in_place = " << is_in_place);
+    SCOPED_TRACE(testing::Message()
+                 << "is_left = " << is_left << ", is_in_place = " << is_in_place);
 
     static constexpr hipStream_t stream = 0; // default
 
@@ -507,8 +508,9 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             unsigned int* d_incorrect_flag;
-            size_t* d_counter;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_incorrect_flag, sizeof(*d_incorrect_flag)));
+            size_t*       d_counter;
+            HIP_CHECK(
+                test_common_utils::hipMallocHelper(&d_incorrect_flag, sizeof(*d_incorrect_flag)));
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_counter, sizeof(*d_counter)));
             HIP_CHECK(hipMemset(d_incorrect_flag, 0, sizeof(*d_incorrect_flag)));
             HIP_CHECK(hipMemset(d_counter, 0, sizeof(*d_counter)));
@@ -517,8 +519,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             // A transform iterator that can be written to (because in-place adjacent diff writes
             // to the input).
             // The conversion to T is used by flag_expected to actually perform the test
-            const auto input = 
-                rocprim::make_counting_iterator(T {0});
+            const auto input = rocprim::make_counting_iterator(T{0});
 
             const T expected            = test_utils::get_random_value<T>(1, size - 2, seed_value);
             static constexpr auto limit = ROCPRIM_GRID_SIZE_LIMIT;
@@ -531,12 +532,10 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             SCOPED_TRACE(testing::Message() << "expected_above_limit = " << expected_above_limit);
 
             const auto make_sum = [](const auto& minuend, const auto& subtrahend)
-            {
-                return (minuend + subtrahend) / 2  + (is_left ? 1 : 0);
-            };
+            { return (minuend + subtrahend) / 2 + (is_left ? 1 : 0); };
 
-            static constexpr auto left_tag     = rocprim::detail::bool_constant<is_left> {};
-            static constexpr auto in_place_tag = rocprim::detail::bool_constant<is_in_place> {};
+            static constexpr auto left_tag     = rocprim::detail::bool_constant<is_left>{};
+            static constexpr auto in_place_tag = rocprim::detail::bool_constant<is_in_place>{};
 
             // Allocate temporary storage
             std::size_t temp_storage_size;
@@ -570,8 +569,11 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
 
             // Copy output to host
             unsigned int incorrect_flag;
-            size_t counter;
-            HIP_CHECK(hipMemcpy(&incorrect_flag, d_incorrect_flag, sizeof(incorrect_flag), hipMemcpyDeviceToHost));
+            size_t       counter;
+            HIP_CHECK(hipMemcpy(&incorrect_flag,
+                                d_incorrect_flag,
+                                sizeof(incorrect_flag),
+                                hipMemcpyDeviceToHost));
             HIP_CHECK(hipMemcpy(&counter, d_counter, sizeof(counter), hipMemcpyDeviceToHost));
 
             ASSERT_EQ(incorrect_flag, 0);
