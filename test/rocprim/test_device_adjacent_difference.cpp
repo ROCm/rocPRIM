@@ -348,42 +348,24 @@ public:
     static constexpr bool debug_synchronous = false;
 };
 
-template<class T>
-struct discard_write
-{
-    T value;
-
-    __device__ operator T() const
-    {
-        return value;
-    }
-    __device__ discard_write& operator=(T)
-    {
-        return *this;
-    }
-};
-
-template<bool is_left>
+template<unsigned int sampling_rate>
 class check_output_iterator
 {
 private:
     class check_output
     {
     public:
-        ROCPRIM_HOST_DEVICE
-        check_output(unsigned int* incorrect_flag, size_t current_index, size_t* const counter)
+        __device__ check_output(unsigned int* incorrect_flag, size_t current_index, size_t* counter)
             : current_index_(current_index), incorrect_flag_(incorrect_flag), counter_(counter)
         {}
 
-        ROCPRIM_DEVICE check_output& operator=(size_t value)
+        __device__ check_output& operator=(size_t value)
         {
-            bool is_correct = value == current_index_;
-
-            if(!is_correct)
+            if(value != current_index_)
             {
                 rocprim::detail::atomic_exch(incorrect_flag_, 1);
             }
-            if(current_index_ % 10000 == 0)
+            if(current_index_ % sampling_rate == 0)
             {
                 atomicAdd(counter_, 1);
             }
@@ -484,11 +466,12 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
     SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using T                                 = size_t;
-    static constexpr bool is_left           = TestFixture::left;
-    static constexpr bool is_in_place       = TestFixture::in_place;
-    const bool            debug_synchronous = TestFixture::debug_synchronous;
-    using OutputIterator                    = check_output_iterator<is_left>;
+    using T                                         = size_t;
+    static constexpr bool         is_left           = TestFixture::left;
+    static constexpr bool         is_in_place       = TestFixture::in_place;
+    const bool                    debug_synchronous = TestFixture::debug_synchronous;
+    static constexpr unsigned int sampling_rate     = 10000;
+    using OutputIterator                            = check_output_iterator<sampling_rate>;
 
     SCOPED_TRACE(testing::Message()
                  << "is_left = " << is_left << ", is_in_place = " << is_in_place);
@@ -516,23 +499,13 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             HIP_CHECK(hipMemset(d_counter, 0, sizeof(*d_counter)));
             OutputIterator output(d_incorrect_flag, d_counter);
 
-            // A transform iterator that can be written to (because in-place adjacent diff writes
-            // to the input).
-            // The conversion to T is used by flag_expected to actually perform the test
             const auto input = rocprim::make_counting_iterator(T{0});
 
-            const T expected            = test_utils::get_random_value<T>(1, size - 2, seed_value);
-            static constexpr auto limit = ROCPRIM_GRID_SIZE_LIMIT;
-
-            const T expected_above_limit
-                = size - 2 > limit ? test_utils::get_random_value<T>(limit, size - 2, seed_value)
-                                   : size - 2;
-
-            SCOPED_TRACE(testing::Message() << "expected = " << expected);
-            SCOPED_TRACE(testing::Message() << "expected_above_limit = " << expected_above_limit);
-
-            const auto make_sum = [](const auto& minuend, const auto& subtrahend)
-            { return (minuend + subtrahend) / 2 + (is_left ? 1 : 0); };
+            // Return the position where the adjacent difference is written out.
+            // The left value is returned at the left-handed difference, and the right value otherwise.
+            // The return value is coherent with the boundary values.
+            const auto op = [](const auto& larger_value, const auto& smaller_value)
+            { return (smaller_value + larger_value) / 2 + (is_left ? 1 : 0); };
 
             static constexpr auto left_tag     = rocprim::detail::bool_constant<is_left>{};
             static constexpr auto in_place_tag = rocprim::detail::bool_constant<is_in_place>{};
@@ -547,7 +520,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    input,
                                                    output,
                                                    size,
-                                                   make_sum,
+                                                   op,
                                                    stream,
                                                    debug_synchronous));
 
@@ -563,7 +536,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    input,
                                                    output,
                                                    size,
-                                                   make_sum,
+                                                   op,
                                                    stream,
                                                    debug_synchronous));
 
@@ -577,7 +550,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             HIP_CHECK(hipMemcpy(&counter, d_counter, sizeof(counter), hipMemcpyDeviceToHost));
 
             ASSERT_EQ(incorrect_flag, 0);
-            ASSERT_EQ(counter, rocprim::detail::ceiling_div(size, 10000u));
+            ASSERT_EQ(counter, rocprim::detail::ceiling_div(size, sampling_rate));
 
             hipFree(d_temp_storage);
             hipFree(d_incorrect_flag);
