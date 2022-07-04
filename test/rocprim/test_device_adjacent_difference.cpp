@@ -348,7 +348,7 @@ public:
     static constexpr bool debug_synchronous = false;
 };
 
-template<unsigned int sampling_rate>
+template<unsigned int SamplingRate>
 class check_output_iterator
 {
 private:
@@ -365,7 +365,7 @@ private:
             {
                 rocprim::detail::atomic_exch(incorrect_flag_, 1);
             }
-            if(current_index_ % sampling_rate == 0)
+            if(current_index_ % SamplingRate == 0)
             {
                 atomicAdd(counter_, 1);
             }
@@ -501,8 +501,8 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
 
             const auto input = rocprim::make_counting_iterator(T{0});
 
-            // Return the position where the adjacent difference is written out.
-            // The left value is returned at the left-handed difference, and the right value otherwise.
+            // Return the position where the adjacent difference is expected to be written out.
+            // When called with consecutive values the left value is returned at the left-handed difference, and the right value otherwise.
             // The return value is coherent with the boundary values.
             const auto op = [](const auto& larger_value, const auto& smaller_value)
             { return (smaller_value + larger_value) / 2 + (is_left ? 1 : 0); };
