@@ -385,64 +385,64 @@ public:
     using iterator_category = std::random_access_iterator_tag;
     using difference_type   = std::ptrdiff_t;
 
-    ROCPRIM_HOST_DEVICE
-    check_output_iterator(unsigned int* const incorrect_flag, size_t* const counter)
+    __host__ __device__ check_output_iterator(unsigned int* const incorrect_flag,
+                                              size_t* const       counter)
         : current_index_(0), incorrect_flag_(incorrect_flag), counter_(counter)
     {}
 
-    ROCPRIM_HOST_DEVICE bool operator==(const check_output_iterator& rhs)
+    __device__ bool operator==(const check_output_iterator& rhs)
     {
         return current_index_ == rhs.current_index_;
     }
-    ROCPRIM_HOST_DEVICE bool operator!=(const check_output_iterator& rhs)
+    __device__ bool operator!=(const check_output_iterator& rhs)
     {
         return !(*this == rhs);
     }
-    ROCPRIM_HOST_DEVICE reference operator*()
+    __device__ reference operator*()
     {
         return reference(incorrect_flag_, current_index_, counter_);
     }
-    ROCPRIM_HOST_DEVICE reference operator[](const difference_type distance)
+    __device__ reference operator[](const difference_type distance)
     {
         return *(*this + distance);
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator& operator+=(const difference_type rhs)
+    __host__ __device__ check_output_iterator& operator+=(const difference_type rhs)
     {
         current_index_ += rhs;
         return *this;
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator& operator-=(const difference_type rhs)
+    __host__ __device__ check_output_iterator& operator-=(const difference_type rhs)
     {
         current_index_ -= rhs;
         return *this;
     }
-    ROCPRIM_HOST_DEVICE difference_type operator-(const check_output_iterator& rhs) const
+    __host__ __device__ difference_type operator-(const check_output_iterator& rhs) const
     {
         return current_index_ - rhs.current_index_;
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator operator+(const difference_type rhs) const
+    __host__ __device__ check_output_iterator operator+(const difference_type rhs) const
     {
         return check_output_iterator(*this) += rhs;
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator operator-(const difference_type rhs) const
+    __host__ __device__ check_output_iterator operator-(const difference_type rhs) const
     {
         return check_output_iterator(*this) -= rhs;
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator& operator++()
+    __host__ __device__ check_output_iterator& operator++()
     {
         ++current_index_;
         return *this;
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator& operator--()
+    __host__ __device__ check_output_iterator& operator--()
     {
         --current_index_;
         return *this;
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator operator++(int)
+    __host__ __device__ check_output_iterator operator++(int)
     {
         return ++check_output_iterator{*this};
     }
-    ROCPRIM_HOST_DEVICE check_output_iterator operator--(int)
+    __host__ __device__ check_output_iterator operator--(int)
     {
         return --check_output_iterator{*this};
     }
