@@ -351,11 +351,14 @@ public:
 template<unsigned int SamplingRate>
 class check_output_iterator
 {
+public:
+    using flag_type = unsigned int;
+
 private:
     class check_output
     {
     public:
-        __device__ check_output(unsigned int* incorrect_flag, size_t current_index, size_t* counter)
+        __device__ check_output(flag_type* incorrect_flag, size_t current_index, size_t* counter)
             : current_index_(current_index), incorrect_flag_(incorrect_flag), counter_(counter)
         {}
 
@@ -373,9 +376,9 @@ private:
         }
 
     private:
-        size_t        current_index_;
-        unsigned int* incorrect_flag_;
-        size_t*       counter_;
+        size_t     current_index_;
+        flag_type* incorrect_flag_;
+        size_t*    counter_;
     };
 
 public:
@@ -385,8 +388,8 @@ public:
     using iterator_category = std::random_access_iterator_tag;
     using difference_type   = std::ptrdiff_t;
 
-    __host__ __device__ check_output_iterator(unsigned int* const incorrect_flag,
-                                              size_t* const       counter)
+    __host__ __device__ check_output_iterator(flag_type* const incorrect_flag,
+                                              size_t* const    counter)
         : current_index_(0), incorrect_flag_(incorrect_flag), counter_(counter)
     {}
 
@@ -448,9 +451,9 @@ public:
     }
 
 private:
-    size_t        current_index_;
-    unsigned int* incorrect_flag_;
-    size_t*       counter_;
+    size_t     current_index_;
+    flag_type* incorrect_flag_;
+    size_t*    counter_;
 };
 
 using RocprimDeviceAdjacentDifferenceLargeTestsParams
@@ -472,6 +475,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
     const bool                    debug_synchronous = TestFixture::debug_synchronous;
     static constexpr unsigned int sampling_rate     = 10000;
     using OutputIterator                            = check_output_iterator<sampling_rate>;
+    using flag_type                                 = OutputIterator::flag_type;
 
     SCOPED_TRACE(testing::Message()
                  << "is_left = " << is_left << ", is_in_place = " << is_in_place);
@@ -490,8 +494,8 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-            unsigned int* d_incorrect_flag;
-            size_t*       d_counter;
+            flag_type* d_incorrect_flag;
+            size_t*    d_counter;
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_incorrect_flag, sizeof(*d_incorrect_flag)));
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_counter, sizeof(*d_counter)));
@@ -541,8 +545,8 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    debug_synchronous));
 
             // Copy output to host
-            unsigned int incorrect_flag;
-            size_t       counter;
+            flag_type incorrect_flag;
+            size_t    counter;
             HIP_CHECK(hipMemcpy(&incorrect_flag,
                                 d_incorrect_flag,
                                 sizeof(incorrect_flag),
