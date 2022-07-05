@@ -31,6 +31,7 @@
 #include "../config.hpp"
 #include "../functional.hpp"
 
+#include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 #include "../iterator/counting_iterator.hpp"
 #include "../iterator/transform_iterator.hpp"
@@ -115,20 +116,15 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
 
     const std::size_t num_blocks = ceiling_div(size, items_per_block);
 
-    if(temporary_storage == nullptr)
-    {
-        if(InPlace && num_blocks >= 2)
-        {
-            storage_size = align_size((num_blocks - 1) * sizeof(value_type));
-        }
-        else
-        {
-            // Make sure user won't try to allocate 0 bytes memory, because
-            // hipMalloc will return nullptr when size is zero.
-            storage_size = 4;
-        }
+    value_type*                    previous_values;
+    const detail::temp_storage_req reqs[] = {detail::temp_storage_req::ptr_aligned_array(
+        &previous_values,
+        InPlace && num_blocks >= 2 ? num_blocks - 1 : 0)};
 
-        return hipSuccess;
+    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
+    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    {
+        return alias_result;
     }
 
     if(num_blocks == 0)
@@ -137,8 +133,7 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
     }
 
     // Copy values before they are overwritten to use as tile predecessors/successors
-    // this is not dereferenced when the operation is not in place
-    auto* const previous_values = static_cast<value_type*>(temporary_storage);
+    // previous_values is not dereferenced when the operation is not in place
     if ROCPRIM_IF_CONSTEXPR(InPlace)
     {
         // If doing left adjacent diff then the last item of each block is needed for the

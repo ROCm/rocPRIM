@@ -26,6 +26,7 @@
 #include <type_traits>
 
 #include "../config.hpp"
+#include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 
 #include "device_merge_config.hpp"
@@ -148,14 +149,17 @@ hipError_t merge_impl(void * temporary_storage,
     static constexpr unsigned int items_per_thread = config::items_per_thread;
     static constexpr auto items_per_block = block_size * items_per_thread;
 
-    const unsigned int partitions = ((input1_size + input2_size) + items_per_block - 1) / items_per_block;
-    const size_t partition_bytes = (partitions + 1) * sizeof(unsigned int);
+    const unsigned int partitions
+        = ((input1_size + input2_size) + items_per_block - 1) / items_per_block;
 
-    if(temporary_storage == nullptr)
+    unsigned int*                  index;
+    const detail::temp_storage_req reqs[]
+        = {detail::temp_storage_req::ptr_aligned_array(&index, partitions + 1)};
+
+    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
+    if(alias_result != hipSuccess || temporary_storage == nullptr)
     {
-        // storage_size is never zero
-        storage_size = partition_bytes;
-        return hipSuccess;
+        return alias_result;
     }
 
     if( partitions == 0u )
@@ -171,8 +175,6 @@ hipError_t merge_impl(void * temporary_storage,
         std::cout << "number of blocks " << number_of_blocks << '\n';
         std::cout << "items_per_block " << items_per_block << '\n';
     }
-
-    unsigned int * index = reinterpret_cast<unsigned int *>(temporary_storage);
 
     const unsigned partition_blocks = ((partitions + 1) + half_block - 1) / half_block;
 

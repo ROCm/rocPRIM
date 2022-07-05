@@ -60,6 +60,7 @@ struct temp_storage_req
 // this function will return an error.
 // This function handles allocation sizes of 0. The alignment of these will not influence the
 // alignment of other allocations, and the resulting pointer of these will be set to nullptr.
+// temporary_storage is assumed to have at least the maximum alignment of all requested alignments.
 template<size_t NumberOfAllocations>
 hipError_t alias_temp_storage(void* const temporary_storage,
                               size_t&     storage_size,
@@ -74,19 +75,20 @@ hipError_t alias_temp_storage(void* const temporary_storage,
         size_t alignment = reqs[i].size == 0 ? 1 : reqs[i].alignment;
         offsets[i]       = align_size(offsets[i - 1] + reqs[i - 1].size, alignment);
     }
-    size_t required_storage_size = offsets[NumberOfAllocations - 1] + reqs[NumberOfAllocations - 1].size;
+    size_t required_storage_size
+        = offsets[NumberOfAllocations - 1] + reqs[NumberOfAllocations - 1].size;
 
     if(temporary_storage == nullptr)
     {
         if(required_storage_size == 0)
         {
             // Make sure the user wont try to allocate 0 bytes of memory.
-            required_storage_size = 1;
+            required_storage_size = 4;
         }
         storage_size = required_storage_size;
         return hipSuccess;
     }
-    else if (storage_size < required_storage_size)
+    else if(storage_size < required_storage_size)
     {
         return hipErrorInvalidValue;
     }

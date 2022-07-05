@@ -29,8 +29,8 @@
 #include "device_scan_by_key_config.hpp"
 
 #include "../config.hpp"
-#include "../detail/various.hpp"
 #include "../detail/temp_storage.hpp"
+#include "../detail/various.hpp"
 #include "../functional.hpp"
 #include "../types/future_value.hpp"
 #include "../types/tuple.hpp"
@@ -146,15 +146,18 @@ namespace detail
         // Number of blocks in a single launch (or the only launch if it fits)
         const unsigned int number_of_blocks = ceiling_div(limited_size, items_per_block);
 
-        void* scan_state_storage;
+        void*                           scan_state_storage;
         ordered_block_id_type::id_type* ordered_bid_storage;
-        wrapped_type* previous_last_value;
+        wrapped_type*                   previous_last_value;
 
-        const detail::temp_storage_req reqs[] = {
-            detail::temp_storage_req(&scan_state_storage, scan_state_type::get_storage_size(number_of_blocks)),
-            detail::temp_storage_req(&ordered_bid_storage, ordered_block_id_type::get_storage_size(), alignof(ordered_block_id_type::id_type)),
-            detail::temp_storage_req::ptr_aligned_array(&previous_last_value, use_limited_size ? 1 : 0)
-        };
+        const detail::temp_storage_req reqs[]
+            = {detail::temp_storage_req(&scan_state_storage,
+                                        scan_state_type::get_storage_size(number_of_blocks)),
+               detail::temp_storage_req(&ordered_bid_storage,
+                                        ordered_block_id_type::get_storage_size(),
+                                        alignof(ordered_block_id_type::id_type)),
+               detail::temp_storage_req::ptr_aligned_array(&previous_last_value,
+                                                           use_limited_size ? 1 : 0)};
 
         hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
         if(alias_result != hipSuccess || temporary_storage == nullptr)
@@ -177,9 +180,11 @@ namespace detail
         // the value of use_sleep_scan_state
         auto with_scan_state
             = [use_sleep,
-               scan_state            = scan_state_type::create(scan_state_storage, number_of_blocks),
-               scan_state_with_sleep = scan_state_with_sleep_type::create(
-                   scan_state_storage, number_of_blocks)](auto&& func) mutable -> decltype(auto) {
+               scan_state = scan_state_type::create(scan_state_storage, number_of_blocks),
+               scan_state_with_sleep
+               = scan_state_with_sleep_type::create(scan_state_storage, number_of_blocks)](
+                  auto&& func) mutable -> decltype(auto)
+        {
             if(use_sleep)
             {
                 return func(scan_state_with_sleep);

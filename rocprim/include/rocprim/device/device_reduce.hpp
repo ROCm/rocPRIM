@@ -29,8 +29,9 @@
 #include "config_types.hpp"
 
 #include "../config.hpp"
-#include "../detail/various.hpp"
 #include "../detail/match_result_type.hpp"
+#include "../detail/temp_storage.hpp"
+#include "../detail/various.hpp"
 
 #include "detail/device_config_helper.hpp"
 #include "detail/device_reduce.hpp"
@@ -128,12 +129,16 @@ hipError_t reduce_impl(void * temporary_storage,
     const unsigned int items_per_thread = params.items_per_thread;
     const auto         items_per_block  = block_size * items_per_thread;
 
-    if(temporary_storage == nullptr)
+    // Pointer to array with block_prefixes
+    result_type*                   block_prefixes;
+    const detail::temp_storage_req reqs[] = {detail::temp_storage_req(
+        &block_prefixes,
+        reduce_get_temporary_storage_bytes<result_type>(size, items_per_block))};
+
+    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
+    if(alias_result != hipSuccess || temporary_storage == nullptr)
     {
-        storage_size = reduce_get_temporary_storage_bytes<result_type>(size, items_per_block);
-        // Make sure user won't try to allocate 0 bytes memory
-        storage_size = storage_size == 0 ? 4 : storage_size;
-        return hipSuccess;
+        return alias_result;
     }
 
     // Start point for time measurements
@@ -153,8 +158,6 @@ hipError_t reduce_impl(void * temporary_storage,
 
     if(number_of_blocks > 1)
     {
-        // Pointer to array with block_prefixes
-        result_type * block_prefixes = static_cast<result_type*>(temporary_storage);
         const auto    aligned_size_limit = number_of_blocks_limit * items_per_block;
 
         // Launch number_of_blocks_limit blocks while there is still at least as many blocks left as the limit

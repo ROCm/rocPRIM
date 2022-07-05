@@ -27,10 +27,11 @@
 #include <type_traits>
 
 #include "../config.hpp"
-#include "../functional.hpp"
-#include "../types.hpp"
-#include "../type_traits.hpp"
+#include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
+#include "../functional.hpp"
+#include "../type_traits.hpp"
+#include "../types.hpp"
 
 #include "device_select_config.hpp"
 #include "detail/device_scan_common.hpp"
@@ -171,48 +172,41 @@ hipError_t partition_impl(void * temporary_storage,
     const size_t limited_size = std::min<size_t>(size, aligned_size_limit);
     const bool use_limited_size = limited_size == aligned_size_limit;
 
-    const unsigned int number_of_blocks = 
-        static_cast<unsigned int>(::rocprim::detail::ceiling_div(limited_size, items_per_block));
+    const unsigned int number_of_blocks
+        = static_cast<unsigned int>(::rocprim::detail::ceiling_div(limited_size, items_per_block));
 
     // Calculate required temporary storage
-    size_t offset_scan_state_bytes = ::rocprim::detail::align_size(
-        // This is valid even with offset_scan_state_with_sleep_type
-        offset_scan_state_type::get_storage_size(number_of_blocks)
-    );
-    size_t ordered_block_id_bytes = ::rocprim::detail::align_size(
-        ordered_block_id_type::get_storage_size(),
-        alignof(size_t)
-    );
+    void*                           offset_scan_state_storage;
+    ordered_block_id_type::id_type* ordered_bid_storage;
+    size_t*                         selected_count;
+    size_t*                         prev_selected_count;
 
-    if(temporary_storage == nullptr)
+    const detail::temp_storage_req reqs[]
+        = {detail::temp_storage_req(&offset_scan_state_storage,
+                                    offset_scan_state_type::get_storage_size(number_of_blocks)),
+           detail::temp_storage_req(&ordered_bid_storage,
+                                    ordered_block_id_type::get_storage_size(),
+                                    alignof(ordered_block_id_type::id_type)),
+           detail::temp_storage_req::ptr_aligned_array(&selected_count, is_three_way ? 2 : 1),
+           detail::temp_storage_req::ptr_aligned_array(&prev_selected_count, is_three_way ? 2 : 1)};
+
+    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
+    if(alias_result != hipSuccess || temporary_storage == nullptr)
     {
-        // storage_size is never zero
-        storage_size = offset_scan_state_bytes + ordered_block_id_bytes + (sizeof(size_t) * 2 * (is_three_way ? 2 : 1));
-
-        return hipSuccess;
+        return alias_result;
     }
 
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
     // Create and initialize lookback_scan_state obj
-    auto offset_scan_state = offset_scan_state_type::create(
-        temporary_storage, number_of_blocks
-    );
-    auto offset_scan_state_with_sleep = offset_scan_state_with_sleep_type::create(
-        temporary_storage, number_of_blocks
-    );
-    // Create ad initialize ordered_block_id obj
-    auto ptr = reinterpret_cast<char*>(temporary_storage);
-    auto ordered_bid = ordered_block_id_type::create(
-        reinterpret_cast<ordered_block_id_type::id_type*>(ptr + offset_scan_state_bytes)
-    );
+    auto offset_scan_state
+        = offset_scan_state_type::create(offset_scan_state_storage, number_of_blocks);
+    auto offset_scan_state_with_sleep
+        = offset_scan_state_with_sleep_type::create(offset_scan_state_storage, number_of_blocks);
 
-    size_t* selected_count = reinterpret_cast<size_t*>(ptr + offset_scan_state_bytes
-                                                       + ordered_block_id_bytes);
-    size_t* prev_selected_count
-        = reinterpret_cast<size_t*>(ptr + offset_scan_state_bytes + ordered_block_id_bytes
-                                    + (is_three_way ? 2 : 1) * sizeof(size_t));
+    // Create and initialize ordered_block_id obj
+    auto ordered_bid = ordered_block_id_type::create(ordered_bid_storage);
 
     hipError_t error;
 
@@ -286,7 +280,7 @@ hipError_t partition_impl(void * temporary_storage,
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
 
         grid_size = current_number_of_blocks;
-        
+
         if (prop.gcnArch == 908 && asicRevision < 2)
         {
             hipLaunchKernelGGL(
@@ -338,11 +332,12 @@ hipError_t partition_impl(void * temporary_storage,
         std::swap(selected_count, prev_selected_count);
     }
 
-    error = ::rocprim::transform(
-        prev_selected_count, selected_count_output, (is_three_way ? 2 : 1), 
-        ::rocprim::identity<>{},
-        stream, debug_synchronous
-    );
+    error = ::rocprim::transform(prev_selected_count,
+                                 selected_count_output,
+                                 (is_three_way ? 2 : 1),
+                                 ::rocprim::identity<>{},
+                                 stream,
+                                 debug_synchronous);
     if (error != hipSuccess) return error;
 
     return hipSuccess;
