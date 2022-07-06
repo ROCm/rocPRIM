@@ -94,24 +94,20 @@ namespace detail
              class ValuesInputIterator,
              class ValuesOutputIterator,
              class OffsetT,
-             class BinaryFunction>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
-        block_merge_process_tile(KeysInputIterator    keys_input,
-                                 KeysOutputIterator   keys_output,
-                                 ValuesInputIterator  values_input,
-                                 ValuesOutputIterator values_output,
-                                 const OffsetT        input_size,
-                                 const OffsetT        sorted_block_size,
-                                 BinaryFunction       compare_function,
-                                 const OffsetT*       merge_partitions)
-            -> std::enable_if_t<
-                (!std::is_trivially_copyable<
-                     typename std::iterator_traits<ValuesInputIterator>::value_type>::value
-                 || rocprim::is_floating_point<
-                     typename std::iterator_traits<ValuesInputIterator>::value_type>::value
-                 || std::is_integral<
-                     typename std::iterator_traits<ValuesInputIterator>::value_type>::value),
-                void>
+             class BinaryFunction,
+             class ValueType = typename std::iterator_traits<ValuesInputIterator>::value_type>
+    ROCPRIM_DEVICE ROCPRIM_INLINE auto block_merge_process_tile(KeysInputIterator    keys_input,
+                                                                KeysOutputIterator   keys_output,
+                                                                ValuesInputIterator  values_input,
+                                                                ValuesOutputIterator values_output,
+                                                                const OffsetT        input_size,
+                                                                const OffsetT  sorted_block_size,
+                                                                BinaryFunction compare_function,
+                                                                const OffsetT* merge_partitions)
+        -> std::enable_if_t<(!std::is_trivially_copyable<ValueType>::value
+                             || rocprim::is_floating_point<ValueType>::value
+                             || std::is_integral<ValueType>::value),
+                            void>
     {
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
         using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
@@ -232,6 +228,10 @@ namespace detail
                             storage.store);
     }
 
+    // The specialization below exists because the compiler creates slow code for
+    // ValueTypes with misaligned datastructures in them (e.g. custom_char_double)
+    // when storing/loading those ValueTypes to/from registers.
+    // Thus this is a temporary workaround.
     template<unsigned int BlockSize,
              unsigned int ItemsPerThread,
              class KeysInputIterator,
@@ -239,24 +239,20 @@ namespace detail
              class ValuesInputIterator,
              class ValuesOutputIterator,
              class OffsetT,
-             class BinaryFunction>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
-        block_merge_process_tile(KeysInputIterator    keys_input,
-                                 KeysOutputIterator   keys_output,
-                                 ValuesInputIterator  values_input,
-                                 ValuesOutputIterator values_output,
-                                 const OffsetT        input_size,
-                                 const OffsetT        sorted_block_size,
-                                 BinaryFunction       compare_function,
-                                 const OffsetT*       merge_partitions)
-            -> std::enable_if_t<
-                (std::is_trivially_copyable<
-                     typename std::iterator_traits<ValuesInputIterator>::value_type>::value
-                 && !rocprim::is_floating_point<
-                     typename std::iterator_traits<ValuesInputIterator>::value_type>::value
-                 && !std::is_integral<
-                     typename std::iterator_traits<ValuesInputIterator>::value_type>::value),
-                void>
+             class BinaryFunction,
+             class ValueType = typename std::iterator_traits<ValuesInputIterator>::value_type>
+    ROCPRIM_DEVICE ROCPRIM_INLINE auto block_merge_process_tile(KeysInputIterator    keys_input,
+                                                                KeysOutputIterator   keys_output,
+                                                                ValuesInputIterator  values_input,
+                                                                ValuesOutputIterator values_output,
+                                                                const OffsetT        input_size,
+                                                                const OffsetT  sorted_block_size,
+                                                                BinaryFunction compare_function,
+                                                                const OffsetT* merge_partitions)
+        -> std::enable_if_t<(std::is_trivially_copyable<ValueType>::value
+                             && !rocprim::is_floating_point<ValueType>::value
+                             && !std::is_integral<ValueType>::value),
+                            void>
     {
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
         using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
@@ -352,7 +348,7 @@ namespace detail
                 ROCPRIM_UNROLL
                 for (unsigned int item = 0; item < ItemsPerThread; ++item)
                 {
-                    unsigned int idx = BlockSize * item + threadIdx.x;
+                    const unsigned int idx = BlockSize * item + threadIdx.x;
                     if(idx < num_keys1)
                     {
                         values_shared[idx] = input1[idx];
@@ -368,7 +364,7 @@ namespace detail
                 ROCPRIM_UNROLL
                 for (unsigned int item = 0; item < ItemsPerThread; ++item)
                 {
-                    unsigned int idx = BlockSize * item + threadIdx.x;
+                    const unsigned int idx = BlockSize * item + threadIdx.x;
                     if(idx < num_keys1)
                     {
                         values_shared[idx] = input1[idx];
