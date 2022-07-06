@@ -133,7 +133,7 @@ hipError_t reduce_impl(void * temporary_storage,
         = reduce_get_temporary_storage_bytes<result_type>(size, items_per_block);
 
     // Pointer to array with block_prefixes
-    result_type*                   block_prefixes;
+    result_type*                         block_prefixes;
     const detail::temp_storage_partition parts[]
         = {detail::temp_storage_partition(&block_prefixes, reduce_temp_storage_bytes)};
 

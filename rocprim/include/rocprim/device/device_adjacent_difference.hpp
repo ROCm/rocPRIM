@@ -116,7 +116,7 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
 
     const std::size_t num_blocks = ceiling_div(size, items_per_block);
 
-    value_type*                    previous_values;
+    value_type*                          previous_values;
     const detail::temp_storage_partition parts[]
         = {detail::temp_storage_partition::ptr_aligned_array(
             &previous_values,

@@ -421,8 +421,8 @@ hipError_t radix_sort_merge_impl(void * temporary_storage,
 
     const bool with_double_buffer = keys_tmp != nullptr;
 
-    key_type*                      keys_tmp_storage;
-    value_type*                    values_tmp_storage;
+    key_type*                            keys_tmp_storage;
+    value_type*                          values_tmp_storage;
     const detail::temp_storage_partition parts[]
         = {detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
                                                              !with_double_buffer ? size : 0),

@@ -152,7 +152,7 @@ hipError_t merge_impl(void * temporary_storage,
     const unsigned int partitions
         = ((input1_size + input2_size) + items_per_block - 1) / items_per_block;
 
-    unsigned int*                  index;
+    unsigned int*                        index;
     const detail::temp_storage_partition parts[]
         = {detail::temp_storage_partition::ptr_aligned_array(&index, partitions + 1)};
 
