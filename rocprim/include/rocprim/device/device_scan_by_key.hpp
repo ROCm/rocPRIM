@@ -150,19 +150,20 @@ namespace detail
         ordered_block_id_type::id_type* ordered_bid_storage;
         wrapped_type*                   previous_last_value;
 
-        const detail::temp_storage_req reqs[]
-            = {detail::temp_storage_req(&scan_state_storage,
-                                        scan_state_type::get_storage_size(number_of_blocks)),
-               detail::temp_storage_req(&ordered_bid_storage,
-                                        ordered_block_id_type::get_storage_size(),
-                                        alignof(ordered_block_id_type::id_type)),
-               detail::temp_storage_req::ptr_aligned_array(&previous_last_value,
-                                                           use_limited_size ? 1 : 0)};
+        const detail::temp_storage_partition parts[]
+            = {detail::temp_storage_partition(&scan_state_storage,
+                                              scan_state_type::get_storage_size(number_of_blocks)),
+               detail::temp_storage_partition(&ordered_bid_storage,
+                                              ordered_block_id_type::get_storage_size(),
+                                              alignof(ordered_block_id_type::id_type)),
+               detail::temp_storage_partition::ptr_aligned_array(&previous_last_value,
+                                                                 use_limited_size ? 1 : 0)};
 
-        hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-        if(alias_result != hipSuccess || temporary_storage == nullptr)
+        hipError_t partition_result
+            = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+        if(partition_result != hipSuccess || temporary_storage == nullptr)
         {
-            return alias_result;
+            return partition_result;
         }
 
         if(number_of_blocks == 0u)

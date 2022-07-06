@@ -129,16 +129,19 @@ hipError_t reduce_impl(void * temporary_storage,
     const unsigned int items_per_thread = params.items_per_thread;
     const auto         items_per_block  = block_size * items_per_thread;
 
+    size_t reduce_temp_storage_bytes
+        = reduce_get_temporary_storage_bytes<result_type>(size, items_per_block);
+
     // Pointer to array with block_prefixes
     result_type*                   block_prefixes;
-    const detail::temp_storage_req reqs[] = {detail::temp_storage_req(
-        &block_prefixes,
-        reduce_get_temporary_storage_bytes<result_type>(size, items_per_block))};
+    const detail::temp_storage_partition parts[]
+        = {detail::temp_storage_partition(&block_prefixes, reduce_temp_storage_bytes)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     // Start point for time measurements

@@ -117,14 +117,16 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
     const std::size_t num_blocks = ceiling_div(size, items_per_block);
 
     value_type*                    previous_values;
-    const detail::temp_storage_req reqs[] = {detail::temp_storage_req::ptr_aligned_array(
-        &previous_values,
-        InPlace && num_blocks >= 2 ? num_blocks - 1 : 0)};
+    const detail::temp_storage_partition parts[]
+        = {detail::temp_storage_partition::ptr_aligned_array(
+            &previous_values,
+            InPlace && num_blocks >= 2 ? num_blocks - 1 : 0)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     if(num_blocks == 0)

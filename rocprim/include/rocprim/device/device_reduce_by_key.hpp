@@ -216,19 +216,20 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     // The running accumulation across the launch boundary.
     accumulator_type* d_previous_accumulated = nullptr;
 
-    const detail::temp_storage_req reqs[]
-        = {detail::temp_storage_req(&scan_state_storage,
+    const detail::temp_storage_partition parts[]
+        = {detail::temp_storage_partition(&scan_state_storage,
                                     scan_state_type::get_storage_size(number_of_tiles)),
-           detail::temp_storage_req(&ordered_bid_storage,
+           detail::temp_storage_partition(&ordered_bid_storage,
                                     ordered_tile_id_type::get_storage_size(),
                                     alignof(ordered_tile_id_type::id_type)),
-           detail::temp_storage_req::ptr_aligned_array(&d_global_head_count, use_limited_size ? 1 : 0),
-           detail::temp_storage_req::ptr_aligned_array(&d_previous_accumulated, use_limited_size ? 1 : 0)};
+           detail::temp_storage_partition::ptr_aligned_array(&d_global_head_count, use_limited_size ? 1 : 0),
+           detail::temp_storage_partition::ptr_aligned_array(&d_previous_accumulated, use_limited_size ? 1 : 0)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     bool             use_sleep;

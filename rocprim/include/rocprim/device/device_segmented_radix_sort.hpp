@@ -355,43 +355,45 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
     size_t              partition_storage_size{};
     void*               partition_temporary_storage{};
 
-    const auto partition_result = partitioner(nullptr,
-                                              partition_storage_size,
-                                              segment_index_iterator{},
-                                              large_segment_indices_output,
-                                              medium_segment_indices_output,
-                                              small_segment_indices_output,
-                                              segment_count_output,
-                                              segments,
-                                              large_segment_selector,
-                                              medium_segment_selector,
-                                              stream,
-                                              debug_synchronous);
-    if(hipSuccess != partition_result)
+    const auto partitioner_result = partitioner(nullptr,
+                                                partition_storage_size,
+                                                segment_index_iterator{},
+                                                large_segment_indices_output,
+                                                medium_segment_indices_output,
+                                                small_segment_indices_output,
+                                                segment_count_output,
+                                                segments,
+                                                large_segment_selector,
+                                                medium_segment_selector,
+                                                stream,
+                                                debug_synchronous);
+    if(hipSuccess != partitioner_result)
     {
-        return partition_result;
+        return partitioner_result;
     }
 
-    const detail::temp_storage_req reqs[] = {
-        detail::temp_storage_req::ptr_aligned_array(&keys_tmp_storage,
-                                                    !with_double_buffer ? size : 0),
-        detail::temp_storage_req::ptr_aligned_array(&values_tmp_storage,
-                                                    !with_double_buffer && with_values ? size : 0),
-        detail::temp_storage_req(&large_segment_indices_output,
-                                 large_and_small_segment_indices_bytes,
-                                 alignof(segment_index_type)),
-        detail::temp_storage_req(&medium_segment_indices_output,
-                                 medium_segment_indices_bytes,
-                                 alignof(segment_index_type)),
-        detail::temp_storage_req(&segment_count_output,
-                                 segment_count_output_bytes,
-                                 alignof(segment_index_type)),
-        detail::temp_storage_req(&partition_temporary_storage, partition_storage_size)};
+    const detail::temp_storage_partition parts[]
+        = {detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
+                                                             !with_double_buffer ? size : 0),
+           detail::temp_storage_partition::ptr_aligned_array(
+               &values_tmp_storage,
+               !with_double_buffer && with_values ? size : 0),
+           detail::temp_storage_partition(&large_segment_indices_output,
+                                          large_and_small_segment_indices_bytes,
+                                          alignof(segment_index_type)),
+           detail::temp_storage_partition(&medium_segment_indices_output,
+                                          medium_segment_indices_bytes,
+                                          alignof(segment_index_type)),
+           detail::temp_storage_partition(&segment_count_output,
+                                          segment_count_output_bytes,
+                                          alignof(segment_index_type)),
+           detail::temp_storage_partition(&partition_temporary_storage, partition_storage_size)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     if(segments == 0u)

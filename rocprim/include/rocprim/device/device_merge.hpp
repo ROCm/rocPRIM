@@ -153,13 +153,14 @@ hipError_t merge_impl(void * temporary_storage,
         = ((input1_size + input2_size) + items_per_block - 1) / items_per_block;
 
     unsigned int*                  index;
-    const detail::temp_storage_req reqs[]
-        = {detail::temp_storage_req::ptr_aligned_array(&index, partitions + 1)};
+    const detail::temp_storage_partition parts[]
+        = {detail::temp_storage_partition::ptr_aligned_array(&index, partitions + 1)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     if( partitions == 0u )

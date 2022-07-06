@@ -181,19 +181,21 @@ hipError_t partition_impl(void * temporary_storage,
     size_t*                         selected_count;
     size_t*                         prev_selected_count;
 
-    const detail::temp_storage_req reqs[]
-        = {detail::temp_storage_req(&offset_scan_state_storage,
-                                    offset_scan_state_type::get_storage_size(number_of_blocks)),
-           detail::temp_storage_req(&ordered_bid_storage,
-                                    ordered_block_id_type::get_storage_size(),
-                                    alignof(ordered_block_id_type::id_type)),
-           detail::temp_storage_req::ptr_aligned_array(&selected_count, is_three_way ? 2 : 1),
-           detail::temp_storage_req::ptr_aligned_array(&prev_selected_count, is_three_way ? 2 : 1)};
+    const detail::temp_storage_partition parts[] = {
+        detail::temp_storage_partition(&offset_scan_state_storage,
+                                       offset_scan_state_type::get_storage_size(number_of_blocks)),
+        detail::temp_storage_partition(&ordered_bid_storage,
+                                       ordered_block_id_type::get_storage_size(),
+                                       alignof(ordered_block_id_type::id_type)),
+        detail::temp_storage_partition::ptr_aligned_array(&selected_count, is_three_way ? 2 : 1),
+        detail::temp_storage_partition::ptr_aligned_array(&prev_selected_count,
+                                                          is_three_way ? 2 : 1)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     // Start point for time measurements

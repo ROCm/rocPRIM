@@ -423,16 +423,18 @@ hipError_t radix_sort_merge_impl(void * temporary_storage,
 
     key_type*                      keys_tmp_storage;
     value_type*                    values_tmp_storage;
-    const detail::temp_storage_req reqs[] = {
-        detail::temp_storage_req::ptr_aligned_array(&keys_tmp_storage,
-                                                    !with_double_buffer ? size : 0),
-        detail::temp_storage_req::ptr_aligned_array(&values_tmp_storage,
-                                                    !with_double_buffer && with_values ? size : 0)};
+    const detail::temp_storage_partition parts[]
+        = {detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
+                                                             !with_double_buffer ? size : 0),
+           detail::temp_storage_partition::ptr_aligned_array(
+               &values_tmp_storage,
+               !with_double_buffer && with_values ? size : 0)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     if(debug_synchronous)
@@ -528,18 +530,21 @@ hipError_t radix_sort_iterations_impl(void * temporary_storage,
     key_type*    keys_tmp_storage;
     value_type*  values_tmp_storage;
 
-    const detail::temp_storage_req reqs[] = {
-        detail::temp_storage_req::ptr_aligned_array(&batch_digit_counts, batches * max_radix_size),
-        detail::temp_storage_req::ptr_aligned_array(&digit_counts, max_radix_size),
-        detail::temp_storage_req::ptr_aligned_array(&keys_tmp_storage,
-                                                    !with_double_buffer ? size : 0),
-        detail::temp_storage_req::ptr_aligned_array(&values_tmp_storage,
-                                                    !with_double_buffer && with_values ? size : 0)};
+    const detail::temp_storage_partition parts[]
+        = {detail::temp_storage_partition::ptr_aligned_array(&batch_digit_counts,
+                                                             batches * max_radix_size),
+           detail::temp_storage_partition::ptr_aligned_array(&digit_counts, max_radix_size),
+           detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
+                                                             !with_double_buffer ? size : 0),
+           detail::temp_storage_partition::ptr_aligned_array(
+               &values_tmp_storage,
+               !with_double_buffer && with_values ? size : 0)};
 
-    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
-    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    hipError_t partition_result
+        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return alias_result;
+        return partition_result;
     }
 
     if( size == 0u )
