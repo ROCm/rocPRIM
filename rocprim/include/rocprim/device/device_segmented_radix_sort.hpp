@@ -336,59 +336,64 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
     const bool do_partitioning = partitioning_allowed
         && segments >= config::warp_sort_config::partitioning_threshold;
 
-    const size_t keys_bytes = ::rocprim::detail::align_size(size * sizeof(key_type));
-    const size_t values_bytes = with_values ? ::rocprim::detail::align_size(size * sizeof(value_type)) : 0;
-    const size_t large_and_small_segment_indices_bytes
-        = ::rocprim::detail::align_size(segments * sizeof(segment_index_type));
+    const size_t large_and_small_segment_indices_bytes = segments * sizeof(segment_index_type);
     const size_t medium_segment_indices_bytes
-        = three_way_partitioning
-              ? ::rocprim::detail::align_size(segments * sizeof(segment_index_type))
-              : 0;
+        = three_way_partitioning ? segments * sizeof(segment_index_type) : 0;
     static constexpr size_t segment_count_output_size = three_way_partitioning ? 2 : 1;
     const size_t            segment_count_output_bytes
-        = ::rocprim::detail::align_size(segment_count_output_size * sizeof(segment_index_type));
+        = segment_count_output_size * sizeof(segment_index_type);
 
     segment_index_type* large_segment_indices_output{};
     // The total number of large and small segments is not above the number of segments
     // The same buffer is filled with the large and small indices from both directions
     auto small_segment_indices_output
         = make_reverse_iterator(large_segment_indices_output + segments);
+    key_type*           keys_tmp_storage;
+    value_type*         values_tmp_storage;
     segment_index_type* medium_segment_indices_output{};
     segment_index_type* segment_count_output{};
     size_t              partition_storage_size{};
     void*               partition_temporary_storage{};
-    if(temporary_storage == nullptr)
-    {
-        storage_size = with_double_buffer ? 0 : (keys_bytes + values_bytes);
-        if(do_partitioning)
-        {
-            storage_size += large_and_small_segment_indices_bytes;
-            storage_size += medium_segment_indices_bytes;
-            storage_size += segment_count_output_bytes;
-            const auto partition_result = partitioner(partition_temporary_storage,
-                                                      partition_storage_size,
-                                                      segment_index_iterator{},
-                                                      large_segment_indices_output,
-                                                      medium_segment_indices_output,
-                                                      small_segment_indices_output,
-                                                      segment_count_output,
-                                                      segments,
-                                                      large_segment_selector,
-                                                      medium_segment_selector,
-                                                      stream,
-                                                      debug_synchronous);
-            if(hipSuccess != partition_result)
-            {
-                return partition_result;
-            }
-            storage_size += partition_storage_size;
-        }
 
-        // Make sure user won't try to allocate 0 bytes memory, otherwise
-        // user may again pass nullptr as temporary_storage
-        storage_size = storage_size == 0 ? 4 : storage_size;
-        return hipSuccess;
+    const auto partition_result = partitioner(nullptr,
+                                              partition_storage_size,
+                                              segment_index_iterator{},
+                                              large_segment_indices_output,
+                                              medium_segment_indices_output,
+                                              small_segment_indices_output,
+                                              segment_count_output,
+                                              segments,
+                                              large_segment_selector,
+                                              medium_segment_selector,
+                                              stream,
+                                              debug_synchronous);
+    if(hipSuccess != partition_result)
+    {
+        return partition_result;
     }
+
+    const detail::temp_storage_req reqs[] = {
+        detail::temp_storage_req::ptr_aligned_array(&keys_tmp_storage,
+                                                    !with_double_buffer ? size : 0),
+        detail::temp_storage_req::ptr_aligned_array(&values_tmp_storage,
+                                                    !with_double_buffer && with_values ? size : 0),
+        detail::temp_storage_req(&large_segment_indices_output,
+                                 large_and_small_segment_indices_bytes,
+                                 alignof(segment_index_type)),
+        detail::temp_storage_req(&medium_segment_indices_output,
+                                 medium_segment_indices_bytes,
+                                 alignof(segment_index_type)),
+        detail::temp_storage_req(&segment_count_output,
+                                 segment_count_output_bytes,
+                                 alignof(segment_index_type)),
+        detail::temp_storage_req(&partition_temporary_storage, partition_storage_size)};
+
+    hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
+    if(alias_result != hipSuccess || temporary_storage == nullptr)
+    {
+        return alias_result;
+    }
+
     if(segments == 0u)
     {
         return hipSuccess;
@@ -411,23 +416,12 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         if(error != hipSuccess) return error;
     }
 
-    char* ptr = reinterpret_cast<char*>(temporary_storage);
     if(!with_double_buffer)
     {
-        keys_tmp = reinterpret_cast<key_type*>(ptr);
-        ptr += keys_bytes;
-        values_tmp = with_values ? reinterpret_cast<value_type*>(ptr) : nullptr;
-        ptr += values_bytes;
+        keys_tmp   = keys_tmp_storage;
+        values_tmp = values_tmp_storage;
     }
-    large_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += large_and_small_segment_indices_bytes;
-    medium_segment_indices_output = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += medium_segment_indices_bytes;
     small_segment_indices_output = make_reverse_iterator(large_segment_indices_output + segments);
-    segment_count_output         = reinterpret_cast<segment_index_type*>(ptr);
-    ptr += segment_count_output_bytes;
-    partition_temporary_storage = ptr;
-    ptr += partition_storage_size;
 
     if(do_partitioning)
     {

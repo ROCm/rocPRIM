@@ -26,10 +26,11 @@
 #include <type_traits>
 
 #include "../config.hpp"
+#include "../detail/temp_storage.hpp"
+#include "../detail/various.hpp"
 #include "../functional.hpp"
 #include "../type_traits.hpp"
 #include "../types/future_value.hpp"
-#include "../detail/various.hpp"
 
 #include "device_scan_config.hpp"
 #include "device_transform.hpp"
@@ -401,23 +402,6 @@ auto scan_impl(void * temporary_storage,
 
     unsigned int number_of_blocks = (limited_size + items_per_block - 1)/items_per_block;
 
-    // Calculate required temporary storage
-    size_t scan_state_bytes = ::rocprim::detail::align_size(
-        // This is valid even with scan_state_with_sleep_type
-        scan_state_type::get_storage_size(number_of_blocks)
-    );
-    size_t ordered_block_id_bytes = ordered_block_id_type::get_storage_size();
-    if(temporary_storage == nullptr)
-    {
-        // storage_size is never zero
-        storage_size = scan_state_bytes + ordered_block_id_bytes;
-
-        if(use_limited_size)
-            storage_size += 2 * sizeof(real_init_value_type);
-
-        return hipSuccess;
-    }
-
     // Pointer to array with block_prefixes
     void*                           scan_state_storage;
     ordered_block_id_type::id_type* ordered_bid_storage;
@@ -437,7 +421,6 @@ auto scan_impl(void * temporary_storage,
     hipError_t alias_result = detail::alias_temp_storage(temporary_storage, storage_size, reqs);
     if(alias_result != hipSuccess || temporary_storage == nullptr)
     {
-        std::cout << "oef" << std::endl;
         return alias_result;
     }
 

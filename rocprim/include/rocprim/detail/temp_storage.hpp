@@ -29,6 +29,9 @@
 BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
+
+constexpr const size_t default_alignment = 256;
+
 // A structure describing a request to allocate some temporary global memory.
 struct temp_storage_req
 {
@@ -37,10 +40,10 @@ struct temp_storage_req
     // The total number of bytes of global memory that should be allocated.
     size_t size;
     // The minimum alignment that the memory should have,
-    size_t alignment = 256;
+    size_t alignment = default_alignment;
 
     template<typename T>
-    temp_storage_req(T** ptr, size_t size, size_t alignment = 256)
+    temp_storage_req(T** ptr, size_t size, size_t alignment = default_alignment)
         : ptr(reinterpret_cast<void**>(ptr)), size(size), alignment(alignment)
     {}
 
