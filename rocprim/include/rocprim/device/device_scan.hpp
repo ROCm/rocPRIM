@@ -221,7 +221,7 @@ auto scan_impl(void * temporary_storage,
            detail::temp_storage_partition::ptr_aligned_array(&previous_last_element,
                                                              use_limited_size ? 1 : 0),
            detail::temp_storage_partition::ptr_aligned_array(&new_last_element,
-                                                             use_limited_size ? 3 : 0)};
+                                                             use_limited_size ? 1 : 0)};
 
     hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
