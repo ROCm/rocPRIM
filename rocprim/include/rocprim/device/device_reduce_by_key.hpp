@@ -50,7 +50,50 @@ namespace detail
 namespace reduce_by_key
 {
 
+template<typename LookBackScanState, typename AccumulatorType>
+ROCPRIM_KERNEL __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void init_kernel(
+    LookBackScanState              lookback_scan_state,
+    const unsigned int             number_of_tiles,
+    ordered_block_id<unsigned int> ordered_bid,
+    const bool                     is_first_launch,
+    const unsigned int             tile_save_idx,
+    std::size_t* const             global_head_count,
+    AccumulatorType* const         previous_accumulated)
+{
+    const unsigned int block_id        = ::rocprim::detail::block_id<0>();
+    const unsigned int block_size      = ::rocprim::detail::block_size<0>();
+    const unsigned int block_thread_id = ::rocprim::detail::block_thread_id<0>();
+    const unsigned int flat_thread_id  = (block_id * block_size) + block_thread_id;
+
+    if(is_first_launch)
+    {
+        if(global_head_count != nullptr && flat_thread_id == 0)
+        {
+            // If there are subsequent launches, initialize the accumulated head flags
+            // over previous launches to zero.
+            *global_head_count = 0;
+        }
+    }
+    else
+    {
+        // Use the reduction of the last launch to update the across-launch variables.
+        const auto update_func = [&](typename LookBackScanState::value_type value)
+        {
+            *global_head_count += ::rocprim::get<0>(value);
+            *previous_accumulated = ::rocprim::get<1>(value);
+        };
+        access_indexed_lookback_value(lookback_scan_state,
+                                      number_of_tiles,
+                                      tile_save_idx,
+                                      flat_thread_id,
+                                      update_func);
+    }
+
+    init_lookback_scan_state(lookback_scan_state, number_of_tiles, ordered_bid, flat_thread_id);
+}
+
 template<typename Config,
+         typename AccumulatorType,
          typename KeyIterator,
          typename ValueIterator,
          typename UniqueIterator,
@@ -70,10 +113,11 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
     const LookbackScanState              scan_state,
     const ordered_block_id<unsigned int> ordered_tile_id,
     const std::size_t                    starting_tile,
-    const std::size_t                    number_of_tiles,
+    const std::size_t                    total_number_of_tiles,
     const std::size_t                    size,
-    const wrapped_type_t<reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>>* const
-        previous_last_value)
+    const std::size_t* const             global_head_count,
+    const AccumulatorType* const         previous_accumulated,
+    const std::size_t                    number_of_tiles_launch)
 {
     reduce_by_key::kernel_impl<Config>(keys_input,
                                        values_input,
@@ -85,9 +129,11 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void kernel(
                                        scan_state,
                                        ordered_tile_id,
                                        starting_tile,
-                                       number_of_tiles,
+                                       total_number_of_tiles,
                                        size,
-                                       previous_last_value);
+                                       global_head_count,
+                                       previous_accumulated,
+                                       number_of_tiles_launch);
 }
 
 #define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                           \
@@ -137,8 +183,6 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
         Config,
         reduce_by_key::default_config<ROCPRIM_TARGET_ARCH, key_type, accumulator_type>>;
 
-    using wrapped_type = wrapped_type_t<accumulator_type>;
-
     using scan_state_type
         = reduce_by_key::lookback_scan_state_t<accumulator_type, /*UseSleep=*/false>;
     using scan_state_with_sleep_type
@@ -158,23 +202,34 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     const size_t limited_size     = std::min<size_t>(size, aligned_size_limit);
     const bool   use_limited_size = limited_size == aligned_size_limit;
 
-    // Number of blocks in a single launch (or the only launch if it fits)
-    const std::size_t  number_of_tiles  = detail::ceiling_div(limited_size, items_per_tile);
-    const unsigned int number_of_blocks = static_cast<unsigned int>(
-        detail::ceiling_div<std::size_t>(number_of_tiles, tiles_per_block));
+    // Number of tiles in a single launch (or the only launch if it fits)
+    const std::size_t number_of_tiles  = detail::ceiling_div(limited_size, items_per_tile);
+    const std::size_t number_of_blocks = detail::ceiling_div(number_of_tiles, tiles_per_block);
 
     // Calculate required temporary storage
-    // This is valid even with scan_state_with_sleep_type
-    const std::size_t scan_state_bytes
-        = detail::align_size(scan_state_type::get_storage_size(number_of_tiles));
+    // scan_state_bytes is valid even with scan_state_with_sleep_type
+    const std::size_t scan_state_bytes       = scan_state_type::get_storage_size(number_of_tiles);
+    const std::size_t block_id_bytes         = ordered_tile_id_type::get_storage_size();
+    const std::size_t head_count_bytes       = sizeof(size_t);
+    const std::size_t prev_accumulated_bytes = sizeof(accumulator_type);
+
+    const std::size_t block_id_offset = align_size(scan_state_bytes, alignof(std::size_t));
+    const std::size_t head_count_offset
+        = align_size(block_id_offset + block_id_bytes, alignof(ordered_tile_id_type));
+    const std::size_t prev_accumulated_offset
+        = align_size(head_count_offset + head_count_bytes, alignof(accumulator_type));
+
     if(temporary_storage == nullptr)
     {
-        const std::size_t ordered_block_id_bytes
-            = align_size(ordered_tile_id_type::get_storage_size(), alignof(wrapped_type));
-
         // storage_size is never zero
-        storage_size = scan_state_bytes + ordered_block_id_bytes
-                       + (use_limited_size ? sizeof(wrapped_type) : 0);
+        if(use_limited_size)
+        {
+            storage_size = block_id_offset + block_id_bytes;
+        }
+        else
+        {
+            storage_size = prev_accumulated_offset + prev_accumulated_bytes;
+        }
 
         return hipSuccess;
     }
@@ -204,12 +259,18 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 
     auto* temp_storage_ptr = static_cast<char*>(temporary_storage);
     auto  ordered_bid      = ordered_tile_id_type::create(
-        reinterpret_cast<ordered_tile_id_type::id_type*>(temp_storage_ptr + scan_state_bytes));
+        reinterpret_cast<ordered_tile_id_type::id_type*>(temp_storage_ptr + block_id_offset));
 
-    // The last element
-    auto* const previous_last_value = use_limited_size ? reinterpret_cast<wrapped_type*>(
-                                          temp_storage_ptr + storage_size - sizeof(wrapped_type))
-                                                       : nullptr;
+    // The number of segment heads in previous launches.
+    std::size_t* d_global_head_count = nullptr;
+    // The running accumulation across the launch boundary.
+    accumulator_type* d_previous_accumulated = nullptr;
+    if(use_limited_size)
+    {
+        d_global_head_count = reinterpret_cast<std::size_t*>(temp_storage_ptr + head_count_offset);
+        d_previous_accumulated
+            = reinterpret_cast<accumulator_type*>(temp_storage_ptr + prev_accumulated_offset);
+    }
 
     if(size == 0)
     {
@@ -223,8 +284,8 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     }
 
     // Total number of tiles in all launches
-    const auto   total_number_of_tiles = ceiling_div(size, items_per_tile);
-    const size_t number_of_launch      = ceiling_div(size, limited_size);
+    const std::size_t total_number_of_tiles = ceiling_div(size, items_per_tile);
+    const std::size_t number_of_launch      = ceiling_div(size, limited_size);
 
     if(debug_synchronous)
     {
@@ -241,10 +302,11 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 
     for(size_t i = 0, offset = 0; i < number_of_launch; i++, offset += limited_size)
     {
-        const size_t current_size            = std::min<size_t>(size - offset, limited_size);
-        const auto   number_of_tiles_launch  = ceiling_div(current_size, items_per_tile);
-        const auto   number_of_blocks_launch = ceiling_div(number_of_tiles_launch, tiles_per_block);
-        const unsigned int init_grid_size = detail::ceiling_div(number_of_tiles_launch, block_size);
+        const std::size_t current_size = std::min<std::size_t>(size - offset, limited_size);
+        const std::size_t number_of_tiles_launch = ceiling_div(current_size, items_per_tile);
+        const std::size_t number_of_blocks_launch
+            = ceiling_div(number_of_tiles_launch, tiles_per_block);
+        const std::size_t init_grid_size = detail::ceiling_div(number_of_tiles_launch, block_size);
 
         // Start point for time measurements
         std::chrono::high_resolution_clock::time_point start;
@@ -261,7 +323,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
         with_scan_state(
             [&](const auto scan_state)
             {
-                hipLaunchKernelGGL(init_lookback_scan_state_kernel,
+                hipLaunchKernelGGL(init_kernel,
                                    dim3(init_grid_size),
                                    dim3(block_size),
                                    0,
@@ -269,8 +331,10 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
                                    scan_state,
                                    number_of_tiles_launch,
                                    ordered_bid,
+                                   i == 0,
                                    number_of_tiles - 1,
-                                   i > 0 ? previous_last_value : nullptr);
+                                   d_global_head_count,
+                                   d_previous_accumulated);
             });
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_lookback_scan_state_kernel",
                                                     number_of_tiles_launch,
@@ -296,7 +360,9 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
                                    i * number_of_tiles,
                                    total_number_of_tiles,
                                    size,
-                                   i > 0 ? previous_last_value : nullptr);
+                                   i > 0 ? d_global_head_count : nullptr,
+                                   i > 0 ? d_previous_accumulated : nullptr,
+                                   number_of_tiles_launch);
             });
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("reduce_by_key_kernel", current_size, start);
     }

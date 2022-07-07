@@ -26,6 +26,7 @@
 #include <rocprim/device/device_reduce_by_key.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/discard_iterator.hpp>
 #include <rocprim/iterator/transform_iterator.hpp>
 
 // required test headers
@@ -338,7 +339,10 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
 
 std::vector<size_t> get_large_sizes()
 {
-    std::vector<size_t> sizes = {(size_t{1} << 32) + (size_t{1} << 31), (size_t{1} << 35) - 1};
+    std::vector<size_t> sizes = {
+        (size_t{1} << 32) + (size_t{1} << 31),
+        (size_t{1} << 35) - 1,
+    };
     return sizes;
 }
 
@@ -475,4 +479,99 @@ TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyLargeValueType)
 {
     // large value type to test TilesPerBlock > 1
     large_indices_reduce_by_key<test_utils::custom_test_type<size_t>>();
+}
+
+template<typename value_type>
+void large_segment_count_reduce_by_key()
+{
+    int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    using key_type = size_t;
+
+    const bool debug_synchronous = false;
+
+    ::rocprim::plus<value_type>   reduce_op;
+    ::rocprim::equal_to<key_type> key_compare_op;
+
+    hipStream_t stream = 0; // default
+
+    const std::vector<size_t> sizes = get_large_sizes();
+
+    for(size_t size : sizes)
+    {
+        SCOPED_TRACE(testing::Message() << "with size = " << size);
+
+        // ensure segments of size 1
+        auto d_keys_input   = rocprim::make_counting_iterator(key_type(0));
+        auto d_values_input = rocprim::constant_iterator<size_t>(1);
+
+        size_t unique_count_expected = size;
+
+        // discard all output
+        auto d_unique_output     = rocprim::make_discard_iterator();
+        auto d_aggregates_output = rocprim::make_discard_iterator();
+
+        size_t* d_unique_count_output;
+        HIP_CHECK(test_common_utils::hipMallocHelper(&d_unique_count_output,
+                                                     sizeof(*d_unique_count_output)));
+
+        size_t temporary_storage_bytes;
+
+        HIP_CHECK(rocprim::reduce_by_key(nullptr,
+                                         temporary_storage_bytes,
+                                         d_keys_input,
+                                         d_values_input,
+                                         size,
+                                         d_unique_output,
+                                         d_aggregates_output,
+                                         d_unique_count_output,
+                                         reduce_op,
+                                         key_compare_op,
+                                         stream,
+                                         debug_synchronous));
+
+        ASSERT_GT(temporary_storage_bytes, 0);
+
+        void* d_temporary_storage;
+        HIP_CHECK(
+            test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
+
+        HIP_CHECK(rocprim::reduce_by_key(d_temporary_storage,
+                                         temporary_storage_bytes,
+                                         d_keys_input,
+                                         d_values_input,
+                                         size,
+                                         d_unique_output,
+                                         d_aggregates_output,
+                                         d_unique_count_output,
+                                         reduce_op,
+                                         key_compare_op,
+                                         stream,
+                                         debug_synchronous));
+
+        HIP_CHECK(hipFree(d_temporary_storage));
+
+        size_t unique_count_output;
+        HIP_CHECK(hipMemcpy(&unique_count_output,
+                            d_unique_count_output,
+                            sizeof(unique_count_output),
+                            hipMemcpyDeviceToHost));
+
+        HIP_CHECK(hipFree(d_unique_count_output));
+
+        ASSERT_EQ(unique_count_output, unique_count_expected);
+    }
+}
+
+TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeySmallValueType)
+{
+    large_segment_count_reduce_by_key<unsigned int>();
+}
+
+TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeyLargeValueType)
+{
+    // large value type to test TilesPerBlock > 1
+    large_segment_count_reduce_by_key<test_utils::custom_test_type<size_t>>();
 }
