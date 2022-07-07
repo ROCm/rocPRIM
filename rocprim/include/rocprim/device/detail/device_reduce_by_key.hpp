@@ -235,23 +235,24 @@ public:
              typename CompareFunction,
              typename BinaryOp,
              typename LookbackScanState>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void process_tile(
-        const KeyIterator     tile_keys,
-        const ValueIterator   tile_values,
-        UniqueIterator        unique_keys,
-        ReductionIterator     reductions,
-        UniqueCountIterator   unique_count,
-        BinaryOp              reduce_op,
-        const CompareFunction compare,
-        LookbackScanState     scan_state,
-        const unsigned int    tile_id,
-        const std::size_t     starting_tile,
-        const std::size_t     number_of_tiles,
-        const std::size_t     size,
-        storage_type&         storage,
-        const wrapped_type_t<reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>>* const
-            previous_last_value)
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+        process_tile(const KeyIterator            tile_keys,
+                     const ValueIterator          tile_values,
+                     UniqueIterator               unique_keys,
+                     ReductionIterator            reductions,
+                     UniqueCountIterator          unique_count,
+                     BinaryOp                     reduce_op,
+                     const CompareFunction        compare,
+                     LookbackScanState            scan_state,
+                     const unsigned int           tile_id,
+                     const std::size_t            starting_tile,
+                     const std::size_t            total_number_of_tiles,
+                     const std::size_t            size,
+                     storage_type&                storage,
+                     const std::size_t* const     global_head_count,
+                     const AccumulatorType* const previous_accumulated)
     {
+
         static constexpr unsigned int items_per_tile = BlockSize * ItemsPerThread;
 
         auto wrapped_op = [&](const wrapped_type& lhs, const wrapped_type& rhs)
@@ -265,12 +266,12 @@ public:
         const std::size_t global_tile_id = starting_tile + tile_id;
         // first and last tiles across all launches
         const bool is_global_first_tile = global_tile_id == 0;
-        const bool is_global_last_tile  = global_tile_id == number_of_tiles - 1;
+        const bool is_global_last_tile  = global_tile_id == total_number_of_tiles - 1;
         // first tile in this launch
         const bool is_first_tile = tile_id == 0;
 
         const unsigned int valid_in_global_last_tile
-            = static_cast<unsigned int>(size - ((number_of_tiles - 1) * items_per_tile));
+            = static_cast<unsigned int>(size - ((total_number_of_tiles - 1) * items_per_tile));
 
         const unsigned int flat_thread_id = threadIdx.x;
 
@@ -309,22 +310,22 @@ public:
         // multiple launches occur due to large indices
         if(is_first_tile)
         {
-            // previous_last_value is used to pass the value from the previous launch
-            if(previous_last_value != nullptr)
+            wrapped_type initial_value = ::rocprim::make_tuple(0u, values[0] /* dummy value */);
+
+            // previous_accumulated is used to pass the accumulated value from the previous launch
+            if(previous_accumulated != nullptr)
             {
-                segment_heads_before = rocprim::get<0>(*previous_last_value);
-                if(flat_thread_id == 0)
-                {
-                    wrapped_values[0] = wrapped_op(*previous_last_value, wrapped_values[0]);
-                }
+                initial_value = ::rocprim::make_tuple(0u, *previous_accumulated);
             }
 
             block_scan_type{}.exclusive_scan(wrapped_values,
                                              wrapped_values,
-                                             rocprim::make_tuple(0u, values[0]),
+                                             initial_value,
                                              reduction,
                                              storage.scan.scan,
                                              wrapped_op);
+            // include initial_value in the block reduction
+            reduction = wrapped_op(initial_value, reduction);
 
             if(flat_thread_id == 0)
             {
@@ -332,11 +333,6 @@ public:
             }
 
             segment_heads_in_block = rocprim::get<0>(reduction);
-            // prevent counting the same segment heads two times
-            if(previous_last_value != nullptr)
-            {
-                segment_heads_in_block -= segment_heads_before;
-            }
         }
         else
         {
@@ -364,12 +360,15 @@ public:
         }
         rocprim::syncthreads();
 
+        const std::size_t segment_heads_in_previous_launches
+            = global_head_count != nullptr ? *global_head_count : 0u;
+
         // At this point each item that is flagged as segment head has
         // - The first key of the segment
         // - The number of segments before it (exclusive scan of head_flags)
         // - The reduction of the previous segment
         scatter_keys_type{}.scatter(
-            unique_keys + segment_heads_before,
+            unique_keys + segment_heads_in_previous_launches + segment_heads_before,
             [&keys](unsigned int i) { return keys[i]; },
             head_flags,
             [&](const unsigned int i)
@@ -394,7 +393,8 @@ public:
             head_flags[valid_in_global_last_tile - flat_thread_id * ItemsPerThread] = 1;
         }
         scatter_values_type{}.scatter(
-            reductions + segment_heads_before - (!is_global_first_tile ? 1 : 0),
+            reductions + segment_heads_in_previous_launches + segment_heads_before
+                - (!is_global_first_tile ? 1 : 0),
             [&wrapped_values](unsigned int i) { return rocprim::get<1>(wrapped_values[i]); },
             head_flags,
             [&, offset = segment_heads_before + (is_global_first_tile ? 1 : 0)](
@@ -405,8 +405,9 @@ public:
 
         if(is_global_last_tile && flat_thread_id == BlockSize - 1)
         {
-            const unsigned int total_segment_heads = segment_heads_before + segment_heads_in_block;
-            *unique_count                          = total_segment_heads;
+            const std::size_t total_segment_heads = segment_heads_in_previous_launches
+                                                    + segment_heads_before + segment_heads_in_block;
+            *unique_count = total_segment_heads;
             if(valid_in_global_last_tile == items_per_tile)
             {
                 reductions[total_segment_heads - 1] = rocprim::get<1>(reduction);
@@ -416,6 +417,7 @@ public:
 };
 
 template<typename Config,
+         typename AccumulatorType,
          typename KeyIterator,
          typename ValueIterator,
          typename UniqueIterator,
@@ -424,21 +426,22 @@ template<typename Config,
          typename CompareFunction,
          typename BinaryOp,
          typename LookbackScanState>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(
-    KeyIterator                    keys_input,
-    ValueIterator                  values_input,
-    const UniqueIterator           unique_keys,
-    const ReductionIterator        reductions,
-    const UniqueCountIterator      unique_count,
-    const BinaryOp                 reduce_op,
-    const CompareFunction          compare,
-    const LookbackScanState        scan_state,
-    ordered_block_id<unsigned int> ordered_tile_id,
-    const std::size_t              starting_tile,
-    const std::size_t              number_of_tiles,
-    const std::size_t              size,
-    const wrapped_type_t<reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>>* const
-        previous_last_value)
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+    kernel_impl(KeyIterator                    keys_input,
+                ValueIterator                  values_input,
+                const UniqueIterator           unique_keys,
+                const ReductionIterator        reductions,
+                const UniqueCountIterator      unique_count,
+                const BinaryOp                 reduce_op,
+                const CompareFunction          compare,
+                const LookbackScanState        scan_state,
+                ordered_block_id<unsigned int> ordered_tile_id,
+                const std::size_t              starting_tile,
+                const std::size_t              total_number_of_tiles,
+                const std::size_t              size,
+                const std::size_t* const       global_head_count,
+                const AccumulatorType* const   previous_accumulated,
+                const std::size_t              number_of_tiles_launch)
 {
     static constexpr unsigned int         block_size         = Config::block_size;
     static constexpr unsigned int         items_per_thread   = Config::items_per_thread;
@@ -448,11 +451,10 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(
     static constexpr block_scan_algorithm scan_algorithm     = Config::scan_algorithm;
     static constexpr unsigned int         items_per_tile     = block_size * items_per_thread;
 
-    using key_type         = reduce_by_key::value_type_t<KeyIterator>;
-    using accumulator_type = reduce_by_key::accumulator_type_t<ValueIterator, BinaryOp>;
+    using key_type = reduce_by_key::value_type_t<KeyIterator>;
 
     using tile_processor = tile_helper<key_type,
-                                       accumulator_type,
+                                       AccumulatorType,
                                        block_size,
                                        items_per_thread,
                                        load_keys_method,
@@ -469,7 +471,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(
     {
         rocprim::syncthreads();
         const std::size_t tile_id = ordered_tile_id.get(threadIdx.x, storage.tile_id);
-        if(tile_id >= number_of_tiles)
+        if(tile_id >= number_of_tiles_launch)
         {
             return;
         }
@@ -489,10 +491,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_impl(
                                       scan_state,
                                       tile_id,
                                       starting_tile,
-                                      number_of_tiles,
+                                      total_number_of_tiles,
                                       size,
                                       storage.tile,
-                                      previous_last_value);
+                                      global_head_count,
+                                      previous_accumulated);
     }
 }
 
