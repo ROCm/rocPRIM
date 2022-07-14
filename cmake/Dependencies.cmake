@@ -59,8 +59,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Global flag to cause add_library() to crea
 # HIP dependency is handled earlier in the project cmake file
 # when VerifyCompiler.cmake is included (when not using HIP-CPU).
 
-# For downloading, building, and installing required dependencies
-include(cmake/DownloadProject.cmake)
+include(FetchContent)
 
 if(USE_HIP_CPU)
   find_package(Threads REQUIRED)
