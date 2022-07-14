@@ -103,7 +103,7 @@ endif(USE_HIP_CPU)
 
 # Test dependencies
 if(BUILD_TEST)
-  # NOTE: Google Test has created a mess with legacy FindGTest.cmake and newer GTestConfig.cmake
+  # NOTE1: Google Test has created a mess with legacy FindGTest.cmake and newer GTestConfig.cmake
   #
   # FindGTest.cmake defines:   GTest::GTest, GTest::Main, GTEST_FOUND
   #
@@ -111,33 +111,43 @@ if(BUILD_TEST)
   #
   # NOTE2: Finding GTest in MODULE mode, one cannot invoke find_package in CONFIG mode, because targets
   #        will be duplicately defined.
+  #
+  # NOTE3: The following snippet first tries to find Google Test binary either in MODULE or CONFIG modes.
+  #        If neither succeeds it goes on to import Google Test into this build either from a system
+  #        source package (apt install googletest on Ubuntu 18.04 only) or GitHub and defines the MODULE
+  #        mode targets. Otherwise if MODULE or CONFIG succeeded, then it prints the result to the
+  #        console via a non-QUIET find_package call and if CONFIG succeeded, creates ALIAS targets
+  #        with the MODULE IMPORTED names.
   if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-    # Google Test (https://github.com/google/googletest)
     find_package(GTest QUIET)
   endif()
-
   if(NOT TARGET GTest::GTest AND NOT TARGET GTest::gtest)
-    message(STATUS "GTest not found or force download GTest on. Downloading and building GTest.")
-    if(CMAKE_CONFIGURATION_TYPES)
-      message(FATAL_ERROR "DownloadProject.cmake doesn't support multi-configuration generators.")
-    endif()
-    set(GTEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/deps/gtest CACHE PATH "")
-    download_project(
-      PROJ                googletest
-      GIT_REPOSITORY      https://github.com/google/googletest.git
-      GIT_TAG             release-1.11.0
-      INSTALL_DIR         ${GTEST_ROOT}
-      CMAKE_ARGS          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} -DBUILD_GTEST=ON -DINSTALL_GTEST=ON -Dgtest_force_shared_crt=ON -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-      LOG_DOWNLOAD        TRUE
-      LOG_CONFIGURE       TRUE
-      LOG_BUILD           TRUE
-      LOG_INSTALL         TRUE
-      BUILD_PROJECT       TRUE
-      UPDATE_DISCONNECTED TRUE # Never update automatically from the remote repository
+    if(EXISTS /usr/src/googletest AND NOT DEPENDENCIES_FORCE_DOWNLOAD)
+      option(BUILD_GTEST "Builds the googletest subproject" ON)
+      option(BUILD_GMOCK "Builds the googlemock subproject" OFF)
+      FetchContent_Declare(
+        googletest
+        SOURCE_DIR /usr/src/googletest
     )
-    find_package(GTest CONFIG REQUIRED PATHS ${GTEST_ROOT})
+    else()
+      message(STATUS "Google Test not found. Fetching...")
+      FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG        e2239ee6043f73722e7aa812a459f54a28552929 # release-1.11.0
+      )
   endif()
+    FetchContent_MakeAvailable(googletest)
+    add_library(GTest::GTest ALIAS gtest)
+    add_library(GTest::Main  ALIAS gtest_main)
+  else()
+    find_package(GTest REQUIRED)
+    if(TARGET GTest::gtest_main AND NOT TARGET GTest::Main)
+      add_library(GTest::GTest ALIAS GTest::gtest)
+      add_library(GTest::Main  ALIAS GTest::gtest_main)
 endif()
+  endif()
+endif(BUILD_TEST)
 
 # Benchmark dependencies
 if(BUILD_BENCHMARK)

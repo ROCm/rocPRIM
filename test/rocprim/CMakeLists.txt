@@ -49,12 +49,6 @@ function(add_rocprim_test_internal TEST_NAME TEST_SOURCES TEST_TARGET)
         GTest::GTest
         GTest::Main
     )
-  else()
-    target_link_libraries(${TEST_TARGET}
-      PRIVATE
-        GTest::gtest
-        GTest::gtest_main
-    )
   endif()
   if(NOT USE_HIP_CPU)
     target_link_libraries(${TEST_TARGET}
