@@ -149,42 +149,26 @@ endif()
   endif()
 endif(BUILD_TEST)
 
-# Benchmark dependencies
 if(BUILD_BENCHMARK)
   if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-    # Google Benchmark (https://github.com/google/benchmark.git)
-    find_package(benchmark QUIET)
+    find_package(benchmark CONFIG QUIET)
   endif()
-
-  if(NOT benchmark_FOUND)
-    message(STATUS "Google Benchmark not found or force download Google Benchmark on. Downloading and building Google Benchmark.")
-    if(CMAKE_CONFIGURATION_TYPES)
-      message(FATAL_ERROR "DownloadProject.cmake doesn't support multi-configuration generators.")
-    endif()
-    set(GOOGLEBENCHMARK_ROOT ${CMAKE_CURRENT_BINARY_DIR}/deps/googlebenchmark CACHE PATH "")
-    if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
-      # hip-clang cannot compile googlebenchmark for some reason
-      set(COMPILER_OVERRIDE "-DCMAKE_CXX_COMPILER=g++")
-    endif()
-
-    download_project(
-      PROJ           googlebenchmark
+  if(NOT TARGET benchmark::benchmark)
+    message(STATUS "Google Benchmark not found. Fetching...")
+    option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." OFF)
+    FetchContent_Declare(
+      googlebench
       GIT_REPOSITORY https://github.com/google/benchmark.git
-      GIT_TAG        v1.6.1
-      INSTALL_DIR    ${GOOGLEBENCHMARK_ROOT}
-      CMAKE_ARGS     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} -DBENCHMARK_ENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_CXX_STANDARD=14 ${COMPILER_OVERRIDE}
-      LOG_DOWNLOAD   TRUE
-      LOG_CONFIGURE  TRUE
-      LOG_BUILD      TRUE
-      LOG_INSTALL    TRUE
-      BUILD_PROJECT  TRUE
-      UPDATE_DISCONNECTED TRUE
+      GIT_TAG        9913418d323e64a0111ca0da81388260c2bbe1e9 # v1.4.0
     )
+    FetchContent_MakeAvailable(googlebench)
+    if(NOT TARGET benchmark::benchmark)
+      add_library(benchmark::benchmark ALIAS benchmark)
   endif()
-  find_package(benchmark REQUIRED CONFIG PATHS ${GOOGLEBENCHMARK_ROOT})
+  else()
+    find_package(benchmark CONFIG REQUIRED)
 endif()
-
-set(PROJECT_EXTERN_DIR ${CMAKE_CURRENT_BINARY_DIR}/extern)
+endif(BUILD_BENCHMARK)
 
 # By default, rocm software stack is expected at /opt/rocm
 # set environment variable ROCM_PATH to change location
