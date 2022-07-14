@@ -79,12 +79,12 @@ if(USE_HIP_CPU)
   else()
     find_package(hip_cpu_rt REQUIRED)
     # If we found HIP-CPU as binary, search for transitive dependencies
-  find_package(Threads REQUIRED)
-  set(CMAKE_REQUIRED_FLAGS "-std=c++17")
-  include(CheckCXXSymbolExists)
-  check_cxx_symbol_exists(__GLIBCXX__ "cstddef" STL_IS_GLIBCXX)
-  set(STL_DEPENDS_ON_TBB ${STL_IS_GLIBCXX})
-  if(STL_DEPENDS_ON_TBB)
+    find_package(Threads REQUIRED)
+    set(CMAKE_REQUIRED_FLAGS "-std=c++17")
+    include(CheckCXXSymbolExists)
+    check_cxx_symbol_exists(__GLIBCXX__ "cstddef" STL_IS_GLIBCXX)
+    set(STL_DEPENDS_ON_TBB ${STL_IS_GLIBCXX})
+    if(STL_DEPENDS_ON_TBB)
       find_package(TBB QUIET)
       if(NOT TARGET TBB::tbb AND NOT TARGET tbb)
         message(STATUS "Thread Building Blocks not found. Fetching...")
@@ -92,12 +92,12 @@ if(USE_HIP_CPU)
           thread-building-blocks
           GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
           GIT_TAG        3df08fe234f23e732a122809b40eb129ae22733f # v2021.5.0
-      )
+        )
         FetchContent_MakeAvailable(thread-building-blocks)
       else()
         find_package(TBB REQUIRED)
-    endif()
-  endif(STL_DEPENDS_ON_TBB)
+      endif()
+    endif(STL_DEPENDS_ON_TBB)
   endif()
 endif(USE_HIP_CPU)
 
@@ -128,7 +128,7 @@ if(BUILD_TEST)
       FetchContent_Declare(
         googletest
         SOURCE_DIR /usr/src/googletest
-    )
+      )
     else()
       message(STATUS "Google Test not found. Fetching...")
       FetchContent_Declare(
@@ -136,7 +136,7 @@ if(BUILD_TEST)
         GIT_REPOSITORY https://github.com/google/googletest.git
         GIT_TAG        e2239ee6043f73722e7aa812a459f54a28552929 # release-1.11.0
       )
-  endif()
+    endif()
     FetchContent_MakeAvailable(googletest)
     add_library(GTest::GTest ALIAS gtest)
     add_library(GTest::Main  ALIAS gtest_main)
@@ -145,7 +145,7 @@ if(BUILD_TEST)
     if(TARGET GTest::gtest_main AND NOT TARGET GTest::Main)
       add_library(GTest::GTest ALIAS GTest::gtest)
       add_library(GTest::Main  ALIAS GTest::gtest_main)
-endif()
+    endif()
   endif()
 endif(BUILD_TEST)
 
@@ -164,36 +164,34 @@ if(BUILD_BENCHMARK)
     FetchContent_MakeAvailable(googlebench)
     if(NOT TARGET benchmark::benchmark)
       add_library(benchmark::benchmark ALIAS benchmark)
-  endif()
+    endif()
   else()
     find_package(benchmark CONFIG REQUIRED)
-endif()
+  endif()
 endif(BUILD_BENCHMARK)
 
-# By default, rocm software stack is expected at /opt/rocm
-# set environment variable ROCM_PATH to change location
-if(NOT ROCM_PATH)
-  set(ROCM_PATH /opt/rocm)
+if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
+  find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
 endif()
-
-find_package(ROCM 0.7.3 CONFIG QUIET PATHS ${ROCM_PATH} /opt/rocm)
 if(NOT ROCM_FOUND)
-  set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
-  set(rocm_cmake_url "https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.zip")
-  set(rocm_cmake_path "${PROJECT_EXTERN_DIR}/rocm-cmake-${rocm_cmake_tag}")
-  set(rocm_cmake_archive "${rocm_cmake_path}.zip")
-  file(DOWNLOAD "${rocm_cmake_url}" "${rocm_cmake_archive}" STATUS status LOG log)
-
-  list(GET status 0 status_code)
-  list(GET status 1 status_string)
+  if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
+    message(STATUS "ROCm CMake not found. Fetching...")
+    FetchContent_Declare(
+      rocm-cmake
+      URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/refs/tags/rocm-5.2.0.tar.gz
+    )
+    FetchContent_MakeAvailable(rocm-cmake)
+    list(APPEND CMAKE_MODULE_PATH "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src/share/rocm/cmake")
+  endif()
+endif()
 
 # Restore user global state
 set(CMAKE_CXX_FLAGS ${USER_CXX_FLAGS})
 if(DEFINED USER_BUILD_SHARED_LIBS)
   set(BUILD_SHARED_LIBS ${USER_BUILD_SHARED_LIBS})
-  else()
+else()
   unset(BUILD_SHARED_LIBS CACHE )
-  endif()
+endif()
 set(ROCM_WARN_TOOLCHAIN_VAR ${USER_ROCM_WARN_TOOLCHAIN_VAR} CACHE BOOL "")
 
 include(ROCMSetupVersion)
