@@ -27,6 +27,7 @@ include:
       - /defaults.yaml
       - /deps-cmake.yaml
       - /deps-rocm.yaml
+      - /deps-vcpkg.yaml
       - /gpus-rocm.yaml
       - /rules.yaml
 
@@ -56,6 +57,69 @@ clang-format:
     - cd $CI_PROJECT_DIR
     - git config --global --add safe.directory $CI_PROJECT_DIR
     - scripts/code-format/check-format.sh $CI_MERGE_REQUEST_DIFF_BASE_SHA --binary "$CLANG_FORMAT"
+
+.cmake-minimum-vcpkg:
+  extends:
+    - .deps:rocm
+    - .deps:cmake-minimum
+    - .deps:rocm-vcpkg
+  before_script:
+    - !reference [".deps:rocm", before_script]
+    - !reference [".deps:cmake-minimum", before_script]
+    - !reference [".deps:rocm-vcpkg", before_script]
+    - $VCPKG_DIR/vcpkg install
+        gtest
+        benchmark
+
+.cmake-minimum-apt:
+  extends:
+    - .deps:rocm
+    - .deps:cmake-minimum
+  before_script:
+    - !reference [".deps:rocm", before_script]
+    - !reference [".deps:cmake-minimum", before_script]
+    - $SUDO_CMD apt-get install -y -qq
+        libgtest-dev
+        libbenchmark-dev
+
+.build:vcpkg-apt:
+  stage: build
+  tags:
+    - rocm-build
+  extends:
+    - .gpus:rocm-gpus
+    - .rules:build
+  script:
+    - cmake
+      -G Ninja
+      -D CMAKE_CXX_COMPILER="$AMDCLANG"
+      -D CMAKE_CXX_FLAGS="-Wall -Wextra -Werror"
+      -D CMAKE_BUILD_TYPE=Release
+      `if [[ "$VCPKG_DIR" ]]; then echo -D CMAKE_TOOLCHAIN_FILE=$VCPKG_DIR/scripts/buildsystems/vcpkg.cmake; fi;`
+      -D BUILD_TEST=ON
+      -D BUILD_EXAMPLE=ON
+      -D BUILD_BENCHMARK=ON
+      -D GPU_TARGETS=$GPU_TARGETS
+      -D AMDGPU_TEST_TARGETS=$GPU_TARGETS
+      -S $CI_PROJECT_DIR
+      -B $BUILD_DIR
+    - cmake
+      --build $BUILD_DIR
+      --target test_basic benchmark_config_dispatch
+
+build:cmake-minimum-vcpkg:
+  stage: build
+  needs: []
+  extends:
+    - .cmake-minimum-vcpkg
+    - .build:vcpkg-apt
+
+build:cmake-minimum-apt:
+  stage: build
+  needs: []
+  extends:
+    - .cmake-minimum-apt
+    - .build:vcpkg-apt
 
 .cmake-latest:
   extends:
