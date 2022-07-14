@@ -24,8 +24,40 @@
 # rocPRIM dependencies
 # ###########################
 
+# NOTE1: the reason we don't scope global state meddling using add_subdirectory
+#        is because CMake < 3.24 lacks CMAKE_FIND_PACKAGE_TARGETS_GLOBAL which
+#        would promote IMPORTED targets of find_package(CONFIG) to be visible
+#        by other parts of the build. So we save and restore global state.
+#
+# NOTE2: We disable the ROCMChecks.cmake warning noting that we meddle with
+#        global state. This is consequence of abusing the CMake CXX language
+#        which HIP piggybacks on top of. This kind of HIP support has one chance
+#        at observing the global flags, at the find_package(HIP) invocation.
+#        The device compiler won't be able to pick up changes after that, hence
+#        the warning.
+set(USER_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+if(DEFINED BUILD_SHARED_LIBS)
+  set(USER_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+endif()
+set(USER_ROCM_WARN_TOOLCHAIN_VAR ${ROCM_WARN_TOOLCHAIN_VAR})
+
+set(ROCM_WARN_TOOLCHAIN_VAR OFF CACHE BOOL "")
+# Turn off warnings and errors for all warnings in dependencies
+separate_arguments(CXX_FLAGS_LIST NATIVE_COMMAND ${CMAKE_CXX_FLAGS})
+list(REMOVE_ITEM CXX_FLAGS_LIST /WX -Werror -Werror=pendantic -pedantic-errors)
+if(MSVC)
+  list(FILTER CXX_FLAGS_LIST EXCLUDE REGEX "/[Ww]([0-4]?)(all)?") # Remove MSVC warning flags
+  list(APPEND CXX_FLAGS_LIST /w)
+else()
+  list(FILTER CXX_FLAGS_LIST EXCLUDE REGEX "-W(all|extra|everything)") # Remove GCC/LLVM flags
+  list(APPEND CXX_FLAGS_LIST -w)
+endif()
+list(JOIN CXX_FLAGS_LIST " " CMAKE_CXX_FLAGS)
+# Don't build client dependencies as shared
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Global flag to cause add_library() to create shared libraries if on." FORCE)
+
 # HIP dependency is handled earlier in the project cmake file
-# when VerifyCompiler.cmake is included.
+# when VerifyCompiler.cmake is included (when not using HIP-CPU).
 
 # For downloading, building, and installing required dependencies
 include(cmake/DownloadProject.cmake)
@@ -184,24 +216,14 @@ if(NOT ROCM_FOUND)
   list(GET status 0 status_code)
   list(GET status 1 status_string)
 
-  if(status_code EQUAL 0)
-    message(STATUS "downloading... done")
+# Restore user global state
+set(CMAKE_CXX_FLAGS ${USER_CXX_FLAGS})
+if(DEFINED USER_BUILD_SHARED_LIBS)
+  set(BUILD_SHARED_LIBS ${USER_BUILD_SHARED_LIBS})
   else()
-    message(FATAL_ERROR "error: downloading\n'${rocm_cmake_url}' failed
-    status_code: ${status_code}
-    status_string: ${status_string}
-    log: ${log}\n")
+  unset(BUILD_SHARED_LIBS CACHE )
   endif()
-
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzvf "${rocm_cmake_archive}"
-    WORKING_DIRECTORY ${PROJECT_EXTERN_DIR})
-  execute_process( COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${PROJECT_EXTERN_DIR}/rocm-cmake .
-    WORKING_DIRECTORY ${PROJECT_EXTERN_DIR}/rocm-cmake-${rocm_cmake_tag} )
-  execute_process( COMMAND ${CMAKE_COMMAND} --build rocm-cmake-${rocm_cmake_tag} --target install
-    WORKING_DIRECTORY ${PROJECT_EXTERN_DIR})
-
-  find_package( ROCM 0.7.3 REQUIRED CONFIG PATHS ${PROJECT_EXTERN_DIR}/rocm-cmake )
-endif()
+set(ROCM_WARN_TOOLCHAIN_VAR ${USER_ROCM_WARN_TOOLCHAIN_VAR} CACHE BOOL "")
 
 include(ROCMSetupVersion)
 include(ROCMCreatePackage)
