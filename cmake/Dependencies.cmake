@@ -62,66 +62,44 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Global flag to cause add_library() to crea
 include(FetchContent)
 
 if(USE_HIP_CPU)
+  if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
+    find_package(hip_cpu_rt QUIET)
+  endif()
+  if(NOT TARGET hip_cpu_rt::hip_cpu_rt)
+    message(STATUS "HIP-CPU runtime not found. Fetching...")
+    FetchContent_Declare(
+      hip-cpu
+      GIT_REPOSITORY https://github.com/ROCm-Developer-Tools/HIP-CPU.git
+      GIT_TAG        56f559c93be210bb300dad3673c06d2bb0119d13 # master@2022.07.01
+    )
+    FetchContent_MakeAvailable(hip-cpu)
+    if(NOT TARGET hip_cpu_rt::hip_cpu_rt)
+      add_library(hip_cpu_rt::hip_cpu_rt ALIAS hip_cpu_rt)
+    endif()
+  else()
+    find_package(hip_cpu_rt REQUIRED)
+    # If we found HIP-CPU as binary, search for transitive dependencies
   find_package(Threads REQUIRED)
-
   set(CMAKE_REQUIRED_FLAGS "-std=c++17")
   include(CheckCXXSymbolExists)
   check_cxx_symbol_exists(__GLIBCXX__ "cstddef" STL_IS_GLIBCXX)
   set(STL_DEPENDS_ON_TBB ${STL_IS_GLIBCXX})
   if(STL_DEPENDS_ON_TBB)
-    if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-      # TBB (https://github.com/oneapi-src/oneTBB)
       find_package(TBB QUIET)
-    endif()
-
-    if(NOT TBB_FOUND)
-      message(STATUS "TBB not found or force download TBB on. Downloading and building TBB.")
-      if(CMAKE_CONFIGURATION_TYPES)
-        message(FATAL_ERROR "DownloadProject.cmake doesn't support multi-configuration generators.")
-      endif()
-      set(TBB_ROOT ${CMAKE_CURRENT_BINARY_DIR}/deps/tbb CACHE PATH "")
-      download_project(
-        PROJ                tbb
-        GIT_REPOSITORY      https://github.com/oneapi-src/oneTBB.git
-        GIT_TAG             v2020.3
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        INSTALL_COMMAND ""
-        UPDATE_DISCONNECTED TRUE # Never update automatically from the remote repository
+      if(NOT TARGET TBB::tbb AND NOT TARGET tbb)
+        message(STATUS "Thread Building Blocks not found. Fetching...")
+        FetchContent_Declare(
+          thread-building-blocks
+          GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+          GIT_TAG        3df08fe234f23e732a122809b40eb129ae22733f # v2021.5.0
       )
-      #ExternalProject_Get_Property(tbb SOURCE_DIR)
-      set(TBB_SOURCE_DIR "${CMAKE_BINARY_DIR}/tbb-src")
-      list(APPEND CMAKE_MODULE_PATH "${TBB_SOURCE_DIR}/cmake")
-      include(TBBBuild)
-      tbb_build(TBB_ROOT "${TBB_SOURCE_DIR}" CONFIG_DIR TBB_CONFIG_DIR MAKE_ARGS tbb_build_dir=${TBB_ROOT})
+        FetchContent_MakeAvailable(thread-building-blocks)
+      else()
+        find_package(TBB REQUIRED)
     endif()
-    find_package(TBB REQUIRED CONFIG PATHS ${TBB_CONFIG_DIR} NO_DEFAULT_PATH)
   endif(STL_DEPENDS_ON_TBB)
-
-  if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-    # HIP CPU Runtime (https://github.com/ROCm-Developer-Tools/HIP-CPU)
-    find_package(hip_cpu_rt QUIET)
   endif()
-
-  if(NOT hip_cpu_rt_FOUND)
-    message(STATUS "Downloading and building HIP CPU Runtime.")
-    set(HIP_CPU_ROOT "${CMAKE_CURRENT_BINARY_DIR}/deps/hip-cpu" CACHE PATH "")
-    download_project(
-      PROJ                hip-cpu
-      GIT_REPOSITORY      https://github.com/ROCm-Developer-Tools/HIP-CPU.git
-      GIT_TAG             master
-      INSTALL_DIR         "${HIP_CPU_ROOT}"
-      CMAKE_ARGS          -Dhip_cpu_rt_BUILD_EXAMPLES=OFF -Dhip_cpu_rt_BUILD_TESTING=OFF -DCMAKE_PREFIX_PATH=${TBB_CONFIG_DIR} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-      LOG_DOWNLOAD        TRUE
-      LOG_CONFIGURE       TRUE
-      LOG_BUILD           TRUE
-      LOG_INSTALL         TRUE
-      BUILD_PROJECT       TRUE
-      UPDATE_DISCONNECTED TRUE # Never update automatically from the remote repository
-    )
-  endif()
-  find_package(hip_cpu_rt REQUIRED CONFIG PATHS ${HIP_CPU_ROOT})
-endif()
+endif(USE_HIP_CPU)
 
 # Test dependencies
 if(BUILD_TEST)
