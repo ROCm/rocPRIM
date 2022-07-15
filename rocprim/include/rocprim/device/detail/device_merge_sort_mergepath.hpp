@@ -261,8 +261,8 @@ namespace detail
 
         using block_store = block_store_impl<false, BlockSize, ItemsPerThread, key_type, value_type>;
 
-        using keys_storage_ = key_type[items_per_tile + 1];
-        using values_storage_ = value_type[items_per_tile + 1];
+        using keys_storage_   = key_type[items_per_tile];
+        using values_storage_ = value_type[items_per_tile];
 
         ROCPRIM_SHARED_MEMORY union {
             typename block_store::storage_type   store;
@@ -273,9 +273,9 @@ namespace detail
         auto& keys_shared = storage.keys.get();
         auto& values_shared = storage.values.get();
 
-        const unsigned short flat_id = block_thread_id<0>();
-        const unsigned int flat_block_id = block_id<0>();
-        const bool IsIncompleteTile = flat_block_id == (input_size / items_per_tile);
+        const unsigned short flat_id            = block_thread_id<0>();
+        const unsigned int   flat_block_id      = block_id<0>();
+        const bool           is_incomplete_tile = flat_block_id == (input_size / items_per_tile);
 
         const OffsetT partition_beg = merge_partitions[flat_block_id];
         const OffsetT partition_end = merge_partitions[flat_block_id + 1];
@@ -309,7 +309,7 @@ namespace detail
                                     keys_input + keys2_beg,
                                     num_keys1,
                                     num_keys2,
-                                    IsIncompleteTile);
+                                    is_incomplete_tile);
         // Load keys into shared memory
         reg_to_shared<BlockSize, ItemsPerThread>(keys_shared, keys);
 
@@ -343,7 +343,7 @@ namespace detail
         {
             const ValuesInputIterator input1 = values_input + keys1_beg;
             const ValuesInputIterator input2 = values_input + keys2_beg;
-            if(IsIncompleteTile)
+            if(is_incomplete_tile)
             {
                 ROCPRIM_UNROLL
                 for (unsigned int item = 0; item < ItemsPerThread; ++item)
@@ -377,12 +377,25 @@ namespace detail
             }
 
             rocprim::syncthreads();
-
-            const OffsetT offset = (flat_block_id * items_per_tile) + (threadIdx.x * ItemsPerThread);
-            ROCPRIM_UNROLL
-            for (unsigned int item = 0; item < ItemsPerThread; ++item)
+            const OffsetT thread_offset = items_per_tile * flat_block_id + ItemsPerThread * flat_id;
+            if(is_incomplete_tile)
             {
-                values_output[offset + item] = values_shared[indices[item]];
+                ROCPRIM_UNROLL
+                for(unsigned int item = 0; item < ItemsPerThread; ++item)
+                {
+                    if(flat_id * ItemsPerThread + item < num_keys1 + num_keys2)
+                    {
+                        values_output[thread_offset + item] = values_shared[indices[item]];
+                    }
+                }
+            }
+            else
+            {
+                ROCPRIM_UNROLL
+                for(unsigned int item = 0; item < ItemsPerThread; ++item)
+                {
+                    values_output[thread_offset + item] = values_shared[indices[item]];
+                }
             }
 
             rocprim::syncthreads();
@@ -391,13 +404,13 @@ namespace detail
         const OffsetT offset = flat_block_id * items_per_tile;
         value_type values[ItemsPerThread];
         block_store().store(offset,
-                           input_size - offset,
-                           IsIncompleteTile,
-                           keys_output,
-                           values_output,
-                           keys,
-                           values,
-                           storage.store);
+                            input_size - offset,
+                            is_incomplete_tile,
+                            keys_output,
+                            values_output,
+                            keys,
+                            values,
+                            storage.store);
     }
 
     template<unsigned int BlockSize,

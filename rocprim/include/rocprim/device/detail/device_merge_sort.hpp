@@ -464,7 +464,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto block_sort_kernel_impl(KeysInputIterato
     using block_store_impl
         = block_store_impl<false, BlockSize, ItemsPerThread, key_type, rocprim::empty_type>;
 
-    using values_storage_ = value_type[items_per_block + 1];
+    using values_storage_ = value_type[items_per_block];
     ROCPRIM_SHARED_MEMORY union {
         typename block_load_keys_impl::storage_type   load_keys;
         typename block_sort_impl::storage_type        sort;
@@ -531,6 +531,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto block_sort_kernel_impl(KeysInputIterato
 
     if ROCPRIM_IF_CONSTEXPR(with_values)
     {
+        ::rocprim::syncthreads();
         auto& values_shared = storage.load_values.get();
         if(is_incomplete_block)
         {
@@ -538,9 +539,9 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto block_sort_kernel_impl(KeysInputIterato
             for(unsigned int item = 0; item < ItemsPerThread; ++item)
             {
                 const unsigned int idx = BlockSize * item + flat_id;
-                if(idx < input_size)
+                if(idx < valid_in_last_block)
                 {
-                    values_shared[idx] = values_input[idx];
+                    values_shared[idx] = values_input[block_offset + idx];
                 }
             }
         }
@@ -550,18 +551,32 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto block_sort_kernel_impl(KeysInputIterato
             for(unsigned int item = 0; item < ItemsPerThread; ++item)
             {
                 const unsigned int idx = BlockSize * item + flat_id;
-                values_shared[idx]     = values_input[idx];
+                values_shared[idx]     = values_input[block_offset + idx];
             }
         }
 
         // Synchronize before reusing shared memory
         ::rocprim::syncthreads();
 
-        const OffsetT offset = (flat_block_id * items_per_block) + (threadIdx.x * ItemsPerThread);
-        ROCPRIM_UNROLL
-        for(unsigned int item = 0; item < ItemsPerThread; ++item)
+        const OffsetT thread_offset = block_offset + ItemsPerThread * flat_id;
+        if(is_incomplete_block)
         {
-            values_output[offset + item] = values_shared[ranks[item]];
+            ROCPRIM_UNROLL
+            for(unsigned int item = 0; item < ItemsPerThread; ++item)
+            {
+                if(flat_id * ItemsPerThread + item < valid_in_last_block)
+                {
+                    values_output[thread_offset + item] = values_shared[ranks[item]];
+                }
+            }
+        }
+        else
+        {
+            ROCPRIM_UNROLL
+            for(unsigned int item = 0; item < ItemsPerThread; ++item)
+            {
+                values_output[thread_offset + item] = values_shared[ranks[item]];
+            }
         }
 
         rocprim::syncthreads();
