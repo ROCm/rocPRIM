@@ -325,7 +325,7 @@ run_autotune:
     - build:autotune
   extends:
     - .benchmark_run
-    - .rules:benchmark
+    - .rules:manual
   timeout: 8h
   artifacts:
     paths:
@@ -343,7 +343,7 @@ run_autotune_config:
   stage: autotune_config
   image: python:3.10.5-buster
   extends:
-    - .rules:benchmark
+    - .rules:manual
   needs:
     - run_autotune
   variables:
