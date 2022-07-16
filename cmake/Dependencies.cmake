@@ -159,7 +159,7 @@ if(BUILD_BENCHMARK)
     FetchContent_Declare(
       googlebench
       GIT_REPOSITORY https://github.com/google/benchmark.git
-      GIT_TAG        9913418d323e64a0111ca0da81388260c2bbe1e9 # v1.4.0
+      GIT_TAG        d17ea665515f0c54d100c6fc973632431379f64b # v1.6.1
     )
     FetchContent_MakeAvailable(googlebench)
     if(NOT TARGET benchmark::benchmark)
