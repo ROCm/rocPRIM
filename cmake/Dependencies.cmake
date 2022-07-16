@@ -181,8 +181,8 @@ if(NOT ROCM_FOUND)
       URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/refs/tags/rocm-5.2.0.tar.gz
     )
     FetchContent_MakeAvailable(rocm-cmake)
-    list(APPEND CMAKE_MODULE_PATH "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src/share/rocm/cmake")
   endif()
+  list(APPEND CMAKE_MODULE_PATH "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src/share/rocm/cmake")
 endif()
 
 # Restore user global state
