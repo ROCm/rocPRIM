@@ -259,14 +259,14 @@ hipError_t merge_sort_impl(void * temporary_storage,
     key_type*   keys_buffer;
     value_type* values_buffer;
 
-    const detail::temp_storage_partition parts[] = {
-        detail::temp_storage_partition::ptr_aligned_array(&d_merge_partitions,
-                                                          use_mergepath ? merge_num_partitions : 0),
-        detail::temp_storage_partition::ptr_aligned_array(&keys_buffer, size),
-        detail::temp_storage_partition::ptr_aligned_array(&values_buffer, with_values ? size : 0)};
-
-    const hipError_t partition_result
-        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    const hipError_t partition_result = detail::temp_storage::partition(
+        temporary_storage,
+        storage_size,
+        detail::temp_storage::sequence(
+            detail::temp_storage::ptr_aligned_array(&d_merge_partitions,
+                                                    use_mergepath ? merge_num_partitions : 0),
+            detail::temp_storage::ptr_aligned_array(&keys_buffer, size),
+            detail::temp_storage::ptr_aligned_array(&values_buffer, with_values ? size : 0)));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;

@@ -421,17 +421,18 @@ hipError_t radix_sort_merge_impl(void * temporary_storage,
 
     const bool with_double_buffer = keys_tmp != nullptr;
 
-    key_type*                            keys_tmp_storage;
-    value_type*                          values_tmp_storage;
-    const detail::temp_storage_partition parts[]
-        = {detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
-                                                             !with_double_buffer ? size : 0),
-           detail::temp_storage_partition::ptr_aligned_array(
-               &values_tmp_storage,
-               !with_double_buffer && with_values ? size : 0)};
+    key_type*   keys_tmp_storage;
+    value_type* values_tmp_storage;
 
-    const hipError_t partition_result
-        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    const hipError_t partition_result = detail::temp_storage::partition(
+        temporary_storage,
+        storage_size,
+        detail::temp_storage::sequence(
+            detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
+                                                    !with_double_buffer ? size : 0),
+            detail::temp_storage::ptr_aligned_array(&values_tmp_storage,
+                                                    !with_double_buffer && with_values ? size
+                                                                                       : 0)));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;
@@ -530,18 +531,17 @@ hipError_t radix_sort_iterations_impl(void * temporary_storage,
     key_type*    keys_tmp_storage;
     value_type*  values_tmp_storage;
 
-    const detail::temp_storage_partition parts[]
-        = {detail::temp_storage_partition::ptr_aligned_array(&batch_digit_counts,
-                                                             batches * max_radix_size),
-           detail::temp_storage_partition::ptr_aligned_array(&digit_counts, max_radix_size),
-           detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
-                                                             !with_double_buffer ? size : 0),
-           detail::temp_storage_partition::ptr_aligned_array(
-               &values_tmp_storage,
-               !with_double_buffer && with_values ? size : 0)};
-
-    const hipError_t partition_result
-        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    const hipError_t partition_result = detail::temp_storage::partition(
+        temporary_storage,
+        storage_size,
+        detail::temp_storage::sequence(
+            detail::temp_storage::ptr_aligned_array(&batch_digit_counts, batches * max_radix_size),
+            detail::temp_storage::ptr_aligned_array(&digit_counts, max_radix_size),
+            detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
+                                                    !with_double_buffer ? size : 0),
+            detail::temp_storage::ptr_aligned_array(&values_tmp_storage,
+                                                    !with_double_buffer && with_values ? size
+                                                                                       : 0)));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;

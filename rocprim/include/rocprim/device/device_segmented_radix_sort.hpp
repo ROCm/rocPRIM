@@ -337,8 +337,7 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         && segments >= config::warp_sort_config::partitioning_threshold;
 
     const size_t large_and_small_segment_indices_bytes = segments * sizeof(segment_index_type);
-    const size_t medium_segment_indices_bytes
-        = three_way_partitioning ? segments * sizeof(segment_index_type) : 0;
+    const size_t medium_segment_indices_size           = three_way_partitioning ? segments : 0;
     static constexpr size_t segment_count_output_size = three_way_partitioning ? 2 : 1;
     const size_t            segment_count_output_bytes
         = segment_count_output_size * sizeof(segment_index_type);
@@ -372,21 +371,27 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         return partitioner_result;
     }
 
-    const detail::temp_storage_partition parts[] = {
-        detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
-                                                          !with_double_buffer ? size : 0),
-        detail::temp_storage_partition::ptr_aligned_array(&values_tmp_storage,
-                                                          !with_double_buffer && with_values ? size
-                                                                                             : 0),
-        detail::temp_storage_partition::ptr_aligned_array(&large_segment_indices_output, segments),
-        detail::temp_storage_partition::ptr_aligned_array(&medium_segment_indices_output,
-                                                          medium_segment_indices_bytes),
-        detail::temp_storage_partition::ptr_aligned_array(&segment_count_output,
-                                                          segment_count_output_bytes),
-        detail::temp_storage_partition(&partition_temporary_storage, partition_storage_size)};
-
-    const hipError_t partition_result
-        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    const hipError_t partition_result = detail::temp_storage::partition(
+        temporary_storage,
+        storage_size,
+        detail::temp_storage::sequence(
+            // These are required by both partitioning and by sorting.
+            detail::temp_storage::ptr_aligned_array(&large_segment_indices_output, segments),
+            detail::temp_storage::ptr_aligned_array(&medium_segment_indices_output,
+                                                    medium_segment_indices_size),
+            detail::temp_storage::ptr_aligned_array(&segment_count_output,
+                                                    segment_count_output_size),
+            detail::temp_storage::mutually_exclusive(
+                // Partition temporary storage only needed by partitioning.
+                detail::temp_storage::temp_storage(&partition_temporary_storage,
+                                                   partition_storage_size),
+                // Keys/values temporary storage only needed by sorting.
+                detail::temp_storage::sequence(
+                    detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
+                                                            !with_double_buffer ? size : 0),
+                    detail::temp_storage::ptr_aligned_array(
+                        &values_tmp_storage,
+                        !with_double_buffer && with_values ? size : 0)))));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;

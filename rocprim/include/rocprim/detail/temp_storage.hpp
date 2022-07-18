@@ -24,6 +24,7 @@
 #include <cstddef>
 
 #include "../config.hpp"
+#include "../types.hpp"
 #include "various.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -32,94 +33,163 @@ namespace detail
 
 constexpr const size_t default_alignment = 256;
 
-/// \brief This structure describes some required partition of temporary global memory.
+namespace temp_storage
+{
+struct layout
+{
+    size_t size;
+    size_t alignment = default_alignment;
+};
+
+template<typename T>
 struct temp_storage_partition
 {
-    /// \brief The location of the resulting pointer to the partitioned memory.
-    void** ptr;
-    /// \brief The total number of bytes of global memory that should be partitioned.
-    size_t size;
-    /// \brief The minimum alignment that the memory should have,
-    size_t alignment = default_alignment;
+    T**    dest;
+    layout storage_layout;
 
-    /// \brief Construct a \p temp_storage_partition for some pointer,
-    /// which requires some amount of memory and with some required alignment.
-    /// size and alignment are in bytes.
-    /// \tparam T - The element-type of the array to create a partition for
-    /// \param ptr       - Pointer to where to write the pointer to the partitioned storage.
-    /// \param size      - The number of elements to partition.
-    /// \param alignment - The minimum required alignment of the partition.
-    template<typename T>
-    temp_storage_partition(T** ptr, size_t size, size_t alignment = default_alignment)
-        : ptr(reinterpret_cast<void**>(ptr)), size(size), alignment(alignment)
-    {}
-
-    /// \brief Create a \p temp_storage_partition for a naturally-aligned pointer
-    /// to an array of some number of element.
-    /// items is in elements of T.
-    /// \tparam T    - The element-type of the array to create a partition for
-    /// \param  ptr  - Pointer to where to write to the pointer to the partitioned storage.
-    /// \param  size - The number of elements to partition.
-    template<typename T>
-    static temp_storage_partition ptr_aligned_array(T** ptr, size_t items)
+    layout get_layout()
     {
-        return temp_storage_partition(ptr, sizeof(T) * items, alignof(T));
+        return this->storage_layout;
+    }
+
+    void set_storage(void* const storage)
+    {
+        *this->dest = this->storage_layout.size == 0 ? nullptr : static_cast<T*>(storage);
     }
 };
 
-/// A helper function to compute the total size of temporary storage, and to break it down into
-/// individual pointers. If \p temporary_storage is \p nullptr, this function will only compute
-/// the total amount of temporary memory that is required and write it to \p storage_size.
-/// Otherwise, this function will assign the pointers in each \p temp_storage_partition to the
-/// correct offset from \p temporary_storage. If the passed storage_size is not large enough,
-/// this function will return an error.
-/// This function handles allocation sizes of 0. The alignment of these will not influence the
-/// alignment of other allocations, and the resulting pointer of these will be set to nullptr.
-/// temporary_storage is assumed to have at least the maximum alignment of all requested alignments.
-/// \tparam NumberOfAllocations  - The number of partitions to allocate
-/// \param temporary_storage     - The base pointer to the allocated temporary memory. May be \p nullptr.
-/// \param storage_size [in,out] - The size of \p temporary_storage.
-/// \param parts        [in,out] - The partitions to partition the temporary memory for.
-template<size_t NumberOfAllocations>
-hipError_t partition_temp_storage(void* const temporary_storage,
-                                  size_t&     storage_size,
-                                  const temp_storage_partition (&parts)[NumberOfAllocations])
+template<typename T>
+temp_storage_partition<T> temp_storage(T** dest, layout storage_layout)
 {
-    // Perform an exclusive scan over the sizes, and adjust each offset so that the alignment is correct.
-    size_t offsets[NumberOfAllocations];
-    offsets[0] = 0;
-    for(size_t i = 1; i < NumberOfAllocations; ++i)
+    return temp_storage_partition<T>{dest, storage_layout};
+}
+
+template<typename T>
+temp_storage_partition<T> temp_storage(T** dest, size_t size, size_t alignment = default_alignment)
+{
+    return temp_storage(dest, {size, alignment});
+}
+
+template<typename T>
+temp_storage_partition<T> ptr_aligned_array(T** dest, size_t elements)
+{
+    return temp_storage(dest, elements * sizeof(T), alignof(T));
+}
+
+template<typename... Ts>
+struct sequence_partition
+{
+    ::rocprim::tuple<Ts...> sub_partitions;
+
+    sequence_partition(Ts... sub_partitions) : sub_partitions{sub_partitions...} {}
+
+    layout get_layout()
     {
-        // If the required size of this partitioned is 0, we don't want it to influence the final pointer.
-        const size_t alignment = parts[i].size == 0 ? 1 : parts[i].alignment;
-        offsets[i]             = align_size(offsets[i - 1] + parts[i - 1].size, alignment);
+        size_t required_alignment = 1;
+        size_t required_size      = 0;
+
+        for_each_in_tuple(this->sub_partitions,
+                          [&](auto& sub_partition)
+                          {
+                              const auto sub_layout = sub_partition.get_layout();
+
+                              if(sub_layout.alignment > required_alignment)
+                                  required_alignment = sub_layout.alignment;
+
+                              if(sub_layout.size > 0)
+                                  required_size = align_size(required_size, sub_layout.alignment)
+                                                  + sub_layout.size;
+                          });
+
+        return {required_size, required_alignment};
     }
-    const size_t required_storage_size
-        = offsets[NumberOfAllocations - 1] + parts[NumberOfAllocations - 1].size;
+
+    void set_storage(void* const storage)
+    {
+        size_t offset = 0;
+        for_each_in_tuple(this->sub_partitions,
+                          [&](auto& sub_partition)
+                          {
+                              const auto sub_layout = sub_partition.get_layout();
+
+                              if(sub_layout.size > 0)
+                                  offset = align_size(offset, sub_layout.alignment);
+
+                              sub_partition.set_storage(
+                                  static_cast<void*>(static_cast<char*>(storage) + offset));
+                              offset += sub_layout.size;
+                          });
+    }
+};
+
+template<typename... Ts>
+sequence_partition<Ts...> sequence(Ts... ts)
+{
+    return sequence_partition<Ts...>(ts...);
+}
+
+template<typename... Ts>
+struct mutually_exclusive_partition
+{
+    ::rocprim::tuple<Ts...> sub_partitions;
+
+    mutually_exclusive_partition(Ts... sub_partitions) : sub_partitions{sub_partitions...} {}
+
+    layout get_layout()
+    {
+        size_t required_alignment = 1;
+        size_t required_size      = 0;
+
+        for_each_in_tuple(this->sub_partitions,
+                          [&](auto& sub_partition)
+                          {
+                              const auto sub_layout = sub_partition.get_layout();
+
+                              if(sub_layout.alignment > required_alignment)
+                                  required_alignment = sub_layout.alignment;
+                              if(sub_layout.size > required_size)
+                                  required_size = sub_layout.size;
+                          });
+
+        return {required_size, required_alignment};
+    }
+
+    void set_storage(void* const storage)
+    {
+        for_each_in_tuple(this->sub_partitions,
+                          [&](auto& sub_partition) { sub_partition.set_storage(storage); });
+    }
+};
+
+template<typename... Ts>
+mutually_exclusive_partition<Ts...> mutually_exclusive(Ts... ts)
+{
+    return mutually_exclusive_partition<Ts...>(ts...);
+}
+
+template<typename TempStoragePartition>
+hipError_t
+    partition(void* const temporary_storage, size_t& storage_size, TempStoragePartition partition)
+{
+    const auto layout = partition.get_layout();
 
     if(temporary_storage == nullptr)
     {
-        if(required_storage_size == 0)
-        {
-            // Make sure the user wont try to allocate 0 bytes of memory.
-            required_storage_size = 4;
-        }
-        storage_size = required_storage_size;
+        // Make sure the user wont try to allocate 0 bytes of memory.
+        storage_size = layout.size == 0 ? 4 : layout.size;
         return hipSuccess;
     }
-    else if(storage_size < required_storage_size)
+    else if(storage_size < layout.size)
     {
         return hipErrorInvalidValue;
     }
 
-    char* const base = static_cast<char*>(temporary_storage);
-    for(size_t i = 0; i < NumberOfAllocations; ++i)
-    {
-        *parts[i].ptr = parts[i].size == 0 ? nullptr : static_cast<void*>(base + offsets[i]);
-    }
+    partition.set_storage(temporary_storage);
 
     return hipSuccess;
 }
+} // namespace temp_storage
+
 } // namespace detail
 END_ROCPRIM_NAMESPACE
 

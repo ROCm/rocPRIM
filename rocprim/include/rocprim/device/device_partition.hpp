@@ -182,21 +182,21 @@ hipError_t partition_impl(void * temporary_storage,
     size_t*                         selected_count;
     size_t*                         prev_selected_count;
 
-    const detail::temp_storage_partition parts[] = {
-        detail::temp_storage_partition(&offset_scan_state_storage,
-                                       // This is valid even with offset_scan_state_with_sleep_type
-                                       offset_scan_state_type::get_storage_size(number_of_blocks)),
-        detail::temp_storage_partition(&ordered_bid_storage,
-                                       ordered_block_id_type::get_storage_size(),
-                                       alignof(ordered_block_id_type::id_type)),
-        // Note: the following two are to be allocated continuously, so that they can be initialized
-        // simultaneously.
-        detail::temp_storage_partition::ptr_aligned_array(&selected_count, selected_count_size),
-        detail::temp_storage_partition::ptr_aligned_array(&prev_selected_count,
-                                                          selected_count_size)};
-
-    const hipError_t partition_result
-        = detail::partition_temp_storage(temporary_storage, storage_size, parts);
+    const hipError_t partition_result = detail::temp_storage::partition(
+        temporary_storage,
+        storage_size,
+        detail::temp_storage::sequence(
+            // This is valid even with offset_scan_state_with_sleep_type
+            detail::temp_storage::temp_storage(
+                &offset_scan_state_storage,
+                offset_scan_state_type::get_temp_storage_layout(number_of_blocks)),
+            detail::temp_storage::temp_storage(&ordered_bid_storage,
+                                               ordered_block_id_type::get_temp_storage_layout()),
+            // Note: the following two are to be allocated continuously, so that they can be initialized
+            // simultaneously.
+            // They have the same base type, so there is no padding between the types.
+            detail::temp_storage::ptr_aligned_array(&selected_count, selected_count_size),
+            detail::temp_storage::ptr_aligned_array(&prev_selected_count, selected_count_size)));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;

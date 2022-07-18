@@ -25,6 +25,7 @@
 #include <iterator>
 
 #include "../../config.hpp"
+#include "../../detail/temp_storage.hpp"
 #include "../../detail/various.hpp"
 #include "../config_types.hpp"
 #include "../device_reduce_config.hpp"
@@ -177,6 +178,15 @@ size_t reduce_get_temporary_storage_bytes(size_t input_size,
     }
     auto size = (input_size + items_per_block - 1)/(items_per_block);
     return size * sizeof(T) + reduce_get_temporary_storage_bytes<T>(size, items_per_block);
+}
+
+template<typename T>
+detail::temp_storage::layout reduce_get_temporary_storage_layout(size_t input_size,
+                                                                 size_t items_per_block)
+{
+    return detail::temp_storage::layout{
+        reduce_get_temporary_storage_bytes<T>(input_size, items_per_block),
+        alignof(T)};
 }
 
 } // end of detail namespace
