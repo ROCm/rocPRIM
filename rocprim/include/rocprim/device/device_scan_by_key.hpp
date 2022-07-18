@@ -151,8 +151,10 @@ namespace detail
         wrapped_type*                   previous_last_value;
 
         const detail::temp_storage_partition parts[]
-            = {detail::temp_storage_partition(&scan_state_storage,
-                                              scan_state_type::get_storage_size(number_of_blocks)),
+            = {detail::temp_storage_partition(
+                   &scan_state_storage,
+                   // This is valid even with offset_scan_state_with_sleep_type
+                   scan_state_type::get_storage_size(number_of_blocks)),
                detail::temp_storage_partition(&ordered_bid_storage,
                                               ordered_block_id_type::get_storage_size(),
                                               alignof(ordered_block_id_type::id_type)),

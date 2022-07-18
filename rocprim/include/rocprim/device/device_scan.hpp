@@ -410,16 +410,17 @@ auto scan_impl(void * temporary_storage,
     real_init_value_type*           previous_last_element;
     real_init_value_type*           new_last_element;
 
-    const detail::temp_storage_partition parts[]
-        = {detail::temp_storage_partition(&scan_state_storage,
-                                          scan_state_type::get_storage_size(number_of_blocks)),
-           detail::temp_storage_partition(&ordered_bid_storage,
-                                          ordered_block_id_type::get_storage_size(),
-                                          alignof(ordered_block_id_type::id_type)),
-           detail::temp_storage_partition::ptr_aligned_array(&previous_last_element,
-                                                             use_limited_size ? 1 : 0),
-           detail::temp_storage_partition::ptr_aligned_array(&new_last_element,
-                                                             use_limited_size ? 1 : 0)};
+    const detail::temp_storage_partition parts[] = {
+        detail::temp_storage_partition(&scan_state_storage,
+                                       // This is valid even with offset_scan_state_with_sleep_type
+                                       scan_state_type::get_storage_size(number_of_blocks)),
+        detail::temp_storage_partition(&ordered_bid_storage,
+                                       ordered_block_id_type::get_storage_size(),
+                                       alignof(ordered_block_id_type::id_type)),
+        detail::temp_storage_partition::ptr_aligned_array(&previous_last_element,
+                                                          use_limited_size ? 1 : 0),
+        detail::temp_storage_partition::ptr_aligned_array(&new_last_element,
+                                                          use_limited_size ? 1 : 0)};
 
     hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);

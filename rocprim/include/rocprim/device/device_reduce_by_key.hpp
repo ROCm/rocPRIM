@@ -208,7 +208,6 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     const std::size_t number_of_blocks = detail::ceiling_div(number_of_tiles, tiles_per_block);
 
     // Calculate required temporary storage
-    // This is valid even with scan_state_with_sleep_type
     void*                          scan_state_storage;
     ordered_tile_id_type::id_type* ordered_bid_storage;
     // The number of segment heads in previous launches.
@@ -218,12 +217,15 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 
     const detail::temp_storage_partition parts[]
         = {detail::temp_storage_partition(&scan_state_storage,
-                                    scan_state_type::get_storage_size(number_of_tiles)),
+                                          // This is valid even with scan_state_with_sleep_type
+                                          scan_state_type::get_storage_size(number_of_tiles)),
            detail::temp_storage_partition(&ordered_bid_storage,
-                                    ordered_tile_id_type::get_storage_size(),
-                                    alignof(ordered_tile_id_type::id_type)),
-           detail::temp_storage_partition::ptr_aligned_array(&d_global_head_count, use_limited_size ? 1 : 0),
-           detail::temp_storage_partition::ptr_aligned_array(&d_previous_accumulated, use_limited_size ? 1 : 0)};
+                                          ordered_tile_id_type::get_storage_size(),
+                                          alignof(ordered_tile_id_type::id_type)),
+           detail::temp_storage_partition::ptr_aligned_array(&d_global_head_count,
+                                                             use_limited_size ? 1 : 0),
+           detail::temp_storage_partition::ptr_aligned_array(&d_previous_accumulated,
+                                                             use_limited_size ? 1 : 0)};
 
     hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);

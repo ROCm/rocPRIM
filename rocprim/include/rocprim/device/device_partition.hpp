@@ -166,6 +166,7 @@ hipError_t partition_impl(void * temporary_storage,
     static constexpr auto items_per_block = block_size * items_per_thread;
 
     static constexpr bool is_three_way = sizeof...(UnaryPredicates) == 2;
+    static constexpr size_t selected_count_size = is_three_way ? 2 : 1;
 
     static constexpr size_t size_limit = config::size_limit;
     static constexpr size_t aligned_size_limit = ::rocprim::max<size_t>(size_limit - (size_limit % items_per_block), items_per_block);
@@ -183,13 +184,16 @@ hipError_t partition_impl(void * temporary_storage,
 
     const detail::temp_storage_partition parts[] = {
         detail::temp_storage_partition(&offset_scan_state_storage,
+                                       // This is valid even with offset_scan_state_with_sleep_type
                                        offset_scan_state_type::get_storage_size(number_of_blocks)),
         detail::temp_storage_partition(&ordered_bid_storage,
                                        ordered_block_id_type::get_storage_size(),
                                        alignof(ordered_block_id_type::id_type)),
-        detail::temp_storage_partition::ptr_aligned_array(&selected_count, is_three_way ? 2 : 1),
+        // Note: the following two are to be allocated continuously, so that they can be initialized
+        // simultaneously.
+        detail::temp_storage_partition::ptr_aligned_array(&selected_count, selected_count_size),
         detail::temp_storage_partition::ptr_aligned_array(&prev_selected_count,
-                                                          is_three_way ? 2 : 1)};
+                                                          selected_count_size)};
 
     hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
@@ -215,7 +219,7 @@ hipError_t partition_impl(void * temporary_storage,
     // Memset selected_count and prev_selected_count at once
     error = hipMemsetAsync(selected_count,
                            0,
-                           sizeof(*selected_count) * 2 * (is_three_way ? 2 : 1),
+                           sizeof(*selected_count) * 2 * selected_count_size,
                            stream);
     if (error != hipSuccess) return error;
 

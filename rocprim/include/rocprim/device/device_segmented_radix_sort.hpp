@@ -372,22 +372,18 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
         return partitioner_result;
     }
 
-    const detail::temp_storage_partition parts[]
-        = {detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
-                                                             !with_double_buffer ? size : 0),
-           detail::temp_storage_partition::ptr_aligned_array(
-               &values_tmp_storage,
-               !with_double_buffer && with_values ? size : 0),
-           detail::temp_storage_partition(&large_segment_indices_output,
-                                          large_and_small_segment_indices_bytes,
-                                          alignof(segment_index_type)),
-           detail::temp_storage_partition(&medium_segment_indices_output,
-                                          medium_segment_indices_bytes,
-                                          alignof(segment_index_type)),
-           detail::temp_storage_partition(&segment_count_output,
-                                          segment_count_output_bytes,
-                                          alignof(segment_index_type)),
-           detail::temp_storage_partition(&partition_temporary_storage, partition_storage_size)};
+    const detail::temp_storage_partition parts[] = {
+        detail::temp_storage_partition::ptr_aligned_array(&keys_tmp_storage,
+                                                          !with_double_buffer ? size : 0),
+        detail::temp_storage_partition::ptr_aligned_array(&values_tmp_storage,
+                                                          !with_double_buffer && with_values ? size
+                                                                                             : 0),
+        detail::temp_storage_partition::ptr_aligned_array(&large_segment_indices_output, segments),
+        detail::temp_storage_partition::ptr_aligned_array(&medium_segment_indices_output,
+                                                          medium_segment_indices_bytes),
+        detail::temp_storage_partition::ptr_aligned_array(&segment_count_output,
+                                                          segment_count_output_bytes),
+        detail::temp_storage_partition(&partition_temporary_storage, partition_storage_size)};
 
     hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
