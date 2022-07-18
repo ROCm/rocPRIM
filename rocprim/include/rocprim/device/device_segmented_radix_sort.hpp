@@ -385,7 +385,7 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
                                                           segment_count_output_bytes),
         detail::temp_storage_partition(&partition_temporary_storage, partition_storage_size)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {

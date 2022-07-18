@@ -223,7 +223,7 @@ auto scan_impl(void * temporary_storage,
            detail::temp_storage_partition::ptr_aligned_array(&new_last_element,
                                                              use_limited_size ? 1 : 0)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
@@ -422,7 +422,7 @@ auto scan_impl(void * temporary_storage,
         detail::temp_storage_partition::ptr_aligned_array(&new_last_element,
                                                           use_limited_size ? 1 : 0)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {

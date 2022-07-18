@@ -166,7 +166,7 @@ hipError_t partition_impl(void * temporary_storage,
     static constexpr auto items_per_block = block_size * items_per_thread;
 
     static constexpr bool is_three_way = sizeof...(UnaryPredicates) == 2;
-    static constexpr size_t selected_count_size = is_three_way ? 2 : 1;
+    static constexpr const size_t selected_count_size = is_three_way ? 2 : 1;
 
     static constexpr size_t size_limit = config::size_limit;
     static constexpr size_t aligned_size_limit = ::rocprim::max<size_t>(size_limit - (size_limit % items_per_block), items_per_block);
@@ -195,7 +195,7 @@ hipError_t partition_impl(void * temporary_storage,
         detail::temp_storage_partition::ptr_aligned_array(&prev_selected_count,
                                                           selected_count_size)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {

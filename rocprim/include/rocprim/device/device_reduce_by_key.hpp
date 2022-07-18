@@ -227,7 +227,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
            detail::temp_storage_partition::ptr_aligned_array(&d_previous_accumulated,
                                                              use_limited_size ? 1 : 0)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {

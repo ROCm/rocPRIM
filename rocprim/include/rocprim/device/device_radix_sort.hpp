@@ -430,7 +430,7 @@ hipError_t radix_sort_merge_impl(void * temporary_storage,
                &values_tmp_storage,
                !with_double_buffer && with_values ? size : 0)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
@@ -540,7 +540,7 @@ hipError_t radix_sort_iterations_impl(void * temporary_storage,
                &values_tmp_storage,
                !with_double_buffer && with_values ? size : 0)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {

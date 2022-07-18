@@ -122,7 +122,7 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
             &previous_values,
             InPlace && num_blocks >= 2 ? num_blocks - 1 : 0)};
 
-    hipError_t partition_result
+    const hipError_t partition_result
         = detail::partition_temp_storage(temporary_storage, storage_size, parts);
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {

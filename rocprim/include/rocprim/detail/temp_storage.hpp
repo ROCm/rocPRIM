@@ -91,10 +91,10 @@ hipError_t partition_temp_storage(void* const temporary_storage,
     for(size_t i = 1; i < NumberOfAllocations; ++i)
     {
         // If the required size of this partitioned is 0, we don't want it to influence the final pointer.
-        size_t alignment = parts[i].size == 0 ? 1 : parts[i].alignment;
-        offsets[i]       = align_size(offsets[i - 1] + parts[i - 1].size, alignment);
+        const size_t alignment = parts[i].size == 0 ? 1 : parts[i].alignment;
+        offsets[i]             = align_size(offsets[i - 1] + parts[i - 1].size, alignment);
     }
-    size_t required_storage_size
+    const size_t required_storage_size
         = offsets[NumberOfAllocations - 1] + parts[NumberOfAllocations - 1].size;
 
     if(temporary_storage == nullptr)
