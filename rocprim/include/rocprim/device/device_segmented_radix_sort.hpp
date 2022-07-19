@@ -336,7 +336,7 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
     const bool do_partitioning = partitioning_allowed
         && segments >= config::warp_sort_config::partitioning_threshold;
 
-    const size_t medium_segment_indices_size           = three_way_partitioning ? segments : 0;
+    const size_t            medium_segment_indices_size = three_way_partitioning ? segments : 0;
     static constexpr size_t segment_count_output_size = three_way_partitioning ? 2 : 1;
     const size_t            segment_count_output_bytes
         = segment_count_output_size * sizeof(segment_index_type);
