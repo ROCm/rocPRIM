@@ -218,13 +218,13 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
-        detail::temp_storage::sequence(
+        detail::temp_storage::make_linear_partition(
             // This is valid even with scan_state_with_sleep_type
-            detail::temp_storage::temp_storage(
+            detail::temp_storage::make_partition(
                 &scan_state_storage,
                 scan_state_type::get_temp_storage_layout(number_of_tiles)),
-            detail::temp_storage::temp_storage(&ordered_bid_storage,
-                                               ordered_tile_id_type::get_temp_storage_layout()),
+            detail::temp_storage::make_partition(&ordered_bid_storage,
+                                                 ordered_tile_id_type::get_temp_storage_layout()),
             detail::temp_storage::ptr_aligned_array(&d_global_head_count, use_limited_size ? 1 : 0),
             detail::temp_storage::ptr_aligned_array(&d_previous_accumulated,
                                                     use_limited_size ? 1 : 0)));

@@ -52,7 +52,7 @@ struct layout
 /// as where to store the allocated pointer.
 /// \tparam T - The base type to allocate temporary memory for.
 template<typename T>
-struct temp_storage_partition
+struct simple_partition
 {
     /// \brief The location to store the pointer to the partitioned memory.
     T** dest;
@@ -74,39 +74,39 @@ struct temp_storage_partition
     }
 };
 
-/// \brief Construct a simple `temp_storage_partition` with a particular layout.
+/// \brief Construct a simple `simple_partition` with a particular layout.
 /// \tparam T              - The base type to allocate temporary memory for
 /// \param  dest           - Pointer to where to store the final allocated pointer
 /// \param  storage_layout - The required layout that the memory allocated to `*dest` should have.
 template<typename T>
-temp_storage_partition<T> temp_storage(T** dest, layout storage_layout)
+simple_partition<T> make_partition(T** dest, layout storage_layout)
 {
-    return temp_storage_partition<T>{dest, storage_layout};
+    return simple_partition<T>{dest, storage_layout};
 }
 
-/// \brief Construct a simple `temp_storage_partition` from a size and an aligment that forms the layout.
+/// \brief Construct a simple `simple_partition` from a size and an aligment that forms the layout.
 /// \tparam T         - The base type to allocate temporary memory for
 /// \param  dest      - Pointer to where to store the final allocated pointer
 /// \param  size      - The required size that the memory allocated to `*dest` should have.
 /// \param  alignment - The required alignment that the memory allocated to `*dest` should have.
 template<typename T>
-temp_storage_partition<T> temp_storage(T** dest, size_t size, size_t alignment = default_alignment)
+simple_partition<T> make_partition(T** dest, size_t size, size_t alignment = default_alignment)
 {
-    return temp_storage(dest, {size, alignment});
+    return make_partition(dest, {size, alignment});
 }
 
-/// \brief Construct a `temp_storage_partition` for a type, given a total number of _elements_ that the allocated
+/// \brief Construct a `simple_partition` for a type, given a total number of _elements_ that the allocated
 /// temporary memory should consist of. The natural alignment for `T` is used.
 /// \tparam T        - The base type to allocate temporary memory for
 /// \param  dest     - Pointer to where to store the final allocated pointer
 /// \param  elements - The number of elements of `T` that the memory allocated to `dest` should consist of.
 template<typename T>
-temp_storage_partition<T> ptr_aligned_array(T** dest, size_t elements)
+simple_partition<T> ptr_aligned_array(T** dest, size_t elements)
 {
-    return temp_storage(dest, elements * sizeof(T), alignof(T));
+    return make_partition(dest, elements * sizeof(T), alignof(T));
 }
 
-/// \brief A partition that represents a sequence of sub-partitions. This structure can be used to
+/// \brief A partition that represents a linear sequence of sub-partitions. This structure can be used to
 /// allocate multiple sub-partitions, each of which are sequentially allocated in order, and packed
 /// such that the only padding between memory of different sub-partitions is due to required alignment.
 /// \tparam Ts - The sub-partitions to allocate temporary memory for. Each should have the following member functions:
@@ -115,13 +115,13 @@ temp_storage_partition<T> ptr_aligned_array(T** dest, size_t elements)
 ///     of sub-partitions with the given pointer. `storage` has at least the required size and alignment as described
 ///     by the result of `get_layout()`.
 template<typename... Ts>
-struct sequence_partition
+struct linear_partition
 {
-    /// \brief The sub-partitions in this `sequence_partition`.
+    /// \brief The sub-partitions in this `linear_partition`.
     ::rocprim::tuple<Ts...> sub_partitions;
 
     /// \brief Constructor.
-    sequence_partition(Ts... sub_partitions) : sub_partitions{sub_partitions...} {}
+    linear_partition(Ts... sub_partitions) : sub_partitions{sub_partitions...} {}
 
     /// Compute the required layout for this type and return it.
     layout get_layout()
@@ -166,13 +166,13 @@ struct sequence_partition
     }
 };
 
-/// \brief Construct a `sequence_partition` from sub-partitions.
+/// \brief Construct a `linear_partition` from sub-partitions.
 /// \tparam Ts - The sub-partitions to allocate temporary memory for.
-/// \see sequence_partition
+/// \see linear_partition
 template<typename... Ts>
-sequence_partition<Ts...> sequence(Ts... ts)
+linear_partition<Ts...> make_linear_partition(Ts... ts)
 {
-    return sequence_partition<Ts...>(ts...);
+    return linear_partition<Ts...>(ts...);
 }
 
 /// \brief A partition that represents a union of sub-partitions of temporary memories which are not used
@@ -183,13 +183,13 @@ sequence_partition<Ts...> sequence(Ts... ts)
 ///     of sub-partitions with the given pointer. `storage` has at least the required size and alignment as described
 ///     by the result of `get_layout()`.
 template<typename... Ts>
-struct mutually_exclusive_partition
+struct union_partition
 {
-    /// \brief The sub-partitions in this `mutually_exclusive_partition`.
+    /// \brief The sub-partitions in this `union_partition`.
     ::rocprim::tuple<Ts...> sub_partitions;
 
     /// \brief Constructor.
-    mutually_exclusive_partition(Ts... sub_partitions) : sub_partitions{sub_partitions...} {}
+    union_partition(Ts... sub_partitions) : sub_partitions{sub_partitions...} {}
 
     /// Compute the required layout for this type and return it.
     layout get_layout()
@@ -220,13 +220,13 @@ struct mutually_exclusive_partition
     }
 };
 
-/// \brief Construct a `mutually_exclusive_partition` from sub-partitions.
+/// \brief Construct a `union_partition` from sub-partitions.
 /// \tparam Ts - The sub-partitions to allocate temporary memory for.
-/// \see mutually_exclusive_partition
+/// \see union_partition
 template<typename... Ts>
-mutually_exclusive_partition<Ts...> mutually_exclusive(Ts... ts)
+union_partition<Ts...> make_union_partition(Ts... ts)
 {
-    return mutually_exclusive_partition<Ts...>(ts...);
+    return union_partition<Ts...>(ts...);
 }
 
 /// \brief This function helps with allocating temporary global memory for device algorithms. It serves

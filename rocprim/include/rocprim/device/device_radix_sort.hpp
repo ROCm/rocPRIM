@@ -427,7 +427,7 @@ hipError_t radix_sort_merge_impl(void * temporary_storage,
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
-        detail::temp_storage::sequence(
+        detail::temp_storage::make_linear_partition(
             detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
                                                     !with_double_buffer ? size : 0),
             detail::temp_storage::ptr_aligned_array(&values_tmp_storage,
@@ -534,7 +534,7 @@ hipError_t radix_sort_iterations_impl(void * temporary_storage,
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
-        detail::temp_storage::sequence(
+        detail::temp_storage::make_linear_partition(
             detail::temp_storage::ptr_aligned_array(&batch_digit_counts, batches * max_radix_size),
             detail::temp_storage::ptr_aligned_array(&digit_counts, max_radix_size),
             detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,

@@ -373,19 +373,19 @@ hipError_t segmented_radix_sort_impl(void * temporary_storage,
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
-        detail::temp_storage::sequence(
+        detail::temp_storage::make_linear_partition(
             // These are required by both partitioning and by sorting.
             detail::temp_storage::ptr_aligned_array(&large_segment_indices_output, segments),
             detail::temp_storage::ptr_aligned_array(&medium_segment_indices_output,
                                                     medium_segment_indices_size),
             detail::temp_storage::ptr_aligned_array(&segment_count_output,
                                                     segment_count_output_size),
-            detail::temp_storage::mutually_exclusive(
+            detail::temp_storage::make_union_partition(
                 // Partition temporary storage only needed by partitioning.
-                detail::temp_storage::temp_storage(&partition_temporary_storage,
-                                                   partition_storage_size),
+                detail::temp_storage::make_partition(&partition_temporary_storage,
+                                                     partition_storage_size),
                 // Keys/values temporary storage only needed by sorting.
-                detail::temp_storage::sequence(
+                detail::temp_storage::make_linear_partition(
                     detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
                                                             !with_double_buffer ? size : 0),
                     detail::temp_storage::ptr_aligned_array(

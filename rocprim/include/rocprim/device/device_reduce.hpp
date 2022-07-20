@@ -138,7 +138,7 @@ hipError_t reduce_impl(void * temporary_storage,
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
-        detail::temp_storage::temp_storage(&block_prefixes, reduce_temp_storage_layout));
+        detail::temp_storage::make_partition(&block_prefixes, reduce_temp_storage_layout));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;

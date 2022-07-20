@@ -219,8 +219,8 @@ auto scan_impl(void * temporary_storage,
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
-        detail::temp_storage::sequence(
-            detail::temp_storage::temp_storage(&block_prefixes, nested_prefixes_size_bytes),
+        detail::temp_storage::make_linear_partition(
+            detail::temp_storage::make_partition(&block_prefixes, nested_prefixes_size_bytes),
             detail::temp_storage::ptr_aligned_array(&previous_last_element,
                                                     use_limited_size ? 1 : 0),
             detail::temp_storage::ptr_aligned_array(&new_last_element, use_limited_size ? 1 : 0)));
@@ -412,13 +412,13 @@ auto scan_impl(void * temporary_storage,
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
-        detail::temp_storage::sequence(
+        detail::temp_storage::make_linear_partition(
             // This is valid even with offset_scan_state_with_sleep_type
-            detail::temp_storage::temp_storage(
+            detail::temp_storage::make_partition(
                 &scan_state_storage,
                 scan_state_type::get_temp_storage_layout(number_of_blocks)),
-            detail::temp_storage::temp_storage(&ordered_bid_storage,
-                                               ordered_block_id_type::get_temp_storage_layout()),
+            detail::temp_storage::make_partition(&ordered_bid_storage,
+                                                 ordered_block_id_type::get_temp_storage_layout()),
             detail::temp_storage::ptr_aligned_array(&previous_last_element,
                                                     use_limited_size ? 1 : 0),
             detail::temp_storage::ptr_aligned_array(&new_last_element, use_limited_size ? 1 : 0)));

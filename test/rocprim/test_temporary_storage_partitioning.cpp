@@ -51,7 +51,7 @@ TEST(RocprimTemporaryStoragePartitioningTests, Basic)
     {
         return rpts::partition(temporary_storage,
                                storage_size,
-                               rpts::temp_storage(&test_allocation, size, alignment));
+                               rpts::make_partition(&test_allocation, size, alignment));
     };
 
     size_t storage_size;
@@ -82,7 +82,7 @@ TEST(RocprimTemporaryStoragePartitioningTests, ZeroSizePartition)
     {
         return rpts::partition(temporary_storage,
                                storage_size,
-                               rpts::temp_storage(&test_allocation, size, alignment));
+                               rpts::make_partition(&test_allocation, size, alignment));
     };
 
     size_t storage_size;
@@ -109,7 +109,7 @@ TEST(RocprimTemporaryStoragePartitioningTests, ZeroSizePartitionInsufficientAllo
     {
         return rpts::partition(temporary_storage,
                                storage_size,
-                               rpts::temp_storage(&test_allocation, 0, 1));
+                               rpts::make_partition(&test_allocation, 0, 1));
     };
 
     size_t storage_size;
@@ -148,11 +148,11 @@ TEST(RocprimTemporaryStoragePartitioningTests, Sequence)
         return rpts::partition(
             temporary_storage,
             storage_size,
-            rpts::sequence(rpts::temp_storage(&test_allocation_a, layout_a),
-                           rpts::temp_storage(&test_allocation_b, layout_b),
-                           rpts::temp_storage(&test_allocation_c, layout_c),
-                           rpts::ptr_aligned_array(&test_allocation_d, 0),
-                           rpts::ptr_aligned_array(&test_allocation_e, elements_e)));
+            rpts::make_linear_partition(rpts::make_partition(&test_allocation_a, layout_a),
+                                        rpts::make_partition(&test_allocation_b, layout_b),
+                                        rpts::make_partition(&test_allocation_c, layout_c),
+                                        rpts::ptr_aligned_array(&test_allocation_d, 0),
+                                        rpts::ptr_aligned_array(&test_allocation_e, elements_e)));
     };
 
     size_t storage_size;
@@ -209,11 +209,11 @@ TEST(RocprimTemporaryStoragePartitioningTests, MutuallyExclusive)
         return rpts::partition(
             temporary_storage,
             storage_size,
-            rpts::sequence(
+            rpts::make_linear_partition(
                 rpts::ptr_aligned_array(&test_allocation_a, elements_a),
-                rpts::mutually_exclusive(rpts::temp_storage(&test_allocation_b, layout_b),
-                                         rpts::ptr_aligned_array(&test_allocation_c, elements_c),
-                                         rpts::ptr_aligned_array(&test_allocation_d, 0))));
+                rpts::make_union_partition(rpts::make_partition(&test_allocation_b, layout_b),
+                                           rpts::ptr_aligned_array(&test_allocation_c, elements_c),
+                                           rpts::ptr_aligned_array(&test_allocation_d, 0))));
     };
 
     size_t storage_size;
@@ -258,8 +258,8 @@ TEST(RocprimTemporaryStoragePartitioningTests, InsufficientAllocation)
         return rpts::partition(
             temporary_storage,
             storage_size,
-            rpts::sequence(rpts::temp_storage(&test_allocation_a, size, alignment),
-                           rpts::temp_storage(&test_allocation_b, size, alignment)));
+            rpts::make_linear_partition(rpts::make_partition(&test_allocation_a, size, alignment),
+                                        rpts::make_partition(&test_allocation_b, size, alignment)));
     };
 
     size_t storage_size;
