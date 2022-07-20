@@ -134,8 +134,8 @@ struct sequence_partition
                           {
                               const auto sub_layout = sub_partition.get_layout();
 
-                              if(sub_layout.alignment > required_alignment)
-                                  required_alignment = sub_layout.alignment;
+                              required_alignment
+                                  = std::max(required_alignment, sub_layout.alignment);
 
                               if(sub_layout.size > 0)
                                   required_size = align_size(required_size, sub_layout.alignment)
@@ -175,10 +175,6 @@ sequence_partition<Ts...> sequence(Ts... ts)
     return sequence_partition<Ts...>(ts...);
 }
 
-/// \brief A partition that represents a sequence of sub-partitions. This structure can be used to
-/// allocate multiple sub-partitions, each of which are sequentially allocated in order, and packed
-/// such that the only padding between memory of different sub-partitions is due to required alignment.
-
 /// \brief A partition that represents a union of sub-partitions of temporary memories which are not used
 /// at the same time, and for which the allocated temporary memory can be shared.
 /// \tparam Ts - The sub-partitions to allocate temporary memory for. Each should have the following member functions:
@@ -206,10 +202,9 @@ struct mutually_exclusive_partition
                           {
                               const auto sub_layout = sub_partition.get_layout();
 
-                              if(sub_layout.alignment > required_alignment)
-                                  required_alignment = sub_layout.alignment;
-                              if(sub_layout.size > required_size)
-                                  required_size = sub_layout.size;
+                              required_alignment
+                                  = std::max(required_alignment, sub_layout.alignment);
+                              required_size = std::max(required_size, sub_layout.size);
                           });
 
         return {required_size, required_alignment};
@@ -265,14 +260,15 @@ hipError_t
     partition(void* const temporary_storage, size_t& storage_size, TempStoragePartition partition)
 {
     const auto layout = partition.get_layout();
+    // Make sure the user wont try to allocate 0 bytes of memory.
+    const size_t required_size = layout.size == 0 ? 4 : layout.size;
 
     if(temporary_storage == nullptr)
     {
-        // Make sure the user wont try to allocate 0 bytes of memory.
-        storage_size = layout.size == 0 ? 4 : layout.size;
+        storage_size = required_size;
         return hipSuccess;
     }
-    else if(storage_size < layout.size)
+    else if(storage_size < required_size)
     {
         return hipErrorInvalidValue;
     }

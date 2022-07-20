@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,18 +36,18 @@ static bool is_aligned_to(void* const ptr, const size_t alignment)
 
 static void* displace_ptr(void* const ptr, const size_t offset)
 {
-    return reinterpret_cast<void*>(reinterpret_cast<intptr_t>(ptr) + offset);
+    return reinterpret_cast<char*>(ptr) + offset;
 }
 
 TEST(RocprimTemporaryStoragePartitioningTests, Basic)
 {
-    constexpr const size_t size      = 123;
-    constexpr const size_t alignment = 1;
+    constexpr size_t size      = 123;
+    constexpr size_t alignment = 1;
 
     hipError_t result;
 
-    size_t* test_allocation;
-    auto    partition = [&](void* const temporary_storage, size_t& storage_size)
+    size_t*    test_allocation;
+    const auto partition = [&](void* const temporary_storage, size_t& storage_size)
     {
         return rpts::partition(temporary_storage,
                                storage_size,
@@ -72,13 +72,13 @@ TEST(RocprimTemporaryStoragePartitioningTests, Basic)
 
 TEST(RocprimTemporaryStoragePartitioningTests, ZeroSizePartition)
 {
-    constexpr const size_t size      = 0;
-    constexpr const size_t alignment = 1;
+    constexpr size_t size      = 0;
+    constexpr size_t alignment = 1;
 
     hipError_t result;
 
-    size_t* test_allocation;
-    auto    partition = [&](void* const temporary_storage, size_t& storage_size)
+    size_t*    test_allocation;
+    const auto partition = [&](void* const temporary_storage, size_t& storage_size)
     {
         return rpts::partition(temporary_storage,
                                storage_size,
@@ -100,13 +100,40 @@ TEST(RocprimTemporaryStoragePartitioningTests, ZeroSizePartition)
     HIP_CHECK(hipFree(temporary_storage));
 }
 
+TEST(RocprimTemporaryStoragePartitioningTests, ZeroSizePartitionInsufficientAllocation)
+{
+    hipError_t result;
+
+    size_t*    test_allocation;
+    const auto partition = [&](void* const temporary_storage, size_t& storage_size)
+    {
+        return rpts::partition(temporary_storage,
+                               storage_size,
+                               rpts::temp_storage(&test_allocation, 0, 1));
+    };
+
+    size_t storage_size;
+    result = partition(nullptr, storage_size);
+    ASSERT_EQ(result, hipSuccess);
+    ASSERT_NE(storage_size, 0);
+
+    void* temporary_storage;
+    HIP_CHECK(test_common_utils::hipMallocHelper(&temporary_storage, storage_size));
+
+    storage_size = 0;
+    result       = partition(temporary_storage, storage_size);
+    ASSERT_EQ(result, hipErrorInvalidValue);
+
+    HIP_CHECK(hipFree(temporary_storage));
+}
+
 TEST(RocprimTemporaryStoragePartitioningTests, Sequence)
 {
-    constexpr const rpts::layout layout_a   = {123, 8};
-    constexpr const rpts::layout layout_b   = {10, 8};
-    constexpr const rpts::layout layout_c   = {100, 32};
-    constexpr const size_t       elements_e = 17;
-    using type_e                            = test_utils::custom_test_type<double>;
+    constexpr rpts::layout layout_a   = {123, 8};
+    constexpr rpts::layout layout_b   = {10, 8};
+    constexpr rpts::layout layout_c   = {100, 32};
+    constexpr size_t       elements_e = 17;
+    using type_e                      = test_utils::custom_test_type<double>;
 
     hipError_t result;
 
@@ -116,7 +143,7 @@ TEST(RocprimTemporaryStoragePartitioningTests, Sequence)
     size_t* test_allocation_d;
     type_e* test_allocation_e;
 
-    auto partition = [&](void* const temporary_storage, size_t& storage_size)
+    const auto partition = [&](void* const temporary_storage, size_t& storage_size)
     {
         return rpts::partition(
             temporary_storage,
@@ -163,12 +190,12 @@ TEST(RocprimTemporaryStoragePartitioningTests, Sequence)
 
 TEST(RocprimTemporaryStoragePartitioningTests, MutuallyExclusive)
 {
-    constexpr const size_t elements_a = 1;
-    using type_a                      = char;
+    constexpr size_t elements_a = 1;
+    using type_a                = char;
 
-    constexpr const rpts::layout layout_b   = {50, 1};
-    constexpr const size_t       elements_c = 17;
-    using type_c                            = test_utils::custom_test_type<double>;
+    constexpr rpts::layout layout_b   = {50, 1};
+    constexpr size_t       elements_c = 17;
+    using type_c                      = test_utils::custom_test_type<double>;
 
     hipError_t result;
 
@@ -177,7 +204,7 @@ TEST(RocprimTemporaryStoragePartitioningTests, MutuallyExclusive)
     type_c* test_allocation_c;
     size_t* test_allocation_d;
 
-    auto partition = [&](void* const temporary_storage, size_t& storage_size)
+    const auto partition = [&](void* const temporary_storage, size_t& storage_size)
     {
         return rpts::partition(
             temporary_storage,
@@ -219,14 +246,14 @@ TEST(RocprimTemporaryStoragePartitioningTests, MutuallyExclusive)
 
 TEST(RocprimTemporaryStoragePartitioningTests, InsufficientAllocation)
 {
-    constexpr const size_t size      = 100;
-    constexpr const size_t alignment = 4;
+    constexpr size_t size      = 100;
+    constexpr size_t alignment = 4;
 
     hipError_t result;
 
-    size_t* test_allocation_a;
-    size_t* test_allocation_b;
-    auto    partition = [&](void* const temporary_storage, size_t& storage_size)
+    size_t*    test_allocation_a;
+    size_t*    test_allocation_b;
+    const auto partition = [&](void* const temporary_storage, size_t& storage_size)
     {
         return rpts::partition(
             temporary_storage,
