@@ -31,11 +31,16 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-/// \brief The default alignment to use.
-constexpr const size_t default_alignment = 256;
-
 namespace temp_storage
 {
+
+/// \brief The default alignment to use.
+constexpr size_t default_alignment = 256;
+
+/// \brief The minimum number of bytes to allocate.
+/// hipMalloc cannot allocate 0 bytes, so even if a function does not require any temporary
+/// storage, the user is still instructed to allocate at least this many bytes.
+constexpr size_t minimum_allocation_size = 4;
 
 /// \brief This value-structure describes the required layout of some piece of
 /// temporary memory, which includes the required size and the required alignment.
@@ -261,7 +266,7 @@ hipError_t
 {
     const auto layout = partition.get_layout();
     // Make sure the user wont try to allocate 0 bytes of memory.
-    const size_t required_size = layout.size == 0 ? 4 : layout.size;
+    const size_t required_size = std::max(layout.size, minimum_allocation_size);
 
     if(temporary_storage == nullptr)
     {

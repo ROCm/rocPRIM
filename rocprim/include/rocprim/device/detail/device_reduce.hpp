@@ -166,29 +166,6 @@ void block_reduce_kernel_impl(InputIterator input,
             );
     }
 }
-
-// Returns size of temporary storage in bytes.
-template<class T>
-size_t reduce_get_temporary_storage_bytes(size_t input_size,
-                                          size_t items_per_block)
-{
-    if(input_size <= items_per_block)
-    {
-        return 0;
-    }
-    auto size = (input_size + items_per_block - 1)/(items_per_block);
-    return size * sizeof(T) + reduce_get_temporary_storage_bytes<T>(size, items_per_block);
-}
-
-template<typename T>
-detail::temp_storage::layout reduce_get_temporary_storage_layout(size_t input_size,
-                                                                 size_t items_per_block)
-{
-    return detail::temp_storage::layout{
-        reduce_get_temporary_storage_bytes<T>(input_size, items_per_block),
-        alignof(T)};
-}
-
 } // end of detail namespace
 
 END_ROCPRIM_NAMESPACE
