@@ -204,6 +204,7 @@ build:autotune:
       -D BENCHMARK_CONFIG_TUNING=ON
       -D GPU_TARGETS=$GPU_TARGETS
     - cmake --build . --target $BENCHMARK_TARGETS
+    - 'rm -rf $BUILD_DIR/benchmark/benchmark*.parallel'
   artifacts:
     paths:
       - $BUILD_DIR/benchmark/benchmark*
