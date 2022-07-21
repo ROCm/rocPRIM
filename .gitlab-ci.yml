@@ -326,6 +326,9 @@ run_autotune:
   extends:
     - .benchmark_run
     - .rules:manual
+  variables:
+    #temporarily disabled radix_sort in benchmark_filename_regex
+    AUTOTUNE_FILENAME_REGEX: (?!^benchmark_device_radix_sort$)${BENCHMARK_FILENAME_REGEX}
   timeout: 8h
   artifacts:
     paths:
@@ -336,7 +339,7 @@ run_autotune:
       --benchmark_dir "${BUILD_DIR}/benchmark"
       --benchmark_gpu_architecture "${GPU_TARGET}"
       --benchmark_output_dir "${BENCHMARK_RESULT_DIR}"
-      --benchmark_filename_regex "${BENCHMARK_FILENAME_REGEX}"
+      --benchmark_filename_regex "${AUTOTUNE_FILENAME_REGEX}"
       --benchmark_filter_regex "${BENCHMARK_ALGORITHM_REGEX}" > /dev/null
 
 run_autotune_config:
