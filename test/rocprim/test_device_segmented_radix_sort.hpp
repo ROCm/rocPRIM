@@ -23,7 +23,7 @@
 #ifndef TEST_DEVICE_SEGMENTED_RADIX_SORT_HPP_
 #define TEST_DEVICE_SEGMENTED_RADIX_SORT_HPP_
 
-#include "common_test_header.hpp"
+#include "../common_test_header.hpp"
 
 // required rocprim headers
 #include <rocprim/device/device_segmented_radix_sort.hpp>

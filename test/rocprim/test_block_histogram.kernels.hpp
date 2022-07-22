@@ -29,8 +29,8 @@
 #include <rocprim/block/block_histogram.hpp>
 
 // required test headers
+#include "../common_test_header.hpp"
 #include "test_utils_types.hpp"
-#include "common_test_header.hpp"
 
 template<
     unsigned int BlockSize,
