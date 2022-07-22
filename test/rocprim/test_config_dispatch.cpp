@@ -1,4 +1,4 @@
-#include "common_test_header.hpp"
+#include "../common_test_header.hpp"
 
 #include <rocprim/device/config_types.hpp>
 

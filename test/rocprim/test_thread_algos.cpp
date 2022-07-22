@@ -34,7 +34,7 @@
 #include "rocprim/thread/thread_scan.hpp"
 #include "rocprim/thread/thread_search.hpp"
 
-#include "common_test_header.hpp"
+#include "../common_test_header.hpp"
 #include "test_utils.hpp"
 
 template<class T>
