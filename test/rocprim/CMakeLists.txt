@@ -43,13 +43,11 @@ function(add_rocprim_test_internal TEST_NAME TEST_SOURCES TEST_TARGET)
       $<BUILD_INTERFACE:${COMMON_TEST_HEADER_DIRECTORY}>
   )
 
-  if(TARGET GTest::GTest)
-    target_link_libraries(${TEST_TARGET}
-      PRIVATE
-        GTest::GTest
-        GTest::Main
-    )
-  endif()
+  target_link_libraries(${TEST_TARGET}
+    PRIVATE
+      GTest::GTest
+      GTest::Main
+  )
   if(NOT USE_HIP_CPU)
     target_link_libraries(${TEST_TARGET}
       PRIVATE

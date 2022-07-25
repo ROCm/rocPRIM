@@ -53,13 +53,11 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
       $<BUILD_INTERFACE:${COMMON_TEST_HEADER_DIRECTORY}>
   )
 
-  if(TARGET GTest::GTest)
-    target_link_libraries(${TEST_TARGET}
-      PRIVATE
-        GTest::GTest
-        GTest::Main
-    )
-  endif()
+  target_link_libraries(${TEST_TARGET}
+    PRIVATE
+      GTest::GTest
+      GTest::Main
+  )
   if(NOT USE_HIP_CPU)
     target_link_libraries(${TEST_TARGET}
       PRIVATE
