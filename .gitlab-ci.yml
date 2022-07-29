@@ -62,11 +62,11 @@ clang-format:
   extends:
     - .deps:rocm
     - .deps:cmake-minimum
-    - .deps:rocm-vcpkg
+    - .deps:vcpkg
   before_script:
     - !reference [".deps:rocm", before_script]
     - !reference [".deps:cmake-minimum", before_script]
-    - !reference [".deps:rocm-vcpkg", before_script]
+    - !reference [".deps:vcpkg", before_script]
     - $VCPKG_DIR/vcpkg install
         gtest
         benchmark
