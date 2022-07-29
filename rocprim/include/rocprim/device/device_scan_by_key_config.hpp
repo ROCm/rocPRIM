@@ -34,6 +34,7 @@
 
 #include "config_types.hpp"
 #include "detail/device_config_helper.hpp"
+#include "device_scan_config.hpp"
 
 /// \addtogroup primitivesmodule_deviceconfigs
 /// @{
