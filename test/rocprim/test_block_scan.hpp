@@ -29,7 +29,7 @@ typed_test_suite_def(suite_name_array, name_suffix, block_params);
 typed_test_def(suite_name_single, name_suffix, InclusiveScan)
 {
     using T = typename TestFixture::input_type;
- // for bfloat16 and half we use double for host-side accumulation
+    // for bfloat16 and half we use double for host-side accumulation
     using binary_op_type_host = typename test_utils::select_plus_operator_host<T>::type;
     binary_op_type_host binary_op_host;
     using acc_type = typename test_utils::select_plus_operator_host<T>::acc_type;
@@ -59,7 +59,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScan)
         std::vector<T> output2 = output;
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
             acc_type accumulator(0);
@@ -124,8 +124,8 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanReduce)
         std::vector<T> output_reductions(size / block_size);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
-        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
+        std::vector<T> expected_reductions(output_reductions.size(), T(0));
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
             acc_type accumulator(0);
@@ -201,8 +201,8 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanPrefixCallback)
         T block_prefix = test_utils::get_random_value<T>(0, 5, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
-        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
+        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), T(0));
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
             acc_type accumulator = block_prefix;
@@ -277,7 +277,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScan)
         const T init = test_utils::get_random_value<T>(0, 5, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
             acc_type accumulator(init);
@@ -346,8 +346,8 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanReduce)
         std::vector<T> output_reductions(size / block_size);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
-        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
+        std::vector<T> expected_reductions(output_reductions.size(), T(0));
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
             acc_type accumulator(init);
@@ -431,8 +431,8 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanPrefixCallback)
         T block_prefix = test_utils::get_random_value<T>(0, 5, seed_value);
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
-        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
+        std::vector<T> expected_block_prefixes(output_block_prefixes.size(), T(0));
         for(size_t i = 0; i < output.size() / block_size; i++)
         {
             acc_type accumulator = block_prefix;

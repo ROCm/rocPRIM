@@ -79,7 +79,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
-        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
 
         // Calculate expected results on host
         for(size_t i = 0; i < input.size() / logical_warp_size; i++)
@@ -138,7 +138,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
         );
 
         // Validating results
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -202,8 +202,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> output_reductions(size / logical_warp_size);
-        std::vector<T> expected(output.size(), (T)0);
-        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
+        std::vector<T> expected_reductions(output_reductions.size(), T(0));
 
         // Calculate expected results on host
         for(size_t i = 0; i < output.size() / logical_warp_size; i++)
@@ -278,8 +278,10 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
         );
 
         // Validating results
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * logical_warp_size);
+        test_utils::assert_near(output_reductions,
+                                expected_reductions,
+                                test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -295,7 +297,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-     // for bfloat16 and half we use double for host-side accumulation
+    // for bfloat16 and half we use double for host-side accumulation
     using binary_op_type_host = typename test_utils::select_plus_operator_host<T>::type;
     binary_op_type_host binary_op_host;
     using acc_type = typename test_utils::select_plus_operator_host<T>::acc_type;
@@ -343,7 +345,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
-        std::vector<T> expected(input.size(), (T)0);
+        std::vector<T> expected(input.size(), T(0));
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
@@ -404,7 +406,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
         );
 
         // Validating results
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -420,7 +422,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-     // for bfloat16 and half we use double for host-side accumulation
+    // for bfloat16 and half we use double for host-side accumulation
     using binary_op_type_host = typename test_utils::select_plus_operator_host<T>::type;
     binary_op_type_host binary_op_host;
     using acc_type = typename test_utils::select_plus_operator_host<T>::acc_type;
@@ -469,8 +471,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> output_reductions(size / logical_warp_size);
-        std::vector<T> expected(input.size(), (T)0);
-        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
+        std::vector<T> expected(input.size(), T(0));
+        std::vector<T> expected_reductions(output_reductions.size(), T(0));
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
@@ -553,8 +555,10 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
         );
 
         // Validating results
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * logical_warp_size);
+        test_utils::assert_near(output_reductions,
+                                expected_reductions,
+                                test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -570,7 +574,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-     // for bfloat16 and half we use double for host-side accumulation
+    // for bfloat16 and half we use double for host-side accumulation
     using binary_op_type_host = typename test_utils::select_plus_operator_host<T>::type;
     binary_op_type_host binary_op_host;
     using acc_type = typename test_utils::select_plus_operator_host<T>::acc_type;
@@ -619,8 +623,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
         std::vector<T> output_inclusive(size);
         std::vector<T> output_exclusive(size);
-        std::vector<T> expected_inclusive(output_inclusive.size(), (T)0);
-        std::vector<T> expected_exclusive(output_exclusive.size(), (T)0);
+        std::vector<T> expected_inclusive(output_inclusive.size(), T(0));
+        std::vector<T> expected_exclusive(output_exclusive.size(), T(0));
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
@@ -707,8 +711,12 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
         );
 
         // Validating results
-        test_utils::assert_near(output_inclusive, expected_inclusive, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_exclusive, expected_exclusive, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_inclusive,
+                                expected_inclusive,
+                                test_utils::precision<T> * logical_warp_size);
+        test_utils::assert_near(output_exclusive,
+                                expected_exclusive,
+                                test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_inclusive_output));
@@ -724,7 +732,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
-     // for bfloat16 and half we use double for host-side accumulation
+    // for bfloat16 and half we use double for host-side accumulation
     using binary_op_type_host = typename test_utils::select_plus_operator_host<T>::type;
     binary_op_type_host binary_op_host;
     using acc_type = typename test_utils::select_plus_operator_host<T>::acc_type;
@@ -774,9 +782,9 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
         std::vector<T> output_inclusive(size);
         std::vector<T> output_exclusive(size);
         std::vector<T> output_reductions(size / logical_warp_size);
-        std::vector<T> expected_inclusive(output_inclusive.size(), (T)0);
-        std::vector<T> expected_exclusive(output_exclusive.size(), (T)0);
-        std::vector<T> expected_reductions(output_reductions.size(), (T)0);
+        std::vector<T> expected_inclusive(output_inclusive.size(), T(0));
+        std::vector<T> expected_exclusive(output_exclusive.size(), T(0));
+        std::vector<T> expected_reductions(output_reductions.size(), T(0));
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
@@ -881,9 +889,15 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
         );
 
         // Validating results
-        test_utils::assert_near(output_inclusive, expected_inclusive, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_exclusive, expected_exclusive, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_reductions, expected_reductions, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_inclusive,
+                                expected_inclusive,
+                                test_utils::precision<T> * logical_warp_size);
+        test_utils::assert_near(output_exclusive,
+                                expected_exclusive,
+                                test_utils::precision<T> * logical_warp_size);
+        test_utils::assert_near(output_reductions,
+                                expected_reductions,
+                                test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_inclusive_output));
@@ -1014,7 +1028,9 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
         );
 
         // Validating results
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<base_type>::percentage);
+        test_utils::assert_near(output,
+                                expected,
+                                test_utils::precision<base_type> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));

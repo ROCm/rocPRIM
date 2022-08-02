@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -115,19 +115,7 @@ TYPED_TEST(RocprimConstantIteratorTests, Transform)
         HIP_CHECK(hipDeviceSynchronize());
 
         // Validating results
-        for(size_t i = 0; i < output.size(); i++)
-        {
-            if(std::is_integral<T>::value)
-            {
-                ASSERT_EQ(output[i], expected[i]) << "where index = " << i;
-            }
-            else if(std::is_floating_point<T>::value)
-            {
-                float percentage = test_utils::precision_threshold<T>::percentage;
-                auto tolerance = std::max(std::abs(0.1f * (float)expected[i]), (float)percentage);
-                ASSERT_NEAR(output[i], expected[i], tolerance) << "where index = " << i;
-            }
-        }
+        test_utils::assert_near(output, expected, test_utils::precision<T>);
 
         hipFree(d_output);
     }

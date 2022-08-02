@@ -28,7 +28,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSum)
 {
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
-     // for bfloat16 and half we use double for host-side accumulation
+    // for bfloat16 and half we use double for host-side accumulation
     using binary_op_type_host = typename test_utils::select_plus_operator_host<T>::type;
     binary_op_type_host binary_op_host;
     using acc_type = typename test_utils::select_plus_operator_host<T>::acc_type;
@@ -78,10 +78,10 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSum)
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
-        std::vector<T> output(input.size() / logical_warp_size, (T)0);
+        std::vector<T> output(input.size() / logical_warp_size, T(0));
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)1);
+        std::vector<T> expected(output.size(), T(1));
         for(size_t i = 0; i < output.size(); i++)
         {
             acc_type value(0);
@@ -136,7 +136,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSum)
             )
         );
 
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -197,10 +197,10 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSum)
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
-        std::vector<T> output(input.size(), (T)0);
+        std::vector<T> output(input.size(), T(0));
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
         for(size_t i = 0; i < output.size() / logical_warp_size; i++)
         {
             acc_type value(0);
@@ -259,7 +259,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSum)
             )
         );
 
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -321,10 +321,10 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSumValid)
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
-        std::vector<T> output(input.size() / logical_warp_size, (T)0);
+        std::vector<T> output(input.size() / logical_warp_size, T(0));
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)1);
+        std::vector<T> expected(output.size(), T(1));
         for(size_t i = 0; i < output.size(); i++)
         {
             acc_type value(0);
@@ -379,7 +379,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSumValid)
             )
         );
 
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -442,10 +442,10 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSumValid)
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
-        std::vector<T> output(input.size(), (T)0);
+        std::vector<T> output(input.size(), T(0));
 
         // Calculate expected results on host
-        std::vector<T> expected(output.size(), (T)0);
+        std::vector<T> expected(output.size(), T(0));
         for(size_t i = 0; i < output.size() / logical_warp_size; i++)
         {
             acc_type value(0);
@@ -504,7 +504,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSumValid)
             )
         );
 
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output, expected, test_utils::precision<T> * valid);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -631,7 +631,9 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceCustomStruct)
             )
         );
 
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<base_type>::percentage);
+        test_utils::assert_near(output,
+                                expected,
+                                test_utils::precision<base_type> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_output));
@@ -773,8 +775,8 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, HeadSegmentedReduceSum)
         );
         HIP_CHECK(hipDeviceSynchronize());
 
-        std::vector<T> output_segment(output.size(), (T)0);
-        std::vector<T> expected_segment(output.size(), (T)0);
+        std::vector<T> output_segment(output.size(), T(0));
+        std::vector<T> expected_segment(output.size(), T(0));
         for(size_t i = 0; i < output.size(); i++)
         {
             if(flags[i])
@@ -783,7 +785,9 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, HeadSegmentedReduceSum)
                 expected_segment[i] = expected[i];
             }
         }
-        test_utils::assert_near(output_segment, expected_segment, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_segment,
+                                expected_segment,
+                                test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_flags));
@@ -946,7 +950,9 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, TailSegmentedReduceSum)
             output_segment[i] = output[index];
             expected_segment[i] = expected[index];
         }
-        test_utils::assert_near(output_segment, expected_segment, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_near(output_segment,
+                                expected_segment,
+                                test_utils::precision<T> * logical_warp_size);
 
         HIP_CHECK(hipFree(device_input));
         HIP_CHECK(hipFree(device_flags));

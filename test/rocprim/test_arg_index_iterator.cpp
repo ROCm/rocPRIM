@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -192,10 +192,8 @@ TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
         HIP_CHECK(hipDeviceSynchronize());
 
         // Check if output values are as expected
-        auto diff = std::abs(test_utils::precision_threshold<T>::percentage * expected.value);
-        if(std::is_integral<T>::value) diff = 0;
-        ASSERT_EQ(output[0].key, expected.key);
-        ASSERT_NEAR(output[0].value, expected.value, diff);
+        test_utils::assert_eq(output[0].key, expected.key);
+        test_utils::assert_eq(output[0].value, expected.value);
 
         hipFree(d_input);
         hipFree(d_output);

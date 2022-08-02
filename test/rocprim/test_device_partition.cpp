@@ -68,21 +68,6 @@ typedef ::testing::Types<
     DevicePartitionParams<test_utils::custom_test_type<long long>>
 > RocprimDevicePartitionTestsParams;
 
-std::vector<size_t> get_sizes(int seed_value)
-{
-    std::vector<size_t> sizes = {
-        0, 1, 2, 32, 64, 256,
-        1024, 2048,
-        3072, 4096,
-        27845, (1 << 18) + 1111,
-        1024 * 1024 * 32
-    };
-    const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(2, 1, 16384, seed_value);
-    sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
-    std::sort(sizes.begin(), sizes.end());
-    return sizes;
-}
-
 TYPED_TEST_SUITE(RocprimDevicePartitionTests, RocprimDevicePartitionTestsParams);
 
 TYPED_TEST(RocprimDevicePartitionTests, Flagged)
@@ -104,14 +89,8 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -361,14 +340,8 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -526,8 +499,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
             ? static_cast<unsigned int>(rand()) : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
             for(const auto& limits : limit_pairs)
