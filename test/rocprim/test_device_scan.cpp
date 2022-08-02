@@ -78,55 +78,35 @@ typedef ::testing::Types<
     DeviceScanParams<unsigned short>,
     DeviceScanParams<short, int>,
     DeviceScanParams<int>,
-    DeviceScanParams<int, int, rocprim::plus<int>, false, 512 >,
-    DeviceScanParams<float, float, rocprim::maximum<float> >,
-    DeviceScanParams<float, float, rocprim::plus<float>, false, 1024 >,
-    DeviceScanParams<int, int, rocprim::plus<int>, false, 524288 >,
-    DeviceScanParams<int, int, rocprim::plus<int>, false, 1048576 >,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, 512>,
+    DeviceScanParams<float, float, rocprim::maximum<float>>,
+    DeviceScanParams<float, float, rocprim::plus<float>, false, 1024>,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, 524288>,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, 1048576>,
     DeviceScanParams<int8_t, int8_t, rocprim::maximum<int8_t>>,
     DeviceScanParams<uint8_t, uint8_t, rocprim::maximum<uint8_t>>,
-#ifndef __HIP__
-    // hip-clang does provide host comparison operators
-    DeviceScanParams<rocprim::half, rocprim::half, test_utils::half_maximum>,
-    // hip-clang does not allow to convert half to float
+    DeviceScanParams<rocprim::half, rocprim::half, rocprim::maximum<rocprim::half>>,
     DeviceScanParams<rocprim::half, float, rocprim::plus<float>>,
-#endif
-    DeviceScanParams<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_maximum>,
+    DeviceScanParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::maximum<rocprim::bfloat16>>,
     DeviceScanParams<rocprim::bfloat16, float, rocprim::plus<float>>,
     // Large
-    DeviceScanParams<int, double, rocprim::plus<int> >,
-    DeviceScanParams<int, double, rocprim::plus<double> >,
-    DeviceScanParams<int, long long, rocprim::plus<long long> >,
-    DeviceScanParams<unsigned int, unsigned long long, rocprim::plus<unsigned long long> >,
-    DeviceScanParams<long long, long long, rocprim::maximum<long long> >,
+    DeviceScanParams<int, double, rocprim::plus<int>>,
+    DeviceScanParams<int, double, rocprim::plus<double>>,
+    DeviceScanParams<int, long long, rocprim::plus<long long>>,
+    DeviceScanParams<unsigned int, unsigned long long, rocprim::plus<unsigned long long>>,
+    DeviceScanParams<long long, long long, rocprim::maximum<long long>>,
     DeviceScanParams<double, double, rocprim::plus<double>, true>,
-    DeviceScanParams<signed char, long, rocprim::plus<long> >,
-    DeviceScanParams<float, double, rocprim::minimum<double> >,
-    DeviceScanParams<test_utils::custom_test_type<int> >,
-    // TODO: Enable again, when it has been fixed.
-    DeviceScanParams<
-        test_utils::custom_test_type<double>, test_utils::custom_test_type<double>,
-        rocprim::plus<test_utils::custom_test_type<double> >, true
-    >,
-    DeviceScanParams<test_utils::custom_test_type<int> >,
-    DeviceScanParams<test_utils::custom_test_array_type<long long, 5> >,
-    DeviceScanParams<test_utils::custom_test_array_type<int, 10> >
-> RocprimDeviceScanTestsParams;
-
-std::vector<size_t> get_sizes(int seed_value)
-{
-    std::vector<size_t> sizes = {
-        0, 1, 10, 53, 211,
-        1024, 2048, 5096,
-        34567, (1 << 18),
-        (1 << 20) - 12345,
-        (1 << 20) + 1
-    };
-    const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(3, 1, 100000, seed_value);
-    sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
-    std::sort(sizes.begin(), sizes.end());
-    return sizes;
-}
+    DeviceScanParams<signed char, long, rocprim::plus<long>>,
+    DeviceScanParams<float, double, rocprim::minimum<double>>,
+    DeviceScanParams<test_utils::custom_test_type<int>>,
+    DeviceScanParams<test_utils::custom_test_type<double>,
+                     test_utils::custom_test_type<double>,
+                     rocprim::plus<test_utils::custom_test_type<double>>,
+                     true>,
+    DeviceScanParams<test_utils::custom_test_type<int>>,
+    DeviceScanParams<test_utils::custom_test_array_type<long long, 5>>,
+    DeviceScanParams<test_utils::custom_test_array_type<int, 10>>>
+    RocprimDeviceScanTestsParams;
 
 template <unsigned int SizeLimit>
 struct size_limit_config {
@@ -147,7 +127,7 @@ struct size_limit_config<ROCPRIM_GRID_SIZE_LIMIT> {
 template <unsigned int SizeLimit>
 using size_limit_config_t = typename size_limit_config<SizeLimit>::type;
 
-// use float for accumulation of bfloat16 and half inputs on device-side if operator is plus
+// use float for accumulation of bfloat16 and half inputs if operator is plus
 template <typename input_type, typename input_op_type> struct accum_type {
     static constexpr bool is_low_precision =
         std::is_same<input_type, ::rocprim::half>::value ||
@@ -227,10 +207,22 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 {
     using T = typename TestFixture::input_type;
     using U = typename TestFixture::output_type;
+
     using scan_op_type = typename TestFixture::scan_op_type;
     // if scan_op_type is rocprim::plus and input_type is bfloat16 or half,
     // use float as device-side accumulator and double as host-side accumulator
-    using acc_type = typename accum_type<T, scan_op_type>::type;
+    using is_plus_op = test_utils::is_plus_operator<scan_op_type>;
+    using acc_type   = typename accum_type<T, scan_op_type>::type;
+
+    // for non-associative operations in inclusive scan
+    // intermediate results use the type of input iterator, then
+    // as all conversions in the tests are to more precise types,
+    // intermediate results use the same or more precise acc_type,
+    // all scan operations use the same acc_type,
+    // and all output types are the same acc_type,
+    // therefore the only source of error is precision of operation itself
+    constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
+
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     using Config = size_limit_config_t<TestFixture::size_limit>;
@@ -244,13 +236,15 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
+            if(single_op_precision * size > 0.5)
             {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
+                std::cout << "Test is skipped from size " << size
+                          << " on, potential error of summation is more than 0.5 of the result "
+                             "with current or larger size"
+                          << std::endl;
+                break;
             }
             hipStream_t stream = 0; // default
 
@@ -327,7 +321,8 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage));
+            ASSERT_NO_FATAL_FAILURE(
+                test_utils::assert_near(output, expected, single_op_precision * size));
 
             hipFree(d_input);
             hipFree(d_output);
@@ -341,10 +336,23 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 {
     using T = typename TestFixture::input_type;
     using U = typename TestFixture::output_type;
+
     using scan_op_type = typename TestFixture::scan_op_type;
     // if scan_op_type is rocprim::plus and input_type is bfloat16 or half,
     // use float as device-side accumulator and double as host-side accumulator
-    using acc_type = typename accum_type<T, scan_op_type>::type;
+    using is_plus_op = test_utils::is_plus_operator<scan_op_type>;
+    using acc_type   = typename accum_type<T, scan_op_type>::type;
+
+    // for non-associative operations in exclusive scan
+    // intermediate results use the type of initial value, then
+    // as all conversions in the tests are to more precise types,
+    // intermediate results use the same or more precise acc_type,
+    // all scan operations use the same acc_type,
+    // and all output types are the same acc_type,
+    // therefore the only source of error is precision of operation itself
+    acc_type        initial_value;
+    constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
+
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     using Config = size_limit_config_t<TestFixture::size_limit>;
@@ -358,13 +366,15 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
+            if(single_op_precision * size > 0.5)
             {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
+                std::cout << "Test is skipped from size " << size
+                          << " on, potential error of summation is more than 0.5 of the result "
+                             "with current or larger size"
+                          << std::endl;
+                break;
             }
             hipStream_t stream = 0; // default
 
@@ -392,7 +402,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 
             // Calculate expected results on host
             std::vector<U> expected(input.size());
-            acc_type initial_value = test_utils::get_random_value<acc_type>(1, 10, seed_value);
+            initial_value = test_utils::get_random_value<acc_type>(1, 10, seed_value);
             test_utils::host_exclusive_scan(
                 input.begin(), input.end(),
                 initial_value, expected.begin(),
@@ -443,7 +453,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage));
+            ASSERT_NO_FATAL_FAILURE(
+                test_utils::assert_near(output, expected, single_op_precision * size));
 
             hipFree(d_input);
             hipFree(d_output);
@@ -459,10 +470,15 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
     using T = typename TestFixture::input_type;
     using K = unsigned int; // key type
     using U = typename TestFixture::output_type;
+
     using scan_op_type = typename TestFixture::scan_op_type;
     // if scan_op_type is rocprim::plus and input_type is bfloat16 or half,
     // use float as device-side accumulator and double as host-side accumulator
-    using acc_type = typename accum_type<T, scan_op_type>::type;
+    using is_plus_op = test_utils::is_plus_operator<scan_op_type>;
+    using acc_type   = typename accum_type<T, scan_op_type>::type;
+
+    constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
+
     const bool debug_synchronous = TestFixture::debug_synchronous;
     using Config = size_limit_config_t<TestFixture::size_limit>;
 
@@ -475,13 +491,15 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
+            if(single_op_precision * size > 0.5)
             {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
+                std::cout << "Test is skipped from size " << size
+                          << " on, potential error of summation is more than 0.5 of the result "
+                             "with current or larger size"
+                          << std::endl;
+                break;
             }
             hipStream_t stream = 0; // default
 
@@ -580,7 +598,8 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage));
+            ASSERT_NO_FATAL_FAILURE(
+                test_utils::assert_near(output, expected, single_op_precision * size));
 
             hipFree(d_keys);
             hipFree(d_input);
@@ -597,10 +616,16 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
     using T = typename TestFixture::input_type;
     using K = unsigned int; // key type
     using U = typename TestFixture::output_type;
+
     using scan_op_type = typename TestFixture::scan_op_type;
     // if scan_op_type is rocprim::plus and input_type is bfloat16 or half,
     // use float as device-side accumulator and double as host-side accumulator
-    using acc_type = typename accum_type<T, scan_op_type>::type;
+    using is_plus_op = test_utils::is_plus_operator<scan_op_type>;
+    using acc_type   = typename accum_type<T, scan_op_type>::type;
+
+    acc_type        initial_value;
+    constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
+
     const bool debug_synchronous = TestFixture::debug_synchronous;
     using Config = size_limit_config_t<TestFixture::size_limit>;
 
@@ -613,13 +638,15 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
+            if(single_op_precision * size > 0.5)
             {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
+                std::cout << "Test is skipped from size " << size
+                          << " on, potential error of summation is more than 0.5 of the result "
+                             "with current or larger size"
+                          << std::endl;
+                break;
             }
             hipStream_t stream = 0; // default
 
@@ -628,7 +655,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             const bool use_unique_keys = bool(test_utils::get_random_value<int>(0, 1, seed_value));
 
             // Generate data
-            acc_type initial_value = test_utils::get_random_value<acc_type>(1, 100, seed_value);
+            initial_value        = test_utils::get_random_value<acc_type>(1, 100, seed_value);
             std::vector<T> input = test_utils::get_random_data<T>(size, 0, 9, seed_value);
             std::vector<K> keys;
             if(use_unique_keys)
@@ -720,7 +747,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage));
+            ASSERT_NO_FATAL_FAILURE(
+                test_utils::assert_near(output, expected, single_op_precision * size));
 
             hipFree(d_keys);
             hipFree(d_input);
@@ -797,21 +825,6 @@ public:
     // clang-format on
 };
 
-std::vector<size_t> get_large_sizes(int seed_value)
-{
-    std::vector<size_t> sizes = {
-        (size_t{1} << 30) - 1, size_t{1} << 30,
-        (size_t{1} << 31) - 1, size_t{1} << 31,
-        (size_t{1} << 32) - 1, size_t{1} << 32,
-        (size_t{1} << 35) - 1
-    };
-    const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(
-        2, (size_t {1} << 30) + 1, (size_t {1} << 35) - 2, seed_value);
-    sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
-    std::sort(sizes.begin(), sizes.end());
-    return sizes;
-}
-
 TEST(RocprimDeviceScanTests, LargeIndicesInclusiveScan)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -831,9 +844,7 @@ TEST(RocprimDeviceScanTests, LargeIndicesInclusiveScan)
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_large_sizes(seed_value);
-
-        for(const auto size : sizes)
+        for(const auto size : test_utils::get_large_sizes(seed_value))
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -920,9 +931,7 @@ TEST(RocprimDeviceScanTests, LargeIndicesExclusiveScan)
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_large_sizes(seed_value);
-
-        for(const auto size : sizes)
+        for(const auto size : test_utils::get_large_sizes(seed_value))
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -1014,12 +1023,13 @@ TYPED_TEST_SUITE(RocprimDeviceScanFutureTests, RocprimDeviceScanFutureTestsParam
 
 TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 {
-    using T                                     = typename TestFixture::input_type;
-    using U                                     = typename TestFixture::output_type;
-    using scan_op_type                          = typename TestFixture::scan_op_type;
-    // if scan_op_type is rocprim::plus and input_type is bfloat16 or half,
-    // use float as device-side accumulator and double as host-side accumulator
-    using acc_type                              = typename accum_type<T, scan_op_type>::type;
+    using T = typename TestFixture::input_type;
+    using U = typename TestFixture::output_type;
+
+    using scan_op_type = typename TestFixture::scan_op_type;
+    using is_plus_op   = test_utils::is_plus_operator<scan_op_type>;
+    using acc_type     = typename accum_type<T, scan_op_type>::type;
+
     const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     using Config                                = size_limit_config_t<TestFixture::size_limit>;
@@ -1035,13 +1045,20 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        const std::vector<size_t> sizes = get_sizes(seed_value);
-        for(auto size : sizes)
+        for(auto size : test_utils::get_sizes(seed_value))
         {
-            if(size == 0 && test_common_utils::use_hmm())
+            constexpr int future_size = 2048;
+            const float   precision
+                = test_utils::precision<T> * future_size
+                  + (is_plus_op::value ? test_utils::precision<acc_type> * size : 0);
+
+            if(precision > 0.5)
             {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
+                std::cout << "Test is skipped from size " << size
+                          << " on, potential error of summation is more than 0.5 of the result "
+                             "with current or larger size"
+                          << std::endl;
+                break;
             }
             const hipStream_t stream = 0; // default
 
@@ -1049,7 +1066,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 
             // Generate data
             const std::vector<T> future_input
-                = test_utils::get_random_data<T>(2048, 1, 10, ~seed_value);
+                = test_utils::get_random_data<T>(future_size, 1, 10, ~seed_value);
             const std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
             std::vector<U>       output(input.size());
 
@@ -1083,7 +1100,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
             const auto future_iter
                 = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_initial_value);
             const auto future_initial_value
-                = rocprim::future_value<T, std::remove_const_t<decltype(future_iter)>> {
+                = rocprim::future_value<acc_type, std::remove_const_t<decltype(future_iter)>>{
                     future_iter};
 
             auto input_iterator = rocprim::make_transform_iterator(
@@ -1139,8 +1156,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
-                output, expected, test_utils::precision_threshold<T>::percentage));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, precision));
 
             hipFree(d_input);
             hipFree(d_output);

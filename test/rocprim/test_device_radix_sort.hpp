@@ -58,16 +58,6 @@ public:
 
 TYPED_TEST_SUITE_P(RocprimDeviceRadixSort);
 
-inline std::vector<unsigned int> get_sizes(int seed_value)
-{
-    std::vector<unsigned int> sizes = { 0, 1, 10, 53, 211, 1024, 2049, 2345, 4096, 8196, 34567, (1 << 16) - 1220, (1 << 23) - 76543 };
-
-    const std::vector<unsigned int> random_sizes
-        = test_utils::get_random_data<unsigned int>(10, 1, 100000, seed_value);
-    sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
-    return sizes;
-}
-
 template<typename TestFixture>
 inline void sort_keys()
 {
@@ -93,15 +83,13 @@ inline void sort_keys()
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(unsigned int size : get_sizes(seed_value))
+        auto sizes = test_utils::get_sizes(seed_value);
+        sizes.push_back(1 << 23);
+
+        for(size_t size : sizes)
         {
-            if(size > (1 << 20) && !check_large_sizes)
-                continue;
-            if(size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
+            if(size > (1 << 17) && !check_large_sizes)
+                break;
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -112,8 +100,8 @@ inline void sort_keys()
             if(rocprim::is_floating_point<key_type>::value)
             {
                 keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   (key_type)-1000,
-                                                                   (key_type) + 1000,
+                                                                   static_cast<key_type>(-1000),
+                                                                   static_cast<key_type>(+1000),
                                                                    seed_value);
                 test_utils::add_special_values(keys_input, seed_value);
             }
@@ -240,15 +228,13 @@ inline void sort_pairs()
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(unsigned int size : get_sizes(seed_value))
+        auto sizes = test_utils::get_sizes(seed_value);
+        sizes.push_back(1 << 23);
+
+        for(size_t size : sizes)
         {
-            if(size > (1 << 20) && !check_large_sizes)
-                continue;
-            if(size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
+            if(size > (1 << 17) && !check_large_sizes)
+                break;
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -259,8 +245,8 @@ inline void sort_pairs()
             if(rocprim::is_floating_point<key_type>::value)
             {
                 keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   (key_type)-1000,
-                                                                   (key_type) + 1000,
+                                                                   static_cast<key_type>(-1000),
+                                                                   static_cast<key_type>(+1000),
                                                                    seed_value);
                 test_utils::add_special_values(keys_input, seed_value);
             }
@@ -428,15 +414,13 @@ inline void sort_keys_double_buffer()
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(unsigned int size : get_sizes(seed_value))
+        auto sizes = test_utils::get_sizes(seed_value);
+        sizes.push_back(1 << 23);
+
+        for(size_t size : sizes)
         {
-            if(size > (1 << 20) && !check_large_sizes)
-                continue;
-            if(size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
+            if(size > (1 << 17) && !check_large_sizes)
+                break;
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -445,8 +429,8 @@ inline void sort_keys_double_buffer()
             if(rocprim::is_floating_point<key_type>::value)
             {
                 keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   (key_type)-1000,
-                                                                   (key_type) + 1000,
+                                                                   static_cast<key_type>(-1000),
+                                                                   static_cast<key_type>(+1000),
                                                                    seed_value);
                 test_utils::add_special_values(keys_input, seed_value);
             }
@@ -554,15 +538,13 @@ inline void sort_pairs_double_buffer()
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(unsigned int size : get_sizes(seed_value))
+        auto sizes = test_utils::get_sizes(seed_value);
+        sizes.push_back(1 << 23);
+
+        for(size_t size : sizes)
         {
-            if(size > (1 << 20) && !check_large_sizes)
-                continue;
-            if(size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
+            if(size > (1 << 17) && !check_large_sizes)
+                break;
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
@@ -571,8 +553,8 @@ inline void sort_pairs_double_buffer()
             if(rocprim::is_floating_point<key_type>::value)
             {
                 keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   (key_type)-1000,
-                                                                   (key_type) + 1000,
+                                                                   static_cast<key_type>(-1000),
+                                                                   static_cast<key_type>(+1000),
                                                                    seed_value);
                 test_utils::add_special_values(keys_input, seed_value);
             }

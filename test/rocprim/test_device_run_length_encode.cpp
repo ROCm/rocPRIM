@@ -80,20 +80,6 @@ typedef ::testing::Types<
 
 TYPED_TEST_SUITE(RocprimDeviceRunLengthEncode, Params);
 
-std::vector<size_t> get_sizes(int seed_value)
-{
-    std::vector<size_t> sizes = {
-        1024, 2048, 4096, 1792,
-        0, 1, 10, 53, 211, 500,
-        2345, 11001, 34567,
-        100000,
-        (1 << 16) - 1220, (1 << 21) - 76543
-    };
-    const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(5, 1, 100000, seed_value);
-    sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
-    return sizes;
-}
-
 template <class T>
 T get_random_value_no_duplicate(const T duplicate, const std::vector<T> &source, const size_t start_index)
 {
@@ -128,14 +114,8 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(size_t size : get_sizes(seed_value))
+        for(size_t size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
-
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             hipStream_t stream = 0; // default
@@ -287,14 +267,8 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(size_t size : get_sizes(seed_value))
+        for(size_t size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
-
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             hipStream_t stream = 0; // default

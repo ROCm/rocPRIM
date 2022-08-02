@@ -67,8 +67,8 @@ using RocprimDeviceSortTestsParams = ::testing::Types<
     DeviceSortParams<float, double>,
     DeviceSortParams<int8_t, int8_t>,
     DeviceSortParams<uint8_t, uint8_t>,
-    DeviceSortParams<rocprim::half, rocprim::half, test_utils::half_less>,
-    DeviceSortParams<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_less>,
+    DeviceSortParams<rocprim::half, rocprim::half, rocprim::less<rocprim::half>>,
+    DeviceSortParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
     DeviceSortParams<int, float, ::rocprim::greater<int>>,
     DeviceSortParams<short, test_utils::custom_test_type<int>>,
     DeviceSortParams<double, test_utils::custom_test_type<double>>,
@@ -78,20 +78,6 @@ using RocprimDeviceSortTestsParams = ::testing::Types<
 
 static_assert(std::is_trivially_copyable<test_utils::custom_float_type>::value,
               "Type must be trivially copyable to cover merge sort specialized kernel");
-
-std::vector<size_t> get_sizes(int seed_value)
-{
-    std::vector<size_t> sizes = {
-        0, 1, 10, 53, 211,
-        128, 256, 512,
-        1024, 2048, 5000,
-        34567, (1 << 17) - 1220, (1 << 20) - 123
-    };
-    const std::vector<size_t> random_sizes = test_utils::get_random_data<size_t>(5, 1, 100000, seed_value);
-    sizes.insert(sizes.end(), random_sizes.begin(), random_sizes.end());
-    std::sort(sizes.begin(), sizes.end());
-    return sizes;
-}
 
 TYPED_TEST_SUITE(RocprimDeviceSortTests, RocprimDeviceSortTestsParams);
 
@@ -112,13 +98,8 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(size_t size : get_sizes(seed_value))
+        for(size_t size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
@@ -232,13 +213,8 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
 
-        for(size_t size : get_sizes(seed_value))
+        for(size_t size : test_utils::get_sizes(seed_value))
         {
-            if (size == 0 && test_common_utils::use_hmm())
-            {
-                // hipMallocManaged() currently doesnt support zero byte allocation
-                continue;
-            }
             hipStream_t stream = 0; // default
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);

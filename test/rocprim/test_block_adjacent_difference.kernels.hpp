@@ -766,7 +766,9 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 3>::t
             output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
-            output, expected, test_utils::precision_threshold<T>::percentage));
+            output,
+            expected,
+            std::max(test_utils::precision<T>, test_utils::precision<stored_type>)));
 
         HIP_CHECK(hipFree(d_input));
         HIP_CHECK(hipFree(d_output));
@@ -855,7 +857,9 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 4>::t
             output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
-            output, expected, test_utils::precision_threshold<T>::percentage));
+            output,
+            expected,
+            std::max(test_utils::precision<T>, test_utils::precision<stored_type>)));
 
         HIP_CHECK(hipFree(d_input));
         HIP_CHECK(hipFree(d_output));
@@ -961,7 +965,9 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 5>::t
             output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
-            output, expected, test_utils::precision_threshold<T>::percentage));
+            output,
+            expected,
+            std::max(test_utils::precision<T>, test_utils::precision<stored_type>)));
 
         HIP_CHECK(hipFree(d_input));
         HIP_CHECK(hipFree(d_tile_sizes));
@@ -1067,8 +1073,15 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 6>::t
         HIP_CHECK(hipMemcpy(
             output.data(), d_output, output.size() * sizeof(output[0]), hipMemcpyDeviceToHost));
 
-        ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
-            output, expected, test_utils::precision_threshold<T>::percentage));
+        using is_add_op = test_utils::is_add_operator<BinaryFunction>;
+        // clang-format off
+        ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected,
+            is_add_op::value
+                ? std::max(test_utils::precision<T>, test_utils::precision<stored_type>)
+                : std::is_same<T, stored_type>::value 
+                    ? 0 
+                    : test_utils::precision<stored_type>));
+        // clang-format on
 
         HIP_CHECK(hipFree(d_input));
         HIP_CHECK(hipFree(d_tile_sizes));

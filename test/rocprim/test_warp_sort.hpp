@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,8 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
 
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
-    using binary_op_type = typename test_utils::select_less_operator<T>::type;
+    using binary_op_type = rocprim::less<T>;
+
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
     static constexpr size_t items_per_thread = TestFixture::params::items_per_thread;
 
@@ -111,7 +112,7 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
             )
         );
 
-        test_utils::assert_near(output, expected, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_eq(output, expected);
 
         HIP_CHECK(hipFree(d_output));
     }
@@ -127,8 +128,10 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
     using pair = test_utils::custom_test_type<T>;
-    using value_op_type = typename test_utils::select_less_operator<T>::type;
-    using eq_op_type = typename test_utils::select_equal_to_operator<T>::type;
+
+    using value_op_type = rocprim::less<T>;
+    using eq_op_type    = rocprim::equal_to<T>;
+
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
     static constexpr size_t items_per_thread = TestFixture::params::items_per_thread;
 
@@ -255,8 +258,8 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
             i = j;
         }
 
-        test_utils::assert_near(output_key, expected_key, test_utils::precision_threshold<T>::percentage);
-        test_utils::assert_near(output_value, expected_value, test_utils::precision_threshold<T>::percentage);
+        test_utils::assert_eq(output_key, expected_key);
+        test_utils::assert_eq(output_value, expected_value);
 
         HIP_CHECK(hipFree(d_output_key));
         HIP_CHECK(hipFree(d_output_value));
