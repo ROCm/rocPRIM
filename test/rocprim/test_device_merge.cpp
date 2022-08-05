@@ -94,7 +94,7 @@ TYPED_TEST_SUITE(RocprimDeviceMergeTests, RocprimDeviceMergeTestsParams);
 TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
@@ -124,7 +124,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
         for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
         {
             unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-            SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+            SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
             // Generate data
             std::vector<key_type> keys_input1 = test_utils::get_random_data<key_type>(size1, 0, size1, seed_value);
@@ -233,7 +233,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
@@ -266,7 +266,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
         for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
         {
             unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-            SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+            SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
             // Generate data
             std::vector<key_type> keys_input1 = test_utils::get_random_data<key_type>(size1, 0, size1, seed_value);

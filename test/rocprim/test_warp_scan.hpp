@@ -27,7 +27,7 @@ typed_test_suite_def(RocprimWarpScanTests, name_suffix, warp_params);
 typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
@@ -74,7 +74,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -149,7 +149,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
 typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
@@ -196,7 +196,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -293,7 +293,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
 typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
@@ -340,7 +340,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -418,7 +418,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
 typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
@@ -465,7 +465,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -570,7 +570,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
 typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
@@ -617,7 +617,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -728,7 +728,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
 typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::params::type;
@@ -775,7 +775,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -909,7 +909,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
 typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using base_type = typename TestFixture::params::type;
@@ -954,7 +954,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> input(size);

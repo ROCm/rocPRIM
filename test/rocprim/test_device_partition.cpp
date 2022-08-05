@@ -73,7 +73,7 @@ TYPED_TEST_SUITE(RocprimDevicePartitionTests, RocprimDevicePartitionTestsParams)
 TYPED_TEST(RocprimDevicePartitionTests, Flagged)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -87,7 +87,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
@@ -226,7 +226,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
 TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -319,7 +319,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
 TYPED_TEST(RocprimDevicePartitionTests, Predicate)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -338,7 +338,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
@@ -497,7 +497,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
     {
         const unsigned int seed_value = seed_index < random_seeds_count
             ? static_cast<unsigned int>(rand()) : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
@@ -881,7 +881,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
     static constexpr hipStream_t stream            = 0;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     const auto modulo = GetParam();
@@ -889,7 +889,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
 
     for(const auto size : sizes)
     {
-        SCOPED_TRACE(testing::Message() << "with size= " << size);
+        SCOPED_TRACE(testing::Message() << "with size = " << size);
         const auto input_iterator = rocprim::make_counting_iterator(static_cast<size_t>(0));
         const modulo_predicate predicate{modulo};
 
@@ -958,7 +958,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
     static constexpr hipStream_t stream            = 0;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     const auto modulo_a = GetParam();
@@ -967,7 +967,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
 
     for(const auto size : sizes)
     {
-        SCOPED_TRACE(testing::Message() << "with size= " << size);
+        SCOPED_TRACE(testing::Message() << "with size = " << size);
         const auto input_iterator = rocprim::make_counting_iterator(static_cast<size_t>(0));
         const auto predicate_a    = modulo_predicate{modulo_a};
         const auto predicate_b    = modulo_predicate{modulo_b};

@@ -74,7 +74,7 @@ TYPED_TEST_SUITE(RocprimDeviceSelectTests, RocprimDeviceSelectTestsParams);
 TYPED_TEST(RocprimDeviceSelectTests, Flagged)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -88,7 +88,7 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
@@ -222,7 +222,7 @@ struct select_op
 TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -235,7 +235,7 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
@@ -356,7 +356,7 @@ std::vector<float> get_discontinuity_probabilities()
 TYPED_TEST(RocprimDeviceSelectTests, Unique)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -373,7 +373,7 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         const auto probabilities = get_discontinuity_probabilities();
         for(auto size : test_utils::get_sizes(seed_value))
@@ -523,7 +523,7 @@ struct element_equal_operator
 TEST(RocprimDeviceSelectTests, UniqueGuardedOperator)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = int64_t;
@@ -538,7 +538,7 @@ TEST(RocprimDeviceSelectTests, UniqueGuardedOperator)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         const auto probabilities = get_discontinuity_probabilities();
         for(auto size : test_utils::get_sizes(seed_value))
@@ -722,7 +722,7 @@ TYPED_TEST_SUITE(RocprimDeviceUniqueByKeyTests, RocprimDeviceUniqueByKeyTestPara
 TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
@@ -741,7 +741,7 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         const auto probabilities = get_discontinuity_probabilities();
         for(auto size : test_utils::get_sizes(seed_value))
@@ -910,7 +910,7 @@ INSTANTIATE_TEST_SUITE_P(RocprimDeviceSelectLargeInputFlaggedTest, RocprimDevice
 TEST_P(RocprimDeviceSelectLargeInputTests, LargeInputFlagged)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     unsigned int flag_selector = GetParam();
@@ -1034,7 +1034,7 @@ TEST_P(RocprimDeviceSelectLargeInputTests, LargeInputUnique)
     static constexpr hipStream_t stream            = 0;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     const unsigned int segment_length = GetParam();

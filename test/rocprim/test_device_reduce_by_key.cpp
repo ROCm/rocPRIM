@@ -116,7 +116,7 @@ TYPED_TEST_SUITE(RocprimDeviceReduceByKey, Params);
 TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::params::key_type;
@@ -151,7 +151,7 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(size_t size : test_utils::get_sizes(seed_value))
         {
@@ -322,7 +322,7 @@ template<typename value_type>
 void large_indices_reduce_by_key()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type       = size_t;
@@ -455,7 +455,7 @@ template<typename value_type>
 void large_segment_count_reduce_by_key()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = size_t;

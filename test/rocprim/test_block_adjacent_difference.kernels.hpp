@@ -361,7 +361,7 @@ auto test_block_adjacent_difference()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
@@ -472,7 +472,7 @@ auto test_block_adjacent_difference()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
@@ -583,7 +583,7 @@ auto test_block_adjacent_difference()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
@@ -713,7 +713,7 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 3>::t
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         const std::vector<T>     input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
@@ -804,7 +804,7 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 4>::t
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         const std::vector<T>     input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
@@ -895,7 +895,7 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 5>::t
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         const std::vector<T>     input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
@@ -1004,7 +1004,7 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 6>::t
     {
         const unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         const std::vector<T>     input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
@@ -1104,7 +1104,7 @@ struct static_for
     static void run()
     {
         int device_id = test_common_utils::obtain_device_from_ctest();
-        SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+        SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
         HIP_CHECK(hipSetDevice(device_id));
 
         test_block_adjacent_difference<Type, FlagType, FlagOpType, Method, BlockSize, items[First]>();
