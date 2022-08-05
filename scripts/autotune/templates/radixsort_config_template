@@ -1,7 +1,7 @@
 {% extends "config_template" %}
 
 {% macro get_header_guard() %}
-ROCPRIM_DEVICE_RADIX_SORT_CONFIG_HPP_
+ROCPRIM_DEVICE_DETAIL_CONFIG_DEVICE_RADIX_SORT_HPP_
 {%- endmacro %}
 
 {% macro kernel_configuration(measurement) -%}
@@ -14,16 +14,16 @@ default_radix_sort_config_base<key_type, value_type> { };
 {%- endmacro %}
 
 {% macro configuration_arch_general(benchmark_of_architecture) -%}
-template<class key_type, class value_type> struct default_radix_sort_config<{{ benchmark_of_architecture.name }}, key_type, value_type> :
+template<class key_type, class value_type> struct default_radix_sort_config<static_cast<unsigned int>({{ benchmark_of_architecture.name }}), key_type, value_type> :
 {%- endmacro %}
 
 {% macro configuration_arch_specific(benchmark_of_architecture, configuration) -%}
-template<> struct default_radix_sort_config<{{ benchmark_of_architecture.name }}, {{ configuration.key_type }}, {{ configuration.value_type }}> :
+template<> struct default_radix_sort_config<static_cast<unsigned int>({{ benchmark_of_architecture.name }}), {{ configuration.key_type }}, {{ configuration.value_type }}> :
 {%- endmacro %}
 
 {% macro configuration_fallback(benchmark_of_architecture, based_on_type, fallback_selection_criteria) -%}
 // Based on {{ based_on_type }}
-template<class key_type, class value_type> struct default_radix_sort_config<{{ benchmark_of_architecture.name }}, key_type, value_type, {{ fallback_selection_criteria }}> :
+template<class key_type, class value_type> struct default_radix_sort_config<static_cast<unsigned int>({{ benchmark_of_architecture.name }}), key_type, value_type, {{ fallback_selection_criteria }}> :
 {%- endmacro %}
 
   
