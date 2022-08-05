@@ -486,7 +486,7 @@ auto test_block_scan_input_arrays()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
@@ -570,7 +570,7 @@ auto test_block_scan_input_arrays()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
@@ -685,7 +685,7 @@ auto test_block_scan_input_arrays()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
@@ -802,7 +802,7 @@ auto test_block_scan_input_arrays()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
@@ -889,7 +889,7 @@ auto test_block_scan_input_arrays()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
@@ -1001,7 +1001,7 @@ auto test_block_scan_input_arrays()
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
@@ -1099,7 +1099,7 @@ struct static_for_input_array
     static void run()
     {
         int device_id = test_common_utils::obtain_device_from_ctest();
-        SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+        SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
         HIP_CHECK(hipSetDevice(device_id));
 
         test_block_scan_input_arrays<T, Method, BlockSize, items[First], rocprim::block_scan_algorithm::using_warp_scan>();

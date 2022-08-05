@@ -62,7 +62,7 @@ template<typename TestFixture>
 inline void sort_keys()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type                           = typename TestFixture::params::key_type;
@@ -81,7 +81,7 @@ inline void sort_keys()
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         auto sizes = test_utils::get_sizes(seed_value);
         sizes.push_back(1 << 23);
@@ -206,7 +206,7 @@ template<typename TestFixture>
 inline void sort_pairs()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type                           = typename TestFixture::params::key_type;
@@ -226,7 +226,7 @@ inline void sort_pairs()
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         auto sizes = test_utils::get_sizes(seed_value);
         sizes.push_back(1 << 23);
@@ -395,7 +395,7 @@ template<typename TestFixture>
 inline void sort_keys_double_buffer()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type                           = typename TestFixture::params::key_type;
@@ -412,7 +412,7 @@ inline void sort_keys_double_buffer()
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         auto sizes = test_utils::get_sizes(seed_value);
         sizes.push_back(1 << 23);
@@ -518,7 +518,7 @@ template<typename TestFixture>
 inline void sort_pairs_double_buffer()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type                           = typename TestFixture::params::key_type;
@@ -536,7 +536,7 @@ inline void sort_pairs_double_buffer()
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         auto sizes = test_utils::get_sizes(seed_value);
         sizes.push_back(1 << 23);
@@ -693,7 +693,7 @@ inline void sort_keys_over_4g()
     const int           seed_value = rand();
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     std::vector<key_type> keys_input

@@ -39,7 +39,7 @@ template<unsigned int block_size,
 void TestSortKeyValue()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     static constexpr const unsigned int items_per_block = block_size * items_per_thread;
@@ -56,7 +56,8 @@ void TestSortKeyValue()
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with size = " << size);
 
         // Generate data
         std::vector<key_type> output_key
@@ -168,7 +169,7 @@ template<unsigned int block_size,
 void TestSortKey(std::vector<size_t> sizes)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     static constexpr const unsigned int items_per_block = block_size * items_per_thread;
@@ -183,11 +184,11 @@ void TestSortKey(std::vector<size_t> sizes)
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(size_t size : sizes)
         {
-            SCOPED_TRACE(testing::Message() << "with size= " << size);
+            SCOPED_TRACE(testing::Message() << "with size = " << size);
             if(size == 0 && test_common_utils::use_hmm())
             {
                 // hipMallocManaged() currently doesnt support zero byte allocation

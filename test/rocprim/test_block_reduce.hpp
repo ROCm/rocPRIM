@@ -29,7 +29,7 @@ typed_test_suite_def(suite_name_array, name_suffix, block_params);
 typed_test_def(suite_name_single, name_suffix, Reduce)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -54,7 +54,7 @@ typed_test_def(suite_name_single, name_suffix, Reduce)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, T(2), T(50), seed_value);
@@ -101,7 +101,7 @@ typed_test_def(suite_name_single, name_suffix, Reduce)
 typed_test_def(suite_name_single, name_suffix, ReduceMultiplies)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T                     = typename TestFixture::input_type;
@@ -121,7 +121,7 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultiplies)
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, T(0.95), T(1.05), seed_value);
@@ -187,7 +187,7 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultiplies)
 typed_test_def(suite_name_single, name_suffix, ReduceMultipliesExact)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T                     = typename TestFixture::input_type;
@@ -206,7 +206,7 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultipliesExact)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output(size, T(1));
@@ -259,7 +259,7 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultipliesExact)
 typed_test_def(suite_name_single, name_suffix, ReduceValid)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;
@@ -275,7 +275,7 @@ typed_test_def(suite_name_single, name_suffix, ReduceValid)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         const size_t valid_items = test_utils::get_random_value<size_t>(block_size - 10, block_size, seed_value);
 
@@ -333,7 +333,7 @@ typed_test_def(suite_name_single, name_suffix, ReduceValid)
 typed_test_def(suite_name_array, name_suffix, Reduce)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::input_type;

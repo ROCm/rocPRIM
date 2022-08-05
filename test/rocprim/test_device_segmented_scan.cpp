@@ -84,7 +84,7 @@ TYPED_TEST_SUITE(RocprimDeviceSegmentedScan, Params);
 TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using input_type   = typename TestFixture::params::input_type;
@@ -111,7 +111,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(size_t size : test_utils::get_sizes(seed_value))
         {
@@ -240,7 +240,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
 TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using input_type   = typename TestFixture::params::input_type;
@@ -269,7 +269,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(size_t size : test_utils::get_sizes(seed_value))
         {
@@ -399,7 +399,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
 TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     // Does not support output iterator with void value_type
@@ -419,7 +419,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
@@ -558,7 +558,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
 TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     // Does not support output iterator with void value_type
@@ -580,7 +580,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(auto size : test_utils::get_sizes(seed_value))
         {

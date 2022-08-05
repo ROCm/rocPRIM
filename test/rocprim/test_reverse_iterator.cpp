@@ -51,7 +51,7 @@ TEST(RocprimReverseIteratorTests, DeviceVector)
     static constexpr int    seed_value = 7;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     auto           input    = test_utils::get_random_data<T>(size, 0, 100, seed_value);

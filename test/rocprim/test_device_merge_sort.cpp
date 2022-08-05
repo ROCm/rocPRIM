@@ -84,7 +84,7 @@ TYPED_TEST_SUITE(RocprimDeviceSortTests, RocprimDeviceSortTestsParams);
 TYPED_TEST(RocprimDeviceSortTests, SortKey)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
@@ -96,7 +96,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(size_t size : test_utils::get_sizes(seed_value))
         {
@@ -198,7 +198,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
 TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
@@ -211,7 +211,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         for(size_t size : test_utils::get_sizes(seed_value))
         {

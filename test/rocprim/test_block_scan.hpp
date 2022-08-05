@@ -37,7 +37,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScan)
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     // Given block size not supported
@@ -52,7 +52,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -101,7 +101,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanReduce)
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     // Given block size not supported
@@ -116,7 +116,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanReduce)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -177,7 +177,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanPrefixCallback)
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     // Given block size not supported
@@ -192,7 +192,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanPrefixCallback)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -254,7 +254,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScan)
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     // Given block size not supported
@@ -269,7 +269,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScan)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -321,7 +321,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanReduce)
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     if(block_size > test_utils::get_max_block_size())
@@ -335,7 +335,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanReduce)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
@@ -407,7 +407,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanPrefixCallback)
     constexpr size_t block_size = TestFixture::block_size;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     // Given block size not supported
@@ -422,7 +422,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanPrefixCallback)
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-        SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
         std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
