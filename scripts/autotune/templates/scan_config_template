@@ -13,10 +13,6 @@ template<unsigned int arch, class value_type, class enable = void> struct defaul
 default_scan_config_base<value_type> { };
 {%- endmacro %}
 
-{% macro configuration_arch_general(benchmark_of_architecture) -%}
-template<class value_type> struct default_scan_config<static_cast<unsigned int>({{ benchmark_of_architecture.name }}), value_type> :
-{%- endmacro %}
-
 {% macro configuration_arch_specific(benchmark_of_architecture, configuration) -%}
 template<> struct default_scan_config<static_cast<unsigned int>({{ benchmark_of_architecture.name }}), {{ configuration.value_type }}> :
 {%- endmacro %}

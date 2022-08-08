@@ -145,22 +145,6 @@ class BenchmarksOfArchitecture:
             return None
 
     @property
-    def base_config_case(self) -> Dict[str, str]:
-        """
-        Finds a suitable configuration if only the architecture is specified.
-        """
-        
-        # For now, return the best performing configuration that has:
-        # int in non-optional types, the empty type in optional types
-        instanced_types: Dict[str, str] = {cfg_type.name: EMPTY_TYPENAME if cfg_type.is_optional else 'int' for cfg_type in self.config_selection_types}
-        instance_key = self.__get_instance_key(instanced_types)
-        if instance_key not in self.benchmarks:
-            print(f"WARNING : requested base config case key \"{instance_key}\" not in list of benchmarks, falling back to first key")
-            return self.__get_best_benchmark(next(iter(self.benchmarks.keys())))
-
-        return self.__get_best_benchmark(instance_key)
-
-    @property
     def best_config_by_selection_types(self):
         """
         Returns a dictionary containing each instantion of the selction configuration as a key
@@ -183,7 +167,7 @@ class BenchmarksOfArchitecture:
     @property
     def fallback_types(self):
         """
-        Provides a fallback triplet of (string describing the type used for generating the fallback, 
+        Provides a fallback triplet of (string describing the type used for generating the fallback,
         cpp enable if statement, benchmark containing the selected parameters for the algorithm).
 
         This function only supports a single non-optional type.

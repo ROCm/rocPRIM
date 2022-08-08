@@ -35,10 +35,7 @@ namespace detail
 {{ general_case() }}
 
 {% for benchmark_of_architecture in all_architectures %}
-{{ configuration_arch_general(benchmark_of_architecture) }}
-{{ kernel_configuration(benchmark_of_architecture.base_config_case) }}
-    
-    {% for configuration, measurement in benchmark_of_architecture.best_config_by_selection_types.items() %}
+    {% for configuration,  measurement in benchmark_of_architecture.best_config_by_selection_types.items() %}
 {{ configuration_arch_specific(benchmark_of_architecture, configuration) }}
 {{ kernel_configuration(measurement) }}
 
