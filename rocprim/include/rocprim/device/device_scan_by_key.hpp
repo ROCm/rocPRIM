@@ -378,7 +378,7 @@ namespace detail
 ///     values_output, size,
 ///     rocprim::plus<int>()
 /// );
-/// // values_output: [1, 2, 3, 7, 5, 11, 18, 8]
+/// // values_output: [1, 3, 3, 7, 5, 11, 18, 8]
 /// \endcode
 /// \endparblock
 template <typename Config = default_config,
