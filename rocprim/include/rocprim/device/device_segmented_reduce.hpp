@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,9 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_SEGMENTED_REDUCE_HPP_
 #define ROCPRIM_DEVICE_DEVICE_SEGMENTED_REDUCE_HPP_
 
-#include <type_traits>
+#include <iostream>
 #include <iterator>
+#include <type_traits>
 
 #include "device_reduce_config.hpp"
 
@@ -41,22 +42,19 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<
-    class Config,
-    class InputIterator,
-    class OutputIterator,
-    class OffsetIterator,
-    class ResultType,
-    class BinaryFunction
->
-ROCPRIM_KERNEL
-__launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
-void segmented_reduce_kernel(InputIterator input,
-                             OutputIterator output,
-                             OffsetIterator begin_offsets,
-                             OffsetIterator end_offsets,
-                             BinaryFunction reduce_op,
-                             ResultType initial_value)
+template<class Config,
+         class InputIterator,
+         class OutputIterator,
+         class OffsetIterator,
+         class ResultType,
+         class BinaryFunction>
+ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().block_size) void segmented_reduce_kernel(
+    InputIterator  input,
+    OutputIterator output,
+    OffsetIterator begin_offsets,
+    OffsetIterator end_offsets,
+    BinaryFunction reduce_op,
+    ResultType     initial_value)
 {
     segmented_reduce<Config>(
         input, output,
@@ -106,13 +104,17 @@ hipError_t segmented_reduce_impl(void * temporary_storage,
         input_type, BinaryFunction
     >::type;
 
-    // Get default config if Config is default_config
-    using config = default_or_custom_config<
-        Config,
-        default_reduce_config<ROCPRIM_TARGET_ARCH, result_type>
-    >;
+    using config = wrapped_reduce_config<Config, result_type>;
 
-    constexpr unsigned int block_size = config::block_size;
+    detail::target_arch target_arch;
+    hipError_t          result = host_target_arch(stream, target_arch);
+    if(result != hipSuccess)
+    {
+        return result;
+    }
+    const reduce_config_params params = dispatch_target_arch<config>(target_arch);
+
+    const unsigned int block_size = params.block_size;
 
     if(temporary_storage == nullptr)
     {

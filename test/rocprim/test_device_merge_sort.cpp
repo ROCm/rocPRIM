@@ -1,6 +1,6 @@
 /// MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -62,6 +62,7 @@ typedef ::testing::Types<
     DeviceSortParams<int>,
     DeviceSortParams<test_utils::custom_test_type<int>>,
     DeviceSortParams<unsigned long>,
+    DeviceSortParams<long long>,
     DeviceSortParams<float, double>,
     DeviceSortParams<int8_t, int8_t>,
     DeviceSortParams<uint8_t, uint8_t>,

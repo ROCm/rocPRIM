@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,31 +32,12 @@
 #include "../../types.hpp"
 
 #include "../../block/block_store.hpp"
+#include "../../detail/merge_path.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
-
-struct range_t
-{
-    unsigned int begin1;
-    unsigned int end1;
-    unsigned int begin2;
-    unsigned int end2;
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int count1()
-    {
-        return end1 - begin1;
-    }
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int count2()
-    {
-        return end2 - begin2;
-    }
-};
 
 ROCPRIM_DEVICE ROCPRIM_INLINE
 range_t compute_range(const unsigned int id,
@@ -70,43 +51,6 @@ range_t compute_range(const unsigned int id,
     unsigned int diag2 = min(size1 + size2, diag1 + spacing);
 
     return range_t{p1, p2, diag1 - p1, diag2 - p2};
-}
-
-template<
-    class KeysInputIterator1,
-    class KeysInputIterator2,
-    class BinaryFunction
->
-ROCPRIM_DEVICE ROCPRIM_INLINE
-unsigned int merge_path(KeysInputIterator1 keys_input1,
-                        KeysInputIterator2 keys_input2,
-                        const size_t input1_size,
-                        const size_t input2_size,
-                        const unsigned int diag,
-                        BinaryFunction compare_function)
-{
-    using key_type = typename std::iterator_traits<KeysInputIterator1>::value_type;
-
-    int begin = max((int)0, (int)diag - (int)input2_size);
-    int end = min((int)diag, (int)input1_size);
-
-    while(begin < end)
-    {
-        unsigned int a = (begin + end) / 2;
-        unsigned int b = diag - 1 - a;
-        key_type input_a = keys_input1[a];
-        key_type input_b = keys_input2[b];
-        if(!compare_function(input_b, input_a))
-        {
-            begin = a + 1;
-        }
-        else
-        {
-            end = a;
-        }
-    }
-
-    return begin;
 }
 
 template<
@@ -131,7 +75,7 @@ void partition_kernel_impl(IndexIterator indices,
     unsigned int id = flat_block_id * flat_block_size + flat_id;
 
     unsigned int partition_id = id * spacing;
-    unsigned int diag = min(partition_id, (unsigned int)(input1_size + input2_size));
+    size_t diag = min(static_cast<size_t>(partition_id), input1_size + input2_size);
 
     unsigned int begin =
         merge_path(
@@ -175,46 +119,6 @@ void load(unsigned int flat_id,
         }
     }
 
-    ::rocprim::syncthreads();
-}
-
-template<
-    class KeyType,
-    unsigned int ItemsPerThread,
-    class BinaryFunction
->
-ROCPRIM_DEVICE ROCPRIM_INLINE
-void serial_merge(KeyType * keys_shared,
-                  KeyType (&inputs)[ItemsPerThread],
-                  unsigned int (&index)[ItemsPerThread],
-                  range_t range,
-                  BinaryFunction compare_function)
-{
-    KeyType a = keys_shared[range.begin1];
-    KeyType b = keys_shared[range.begin2];
-
-    ROCPRIM_UNROLL
-    for(unsigned int i = 0; i < ItemsPerThread; ++i)
-    {
-        bool compare = (range.begin2 >= range.end2) ||
-                       ((range.begin1 < range.end1) && !compare_function(b, a));
-        unsigned int x = compare ? range.begin1 : range.begin2;
-
-        inputs[i] = compare ? a : b;
-        index[i] = x;
-
-        KeyType c = keys_shared[++x];
-        if(compare)
-        {
-            a = c;
-            range.begin1 = x;
-        }
-        else
-        {
-            b = c;
-            range.begin2 = x;
-        }
-    }
     ::rocprim::syncthreads();
 }
 
@@ -403,8 +307,8 @@ void merge_kernel_impl(IndexIterator indices,
     const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
     const unsigned int block_offset = flat_block_id * items_per_block;
     const unsigned int count = input1_size + input2_size;
-    const unsigned int number_of_blocks = (count + items_per_block - 1)/items_per_block;
-    const auto valid_in_last_block = count - items_per_block * (number_of_blocks - 1);
+    const unsigned int valid_in_last_block = count - block_offset;
+    const bool         is_incomplete_block = valid_in_last_block < items_per_block;
 
     const unsigned int p1 = indices[flat_block_id];
     const unsigned int p2 = indices[flat_block_id + 1];
@@ -423,7 +327,7 @@ void merge_kernel_impl(IndexIterator indices,
 
     ::rocprim::syncthreads();
 
-    if(flat_block_id == (number_of_blocks - 1)) // last block
+    if(is_incomplete_block) // # elements in last block may not equal items_per_block for the last block
     {
         keys_store_type().store(
             keys_output + block_offset,

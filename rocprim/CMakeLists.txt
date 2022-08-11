@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2019 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ target_include_directories(rocprim
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/rocprim>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/>
 )
 
 # This target links against HIP library
@@ -54,9 +54,6 @@ target_link_libraries(rocprim_hip INTERFACE rocprim hip::device)
 
 
 # Installation
-
-include(GNUInstallDirs)
-set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 
 # We need to install headers manually as rocm_install_targets
 # does not support header-only libraries (INTERFACE targets)
@@ -68,7 +65,7 @@ rocm_install(
   DIRECTORY
     "include/"
     "${PROJECT_BINARY_DIR}/rocprim/include/"
-  DESTINATION include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
   FILES_MATCHING
   PATTERN "*.h"
   PATTERN "*.hpp"
