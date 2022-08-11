@@ -390,7 +390,7 @@ class BenchmarkDataManager:
 
         for algo_name, algo in self.algorithms.items():
             config: str = algo.create_config_file_content()
-            path_str: str = os.path.join(base_dir, algo_name)
+            path_str: str = os.path.join(base_dir, f"{algo_name}.hpp")
             with open(path_str, "w") as outfile:
                 outfile.write(config)
 

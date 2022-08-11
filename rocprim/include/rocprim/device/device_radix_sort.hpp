@@ -35,11 +35,11 @@
 #include "../functional.hpp"
 #include "../types.hpp"
 
-#include "device_radix_sort_config.hpp"
-#include "device_transform.hpp"
+#include "detail/config/device_radix_sort.hpp"
 #include "detail/device_radix_sort.hpp"
-#include "specialization/device_radix_single_sort.hpp"
+#include "device_transform.hpp"
 #include "specialization/device_radix_merge_sort.hpp"
+#include "specialization/device_radix_single_sort.hpp"
 
 /// \addtogroup devicemodule
 /// @{

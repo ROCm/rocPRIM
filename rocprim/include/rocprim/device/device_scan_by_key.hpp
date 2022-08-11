@@ -26,7 +26,7 @@
 #include "detail/ordered_block_id.hpp"
 
 #include "config_types.hpp"
-#include "device_scan_by_key_config.hpp"
+#include "detail/config/device_scan_by_key.hpp"
 
 #include "../config.hpp"
 #include "../detail/temp_storage.hpp"

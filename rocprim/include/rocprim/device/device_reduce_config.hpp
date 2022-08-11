@@ -30,7 +30,6 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
-
 namespace detail
 {
 
