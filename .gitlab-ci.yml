@@ -33,13 +33,14 @@ include:
 
 stages:
   - lint
+  - autotune
   - build
   - test
   - benchmark
-  - autotune_config
 
 variables:
   PACKAGE_DIR: $BUILD_DIR/package
+  AUTOTUNE_CONFIG_DIR: ${CI_PROJECT_DIR}/autotune_config
 
 clang-format:
   extends:
@@ -214,7 +215,9 @@ build:package:
 
 build:benchmark:
   stage: build
-  needs: []
+  needs: 
+    - job: "autotune:generate-config"
+      optional: true
   tags:
     - rocm-build
   extends:
@@ -222,6 +225,8 @@ build:benchmark:
     - .gpus:rocm-gpus
     - .rules:build
   script:
+# If we have a custom config created by autotune:create-config
+    - "[ -d ${AUTOTUNE_CONFIG_DIR} ] && cp -r -f ${AUTOTUNE_CONFIG_DIR}/* ./"
     - mkdir -p $BUILD_DIR
     - cd $BUILD_DIR
     - cmake
@@ -242,8 +247,8 @@ build:benchmark:
       - $BUILD_DIR/deps/googlebenchmark/
     expire_in: 2 weeks
 
-build:autotune:
-  stage: build
+autotune:build:
+  stage: autotune
   needs: []
   tags:
     - rocm-build
@@ -356,28 +361,22 @@ test:doc:
     - cd doc
     - doxygen Doxyfile
 
-.benchmark_run:
+benchmark:
   stage: benchmark
+  needs:
+    - build:benchmark
   extends:
-  - .cmake-minimum
-  - .gpus:rocm
+    - .cmake-minimum
+    - .gpus:rocm
+    - .rules:benchmark
   variables:
     BENCHMARK_RESULT_DIR: ${CI_PROJECT_DIR}/benchmark_results/
     BENCHMARK_FILENAME_REGEX: ^benchmark
     BENCHMARK_ALGORITHM_REGEX: ""
-  before_script:
+  script:
     - 'printf "CI Variables used in benchmarks:\nBENCHMARK_RESULT_DIR: %s\nBENCHMARK_FILENAME_REGEX: %s\nBENCHMARK_ALGORITHM_REGEX: %s \n" "$BENCHMARK_RESULT_DIR" "$BENCHMARK_FILENAME_REGEX" "$BENCHMARK_ALGORITHM_REGEX"'
     - cd "${CI_PROJECT_DIR}"
     - mkdir -p "${BENCHMARK_RESULT_DIR}"
-
-
-run_benchmark:
-  needs:
-    - build:benchmark
-  extends:
-    - .benchmark_run
-    - .rules:benchmark
-  script:
     - python3
       .gitlab/run_benchmarks.py
       --benchmark_dir "${BUILD_DIR}/benchmark"
@@ -386,48 +385,61 @@ run_benchmark:
       --benchmark_filename_regex "${BENCHMARK_FILENAME_REGEX}"
       --benchmark_filter_regex "${BENCHMARK_ALGORITHM_REGEX}"
 
-run_autotune:
+.autotune-base:
+  stage: autotune
+  variables:
+    AUTOTUNE_RESULT_DIR: ${CI_PROJECT_DIR}/autotune_results
+
+autotune:execute-tuning:
   needs:
-    - build:autotune
+    - autotune:build
   extends:
-    - .benchmark_run
+    - .autotune-base
+    - .cmake-minimum
+    - .gpus:rocm
     - .rules:manual
   variables:
-    #temporarily disabled radix_sort in benchmark_filename_regex
-    AUTOTUNE_FILENAME_REGEX: (?!^benchmark_device_radix_sort$)${BENCHMARK_FILENAME_REGEX}
+    #temporarily disabled radix_sort in autotune_filename_regex
+    AUTOTUNE_FILENAME_REGEX: (?!^benchmark_device_radix_sort$)^benchmark
+    AUTOTUNE_ALGORITHM_REGEX: ""
   timeout: 8h
   artifacts:
     paths:
-    - ${BENCHMARK_RESULT_DIR}/*.json
+    - ${AUTOTUNE_RESULT_DIR}/*.json
   script:
+    - 'printf "CI Variables used in benchmarks:\nAUTOTUNE_RESULT_DIR: %s\nAUTOTUNE_FILENAME_REGEX: %s\nAUTOTUNE_ALGORITHM_REGEX: %s \n" "$AUTOTUNE_RESULT_DIR" "$AUTOTUNE_FILENAME_REGEX" "$AUTOTUNE_ALGORITHM_REGEX"'
+    - cd "${CI_PROJECT_DIR}"
+    - mkdir -p "${AUTOTUNE_RESULT_DIR}"
     - python3
       .gitlab/run_benchmarks.py
       --benchmark_dir "${BUILD_DIR}/benchmark"
       --benchmark_gpu_architecture "${GPU_TARGET}"
-      --benchmark_output_dir "${BENCHMARK_RESULT_DIR}"
+      --benchmark_output_dir "${AUTOTUNE_RESULT_DIR}"
       --benchmark_filename_regex "${AUTOTUNE_FILENAME_REGEX}"
-      --benchmark_filter_regex "${BENCHMARK_ALGORITHM_REGEX}" > /dev/null
+      --benchmark_filter_regex "${AUTOTUNE_ALGORITHM_REGEX}" > /dev/null
 
-run_autotune_config:
-  stage: autotune_config
+autotune:generate-config:
   image: python:3.10.5-buster
-  extends:
-    - .rules:manual
   needs:
-    - run_autotune
+    - autotune:execute-tuning
+  extends:
+    - .autotune-base
   variables:
-    AUTOTUNE_CONFIG_DIR: ${CI_PROJECT_DIR}/autotune_config
+    AUTOTUNE_CONFIG_REPO_PATH: /rocprim/include/rocprim/device/detail/config
   script:
+# List the final .json files to use for config generation
+    - ls -al ${AUTOTUNE_RESULT_DIR}
     - cd "${CI_PROJECT_DIR}"
-    - mkdir -p "${AUTOTUNE_CONFIG_DIR}"
     - python3 -m pip install jinja2
+    - mkdir -p ${AUTOTUNE_CONFIG_DIR}${AUTOTUNE_CONFIG_REPO_PATH}
     - python3
       scripts/autotune/create_optimization.py
-      --benchmark_files "${CI_PROJECT_DIR}/benchmark_results/*.json"
-      --out_basedir "${AUTOTUNE_CONFIG_DIR}"
+      --benchmark_files ${AUTOTUNE_RESULT_DIR}/*.json
+      --out_basedir "${AUTOTUNE_CONFIG_DIR}${AUTOTUNE_CONFIG_REPO_PATH}"
   artifacts:
     paths:
-    - ${AUTOTUNE_CONFIG_DIR}
+      - ${AUTOTUNE_CONFIG_DIR}
 
 scheduled-check-changes:
+  stage: autotune
   extends: .rules:scheduled-check-changes
