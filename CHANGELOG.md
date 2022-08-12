@@ -23,6 +23,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - CMake functionality to improve build parallelism of the test suite that splits compilation units by
 function or by parameters.
 - Reverse iterator.
+- Support for problem sizes over `UINT_MAX` in device functions `inclusive_scan_by_key` and `exclusive_scan_by_key`.
 ## Changed
 - Improved the performance of warp primitives using the swizzle operation on Navi
 - Improved build parallelism of the test suite by splitting up large compilation units

@@ -1006,6 +1006,267 @@ TEST(RocprimDeviceScanTests, LargeIndicesExclusiveScan)
     }
 }
 
+/// \brief This iterator keeps track of the current index. Upon dereference, a \p CheckValue object
+/// is created and besides the current index, the provided \p rocprim::tuple<Args...> is passed
+/// to its constructor.
+template<class CheckValue, class... Args>
+class check_run_iterator
+{
+public:
+    using args_t            = rocprim::tuple<Args...>;
+    using value_type        = CheckValue;
+    using reference         = CheckValue;
+    using pointer           = CheckValue*;
+    using iterator_category = std::random_access_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+
+    ROCPRIM_HOST_DEVICE
+    check_run_iterator(const args_t args) : current_index_(0), args_(args) {}
+
+    ROCPRIM_HOST_DEVICE bool operator==(const check_run_iterator& rhs)
+    {
+        return current_index_ == rhs.current_index_;
+    }
+    ROCPRIM_HOST_DEVICE bool operator!=(const check_run_iterator& rhs)
+    {
+        return !(*this == rhs);
+    }
+    ROCPRIM_HOST_DEVICE reference operator*()
+    {
+        return value_type{current_index_, args_};
+    }
+    ROCPRIM_HOST_DEVICE reference operator[](const difference_type distance)
+    {
+        return *(*this + distance);
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator& operator+=(const difference_type rhs)
+    {
+        current_index_ += rhs;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator& operator-=(const difference_type rhs)
+    {
+        current_index_ -= rhs;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE difference_type operator-(const check_run_iterator& rhs) const
+    {
+        return current_index_ - rhs.current_index_;
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator operator+(const difference_type rhs) const
+    {
+        return check_run_iterator(*this) += rhs;
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator operator-(const difference_type rhs) const
+    {
+        return check_run_iterator(*this) -= rhs;
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator& operator++()
+    {
+        ++current_index_;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator& operator--()
+    {
+        --current_index_;
+        return *this;
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator operator++(int)
+    {
+        return ++check_run_iterator{*this};
+    }
+    ROCPRIM_HOST_DEVICE check_run_iterator operator--(int)
+    {
+        return --check_run_iterator{*this};
+    }
+
+private:
+    size_t current_index_;
+    args_t args_;
+};
+
+/// \brief Checks if the \p size_t values written to it are part of the expected sequence.
+/// The expected sequence is the sequence [0, 1, 2, 3, ...) inclusively scanned in runs of
+/// \p run_length.
+/// If a discrepancy is found, \p incorrect_flag is atomically set to 1.
+struct check_value_inclusive
+{
+    size_t                                current_index_{};
+    rocprim::tuple<size_t, unsigned int*> args_; // run_length, incorrect flag
+
+    ROCPRIM_HOST_DEVICE
+    size_t operator=(const size_t value)
+    {
+        const size_t run_start    = current_index_ - (current_index_ % rocprim::get<0>(args_));
+        const size_t index_in_run = current_index_ - run_start + 1;
+        const size_t expected_sum = (run_start + current_index_) * index_in_run / 2;
+        if(value != expected_sum)
+        {
+            rocprim::detail::atomic_exch(rocprim::get<1>(args_), 1);
+        }
+        return value;
+    }
+};
+
+/// \brief Checks if the \p size_t values written to it are part of the expected sequence.
+/// The expected sequence is the sequence [0, 1, 2, 3, ...) exclusively scanned in runs of
+/// \p run_length, with \p initial_value.
+/// If a discrepancy is found, \p incorrect_flag is atomically set to 1.
+struct check_value_exclusive
+{
+    size_t current_index_{};
+    rocprim::tuple<size_t, size_t, unsigned int*>
+        args_; // run_length, initial_value, incorrect flag
+
+    ROCPRIM_HOST_DEVICE
+    size_t operator=(const size_t value)
+    {
+        const size_t run_start    = current_index_ - (current_index_ % rocprim::get<0>(args_));
+        const size_t index_in_run = current_index_ - run_start;
+        const size_t expected_sum
+            = rocprim::get<1>(args_) + (run_start + current_index_ - 1) * index_in_run / 2;
+        if(value != expected_sum)
+        {
+            rocprim::detail::atomic_exch(rocprim::get<2>(args_), 1);
+        }
+        return value;
+    }
+};
+
+using check_run_inclusive_iterator
+    = check_run_iterator<check_value_inclusive, size_t, unsigned int*>;
+using check_run_exclusive_iterator
+    = check_run_iterator<check_value_exclusive, size_t, size_t, unsigned int*>;
+
+/// \p brief Provides a skeleton to both the inclusive and exclusive scan large indices tests.
+/// The call to the appropriate scan function must be implemented in \p scan_by_key_fun.
+template<class ScanByKeyFun>
+void large_indices_scan_by_key_test(ScanByKeyFun scan_by_key_fun)
+{
+    const int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    constexpr bool        debug_synchronous = false;
+    constexpr hipStream_t stream            = 0;
+
+    const int seed_value = rand();
+    SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
+
+    const auto size = test_utils::get_large_sizes(seed_value).back();
+    SCOPED_TRACE(testing::Message() << "with size = " << size);
+
+    unsigned int* d_incorrect_flag;
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_incorrect_flag, sizeof(*d_incorrect_flag)));
+    HIP_CHECK(hipMemset(d_incorrect_flag, 0, sizeof(*d_incorrect_flag)));
+
+    const size_t run_length = test_utils::get_random_value<size_t>(1, 10000, seed_value);
+    SCOPED_TRACE(testing::Message() << "with run_length = " << run_length);
+
+    const auto keys_input = rocprim::make_transform_iterator(rocprim::counting_iterator<size_t>(0),
+                                                             [run_length](const auto value)
+                                                             { return value / run_length; });
+    const auto values_input = rocprim::counting_iterator<size_t>(0);
+
+    size_t temp_storage_size_bytes;
+    void*  d_temp_storage = nullptr;
+    HIP_CHECK(scan_by_key_fun(d_temp_storage,
+                              temp_storage_size_bytes,
+                              keys_input,
+                              values_input,
+                              run_length,
+                              d_incorrect_flag,
+                              size,
+                              stream,
+                              debug_synchronous,
+                              seed_value));
+    ASSERT_GT(temp_storage_size_bytes, 0);
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+    HIP_CHECK(scan_by_key_fun(d_temp_storage,
+                              temp_storage_size_bytes,
+                              keys_input,
+                              values_input,
+                              run_length,
+                              d_incorrect_flag,
+                              size,
+                              stream,
+                              debug_synchronous,
+                              seed_value));
+    HIP_CHECK(hipGetLastError());
+
+    unsigned int incorrect_flag;
+    HIP_CHECK(hipMemcpy(&incorrect_flag,
+                        d_incorrect_flag,
+                        sizeof(incorrect_flag),
+                        hipMemcpyDeviceToHost));
+
+    ASSERT_EQ(0, incorrect_flag);
+
+    HIP_CHECK(hipFree(d_temp_storage));
+    HIP_CHECK(hipFree(d_incorrect_flag));
+}
+
+TEST(RocprimDeviceScanTests, LargeIndicesInclusiveScanByKey)
+{
+    auto inclusive_scan_by_key = [](void*         d_temp_storage,
+                                    size_t&       temp_storage_size_bytes,
+                                    auto          keys_input,
+                                    auto          values_input,
+                                    size_t        run_length,
+                                    unsigned int* d_incorrect_flag,
+                                    size_t        size,
+                                    hipStream_t   stream,
+                                    bool          debug_synchronous,
+                                    int /*seed_value*/) -> hipError_t
+    {
+        const check_run_inclusive_iterator output_it(
+            rocprim::make_tuple(run_length, d_incorrect_flag));
+
+        return rocprim::inclusive_scan_by_key(d_temp_storage,
+                                              temp_storage_size_bytes,
+                                              keys_input,
+                                              values_input,
+                                              output_it,
+                                              size,
+                                              rocprim::plus<size_t>{},
+                                              rocprim::equal_to<size_t>{},
+                                              stream,
+                                              debug_synchronous);
+    };
+    large_indices_scan_by_key_test(inclusive_scan_by_key);
+}
+
+TEST(RocprimDeviceScanTests, LargeIndicesExclusiveScanByKey)
+{
+    auto exclusive_scan_by_key = [](void*         d_temp_storage,
+                                    size_t&       temp_storage_size_bytes,
+                                    auto          keys_input,
+                                    auto          values_input,
+                                    size_t        run_length,
+                                    unsigned int* d_incorrect_flag,
+                                    size_t        size,
+                                    hipStream_t   stream,
+                                    bool          debug_synchronous,
+                                    int           seed_value) -> hipError_t
+    {
+        const size_t initial_value = test_utils::get_random_value<size_t>(0, 10000, seed_value);
+        const check_run_exclusive_iterator output_it(
+            rocprim::make_tuple(run_length, initial_value, d_incorrect_flag));
+        return rocprim::exclusive_scan_by_key(d_temp_storage,
+                                              temp_storage_size_bytes,
+                                              keys_input,
+                                              values_input,
+                                              output_it,
+                                              initial_value,
+                                              size,
+                                              rocprim::plus<size_t>{},
+                                              rocprim::equal_to<size_t>{},
+                                              stream,
+                                              debug_synchronous);
+    };
+    large_indices_scan_by_key_test(exclusive_scan_by_key);
+}
+
 using RocprimDeviceScanFutureTestsParams
     = ::testing::Types<DeviceScanParams<char>,
                        DeviceScanParams<int>,
