@@ -355,6 +355,7 @@ run_autotune_config:
   script:
     - cd "${CI_PROJECT_DIR}"
     - mkdir -p "${AUTOTUNE_CONFIG_DIR}"
+    - python3 -m pip install jinja2
     - python3
       scripts/autotune/create_optimization.py
       --benchmark_files "${CI_PROJECT_DIR}/benchmark_results/*.json"
