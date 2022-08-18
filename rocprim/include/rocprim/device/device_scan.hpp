@@ -32,11 +32,11 @@
 #include "../type_traits.hpp"
 #include "../types/future_value.hpp"
 
-#include "device_scan_config.hpp"
-#include "device_transform.hpp"
+#include "detail/config/device_scan.hpp"
 #include "detail/device_scan_common.hpp"
 #include "detail/device_scan_lookback.hpp"
 #include "detail/device_scan_reduce_then_scan.hpp"
+#include "device_transform.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
