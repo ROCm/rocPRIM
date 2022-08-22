@@ -22,7 +22,7 @@
 
 include:
   - project: 'amd/ci-templates'
-    ref: test-deps
+    ref: main
     file:
       - /defaults.yaml
       - /deps-cmake.yaml
