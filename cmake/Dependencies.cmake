@@ -176,19 +176,13 @@ if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
   find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
 endif()
 if(NOT ROCM_FOUND)
-  message(STATUS "ROCm CMake not found. Fetching...")
-  FetchContent_Declare(
-    rocm-cmake
-    GIT_REPOSITORY https://github.com/RadeonOpenCompute/rocm-cmake.git
-    GIT_TAG        develop
-  )
-  # Adding rocm-cmake via add_subdirectory does nothing, but defines useless targets such
-  # as `analyze`
-  # Just download, unpack, then find the provided config file, skipping any other location cmake
-  # might search for.
-  FetchContent_GetProperties(rocm-cmake POPULATED ROCM_CMAKE_POPULATED)
-  if(NOT ROCM_CMAKE_POPULATED)
-    FetchContent_Populate(rocm-cmake)
+  if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
+    message(STATUS "ROCm CMake not found. Fetching...")
+    FetchContent_Declare(
+      rocm-cmake
+      URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/refs/tags/rocm-5.2.0.tar.gz
+    )
+    FetchContent_MakeAvailable(rocm-cmake)
   endif()
   find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
 else()
