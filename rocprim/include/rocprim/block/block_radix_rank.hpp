@@ -73,7 +73,7 @@ class block_radix_rank
                                                       storage_type_&     storage)
     {
         ROCPRIM_UNROLL
-        for(int i = 0; i < column_size; ++i)
+        for(unsigned int i = 0; i < column_size; ++i)
         {
             storage.packed_counters[i * block_size + flat_id] = 0;
         }
@@ -86,7 +86,7 @@ class block_radix_rank
     {
         packed_counter_type block_reduction = 0;
         ROCPRIM_UNROLL
-        for(int i = 0; i < column_size; ++i)
+        for(unsigned int i = 0; i < column_size; ++i)
         {
             block_reduction += packed_counters[i];
         }
@@ -99,7 +99,7 @@ class block_radix_rank
             packed_counter_type totals        = exclusive_prefix + block_reduction;
             packed_counter_type column_prefix = 0;
             ROCPRIM_UNROLL
-            for(int i = 1; i < packing_ratio; i <<= 1)
+            for(unsigned int i = 1; i < packing_ratio; i <<= 1)
             {
                 column_prefix += totals << (sizeof(digit_counter_type) * 8 * i);
             }
@@ -111,7 +111,7 @@ class block_radix_rank
         exclusive_prefix += storage.column_prefix;
 
         ROCPRIM_UNROLL
-        for(int i = 0; i < column_size; ++i)
+        for(unsigned int i = 0; i < column_size; ++i)
         {
             packed_counter_type counter = packed_counters[i];
             packed_counters[i]          = exclusive_prefix;
@@ -129,7 +129,7 @@ class block_radix_rank
         {
             packed_counter_type local_counters[column_size];
             ROCPRIM_UNROLL
-            for(int i = 0; i < column_size; ++i)
+            for(unsigned int i = 0; i < column_size; ++i)
             {
                 local_counters[i] = shared_counters[i];
             }
@@ -137,7 +137,7 @@ class block_radix_rank
             scan_block_counters(flat_id, storage, local_counters);
 
             ROCPRIM_UNROLL
-            for(int i = 0; i < column_size; ++i)
+            for(unsigned int i = 0; i < column_size; ++i)
             {
                 shared_counters[i] = local_counters[i];
             }
@@ -164,7 +164,7 @@ class block_radix_rank
         unsigned int       digit_counters[ItemsPerThread];
 
         ROCPRIM_UNROLL
-        for(int i = 0; i < ItemsPerThread; ++i)
+        for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
             const unsigned int digit = KeyCodec::extract_digit(bit_keys[i], begin_bit, pass_bits);
             const unsigned int column_counter = digit % (radix_digits / packing_ratio);
@@ -183,18 +183,18 @@ class block_radix_rank
         ::rocprim::syncthreads();
 
         ROCPRIM_UNROLL
-        for(int i = 0; i < ItemsPerThread; ++i)
+        for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
             ranks[i] = thread_prefixes[i] + storage.digit_counters[digit_counters[i]];
         }
     }
 
     template<bool Descending, typename Key, unsigned int ItemsPerThread>
-    void rank_keys_impl(const Key (&keys)[ItemsPerThread],
-                        unsigned int (&ranks)[ItemsPerThread],
-                        storage_type_&     storage,
-                        const unsigned int begin_bit,
-                        const unsigned int pass_bits)
+    ROCPRIM_DEVICE void rank_keys_impl(const Key (&keys)[ItemsPerThread],
+                                       unsigned int (&ranks)[ItemsPerThread],
+                                       storage_type_&     storage,
+                                       const unsigned int begin_bit,
+                                       const unsigned int pass_bits)
     {
         using key_codec    = ::rocprim::detail::radix_key_codec<Key, Descending>;
         using bit_key_type = typename key_codec::bit_key_type;
@@ -203,8 +203,9 @@ class block_radix_rank
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
-            bit_keys = key_codec::encode(keys[i]);
+            bit_keys[i] = key_codec::encode(keys[i]);
         }
+
         rank_bit_keys_impl<key_codec>(bit_keys, ranks, storage, begin_bit, pass_bits);
     }
 
