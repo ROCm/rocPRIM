@@ -36,8 +36,8 @@ template<typename T,
          unsigned int ItemsPerThread,
          unsigned int MaxRadixBits,
          bool         MemoizeOuterScan>
-__global__ __launch_bounds__(BlockSize) void rank_kernel(const T*            items_input,
-                                                         const unsigned int* ranks_output,
+__global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      items_input,
+                                                         unsigned int* const ranks_output,
                                                          const bool          descending,
                                                          const unsigned int  start_bit,
                                                          const unsigned int  radix_bits)
@@ -51,8 +51,8 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T*            ite
     T keys[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, items_input + block_offset, keys);
 
-    ROCPRIM_SHARED_MEMORY typename block_rank_type::storage storage;
-    unsigned int                                            ranks[ItemsPerThread];
+    ROCPRIM_SHARED_MEMORY typename block_rank_type::storage_type storage;
+    unsigned int                                                 ranks[ItemsPerThread];
 
     if(descending)
     {
@@ -63,7 +63,7 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T*            ite
         block_rank_type{}.rank_keys(keys, ranks, storage, start_bit, radix_bits);
     }
 
-    rocprim::block_store_direct_blocked(lid, ranks_output + block_offset, keys);
+    rocprim::block_store_direct_blocked(lid, ranks_output + block_offset, ranks);
 }
 
 template<typename T,
@@ -97,7 +97,7 @@ void test_block_radix_rank()
     SCOPED_TRACE(testing::Message() << "with radix_bits = " << radix_bits);
     SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; ++seed_index)
+    for(size_t seed_index = 0; seed_index < 1; ++seed_index)
     {
         seed_type seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
@@ -122,7 +122,7 @@ void test_block_radix_rank()
 
         // Calculated expected results on host
         std::vector<unsigned int> expected(size);
-        for(size_t i = 0; grid_size < 0; ++i)
+        for(size_t i = 0; i < grid_size; ++i)
         {
             size_t     block_offset = i * items_per_block;
             const auto key_cmp = test_utils::key_comparator<T, descending, start_bit, end_bit>();
@@ -172,6 +172,7 @@ void test_block_radix_rank()
                             d_ranks_output,
                             size * sizeof(unsigned int),
                             hipMemcpyDeviceToHost));
+        HIP_CHECK(hipDeviceSynchronize());
 
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(ranks_output, expected));
 
@@ -198,6 +199,7 @@ struct static_for
                               pass_start_bit[First],
                               max_radix_bits[First],
                               radix_bits,
+                              rank_desc[First],
                               MemoizeOuterScan>();
         static_for<First + 1, Last, T, BlockSize, MemoizeOuterScan>::run();
     }

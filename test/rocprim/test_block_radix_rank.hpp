@@ -33,10 +33,19 @@ typed_test_def(suite_name, name_suffix, RankBasic)
     {
         GTEST_SKIP();
     }
+
+    static_for<0, n_sizes, type, block_size, false>::run();
 }
 
 typed_test_def(suite_name, name_suffix, RankBasicMemoize)
 {
     using type                  = typename TestFixture::params::input_type;
     constexpr size_t block_size = TestFixture::params::block_size;
+
+    if(block_size > test_utils::get_max_block_size())
+    {
+        GTEST_SKIP();
+    }
+
+    static_for<0, n_sizes, type, block_size, true>::run();
 }

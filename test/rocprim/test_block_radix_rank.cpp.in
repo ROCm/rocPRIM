@@ -36,22 +36,24 @@
 #include "test_block_radix_rank.kernels.hpp"
 
 // Start stamping out tests
-struct RocprimBlockDiscontinuity;
+struct RocprimBlockRadixRank;
+
+#cmakedefine ROCPRIM_TEST_SLICE @ROCPRIM_TEST_SLICE@
+
+#if ROCPRIM_TEST_SLICE == 0
 
 struct Integral;
 #define suite_name RocprimBlockRadixRank
 #define warp_params BlockParamsIntegral
 #define name_suffix Integral
 
-#include "test_block_radix_rank.hpp"
-
-#undef suite_name
-#undef warp_params
-#undef name_suffix
+#elif ROCPRIM_TEST_SLICE == 1
 
 struct Floating;
 #define suite_name RocprimBlockRadixRank
 #define warp_params BlockParamsFloating
 #define name_suffix Floating
+
+#endif
 
 #include "test_block_radix_rank.hpp"

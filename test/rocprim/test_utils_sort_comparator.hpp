@@ -46,12 +46,11 @@ struct key_comparator
 {};
 
 template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
-struct key_comparator<
-    Key,
-    Descending,
-    StartBit,
-    EndBit,
-    typename std::enable_if<rocprim::is_integral<Key>::value>::type>
+struct key_comparator<Key,
+                      Descending,
+                      StartBit,
+                      EndBit,
+                      typename std::enable_if<rocprim::is_integral<Key>::value>::type>
 {
     static constexpr Key radix_mask_upper
         = EndBit == 8 * sizeof(Key) ? ~Key(0) : (Key(1) << EndBit) - 1;
@@ -67,12 +66,11 @@ struct key_comparator<
 };
 
 template<class Key, bool Descending, unsigned int StartBit, unsigned int EndBit>
-struct key_comparator<
-    Key,
-    Descending,
-    StartBit,
-    EndBit,
-    typename std::enable_if<rocprim::is_floating_point<Key>::value>::type>
+struct key_comparator<Key,
+                      Descending,
+                      StartBit,
+                      EndBit,
+                      typename std::enable_if<rocprim::is_floating_point<Key>::value>::type>
 {
     using unsigned_bits_type = typename rocprim::get_unsigned_bits_type<Key>::unsigned_type;
 
