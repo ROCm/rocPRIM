@@ -33,114 +33,12 @@
 #include "../types.hpp"
 
 #include "block_exchange.hpp"
+#include "block_radix_rank.hpp"
 
 /// \addtogroup blockmodule
 /// @{
 
 BEGIN_ROCPRIM_NAMESPACE
-
-namespace detail
-{
-
-/// Specialized block scan of bool (1 bit values)
-/// It uses warp scan and reduce functions of bool (1 bit values) based on ballot and bit count.
-/// They have much better performance (several times faster) than generic scan and reduce classes
-/// because of using hardware ability to calculate which lanes have true predicate values.
-template<
-    unsigned int BlockSizeX,
-    unsigned int BlockSizeY = 1,
-    unsigned int BlockSizeZ = 1
->
-class block_bit_plus_scan
-{
-    static constexpr unsigned int BlockSize = BlockSizeX * BlockSizeY * BlockSizeZ;
-    // Select warp size
-    static constexpr unsigned int warp_size =
-        detail::get_min_warp_size(BlockSize, ::rocprim::device_warp_size());
-    // Number of warps in block
-    static constexpr unsigned int warps_no = (BlockSize + warp_size - 1) / warp_size;
-
-    // typedef of warp_scan primitive that will be used to get prefix values for
-    // each warp (scanned carry-outs from warps before it)
-    // warp_scan_crosslane is an implementation of warp_scan that does not need storage,
-    // but requires logical warp size to be a power of two.
-    using warp_scan_prefix_type =
-        ::rocprim::detail::warp_scan_crosslane<unsigned int, detail::next_power_of_two(warps_no)>;
-
-public:
-
-    struct storage_type_
-    {
-        unsigned int warp_prefixes[warps_no];
-        // ---------- Shared memory optimisation ----------
-        // Since we use warp_scan_crosslane for warp scan, we don't need to allocate
-        // any temporary memory for it.
-    };
-
-    using storage_type = detail::raw_storage<storage_type_>;
-
-    template<unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void exclusive_scan(const unsigned int (&input)[ItemsPerThread],
-                        unsigned int (&output)[ItemsPerThread],
-                        unsigned int& reduction,
-                        storage_type& storage)
-    {
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
-        const unsigned int lane_id = ::rocprim::lane_id();
-        const unsigned int warp_id = ::rocprim::warp_id(flat_id);
-        storage_type_& storage_ = storage.get();
-
-        unsigned int warp_reduction = ::rocprim::bit_count(::rocprim::ballot(input[0]));
-        for(unsigned int i = 1; i < ItemsPerThread; i++)
-        {
-            warp_reduction += ::rocprim::bit_count(::rocprim::ballot(input[i]));
-        }
-        if(lane_id == 0)
-        {
-            storage_.warp_prefixes[warp_id] = warp_reduction;
-        }
-        ::rocprim::syncthreads();
-
-        // Scan the warp reduction results to calculate warp prefixes
-        if(flat_id < warps_no)
-        {
-            unsigned int prefix = storage_.warp_prefixes[flat_id];
-            warp_scan_prefix_type().inclusive_scan(prefix, prefix, ::rocprim::plus<unsigned int>());
-            storage_.warp_prefixes[flat_id] = prefix;
-        }
-#ifdef __HIP_CPU_RT__
-        else
-        {
-            // HIP-CPU doesn't implement lockstep behavior. Need to invoke the same number sync ops in divergent branch.
-            empty_type empty;
-            ::rocprim::detail::warp_scan_crosslane<empty_type, detail::next_power_of_two(warps_no)>().inclusive_scan(empty, empty, empty_binary_op{});
-        }
-#endif
-        ::rocprim::syncthreads();
-
-        // Perform exclusive warp scan of bit values
-        unsigned int lane_prefix = 0;
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
-        {
-            lane_prefix = ::rocprim::masked_bit_count(::rocprim::ballot(input[i]), lane_prefix);
-        }
-
-        // Scan the lane's items and calculate final scan results
-        output[0] = warp_id == 0
-            ? lane_prefix
-            : lane_prefix + storage_.warp_prefixes[warp_id - 1];
-        for(unsigned int i = 1; i < ItemsPerThread; i++)
-        {
-            output[i] = output[i - 1] + input[i - 1];
-        }
-
-        // Get the final inclusive reduction result
-        reduction = storage_.warp_prefixes[warps_no - 1];
-    }
-};
-
-} // end namespace detail
 
 /// \brief The block_radix_sort class is a block level parallel primitive which provides
 /// methods sorting items (keys or key-value pairs) partitioned across threads in a block
@@ -198,24 +96,23 @@ template<
 >
 class block_radix_sort
 {
-    static constexpr unsigned int BlockSize = BlockSizeX * BlockSizeY * BlockSizeZ;
-    static constexpr bool with_values = !std::is_same<Value, empty_type>::value;
+    static constexpr unsigned int BlockSize           = BlockSizeX * BlockSizeY * BlockSizeZ;
+    static constexpr bool         with_values         = !std::is_same<Value, empty_type>::value;
+    static constexpr unsigned int radix_bits_per_pass = 4;
 
-    using bit_key_type = typename ::rocprim::detail::radix_key_codec<Key>::bit_key_type;
-    using bit_block_scan = detail::block_bit_plus_scan<BlockSizeX, BlockSizeY, BlockSizeZ>;
-
+    using bit_key_type    = typename ::rocprim::detail::radix_key_codec<Key>::bit_key_type;
+    using block_rank_type = ::rocprim::
+        block_radix_rank<BlockSizeX, radix_bits_per_pass, false, BlockSizeY, BlockSizeZ>;
     using bit_keys_exchange_type = ::rocprim::block_exchange<bit_key_type, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
-    using values_exchange_type = ::rocprim::block_exchange<Value, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
+    using values_exchange_type
+        = ::rocprim::block_exchange<Value, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
 
     // Struct used for creating a raw_storage object for this primitive's temporary storage.
-    struct storage_type_
+    union storage_type_
     {
-        union
-        {
-            typename bit_keys_exchange_type::storage_type bit_keys_exchange;
-            typename values_exchange_type::storage_type values_exchange;
-        };
-        typename block_radix_sort<Key,BlockSizeX,ItemsPerThread,Value,BlockSizeY,BlockSizeZ>::bit_block_scan::storage_type bit_block_scan;
+        typename bit_keys_exchange_type::storage_type bit_keys_exchange;
+        typename values_exchange_type::storage_type   values_exchange;
+        typename block_rank_type::storage_type        rank;
     };
 
 public:
@@ -896,53 +793,44 @@ private:
                    unsigned int end_bit)
     {
         using key_codec = ::rocprim::detail::radix_key_codec<Key, Descending>;
-        storage_type_& storage_ = storage.get();
-
-        const unsigned int flat_id = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
 
         bit_key_type bit_keys[ItemsPerThread];
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
             bit_keys[i] = key_codec::encode(keys[i]);
         }
 
-        // Use binary digits (i.e. digits can be 0 or 1)
-        for(unsigned int bit = begin_bit; bit < end_bit; bit++)
+        while(true)
         {
-            unsigned int bits[ItemsPerThread];
-            for(unsigned int i = 0; i < ItemsPerThread; i++)
-            {
-                bits[i] = key_codec::extract_digit(bit_keys[i], bit, 1);
-            }
+            const int pass_bits = min(radix_bits_per_pass, end_bit - begin_bit);
 
             unsigned int ranks[ItemsPerThread];
-#ifdef __HIP_CPU_RT__
-            // TODO: Check if really necessary
-            // Initialize contents, as non-hipcc compilers don't unconditionally zero out allocated memory
-            std::memset(ranks, 0, ItemsPerThread * sizeof(decltype(ranks[0])));
-#endif
-            unsigned int count;
-            bit_block_scan().exclusive_scan(bits, ranks, count, storage_.bit_block_scan);
+            block_rank_type{}.template rank_bit_keys<key_codec>(bit_keys,
+                                                                ranks,
+                                                                storage.get().rank,
+                                                                begin_bit,
+                                                                pass_bits);
 
-            // Scatter keys to computed positions considering starting positions of their digit values
-            const unsigned int start = BlockSize * ItemsPerThread - count;
-            for(unsigned int i = 0; i < ItemsPerThread; i++)
-            {
-                // Calculate position for the first digit (0) value based on positions of the second (1)
-                ranks[i] = bits[i] != 0
-                    ? (start + ranks[i])
-                    : (flat_id * ItemsPerThread + i - ranks[i]);
-            }
+            begin_bit += radix_bits_per_pass;
+
             exchange_keys(storage, bit_keys, ranks);
             exchange_values(storage, values, ranks);
+
+            if(begin_bit >= end_bit)
+                break;
+
+            // Synchronization required to make bock_rank wait on the next iteration.
+            ::rocprim::syncthreads();
         }
 
-        if(ToStriped)
+        if ROCPRIM_IF_CONSTEXPR(ToStriped)
         {
             to_striped_keys(storage, bit_keys);
             to_striped_values(storage, values);
         }
 
+        ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
             keys[i] = key_codec::decode(bit_keys[i]);
@@ -955,7 +843,7 @@ private:
                        const unsigned int (&ranks)[ItemsPerThread])
     {
         storage_type_& storage_ = storage.get();
-        // Synchronization is omitted here because bit_block_scan already calls it
+        ::rocprim::syncthreads(); // Storage will be reused (union), synchronization is needed
         bit_keys_exchange_type().scatter_to_blocked(bit_keys, bit_keys, ranks, storage_.bit_keys_exchange);
     }
 
@@ -985,7 +873,7 @@ private:
                          bit_key_type (&bit_keys)[ItemsPerThread])
     {
         storage_type_& storage_ = storage.get();
-        ::rocprim::syncthreads();
+        ::rocprim::syncthreads(); // Storage will be reused (union), synchronization is needed
         bit_keys_exchange_type().blocked_to_striped(bit_keys, bit_keys, storage_.bit_keys_exchange);
     }
 
