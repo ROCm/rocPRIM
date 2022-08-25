@@ -3,11 +3,13 @@
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
 ## [Unreleased rocPRIM-2.12.0 for ROCm 5.4.0]
+- New block level `radix_rank` primitive.
 ## Changed
-- `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem 
+- `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem
   sizes larger than 2^32 items.
 - Device algorithms now return `hipErrorInvalidValue` if the amount of passed temporary memory is insufficient.
 - Lists of sizes for tests are unified, restored scan/reduce tests for `half` and `bfloat16` values.
+- Improved the performance of `block_radix_sort` and `device_radix_sort`.
 ### Removed
 - `block_sort::sort()` overload for keys and values with a dynamic size. This overload was documented but the
   implementation is missing. To avoid further confusion the documentation is removed until a decision is made on
