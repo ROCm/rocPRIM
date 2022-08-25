@@ -33,6 +33,52 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
+/// \brief The block_radix_rank class is a blcok level parallel primitives which provides
+/// methods for ranking items partitioned across threads in a block. This algorithm
+/// associates each item with the index it would gain if the keys were sorted into an array,
+/// according to a radix comparison.
+///
+/// \tparam BlockSizeX - the number of threads in a block's x dimension.
+/// \tparam RadixBits - the maximum number of radix digit bits that comparisons are performed by.
+/// \tparam MemoizeOuterScan - whether to cache digit counters in local memory. This omits loading
+/// the same values from shared memory twice, at the expense of more register usage.
+/// \tparam BlockSizeY - the number of threads in a block's y dimension, defaults to 1.
+/// \tparam BlockSizeZ - the number of threads in a block's z dimension, defaults to 1.
+///
+/// \par Overview
+/// * Key type must be an arithmetic type (that is, an integral type or a floating point type).
+/// * Performance depends on the block size and the number of items that will be sorted per thread.
+///     * It is usually better if the block size is a multiple of th size of the hardware warp.
+///     * It is usually increased when there are more than one item per thread. However, when there are too
+///     many items per thread, each thread may need so much registers and/or shared memory.
+/// * Shared memory usage deoends on the block size, and the maximum number of radix bits that will be
+/// considered when comparing keys.
+///     * The storage increases when more bits are considered.
+///
+/// \par Examples
+/// In the example, radix rank is performed on a block of 128 threads. Each thread provides
+/// three \p float values, which are ranked according to bits 10 through 14. The results are
+/// written back in a separate array of three <tt>unsigned int</tt> values.
+///
+/// \code{.cpp}
+/// __global__ void example_kernel(...)
+/// {
+///     // specialize the block_radix_rank for float, block of 128 threads.
+///     using block_rank_float = rocprim::block_radix_rank<float, 128>;
+///     // allocate storage in shared memory
+///     __shared__ block_rank_float::storage_type storage;
+///
+///     float        input[3] = ...;
+///     unsigned int output[3] = ...;
+///     // execute the block radix rank (ascending)
+///     block_rank_float().rank_keys(input,
+///                                  output,
+///                                  storage,
+///                                  10,
+///                                  4);
+///     ...
+/// }
+/// \endcode
 template<unsigned int BlockSizeX,
          unsigned int RadixBits,
          bool         MemoizeOuterScan = false,
@@ -210,12 +256,61 @@ class block_radix_rank
     }
 
 public:
+    /// \brief Struct used to allocate a temporary memory that is required for thread
+    /// communication during operations provided by related parallel primitive.
+    ///
+    /// Depending on the implemention the operations exposed by parallel primitive may
+    /// require a temporary storage for thread communication. The storage should be allocated
+    /// using keywords \p __shared__. It can be aliased to
+    /// an externally allocated memory, or be a part of a union with other storage types
+    /// to increase shared memory reusability.
 #ifndef DOXYGEN_SHOULD_SKIP_THIS // hides storage_type implementation for Doxygen
     using storage_type = detail::raw_storage<storage_type_>;
 #else
     using storage_type = storage_type_; // only for Doxygen
 #endif
 
+    /// \brief Perform ascending radix rank over keys partitioned across threads in a block.
+    ///
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
+    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
+    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
+    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    ///
+    /// \par Storage reusage
+    /// A synchronization barrier should be placed before \p storage is reused
+    /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
+    ///
+    /// \par Examples
+    /// \parblock
+    /// In the example, radix rank is performed on a block of 128 threads. Each thread provides
+    /// three \p float values, which are ranked according to bits 10 through 14. The results are
+    /// written back in a separate array of three <tt>unsigned int</tt> values.
+    ///
+    /// \code{.cpp}
+    /// __global__ void example_kernel(...)
+    /// {
+    ///     // specialize the block_radix_rank for float, block of 128 threads.
+    ///     using block_rank_float = rocprim::block_radix_rank<float, 128>;
+    ///     // allocate storage in shared memory
+    ///     __shared__ block_rank_float::storage_type storage;
+    ///
+    ///     float        input[3] = ...;
+    ///     unsigned int output[3] = ...;
+    ///     // execute the block radix rank (ascending)
+    ///     block_rank_float().rank_keys(input,
+    ///                                  output,
+    ///                                  storage,
+    ///                                  10,
+    ///                                  4);
+    ///     ...
+    /// }
+    /// \endcode
     template<typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
@@ -226,6 +321,19 @@ public:
         rank_keys_impl<false>(keys, ranks, storage.get(), begin_bit, pass_bits);
     }
 
+    /// \brief Perform ascending radix rank over keys partitioned across threads in a block.
+    ///
+    /// * This overload does not accept storage argment. Required shared memory is allocated
+    /// by the method itself.
+    ///
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
+    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
+    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
     template<typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
@@ -236,6 +344,47 @@ public:
         rank_keys(keys, ranks, storage.get(), begin_bit, pass_bits);
     }
 
+    /// \brief Perform descending radix rank over keys partitioned across threads in a block.
+    ///
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
+    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
+    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
+    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    ///
+    /// \par Storage reusage
+    /// A synchronization barrier should be placed before \p storage is reused
+    /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
+    ///
+    /// \par Examples
+    /// \parblock
+    /// In the example, radix rank is performed on a block of 128 threads. Each thread provides
+    /// three \p float values, which are ranked according to bits 10 through 14. The results are
+    /// written back in a separate array of three <tt>unsigned int</tt> values.
+    ///
+    /// \code{.cpp}
+    /// __global__ void example_kernel(...)
+    /// {
+    ///     // specialize the block_radix_rank for float, block of 128 threads.
+    ///     using block_rank_float = rocprim::block_radix_rank<float, 128>;
+    ///     // allocate storage in shared memory
+    ///     __shared__ block_rank_float::storage_type storage;
+    ///
+    ///     float        input[3] = ...;
+    ///     unsigned int output[3] = ...;
+    ///     // execute the block radix rank (descending)
+    ///     block_rank_float().rank_keys_desc(input,
+    ///                                       output,
+    ///                                       storage,
+    ///                                       10,
+    ///                                       4);
+    ///     ...
+    /// }
+    /// \endcode
     template<typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
@@ -246,6 +395,19 @@ public:
         rank_keys_impl<true>(keys, ranks, storage.get(), begin_bit, pass_bits);
     }
 
+    /// \brief Perform descendingradix rank over keys partitioned across threads in a block.
+    ///
+    /// * This overload does not accept storage argment. Required shared memory is allocated
+    /// by the method itself.
+    ///
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
+    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
+    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
     template<typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
