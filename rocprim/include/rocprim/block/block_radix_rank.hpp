@@ -301,7 +301,7 @@ public:
     ///     __shared__ block_rank_float::storage_type storage;
     ///
     ///     float        input[3] = ...;
-    ///     unsigned int output[3] = ...;
+    ///     unsigned int output[3];
     ///     // execute the block radix rank (ascending)
     ///     block_rank_float().rank_keys(input,
     ///                                  output,
@@ -375,7 +375,7 @@ public:
     ///     __shared__ block_rank_float::storage_type storage;
     ///
     ///     float        input[3] = ...;
-    ///     unsigned int output[3] = ...;
+    ///     unsigned int output[3];
     ///     // execute the block radix rank (descending)
     ///     block_rank_float().rank_keys_desc(input,
     ///                                       output,
@@ -418,6 +418,57 @@ public:
         rank_keys_desc(keys, ranks, storage.get(), begin_bit, pass_bits);
     }
 
+    /// \brief Perform radix rank over bit keys partitioned across threads in a block. This overload
+    /// accepts a custom key codec, and assumes that keys have already been encoded
+    /// using <tt>KeyCodec::encode</tt>
+    ///
+    /// \tparam KeyCodec - the key codec with which to extract digits.
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
+    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
+    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
+    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    ///
+    /// \par Storage reusage
+    /// A synchronization barrier should be placed before \p storage is reused
+    /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
+    ///
+    /// \par Examples
+    /// \parblock
+    /// In the example, radix rank is performed on a block of 128 threads. Each thread provides
+    /// three \p float values, which are ranked according to bits 10 through 14. The results are
+    /// written back in a separate array of three <tt>unsigned int</tt> values.
+    ///
+    /// \code{.cpp}
+    /// __global__ void example_kernel(...)
+    /// {
+    ///     // specialize the block_radix_rank for float, block of 128 threads.
+    ///     using block_rank_float = rocprim::block_radix_rank<float, 128>;
+    ///     // allocate storage in shared memory
+    ///     __shared__ block_rank_float::storage_type storage;
+    ///     // specialize a key codec
+    ///     using key_codec = ...;
+    ///     float        input[3] = ...;
+    ///     // encode keys
+    ///     unsigned int bit_inputs[3];
+    ///     for (int i = 0; i < 3; ++i) {
+    ///         bit_inputs[i] = key_codec::encode(inputs[i]);
+    ///     }
+    ///
+    ///     unsigned int output[3];
+    ///     // execute the block radix rank
+    ///     block_rank_float().rank_bit_keys<key_codec>(input,
+    ///                                                 output,
+    ///                                                 storage,
+    ///                                                 10,
+    ///                                                 4);
+    ///     ...
+    /// }
+    /// \endcode
     template<typename KeyCodec, typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_bit_keys(const Key (&keys)[ItemsPerThread],
                                       unsigned int (&ranks)[ItemsPerThread],
@@ -428,6 +479,23 @@ public:
         rank_bit_keys_impl<KeyCodec>(keys, ranks, storage.get(), begin_bit, pass_bits);
     }
 
+    /// \brief Perform radix rank over bit keys partitioned across threads in a block. This overload
+    /// accepts a custom key codec, and assumes that keys have already been encoded
+    /// using <tt>KeyCodec::encode</tt>
+    ///
+    /// * This overload does not accept storage argment. Required shared memory is allocated
+    /// by the method itself.
+    ///
+    /// \tparam KeyCodec - the key codec with which to extract digits.
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
+    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
+    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
+    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
     template<typename KeyCodec, typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_bit_keys(const Key (&keys)[ItemsPerThread],
                                       unsigned int (&ranks)[ItemsPerThread],
