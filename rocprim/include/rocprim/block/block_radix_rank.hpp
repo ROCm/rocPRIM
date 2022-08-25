@@ -206,20 +206,20 @@ class block_radix_rank
 
         reset_counters(flat_id, storage);
 
-        digit_counter_type thread_prefixes[ItemsPerThread];
-        unsigned int       digit_counters[ItemsPerThread];
+        digit_counter_type  thread_prefixes[ItemsPerThread];
+        digit_counter_type* digit_counters[ItemsPerThread];
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
             const unsigned int digit = KeyCodec::extract_digit(bit_keys[i], begin_bit, pass_bits);
-            const unsigned int column_counter = digit % (radix_digits / packing_ratio);
-            const unsigned int sub_counter    = digit / (radix_digits / packing_ratio);
+            const unsigned int column_counter = digit % column_size;
+            const unsigned int sub_counter    = digit / column_size;
             const unsigned int counter
                 = (column_counter * block_size + flat_id) * packing_ratio + sub_counter;
 
-            digit_counters[i]  = counter;
-            thread_prefixes[i] = storage.digit_counters[counter]++;
+            digit_counters[i]  = &storage.digit_counters[counter];
+            thread_prefixes[i] = (*digit_counters[i])++;
         }
 
         ::rocprim::syncthreads();
@@ -231,7 +231,7 @@ class block_radix_rank
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
-            ranks[i] = thread_prefixes[i] + storage.digit_counters[digit_counters[i]];
+            ranks[i] = thread_prefixes[i] + *digit_counters[i];
         }
     }
 
