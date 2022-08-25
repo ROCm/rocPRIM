@@ -89,6 +89,11 @@ struct inner_type<custom_float_type>
 // Nonetheless until that adding a test for this pattern should reduce accidental breakages
 namespace rocprim
 {
+
+template<>
+struct is_floating_point<test_utils::custom_float_type> : std::true_type
+{};
+
 namespace detail
 {
 
