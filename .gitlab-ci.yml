@@ -226,7 +226,7 @@ build:benchmark:
     - .rules:build
   script:
 # If we have a custom config created by autotune:create-config
-    - "[ -d ${AUTOTUNE_CONFIG_DIR} ] && cp -r -f ${AUTOTUNE_CONFIG_DIR}/* ./"
+    - "[ -d ${AUTOTUNE_CONFIG_DIR} ] && cp -r -f ${AUTOTUNE_CONFIG_DIR}/* ${CI_PROJECT_DIR}/"
     - mkdir -p $BUILD_DIR
     - cd $BUILD_DIR
     - cmake
@@ -387,6 +387,8 @@ benchmark:
 
 .autotune-base:
   stage: autotune
+  extends:
+    - .rules:manual
   variables:
     AUTOTUNE_RESULT_DIR: ${CI_PROJECT_DIR}/autotune_results
 
@@ -397,7 +399,6 @@ autotune:execute-tuning:
     - .autotune-base
     - .cmake-minimum
     - .gpus:rocm
-    - .rules:manual
   variables:
     #temporarily disabled radix_sort in autotune_filename_regex
     AUTOTUNE_FILENAME_REGEX: (?!^benchmark_device_radix_sort$)^benchmark
