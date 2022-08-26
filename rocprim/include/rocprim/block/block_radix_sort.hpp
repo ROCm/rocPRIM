@@ -102,7 +102,7 @@ class block_radix_sort
 
     using bit_key_type    = typename ::rocprim::detail::radix_key_codec<Key>::bit_key_type;
     using block_rank_type = ::rocprim::
-        block_radix_rank<BlockSizeX, radix_bits_per_pass, false, BlockSizeY, BlockSizeZ>;
+        block_radix_rank<BlockSizeX, radix_bits_per_pass, true, BlockSizeY, BlockSizeZ>;
     using bit_keys_exchange_type = ::rocprim::block_exchange<bit_key_type, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
     using values_exchange_type
         = ::rocprim::block_exchange<Value, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
