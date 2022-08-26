@@ -806,12 +806,12 @@ private:
             const int pass_bits = min(radix_bits_per_pass, end_bit - begin_bit);
 
             unsigned int ranks[ItemsPerThread];
-            block_rank_type{}.template rank_bit_keys<key_codec>(bit_keys,
-                                                                ranks,
-                                                                storage.get().rank,
-                                                                begin_bit,
-                                                                pass_bits);
-
+            block_rank_type{}.template rank_keys(
+                bit_keys,
+                ranks,
+                storage.get().rank,
+                [begin_bit, pass_bits](const bit_key_type& key)
+                { return key_codec::extract_digit(key, begin_bit, pass_bits); });
             begin_bit += radix_bits_per_pass;
 
             exchange_keys(storage, bit_keys, ranks);

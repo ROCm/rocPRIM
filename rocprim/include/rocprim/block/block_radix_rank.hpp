@@ -36,7 +36,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief The block_radix_rank class is a blcok level parallel primitives which provides
 /// methods for ranking items partitioned across threads in a block. This algorithm
 /// associates each item with the index it would gain if the keys were sorted into an array,
-/// according to a radix comparison.
+/// according to a radix comparison. Ranking is performed in a stable manner.
 ///
 /// \tparam BlockSizeX - the number of threads in a block's x dimension.
 /// \tparam RadixBits - the maximum number of radix digit bits that comparisons are performed by.
@@ -194,12 +194,11 @@ class block_radix_rank
         }
     }
 
-    template<typename KeyCodec, typename BitKey, unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE void rank_bit_keys_impl(const BitKey (&bit_keys)[ItemsPerThread],
-                                           unsigned int (&ranks)[ItemsPerThread],
-                                           storage_type_&     storage,
-                                           const unsigned int begin_bit,
-                                           const unsigned int pass_bits)
+    template<typename Key, unsigned int ItemsPerThread, typename DigitCallback>
+    ROCPRIM_DEVICE void rank_keys_impl(const Key (&keys)[ItemsPerThread],
+                                       unsigned int (&ranks)[ItemsPerThread],
+                                       storage_type_& storage,
+                                       DigitCallback  digit_callback)
     {
         const unsigned int flat_id
             = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
@@ -212,7 +211,7 @@ class block_radix_rank
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
-            const unsigned int digit = KeyCodec::extract_digit(bit_keys[i], begin_bit, pass_bits);
+            const unsigned int digit          = digit_callback(keys[i]);
             const unsigned int column_counter = digit % column_size;
             const unsigned int sub_counter    = digit / column_size;
             const unsigned int counter
@@ -252,7 +251,11 @@ class block_radix_rank
             bit_keys[i] = key_codec::encode(keys[i]);
         }
 
-        rank_bit_keys_impl<key_codec>(bit_keys, ranks, storage, begin_bit, pass_bits);
+        rank_keys_impl(bit_keys,
+                       ranks,
+                       storage,
+                       [begin_bit, pass_bits](const bit_key_type& key)
+                       { return key_codec::extract_digit(key, begin_bit, pass_bits); });
     }
 
 public:
@@ -295,8 +298,8 @@ public:
     /// \code{.cpp}
     /// __global__ void example_kernel(...)
     /// {
-    ///     // specialize the block_radix_rank for float, block of 128 threads.
-    ///     using block_rank_float = rocprim::block_radix_rank<float, 128>;
+    ///     // specialize the block_radix_rank for float, block of 128 threads, and a maximum of 4 bits.
+    ///     using block_rank_float = rocprim::block_radix_rank<float, 128, 4>;
     ///     // allocate storage in shared memory
     ///     __shared__ block_rank_float::storage_type storage;
     ///
@@ -369,8 +372,8 @@ public:
     /// \code{.cpp}
     /// __global__ void example_kernel(...)
     /// {
-    ///     // specialize the block_radix_rank for float, block of 128 threads.
-    ///     using block_rank_float = rocprim::block_radix_rank<float, 128>;
+    ///     // specialize the block_radix_rank for float, block of 128 threads, and a maximum of 4 bits.
+    ///     using block_rank_float = rocprim::block_radix_rank<float, 128, 4>;
     ///     // allocate storage in shared memory
     ///     __shared__ block_rank_float::storage_type storage;
     ///
@@ -395,7 +398,7 @@ public:
         rank_keys_impl<true>(keys, ranks, storage.get(), begin_bit, pass_bits);
     }
 
-    /// \brief Perform descendingradix rank over keys partitioned across threads in a block.
+    /// \brief Perform descending radix rank over keys partitioned across threads in a block.
     ///
     /// * This overload does not accept storage argment. Required shared memory is allocated
     /// by the method itself.
@@ -418,20 +421,22 @@ public:
         rank_keys_desc(keys, ranks, storage.get(), begin_bit, pass_bits);
     }
 
-    /// \brief Perform radix rank over bit keys partitioned across threads in a block. This overload
-    /// accepts a custom key codec, and assumes that keys have already been encoded
-    /// using <tt>KeyCodec::encode</tt>
+    /// \brief Perform ascending radix rank over bit keys partitioned across threads in a block.
+    /// This overload accepts a callback used to extract the radix digit from a key.
     ///
-    /// \tparam KeyCodec - the key codec with which to extract digits.
     /// \tparam Key - the key type.
     /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// a key.
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
-    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
-    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
-    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
-    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    /// \param [in] digit_callback - function object used to convert a key to a digit.
+    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// <tt>unsigned int f(const Key &key);</tt>. The signature does not need to have
+    /// <tt>const &</tt>, but function object must not modify the objects passed to it.
+    /// This function will be used during ranking to extract the digit that indicates
+    /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
     ///
     /// \par Storage reusage
     /// A synchronization barrier should be placed before \p storage is reused
@@ -440,70 +445,159 @@ public:
     /// \par Examples
     /// \parblock
     /// In the example, radix rank is performed on a block of 128 threads. Each thread provides
-    /// three \p float values, which are ranked according to bits 10 through 14. The results are
-    /// written back in a separate array of three <tt>unsigned int</tt> values.
+    /// three \p int values, which are ranked according to a digit callback that extracts
+    /// digits 0 through 4. Results written back in a separate array of three <tt>unsigned int</tt> values.
     ///
     /// \code{.cpp}
     /// __global__ void example_kernel(...)
     /// {
-    ///     // specialize the block_radix_rank for float, block of 128 threads.
-    ///     using block_rank_float = rocprim::block_radix_rank<float, 128>;
+    ///     // specialize the block_radix_rank for int, block of 128 threads, and a maximum of 4 bits.
+    ///     using block_rank_float = rocprim::block_radix_rank<int, 128, 4>;
     ///     // allocate storage in shared memory
     ///     __shared__ block_rank_float::storage_type storage;
-    ///     // specialize a key codec
-    ///     using key_codec = ...;
-    ///     float        input[3] = ...;
-    ///     // encode keys
-    ///     unsigned int bit_inputs[3];
-    ///     for (int i = 0; i < 3; ++i) {
-    ///         bit_inputs[i] = key_codec::encode(inputs[i]);
-    ///     }
     ///
+    ///     int          input[3] = ...;
     ///     unsigned int output[3];
-    ///     // execute the block radix rank
-    ///     block_rank_float().rank_bit_keys<key_codec>(input,
-    ///                                                 output,
-    ///                                                 storage,
-    ///                                                 10,
-    ///                                                 4);
+    ///     // execute the block radix rank (ascending)
+    ///     block_rank_float().rank_keys(input,
+    ///                                  output,
+    ///                                  storage,
+    ///                                  [](const int& key)
+    ///                                  {
+    ///                                      // Rank the keys by the lower 4 bits
+    ///                                      return key & 0xF;
+    ///                                  });
     ///     ...
     /// }
     /// \endcode
-    template<typename KeyCodec, typename Key, unsigned ItemsPerThread>
-    ROCPRIM_DEVICE void rank_bit_keys(const Key (&keys)[ItemsPerThread],
-                                      unsigned int (&ranks)[ItemsPerThread],
-                                      storage_type& storage,
-                                      unsigned int  begin_bit = 0,
-                                      unsigned int  pass_bits = RadixBits)
+    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
+                                  unsigned int (&ranks)[ItemsPerThread],
+                                  storage_type& storage,
+                                  DigitCallback digit_callback)
     {
-        rank_bit_keys_impl<KeyCodec>(keys, ranks, storage.get(), begin_bit, pass_bits);
+        rank_keys_impl(keys, ranks, storage.get(), digit_callback);
     }
 
-    /// \brief Perform radix rank over bit keys partitioned across threads in a block. This overload
-    /// accepts a custom key codec, and assumes that keys have already been encoded
-    /// using <tt>KeyCodec::encode</tt>
+    /// \brief Perform ascending radix rank over bit keys partitioned across threads in a block.
+    /// This overload accepts a callback used to extract the radix digit from a key.
     ///
     /// * This overload does not accept storage argment. Required shared memory is allocated
     /// by the method itself.
     ///
-    /// \tparam KeyCodec - the key codec with which to extract digits.
     /// \tparam Key - the key type.
     /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// a key.
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
-    /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
-    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
-    /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
-    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
-    template<typename KeyCodec, typename Key, unsigned ItemsPerThread>
-    ROCPRIM_DEVICE void rank_bit_keys(const Key (&keys)[ItemsPerThread],
-                                      unsigned int (&ranks)[ItemsPerThread],
-                                      unsigned int begin_bit = 0,
-                                      unsigned int pass_bits = RadixBits)
+    /// \param [in] digit_callback - function object used to convert a key to a digit.
+    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// <tt>unsigned int f(const Key &key);</tt>. The signature does not need to have
+    /// <tt>const &</tt>, but function object must not modify the objects passed to it.
+    /// This function will be used during ranking to extract the digit that indicates
+    /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
+    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
+                                  unsigned int (&ranks)[ItemsPerThread],
+                                  DigitCallback digit_callback)
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        rank_bit_keys(keys, ranks, storage.get(), begin_bit, pass_bits);
+        rank_keys(keys, ranks, storage.get(), digit_callback);
+    }
+
+    /// \brief Perform descending radix rank over bit keys partitioned across threads in a block.
+    /// This overload accepts a callback used to extract the radix digit from a key.
+    ///
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// a key.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
+    /// \param [in] digit_callback - function object used to convert a key to a digit.
+    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// <tt>unsigned int f(const Key &key);</tt>. The signature does not need to have
+    /// <tt>const &</tt>, but function object must not modify the objects passed to it.
+    /// This function will be used during ranking to extract the digit that indicates
+    /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
+    ///
+    /// \par Storage reusage
+    /// A synchronization barrier should be placed before \p storage is reused
+    /// or repurposed: \p __syncthreads() or \p rocprim::syncthreads().
+    ///
+    /// \par Examples
+    /// \parblock
+    /// In the example, radix rank is performed on a block of 128 threads. Each thread provides
+    /// three \p int values, which are ranked according to a digit callback that extracts
+    /// digits 0 through 4. Results written back in a separate array of three <tt>unsigned int</tt> values.
+    ///
+    /// \code{.cpp}
+    /// __global__ void example_kernel(...)
+    /// {
+    ///     // specialize the block_radix_rank for int, block of 128 threads, and a maximum of 4 bits.
+    ///     using block_rank_float = rocprim::block_radix_rank<int, 128, 4>;
+    ///     // allocate storage in shared memory
+    ///     __shared__ block_rank_float::storage_type storage;
+    ///
+    ///     int          input[3] = ...;
+    ///     unsigned int output[3];
+    ///     // execute the block radix rank (descending))
+    ///     block_rank_float().rank_keys_desc(input,
+    ///                                       output,
+    ///                                       storage,
+    ///                                       [](const int& key)
+    ///                                       {
+    ///                                           // Rank the keys by the lower 4 bits
+    ///                                           return key & 0xF;
+    ///                                       });
+    ///     ...
+    /// }
+    /// \endcode
+    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
+                                       unsigned int (&ranks)[ItemsPerThread],
+                                       storage_type& storage,
+                                       DigitCallback digit_callback)
+    {
+        rank_keys_impl(keys,
+                       ranks,
+                       storage.get(),
+                       [digit_callback](const Key& key)
+                       {
+                           const unsigned int digit = digit_callback(key);
+                           return RadixBits - 1 - digit;
+                       });
+    }
+
+    /// \brief Perform descending radix rank over bit keys partitioned across threads in a block.
+    /// This overload accepts a callback used to extract the radix digit from a key.
+    ///
+    /// * This overload does not accept storage argment. Required shared memory is allocated
+    /// by the method itself.
+    ///
+    /// \tparam Key - the key type.
+    /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
+    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// a key.
+    /// \param [in] keys - reference to an array of keys provided by a thread.
+    /// \param [out] ranks - reference to an array where the final ranks are written to.
+    /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
+    /// \param [in] digit_callback - function object used to convert a key to a digit.
+    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// <tt>unsinged int f(const Key &key);</tt>. The signature does not need to have
+    /// <tt>const &</tt>, but function object must not modify the objects passed to it.
+    /// This function will be used during ranking to extract the digit that indicates
+    /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
+    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
+                                       unsigned int (&ranks)[ItemsPerThread],
+                                       DigitCallback digit_callback)
+    {
+        ROCPRIM_SHARED_MEMORY storage_type storage;
+        rank_keys_desc(keys, ranks, storage.get(), digit_callback);
     }
 };
 
