@@ -7,13 +7,13 @@ gpu_arch=$1;
 #git clone -b autotune_preview  https://github.com/ROCmSoftwarePlatform/rocPRIM.git
 mkdir -p build && cd build
 
-#CC=/opt/rocm/llvm/bin/clang CXX=/opt/rocm/llvm/bin/clang++ cmake -D BUILD_BENCHMARK=ON -D BENCHMARK_CONFIG_TUNING=ON ..
+CC=/opt/rocm/llvm/bin/clang CXX=/opt/rocm/llvm/bin/clang++ cmake -D BUILD_BENCHMARK=ON -D BENCHMARK_CONFIG_TUNING=ON ..
 
 # Only build the benchmark_device_reduce since the others don't work on the preview branch
-#make -j `nproc` benchmark_device_reduce
+make -j `nproc` benchmark_device_reduce
 
 #Generate json output of the benchmark
-#./benchmark/benchmark_device_reduce --benchmark_out=./device_reduce_$gpu_arch.json --benchmark_out_format=json
+./benchmark/benchmark_device_reduce --benchmark_out=./device_reduce_$gpu_arch.json --benchmark_out_format=json
 
 mkdir -p ../configs
 
