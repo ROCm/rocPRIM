@@ -21,7 +21,7 @@
 """
 This Python script is intended for the creation of autotuned configurations
 for the supported rocPRIM algorithms based on benchmark results. The script
-does not update the configurations automatically, the user is responsible for 
+does not update the configurations automatically, the user is responsible for
 installation and the correctness of the files
 """
 
@@ -76,7 +76,7 @@ class Algorithm:
         self.name = algorithm_name
         self.architectures = {}
         self.configuration_lines = []
-    
+
     def architecture_exists(self, architecture_name):
         return architecture_name in self.architectures.keys()
 
@@ -101,7 +101,7 @@ class Algorithm:
         """
 
         generated_config_file_content=""
-        self.set_configurations()        
+        self.set_configurations()
 
         configuration= '\n'.join(self.configuration_lines)
 
@@ -119,11 +119,11 @@ class Algorithm:
         is a valid cpp template instantiation
         """
 
-        self.configuration_lines.append(self._create_general_base_case())
+        #self.configuration_lines.append(self._create_general_base_case())
         for benchmarks_of_architecture in self.architectures.values():
             self.configuration_lines.append(self._create_base_case_for_arch(benchmarks_of_architecture))
             self.configuration_lines += self._create_specialized_cases_for_arch(benchmarks_of_architecture)
-        
+
 class AlgorithmDeviceReduce(Algorithm):
     def _create_general_base_case(self):
         #Hardcode some configurations in case non of the specializations can be instantiated
@@ -151,7 +151,7 @@ class BenchmarkDataManager:
     Aggregates the data from multiple benchmark files containing single benchmark runs
     with different configurations.
     """
-    
+
     def __init__(self):
         self.algorithms={}
         self.algo_factory = AlgorithmFactory()
@@ -188,7 +188,7 @@ class BenchmarkDataManager:
         if not self.algorithm_exists(algorithm_name):
             self.add_new_algorithm(algorithm_name)
         self.get_algorithm(algorithm_name).add_measurement(single_benchmark_data)
-    
+
     def __generate_configuration(self):
         out = {}
         for key, algo in self.algorithms.items():

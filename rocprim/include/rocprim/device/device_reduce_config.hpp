@@ -39,71 +39,33 @@ BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
+// Default config for any GPU arch that doesnt have any specializations
+template<unsigned int arch, class Value> struct default_reduce_config  : reduce_config<256, 4, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
 
-template<class Value>
-struct reduce_config_803
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+/*********************************BEGIN gfx803 CONFIG**************************/
 
-    using type = reduce_config<
-        limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-        ::rocprim::max(1u, 16u / item_scale),
-        ::rocprim::block_reduce_algorithm::using_warp_reduce
-    >;
-};
+/*********************************END gfx803 CONFIG**************************/
 
-template<class Value>
-struct reduce_config_900
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+/*********************************BEGIN gfx900 CONFIG**************************/
 
-    using type = reduce_config<
-        limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-        ::rocprim::max(1u, 16u / item_scale),
-        ::rocprim::block_reduce_algorithm::using_warp_reduce
-    >;
-};
+/*********************************END gfx900 CONFIG**************************/
 
-// TODO: We need to update these parameters
-template<class Value>
-struct reduce_config_90a
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+/*********************************BEGIN gfx906 CONFIG**************************/
 
-    using type = reduce_config<
-        limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-        ::rocprim::max(1u, 16u / item_scale),
-        ::rocprim::block_reduce_algorithm::using_warp_reduce
-    >;
-};
+/*********************************END gfx906 CONFIG**************************/
 
-// TODO: We need to update these parameters
-template<class Value>
-struct reduce_config_1030
-{
-    static constexpr unsigned int item_scale =
-        ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+/*********************************BEGIN gfx908 CONFIG**************************/
 
-    using type = reduce_config<
-        limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_32>::value,
-        ::rocprim::max(1u, 16u / item_scale),
-        ::rocprim::block_reduce_algorithm::using_warp_reduce
-    >;
-};
+/*********************************END gfx908 CONFIG**************************/
 
-template<unsigned int TargetArch, class Value>
-struct default_reduce_config
-    : select_arch<
-        TargetArch,
-        select_arch_case<803, reduce_config_803<Value>>,
-        select_arch_case<900, reduce_config_900<Value>>,
-        select_arch_case<ROCPRIM_ARCH_90a, reduce_config_90a<Value>>,
-        select_arch_case<1030, reduce_config_1030<Value>>,
-        reduce_config_900<Value>
-    > { };
+/*********************************BEGIN gfx90a CONFIG**************************/
+
+/*********************************END gfx90a CONFIG**************************/
+
+/*********************************BEGIN gfx1030 CONFIG**************************/
+
+/*********************************END gfx1030 CONFIG**************************/
+
 
 } // end namespace detail
 
