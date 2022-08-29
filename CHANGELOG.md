@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [Unreleased rocPRIM-2.11.0 for ROCm 5.3.0]
+## [rocPRIM-2.11.0 for ROCm 5.3.0]
 ### Added
 - New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
   on pairs of adjacent items distributed between threads in a block.
@@ -19,12 +19,12 @@ function or by parameters.
 - `device_segmented_radix_sort` now partitions segments to groups small, medium and large segments.
   Each segment group can be sorted by specialized kernels to improve throughput.
 
-## [Unreleased rocPRIM-2.10.14 for ROCm 5.2.0]
+## [rocPRIM-2.10.14 for ROCm 5.2.0]
 ### Added
 - Packages for tests and benchmark executable on all supported OSes using CPack.
 - Added File/Folder Reorg Changes and Enabled Backward compatibility support using wrapper headers.
 
-## [Released rocPRIM-2.10.13 for ROCm 5.1.0]
+## [rocPRIM-2.10.13 for ROCm 5.1.0]
 ### Fixed
 - Fixed radix sort int64_t bug introduced in [2.10.11]
 ### Added
@@ -43,7 +43,7 @@ function or by parameters.
 ### Known issues
 - device_segmented_radix_sort unit test failing for HIP on Windows
 
-## [Released rocPRIM-2.10.12 for ROCm 5.0.0]
+## [rocPRIM-2.10.12 for ROCm 5.0.0]
 ### Fixed
 - Enable bfloat16 tests and reduce threshold for bfloat16
 - Fix device scan limit_size feature
