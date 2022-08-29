@@ -565,10 +565,10 @@ public:
         rank_keys_impl(keys,
                        ranks,
                        storage.get(),
-                       [digit_callback](const Key& key)
+                       [&digit_callback](const Key& key)
                        {
                            const unsigned int digit = digit_callback(key);
-                           return RadixBits - 1 - digit;
+                           return radix_digits - 1 - digit;
                        });
     }
 
