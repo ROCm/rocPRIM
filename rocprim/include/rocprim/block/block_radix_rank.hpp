@@ -33,7 +33,7 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
-/// \brief The block_radix_rank class is a blcok level parallel primitives which provides
+/// \brief The block_radix_rank class is a block level parallel primitives that provides
 /// methods for ranking items partitioned across threads in a block. This algorithm
 /// associates each item with the index it would gain if the keys were sorted into an array,
 /// according to a radix comparison. Ranking is performed in a stable manner.
@@ -50,10 +50,11 @@ BEGIN_ROCPRIM_NAMESPACE
 /// * Performance depends on the block size and the number of items that will be sorted per thread.
 ///     * It is usually better if the block size is a multiple of th size of the hardware warp.
 ///     * It is usually increased when there are more than one item per thread. However, when there are too
-///     many items per thread, each thread may need so much registers and/or shared memory.
-/// * Shared memory usage deoends on the block size, and the maximum number of radix bits that will be
+///     many items per thread, each thread may need so much registers and/or shared memory
+///     that it impedes performance.
+/// * Shared memory usage depends on the block size and the maximum number of radix bits that will be
 /// considered when comparing keys.
-///     * The storage increases when more bits are considered.
+///     * The storage requirement increases when more bits are considered.
 ///
 /// \par Examples
 /// In the example, radix rank is performed on a block of 128 threads. Each thread provides
