@@ -417,7 +417,7 @@ autotune:execute-tuning:
       --benchmark_gpu_architecture "${GPU_TARGET}"
       --benchmark_output_dir "${AUTOTUNE_RESULT_DIR}"
       --benchmark_filename_regex "${AUTOTUNE_FILENAME_REGEX}"
-      --benchmark_filter_regex "${AUTOTUNE_ALGORITHM_REGEX}" > /dev/null
+      --benchmark_filter_regex "${AUTOTUNE_ALGORITHM_REGEX}"
 
 autotune:generate-config:
   image: python:3.10.5-buster

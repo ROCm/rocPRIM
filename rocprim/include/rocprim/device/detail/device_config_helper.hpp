@@ -137,6 +137,24 @@ template<class Key, class Value>
 struct default_merge_sort_config_base : default_merge_sort_config_base_helper<Key, Value>::type
 {};
 
+template<class HistogramConfig  = kernel_config<256, 8>,
+         class SortConfig       = kernel_config<256, 15>,
+         unsigned int RadixBits = 4,
+         unsigned int BatchSize = 1u << 18>
+struct radix_sort_onesweep_config
+{
+    /// \brief Configration of radix sort onesweep histogram kernel.
+    using histogram = HistogramConfig;
+    /// \brief Configration of radix sort onesweep sort kernel.
+    using sort = SortConfig;
+
+    /// \brief The number of bits to sort in one onesweep iteration.
+    static constexpr unsigned int radix_bits = RadixBits;
+    /// \brief The number of blocks to sort in a single onesweep iteration batch.
+    /// The total items to sort per iteration should be less than 2 ** 30.
+    static constexpr unsigned int batch_size = BatchSize;
+};
+
 } // namespace detail
 
 /// \brief Configuration of device-level radix sort operation.
@@ -160,7 +178,11 @@ template<unsigned int LongRadixBits,
          class SortSingleConfig               = kernel_config<256, 10>,
          class SortMergeConfig                = kernel_config<1024, 1>,
          unsigned int MergeSizeLimitBlocks    = 1024U,
-         bool         ForceSingleKernelConfig = false>
+         bool         ForceSingleKernelConfig = false,
+         class OnesweepHistogramConfig        = kernel_config<256, 8>,
+         class OnesweepSortConfig             = kernel_config<256, 15>,
+         unsigned int OnesweepRadixBits       = 4,
+         unsigned int OnesweepBatchSize       = 1U << 18>
 struct radix_sort_config
 {
     /// \brief Number of bits in long iterations.
@@ -178,6 +200,12 @@ struct radix_sort_config
     using sort_single = SortSingleConfig;
     /// \brief Configuration of radix sort merge kernel.
     using sort_merge = SortMergeConfig;
+    /// \brief Configration of radix sort onesweep.
+    using onesweep = detail::radix_sort_onesweep_config<OnesweepHistogramConfig,
+                                                        OnesweepSortConfig,
+                                                        OnesweepRadixBits,
+                                                        OnesweepBatchSize>;
+
     /// \brief Force use radix sort single kernel configuration.
     static constexpr bool force_single_kernel_config = ForceSingleKernelConfig;
 };

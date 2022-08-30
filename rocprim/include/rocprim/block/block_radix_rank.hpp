@@ -115,6 +115,17 @@ class block_radix_rank
         typename block_scan_type::storage_type block_scan;
     };
 
+    ROCPRIM_DEVICE ROCPRIM_INLINE digit_counter_type& get_digit_counter(const unsigned int digit,
+                                                                        const unsigned int thread,
+                                                                        storage_type_&     storage)
+    {
+        const unsigned int column_counter = digit % column_size;
+        const unsigned int sub_counter    = digit / column_size;
+        const unsigned int counter
+            = (column_counter * block_size + thread) * packing_ratio + sub_counter;
+        return storage.digit_counters[counter];
+    };
+
     ROCPRIM_DEVICE ROCPRIM_INLINE void reset_counters(const unsigned int flat_id,
                                                       storage_type_&     storage)
     {
@@ -205,14 +216,9 @@ class block_radix_rank
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
-            const unsigned int digit          = digit_callback(keys[i]);
-            const unsigned int column_counter = digit % column_size;
-            const unsigned int sub_counter    = digit / column_size;
-            const unsigned int counter
-                = (column_counter * block_size + flat_id) * packing_ratio + sub_counter;
-
-            digit_counters[i]  = &storage.digit_counters[counter];
-            thread_prefixes[i] = (*digit_counters[i])++;
+            const unsigned int digit = digit_callback(keys[i]);
+            digit_counters[i]        = &get_digit_counter(digit, flat_id, storage);
+            thread_prefixes[i]       = (*digit_counters[i])++;
         }
 
         ::rocprim::syncthreads();
@@ -253,6 +259,9 @@ class block_radix_rank
     }
 
 public:
+    static constexpr unsigned int digits_per_thread
+        = ::rocprim::detail::ceiling_div(radix_digits, block_size);
+
     /// \brief Struct used to allocate a temporary memory that is required for thread
     /// communication during operations provided by related parallel primitive.
     ///
@@ -592,6 +601,45 @@ public:
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         rank_keys_desc(keys, ranks, storage.get(), digit_callback);
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        get_exclusive_digit_prefix(unsigned int (&prefix)[digits_per_thread], storage_type& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(block_size == radix_digits || digit < radix_digits)
+            {
+                // The counter for thread 0 holds the prefix of all the digits at this point.
+                prefix[i] = get_digit_counter(digit, 0, storage.get());
+            }
+        }
+    }
+
+    template<unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void get_digit_counts(unsigned int (&counts)[digits_per_thread],
+                                                        storage_type& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(block_size == radix_digits || digit < radix_digits)
+            {
+                // The counter for thread 0 holds the prefix of all the digits at this point.
+                // To find the count, subtract the prefix of the next digit with that of the
+                // current digit.
+                const unsigned int counter = get_digit_counter(digit, 0, storage.get());
+                const unsigned int next_counter
+                    = digit + 1 == radix_digits ? block_size * ItemsPerThread
+                                                : get_digit_counter(digit + 1, 0, storage.get());
+                counts[i] = next_counter - counter;
+            }
+        }
     }
 };
 

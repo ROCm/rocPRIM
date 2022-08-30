@@ -55,7 +55,12 @@ struct device_radix_sort_benchmark : public config_autotune_interface
                R"regex(kernel_config<\s*(?P<sort_block_size>[0-9]+),\s*(?P<sort_items_per_thread>[0-9]+)>,\s*)regex"
                R"regex(kernel_config<\s*(?P<sort_single_block_size>[0-9]+),\s*(?P<sort_single_items_per_thread>[0-9]+)>,\s*)regex"
                R"regex(kernel_config<\s*(?P<sort_merge_block_size>[0-9]+),\s*(?P<sort_merge_items_per_thread>[0-9]+)>,\s*)regex"
-               R"regex((?P<force_single_kernel_config>[0-9]+)>>)regex";
+               R"regex((?P<merge_size_limit_blocks>[0-9]+),\s*)regex"
+               R"regex((?P<force_single_kernel_config>[0-9]+),\s*)regex"
+               R"regex(kernel_config<\s*(?P<onesweep_histogram_block_size>[0-9]+),\s*(?P<onesweep_histogram_items_per_thread>[0-9]+)>,\s*)regex"
+               R"regex(kernel_config<\s*(?P<onesweep_sort_block_size>[0-9]+),\s*(?P<onesweep_sort_items_per_thread>[0-9]+)>,\s*)regex"
+               R"regex((?P<onesweep_radix_bits>[0-9]+),\s*)regex"
+               R"regex((?P<onesweep_batch_size>[0-9]+)>>)regex";
     }
 
     std::string name() const override
@@ -76,7 +81,14 @@ struct device_radix_sort_benchmark : public config_autotune_interface
             + ", " + pad_string(std::to_string(Config::sort_single::items_per_thread), 2) + ">, "
             + "kernel_config<" + pad_string(std::to_string(Config::sort_merge::block_size), 4)
             + ", " + pad_string(std::to_string(Config::sort_merge::items_per_thread), 2) + ">, "
-            + std::to_string(Config::force_single_kernel_config) + ">>");
+            + std::to_string(Config::merge_size_limit_blocks) + ", "
+            + std::to_string(Config::force_single_kernel_config) + ", " + "kernel_config<"
+            + pad_string(std::to_string(Config::onesweep::histogram::block_size), 4) + ", "
+            + pad_string(std::to_string(Config::onesweep::histogram::items_per_thread), 2) + ">, "
+            + "kernel_config<" + pad_string(std::to_string(Config::onesweep::sort::block_size), 4)
+            + ", " + pad_string(std::to_string(Config::onesweep::sort::items_per_thread), 2) + ">, "
+            + std::to_string(Config::onesweep::radix_bits) + ", "
+            + std::to_string(Config::onesweep::batch_size) + ">>");
     }
 
     static constexpr unsigned int batch_size  = 10;
@@ -322,25 +334,37 @@ inline constexpr unsigned int get_max_items_per_thread(size_t key_bytes, size_t 
     size_t total_bytes = key_bytes + value_bytes;
     if(total_bytes <= 12)
     {
-        return 30;
+        return 20;
     }
     else if(12 < total_bytes && total_bytes <= 18)
     {
-        return 20;
+        return 15;
     }
     else //(18 < total_bytes)
     {
         return 10;
     }
 }
-template<unsigned int LongRadixBits,
-         unsigned int ShortRadixBits,
-         unsigned int ItemsPerThread2,
+
+template<unsigned int SortItemsPerThread, typename Key, typename Value>
+constexpr bool enable_config = sizeof(Key) + sizeof(Value) <= 8 || SortItemsPerThread <= 12;
+
+template<unsigned int RadixBits,
+         unsigned int SortItemsPerThread,
          typename Key,
-         typename Value = rocprim::empty_type>
-struct device_radix_sort_benchmark_generator
+         typename Value  = rocprim::empty_type,
+         typename Enable = void>
+struct device_radix_sort_benchmark_generator;
+
+template<unsigned int RadixBits, unsigned int SortItemsPerThread, typename Key, typename Value>
+struct device_radix_sort_benchmark_generator<
+    RadixBits,
+    SortItemsPerThread,
+    Key,
+    Value,
+    std::enable_if_t<enable_config<SortItemsPerThread, Key, Value>>>
 {
-    template<unsigned int ItemsPerThread1>
+    template<unsigned int HistogramItemsPerThread>
     struct create_ipt1
     {
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
@@ -349,10 +373,19 @@ struct device_radix_sort_benchmark_generator
                 std::make_unique<device_radix_sort_benchmark<
                     Key,
                     Value,
-                    rocprim::radix_sort_config<LongRadixBits,
-                                               ShortRadixBits,
-                                               rocprim::kernel_config<256u, ItemsPerThread1>,
-                                               rocprim::kernel_config<256u, ItemsPerThread2>>>>());
+                    // Note: first 4 parameters are not used by the radix sort algorithm,
+                    //   and the 4 parameters after that are not used by this benchmark.
+                    rocprim::radix_sort_config<4,
+                                               4,
+                                               rocprim::kernel_config<256, 7>,
+                                               rocprim::kernel_config<256, 10>,
+                                               rocprim::kernel_config<256, 10>,
+                                               rocprim::kernel_config<1024, 1>,
+                                               1024,
+                                               false,
+                                               rocprim::kernel_config<256, HistogramItemsPerThread>,
+                                               rocprim::kernel_config<256, SortItemsPerThread>,
+                                               RadixBits>>>());
         }
     };
 
@@ -363,6 +396,17 @@ struct device_radix_sort_benchmark_generator
         static_for_each<make_index_range<unsigned int, 1, max_items_per_thread>, create_ipt1>(
             storage);
     }
+};
+
+template<unsigned int RadixBits, unsigned int SortItemsPerThread, typename Key, typename Value>
+struct device_radix_sort_benchmark_generator<
+    RadixBits,
+    SortItemsPerThread,
+    Key,
+    Value,
+    std::enable_if_t<!enable_config<SortItemsPerThread, Key, Value>>>
+{
+    static void create(std::vector<std::unique_ptr<config_autotune_interface>>&) {}
 };
 
 template<unsigned int BlockSize, typename Key, typename Value = rocprim::empty_type>
