@@ -26,7 +26,7 @@ python3 ../scripts/autotune/merge_config.py ../rocprim/include/rocprim/device/de
 
 git add ../rocprim/include/rocprim/device/device_reduce_config.hpp
 git commit -m "Updating config for ${gpu_arch}"
-git push
+# git push
 #Test if the installed configuration works
 #mkdir ../build_noautotune &&  cd ../build_noautotune
 #CC=/opt/rocm/llvm/bin/clang CXX=/opt/rocm/llvm/bin/clang++ cmake -D BUILD_BENCHMARK=ON -D BENCHMARK_CONFIG_TUNING=OFF  -D CMAKE_CXX_FLAGS="-DROCPRIM_TARGET_ARCH=$gpu_arch" ..
