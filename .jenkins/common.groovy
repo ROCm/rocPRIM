@@ -24,12 +24,12 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 }
 
 
-def runTestCommand (platform, project)
+def runTestCommand (platform, project, testCommand="")
 {
     String sudo = auxiliary.sudo(platform.jenkinsLabel)
     String centos = platform.jenkinsLabel.contains('centos') ? '3' : ''
 
-    def testCommand = "ctest${centos} --output-on-failure "
+    testCommand = testCommand ?: "ctest${centos} --output-on-failure "
     def hmmTestCommand = ''
     if (platform.jenkinsLabel.contains('gfx90a'))
     {
