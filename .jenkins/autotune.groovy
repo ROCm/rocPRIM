@@ -9,7 +9,7 @@ def runCI =
     nodeDetails, jobName->
 
     def prj = new rocProject('rocPRIM', 'PreCheckin')
-    prj.testDirectory = 'scripts/autotune'
+    prj.testDirectory = '.'
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
@@ -23,7 +23,7 @@ def runCI =
 
         commonGroovy = load "${project.paths.project_src_prefix}/.jenkins/common.groovy"
         commonGroovy.runTestCommand(platform, project, auxiliary.gfxTargetParser() + 
-            '\n./autotune_usage_script.sh $(echo "$gpu_arch" | sed -E "s/gfx([0-9a-f]+).*/\\1/")')
+            '\nscripts/autotune/autotune_usage_script.sh $(echo "$gpu_arch" | sed -E "s/gfx([0-9a-f]+).*/\\1/")')
     }
 
 
