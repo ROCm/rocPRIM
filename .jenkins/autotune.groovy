@@ -25,7 +25,7 @@ def runCI =
     }
 
 
-    buildProject(prj, formatCheck, nodes.dockerArray, None, testCommand, None)
+    buildProject(prj, formatCheck, nodes.dockerArray, null, testCommand, null)
 }
 
 ci: { 
