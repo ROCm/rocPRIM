@@ -8,7 +8,7 @@ def runCI =
 {
     nodeDetails, jobName->
 
-    def prj = new rocProject('rocPRIM', 'PreCheckin')
+    def prj = new rocProject('rocPRIM', 'Autotune')
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
