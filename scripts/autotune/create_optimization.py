@@ -31,6 +31,7 @@ import json
 import re
 import argparse
 import os
+import sys
 import collections
 from enum import Enum
 from dataclasses import dataclass
@@ -48,6 +49,17 @@ env = Environment(
     trim_blocks=True
 
 )
+
+class NotSupportedError(Exception):
+    """Exception raised for algorithms that are not supported
+    Attributes:
+        message -- explanation of the error
+    """
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
 
 @dataclass
 class SelectionType:
@@ -302,7 +314,7 @@ def create_algorithm(algorithm_name: str, fallback_entries):
     elif algorithm_name == 'device_scan_by_key':  
         return AlgorithmDeviceScanByKey(fallback_entries)
     else:
-        raise(KeyError)
+        raise(NotSupportedError(f'Algorithm "{algorithm_name}" is not supported (yet)'))
 
 class BenchmarkDataManager:
     """
@@ -374,19 +386,33 @@ class BenchmarkDataManager:
         The benchmarks within the file may belong to different algorithms.
         """
 
-        with open(benchmark_run_file_path) as file_handle:
+        with open(benchmark_run_file_path, "r+") as file_handle:
+            # Fix Google Benchmark comma issue
+            contents = file_handle.read()
+            contents = re.sub(r"(\s*\"[^\"]*\"[^,])(^\s*\"[^\"]*\":)", "\\1,\\2", contents, 0, re.MULTILINE)
+            file_handle.seek(0)
+            file_handle.write(contents)
+            file_handle.truncate()
+
+        with open(benchmark_run_file_path, "r") as file_handle:
             benchmark_run_data = json.load(file_handle)
 
-        arch = self.__get_target_architecture_from_context(benchmark_run_data)
-        name_regex = benchmark_run_data['context']['autotune_config_pattern']
-        for raw_single_benchmark in benchmark_run_data['benchmarks']:
-            single_benchmark = self.__get_single_benchmark(name_regex, raw_single_benchmark)
-            self.__add_benchmark_to_algorithm(single_benchmark, arch)
+        try:
+            arch = self.__get_target_architecture_from_context(benchmark_run_data)
+            name_regex = benchmark_run_data['context']['autotune_config_pattern']
+            for raw_single_benchmark in benchmark_run_data['benchmarks']:
+                single_benchmark = self.__get_single_benchmark(name_regex, raw_single_benchmark)
+                self.__add_benchmark_to_algorithm(single_benchmark, arch)
+            print(f'INFO: Successfully processed file "{benchmark_run_file_path}"')
+        except NotSupportedError as error:
+            print(f'WARNING: Could not process file "{benchmark_run_file_path}": {error}', file=sys.stderr, flush=True)
 
     def write_configs_to_files(self, base_dir: str):
         """
         For each algorithm, creates a file containing configurations and places these in base_dir.
         """
+        if len(self.algorithms) == 0:
+            raise(KeyError('No suitable files to process'))
 
         for algo_name, algo in self.algorithms.items():
             config: str = algo.create_config_file_content()
