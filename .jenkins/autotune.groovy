@@ -21,6 +21,7 @@ def runCI =
     {
         platform, project->
 
+        commonGroovy = load "${project.paths.project_src_prefix}/.jenkins/common.groovy"
         commonGroovy.runTestCommand(platform, project, auxiliary.gfxTargetParser() + '\n./autotune_usage_script.sh $(sed -e "s/gfx([0-9a-f]+).*/\1/" <<< $gpu_arch')
     }
 
