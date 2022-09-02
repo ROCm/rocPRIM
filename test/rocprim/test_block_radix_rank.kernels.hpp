@@ -56,11 +56,11 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      ite
 
     if(descending)
     {
-        block_rank_type{}.rank_keys_desc(keys, ranks, storage, start_bit, radix_bits);
+        block_rank_type().rank_keys_desc(keys, ranks, storage, start_bit, radix_bits);
     }
     else
     {
-        block_rank_type{}.rank_keys(keys, ranks, storage, start_bit, radix_bits);
+        block_rank_type().rank_keys(keys, ranks, storage, start_bit, radix_bits);
     }
 
     rocprim::block_store_direct_blocked(lid, ranks_output + block_offset, ranks);
@@ -107,10 +107,7 @@ void test_block_radix_rank()
         std::vector<T> keys_input;
         if(rocprim::is_floating_point<T>::value)
         {
-            keys_input = test_utils::get_random_data<T>(size,
-                                                        static_cast<T>(-1000),
-                                                        static_cast<T>(+1000),
-                                                        seed_value);
+            keys_input = test_utils::get_random_data<T>(size, T(-1000), T(+1000), seed_value);
         }
         else
         {

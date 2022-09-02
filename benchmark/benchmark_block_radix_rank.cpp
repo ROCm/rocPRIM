@@ -81,11 +81,11 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T*      keys_inpu
             const unsigned pass_bits = min(RadixBits, end_bit - begin_bit);
             if ROCPRIM_IF_CONSTEXPR(Descending)
             {
-                rank_type{}.rank_keys_desc(keys, ranks, storage, begin_bit, pass_bits);
+                rank_type().rank_keys_desc(keys, ranks, storage, begin_bit, pass_bits);
             }
             else
             {
-                rank_type{}.rank_keys(keys, ranks, storage, begin_bit, pass_bits);
+                rank_type().rank_keys(keys, ranks, storage, begin_bit, pass_bits);
             }
             begin_bit += RadixBits;
         }
@@ -161,14 +161,19 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
         stream,                                                                                  \
         size)
 
+// clang-format off
 #define CREATE_BENCHMARK_KINDS(type, block, ipt)                    \
     CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_BASIC), \
-        CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_MEMOIZE)
+    CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_MEMOIZE)
 
-#define BENCHMARK_TYPE(type, block)                                                      \
-    CREATE_BENCHMARK_KINDS(type, block, 1), CREATE_BENCHMARK_KINDS(type, block, 4),      \
-        CREATE_BENCHMARK_KINDS(type, block, 8), CREATE_BENCHMARK_KINDS(type, block, 12), \
-        CREATE_BENCHMARK_KINDS(type, block, 16), CREATE_BENCHMARK_KINDS(type, block, 20)
+#define BENCHMARK_TYPE(type, block)          \
+    CREATE_BENCHMARK_KINDS(type, block, 1),  \
+    CREATE_BENCHMARK_KINDS(type, block, 4),  \
+    CREATE_BENCHMARK_KINDS(type, block, 8),  \
+    CREATE_BENCHMARK_KINDS(type, block, 12), \
+    CREATE_BENCHMARK_KINDS(type, block, 16), \
+    CREATE_BENCHMARK_KINDS(type, block, 20)
+// clang-format on
 
 void add_benchmarks(const std::string&                            name,
                     std::vector<benchmark::internal::Benchmark*>& benchmarks,

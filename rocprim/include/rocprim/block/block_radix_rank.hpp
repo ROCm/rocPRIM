@@ -33,7 +33,7 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
-/// \brief The block_radix_rank class is a block level parallel primitives that provides
+/// \brief The block_radix_rank class is a block level parallel primitive that provides
 /// methods for ranking items partitioned across threads in a block. This algorithm
 /// associates each item with the index it would gain if the keys were sorted into an array,
 /// according to a radix comparison. Ranking is performed in a stable manner.
@@ -48,13 +48,14 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \par Overview
 /// * Key type must be an arithmetic type (that is, an integral type or a floating point type).
 /// * Performance depends on the block size and the number of items that will be sorted per thread.
-///     * It is usually better if the block size is a multiple of th size of the hardware warp.
+///     * It is usually better if the block size is a multiple of the size of the hardware warp.
 ///     * It is usually increased when there are more than one item per thread. However, when there are too
-///     many items per thread, each thread may need so much registers and/or shared memory
+///     many items per thread, each thread may need so many registers and/or shared memory
 ///     that it impedes performance.
 /// * Shared memory usage depends on the block size and the maximum number of radix bits that will be
 /// considered when comparing keys.
 ///     * The storage requirement increases when more bits are considered.
+/// * The maximum amount of keys that can be ranked in a block is <tt>2**16</tt>.
 ///
 /// \par Examples
 /// In the example, radix rank is performed on a block of 128 threads. Each thread provides
@@ -139,7 +140,7 @@ class block_radix_rank
         }
 
         packed_counter_type exclusive_prefix = 0;
-        block_scan_type{}.exclusive_scan(block_reduction, exclusive_prefix, 0, storage.block_scan);
+        block_scan_type().exclusive_scan(block_reduction, exclusive_prefix, 0, storage.block_scan);
 
         if(flat_id == block_size - 1)
         {
@@ -201,6 +202,8 @@ class block_radix_rank
                                        storage_type_& storage,
                                        DigitCallback  digit_callback)
     {
+        static_assert(block_size * ItemsPerThread < 1u << 16,
+                      "The maximum about of items that block_radix_rank can rank is 2**16.");
         const unsigned int flat_id
             = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
 

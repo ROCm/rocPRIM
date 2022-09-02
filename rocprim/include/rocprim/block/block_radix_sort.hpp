@@ -806,7 +806,7 @@ private:
             const int pass_bits = min(radix_bits_per_pass, end_bit - begin_bit);
 
             unsigned int ranks[ItemsPerThread];
-            block_rank_type{}.template rank_keys(
+            block_rank_type().template rank_keys(
                 bit_keys,
                 ranks,
                 storage.get().rank,
