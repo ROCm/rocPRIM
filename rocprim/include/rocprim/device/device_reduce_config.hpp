@@ -59,7 +59,13 @@ template<unsigned int arch, class Value> struct default_reduce_config  : reduce_
 /*********************************END gfx908 CONFIG**************************/
 
 /*********************************BEGIN gfx90a CONFIG**************************/
-
+template<class Value> struct default_reduce_config<90a, Value>  : reduce_config<256, 8, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
+template<> struct default_reduce_config<90a, double> : reduce_config<256, 2, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
+template<> struct default_reduce_config<90a, float> : reduce_config<256, 8, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
+template<> struct default_reduce_config<90a, int> : reduce_config<256, 8, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
+template<> struct default_reduce_config<90a, int64_t> : reduce_config<256, 8, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
+template<> struct default_reduce_config<90a, int8_t> : reduce_config<256, 16, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
+template<> struct default_reduce_config<90a, rocprim::half> : reduce_config<256, 8, ::rocprim::block_reduce_algorithm::using_warp_reduce> { };
 /*********************************END gfx90a CONFIG**************************/
 
 /*********************************BEGIN gfx1030 CONFIG**************************/
