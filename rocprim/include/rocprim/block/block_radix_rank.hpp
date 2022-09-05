@@ -101,7 +101,7 @@ class block_radix_rank
     static constexpr unsigned int radix_digits = 1 << RadixBits;
     static constexpr unsigned int packing_ratio
         = sizeof(packed_counter_type) / sizeof(digit_counter_type);
-    static constexpr unsigned int column_size       = radix_digits / packing_ratio;
+    static constexpr unsigned int column_size = radix_digits / packing_ratio;
 
     // Struct used for creating a raw_storage object for this primitive's temporary storage.
     struct storage_type_
