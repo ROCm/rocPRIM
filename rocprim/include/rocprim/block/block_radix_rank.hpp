@@ -126,9 +126,7 @@ class block_radix_rank
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void
-        scan_block_counters(const unsigned int         flat_id,
-                            storage_type_&             storage,
-                            packed_counter_type* const packed_counters)
+        scan_block_counters(storage_type_& storage, packed_counter_type* const packed_counters)
     {
         packed_counter_type block_reduction = 0;
         ROCPRIM_UNROLL
@@ -175,7 +173,7 @@ class block_radix_rank
                 local_counters[i] = shared_counters[i];
             }
 
-            scan_block_counters(flat_id, storage, local_counters);
+            scan_block_counters(storage, local_counters);
 
             ROCPRIM_UNROLL
             for(unsigned int i = 0; i < column_size; ++i)
@@ -185,7 +183,7 @@ class block_radix_rank
         }
         else
         {
-            scan_block_counters(flat_id, storage, shared_counters);
+            scan_block_counters(storage, shared_counters);
         }
     }
 
