@@ -113,7 +113,6 @@ class block_radix_rank
         };
 
         typename block_scan_type::storage_type block_scan;
-        packed_counter_type                    column_prefix;
     };
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void reset_counters(const unsigned int flat_id,
@@ -139,23 +138,18 @@ class block_radix_rank
         }
 
         packed_counter_type exclusive_prefix = 0;
-        block_scan_type().exclusive_scan(block_reduction, exclusive_prefix, 0, storage.block_scan);
+        packed_counter_type reduction;
+        block_scan_type().exclusive_scan(block_reduction,
+                                         exclusive_prefix,
+                                         0,
+                                         reduction,
+                                         storage.block_scan);
 
-        if(flat_id == block_size - 1)
+        ROCPRIM_UNROLL
+        for(unsigned int i = 1; i < packing_ratio; i <<= 1)
         {
-            packed_counter_type totals        = exclusive_prefix + block_reduction;
-            packed_counter_type column_prefix = 0;
-            ROCPRIM_UNROLL
-            for(unsigned int i = 1; i < packing_ratio; i <<= 1)
-            {
-                column_prefix += totals << (sizeof(digit_counter_type) * 8 * i);
-            }
-            storage.column_prefix = column_prefix;
+            exclusive_prefix += reduction << (sizeof(digit_counter_type) * 8 * i);
         }
-
-        ::rocprim::syncthreads();
-
-        exclusive_prefix += storage.column_prefix;
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < column_size; ++i)
