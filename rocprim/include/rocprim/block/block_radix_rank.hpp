@@ -119,9 +119,9 @@ class block_radix_rank
                                                       storage_type_&     storage)
     {
         ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < column_size; ++i)
+        for (unsigned int i = flat_id; i < block_size * column_size; i += block_size)
         {
-            storage.packed_counters[i * block_size + flat_id] = 0;
+            storage.packed_counters[i] = 0;
         }
     }
 
@@ -194,7 +194,7 @@ class block_radix_rank
                                        DigitCallback  digit_callback)
     {
         static_assert(block_size * ItemsPerThread < 1u << 16,
-                      "The maximum about of items that block_radix_rank can rank is 2**16.");
+                      "The maximum amout of items that block_radix_rank can rank is 2**16.");
         const unsigned int flat_id
             = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
 
@@ -276,9 +276,9 @@ public:
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
     /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
-    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// Must be in range <tt>[0; 8 * sizeof(Key))</tt>.
     /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
-    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    /// the range <tt>(0; RadixBits]</tt>. Default value: RadixBits.
     ///
     /// \par Storage reusage
     /// A synchronization barrier should be placed before \p storage is reused
@@ -329,9 +329,9 @@ public:
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
-    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// Must be in range <tt>[0; 8 * sizeof(Key))</tt>.
     /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
-    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    /// the range <tt>(0; RadixBits]</tt>. Default value: RadixBits.
     template<typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
@@ -350,9 +350,9 @@ public:
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
     /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
-    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// Must be in range <tt>[0; 8 * sizeof(Key))</tt>.
     /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
-    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    /// the range <tt>(0; RadixBits]</tt>. Default value: RadixBits.
     ///
     /// \par Storage reusage
     /// A synchronization barrier should be placed before \p storage is reused
@@ -403,9 +403,9 @@ public:
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] begin_bit - index of the first (least significant) bit used in key comparison.
-    /// Must be in range <tt>(0; 8 * sizeof(Key))</tt>.
+    /// Must be in range <tt>[0; 8 * sizeof(Key))</tt>.
     /// \param [in] pass_bits - [optional] the number of bits used in key comparison. Must be in
-    /// the range <tt>(0; RadixBits)</tt>. Defaukt value: RadixBits.
+    /// the range <tt>(0; RadixBits]</tt>. Default value: RadixBits.
     template<typename Key, unsigned ItemsPerThread>
     ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],

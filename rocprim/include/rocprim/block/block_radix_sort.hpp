@@ -41,7 +41,7 @@
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief The block_radix_sort class is a block level parallel primitive which provides
-/// methods sorting items (keys or key-value pairs) partitioned across threads in a block
+/// methods for sorting of items (keys or key-value pairs) partitioned across threads in a block
 /// using radix sort algorithm.
 ///
 /// \tparam Key - the key type.
@@ -54,7 +54,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// * \p Key type must be an arithmetic type (that is, an integral type or a floating-point
 /// type).
 /// * Performance depends on \p BlockSize and \p ItemsPerThread.
-///   * It is usually better of \p BlockSize is a multiple of the size of the hardware warp.
+///   * It is usually better for \p BlockSize to be a multiple of the size of the hardware warp.
 ///   * It is usually increased when \p ItemsPerThread is greater than one. However, when there
 ///   are too many items per thread, each thread may need so much registers and/or shared memory
 ///   that occupancy will fall too low, decreasing the performance.
