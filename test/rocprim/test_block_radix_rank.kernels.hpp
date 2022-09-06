@@ -48,11 +48,12 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      ite
     const unsigned int     lid             = threadIdx.x;
     const unsigned int     block_offset    = blockIdx.x * items_per_block;
 
-    T keys[ItemsPerThread];
+    T            keys[ItemsPerThread];
+    unsigned int ranks[ItemsPerThread];
+
     rocprim::block_load_direct_blocked(lid, items_input + block_offset, keys);
 
     ROCPRIM_SHARED_MEMORY typename block_rank_type::storage_type storage;
-    unsigned int                                                 ranks[ItemsPerThread];
 
     if(descending)
     {
@@ -134,7 +135,7 @@ void test_block_radix_rank()
                 { return key_cmp(keys_input[block_offset + i], keys_input[block_offset + j]); });
 
             // Invert the sorted indices sequence to obtain the ranks.
-            for(size_t j = 0; j < indices.size(); ++j)
+            for(size_t j = 0; j < items_per_block; ++j)
             {
                 expected[block_offset + indices[j]] = static_cast<int>(j);
             }
