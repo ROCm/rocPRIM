@@ -118,7 +118,6 @@ class block_radix_rank
     ROCPRIM_DEVICE ROCPRIM_INLINE void reset_counters(const unsigned int flat_id,
                                                       storage_type_&     storage)
     {
-        ROCPRIM_UNROLL
         for (unsigned int i = flat_id; i < block_size * column_size; i += block_size)
         {
             storage.packed_counters[i] = 0;
@@ -187,11 +186,11 @@ class block_radix_rank
         }
     }
 
-    template<typename Key, unsigned int ItemsPerThread, typename DigitCallback>
+    template<typename Key, unsigned int ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys_impl(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
                                        storage_type_& storage,
-                                       DigitCallback  digit_callback)
+                                       DigitExtractor digit_callback)
     {
         static_assert(block_size * ItemsPerThread < 1u << 16,
                       "The maximum amout of items that block_radix_rank can rank is 2**16.");
@@ -421,7 +420,7 @@ public:
     ///
     /// \tparam Key - the key type.
     /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
-    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// \tparam DigitExtractor - type of the unary function object used to extract a digit from
     /// a key.
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
@@ -465,11 +464,11 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
-                                  storage_type& storage,
-                                  DigitCallback digit_callback)
+                                  storage_type&  storage,
+                                  DigitExtractor digit_callback)
     {
         rank_keys_impl(keys, ranks, storage.get(), digit_callback);
     }
@@ -482,7 +481,7 @@ public:
     ///
     /// \tparam Key - the key type.
     /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
-    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// \tparam DigitExtractor - type of the unary function object used to extract a digit from
     /// a key.
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
@@ -493,10 +492,10 @@ public:
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
     /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
-    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
-                                  DigitCallback digit_callback)
+                                  DigitExtractor digit_callback)
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         rank_keys(keys, ranks, storage.get(), digit_callback);
@@ -507,7 +506,7 @@ public:
     ///
     /// \tparam Key - the key type.
     /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
-    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// \tparam DigitExtractor - type of the unary function object used to extract a digit from
     /// a key.
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
@@ -551,11 +550,11 @@ public:
     ///     ...
     /// }
     /// \endcode
-    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
-                                       storage_type& storage,
-                                       DigitCallback digit_callback)
+                                       storage_type&  storage,
+                                       DigitExtractor digit_callback)
     {
         rank_keys_impl(keys,
                        ranks,
@@ -575,7 +574,7 @@ public:
     ///
     /// \tparam Key - the key type.
     /// \tparam ItemsPerThread - the number of items contributed by each thread in the block.
-    /// \tparam DigitCallback - type of the unary function object used to extract a digit from
+    /// \tparam DigitExtractor - type of the unary function object used to extract a digit from
     /// a key.
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
@@ -586,10 +585,10 @@ public:
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
     /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
-    template<typename Key, unsigned ItemsPerThread, typename DigitCallback>
+    template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
-                                       DigitCallback digit_callback)
+                                       DigitExtractor digit_callback)
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
         rank_keys_desc(keys, ranks, storage.get(), digit_callback);
