@@ -164,14 +164,14 @@ build:cmake-minimum-apt:
     - cmake --build $BUILD_DIR
   artifacts:
     paths:
-    - $BUILD_DIR/test/test_*
-    - $BUILD_DIR/test/rocprim/test_*
-    - $BUILD_DIR/test/CTestTestfile.cmake
-    - $BUILD_DIR/test/rocprim/CTestTestfile.cmake
-    - $BUILD_DIR/gtest/
-    - $BUILD_DIR/CMakeCache.txt
-    - $BUILD_DIR/.ninja_log
-    - $BUILD_DIR/CTestTestfile.cmake
+      - $BUILD_DIR/test/test_*
+      - $BUILD_DIR/test/rocprim/test_*
+      - $BUILD_DIR/test/CTestTestfile.cmake
+      - $BUILD_DIR/test/rocprim/CTestTestfile.cmake
+      - $BUILD_DIR/gtest/
+      - $BUILD_DIR/CMakeCache.txt
+      - $BUILD_DIR/.ninja_log
+      - $BUILD_DIR/CTestTestfile.cmake
     expire_in: 2 weeks
 
 build:cmake-latest:
@@ -406,7 +406,7 @@ autotune:execute-tuning:
   timeout: 8h
   artifacts:
     paths:
-    - ${AUTOTUNE_RESULT_DIR}/*.json
+      - ${AUTOTUNE_RESULT_DIR}/*.json
   script:
     - 'printf "CI Variables used in benchmarks:\nAUTOTUNE_RESULT_DIR: %s\nAUTOTUNE_FILENAME_REGEX: %s\nAUTOTUNE_ALGORITHM_REGEX: %s \n" "$AUTOTUNE_RESULT_DIR" "$AUTOTUNE_FILENAME_REGEX" "$AUTOTUNE_ALGORITHM_REGEX"'
     - cd "${CI_PROJECT_DIR}"
@@ -422,13 +422,52 @@ autotune:execute-tuning:
 autotune:generate-config:
   image: python:3.10.5-buster
   needs:
-    - autotune:execute-tuning
+    - job: "autotune:execute-tuning"
+      optional: true
   extends:
+    - .rules:manual
     - .autotune-base
   variables:
     AUTOTUNE_CONFIG_REPO_PATH: /rocprim/include/rocprim/device/detail/config
+    AUTOTUNE_RESULT_CACHE_DIR: ${AUTOTUNE_RESULT_DIR}_cache
+  tags:
+    - single-cache
+  cache:
+    key: autotune-cache
+    paths:
+      - autotune_results_cache/
   script:
-# List the final .json files to use for config generation
+    # Set cache dir variables depending on if this is a MR or not
+    - >
+      if [ ! -z "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}" ]; then
+        AUTOTUNE_RESULT_CACHE_BRANCH_DIR="${AUTOTUNE_RESULT_CACHE_DIR}/${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}"
+        AUTOTUNE_RESULT_CACHE_TARGET_BRANCH_DIR="${AUTOTUNE_RESULT_CACHE_DIR}/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+      else 
+        AUTOTUNE_RESULT_CACHE_BRANCH_DIR="${AUTOTUNE_RESULT_CACHE_DIR}/${CI_COMMIT_BRANCH}"
+      fi
+    # If the global cache dir does not exist, create it
+    - mkdir -p $AUTOTUNE_RESULT_CACHE_DIR
+    # If there are fresh results in the artifacts, cache them in the branch cache
+    # If there are no fresh results, check branch cache
+    # If there are no branch cache results, check TARGET branch cache
+    # If there are TARGET branch cache results, cache them in the branch cache
+    - >
+      if [ -d "$AUTOTUNE_RESULT_DIR" ]; then 
+        mkdir -p $AUTOTUNE_RESULT_CACHE_BRANCH_DIR
+        cp -R -u ${AUTOTUNE_RESULT_DIR}/*.json ${AUTOTUNE_RESULT_CACHE_BRANCH_DIR}
+      elif [ -d "$AUTOTUNE_RESULT_CACHE_BRANCH_DIR" ]; then
+        mkdir -p $AUTOTUNE_RESULT_DIR
+        cp -R -u ${AUTOTUNE_RESULT_CACHE_BRANCH_DIR}/*.json ${AUTOTUNE_RESULT_DIR}
+      elif [ -d "$AUTOTUNE_RESULT_CACHE_TARGET_BRANCH_DIR" ]; then
+        mkdir -p $AUTOTUNE_RESULT_DIR
+        cp -R -u ${AUTOTUNE_RESULT_CACHE_TARGET_BRANCH_DIR}/*.json ${AUTOTUNE_RESULT_DIR}
+        mkdir -p $AUTOTUNE_RESULT_CACHE_BRANCH_DIR
+        cp -R -u ${AUTOTUNE_RESULT_DIR}/*.json ${AUTOTUNE_RESULT_CACHE_BRANCH_DIR}
+      else
+        echo 'ERROR: No autotune results found in previous artifacts, the branch cache or the target branch cache...'
+        exit 1
+      fi
+    # List the final .json files to use for config generation
     - ls -al ${AUTOTUNE_RESULT_DIR}
     - cd "${CI_PROJECT_DIR}"
     - python3 -m pip install jinja2
