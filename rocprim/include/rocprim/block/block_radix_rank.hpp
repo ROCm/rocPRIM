@@ -118,7 +118,7 @@ class block_radix_rank
     ROCPRIM_DEVICE ROCPRIM_INLINE void reset_counters(const unsigned int flat_id,
                                                       storage_type_&     storage)
     {
-        for (unsigned int i = flat_id; i < block_size * column_size; i += block_size)
+        for(unsigned int i = flat_id; i < block_size * column_size; i += block_size)
         {
             storage.packed_counters[i] = 0;
         }
