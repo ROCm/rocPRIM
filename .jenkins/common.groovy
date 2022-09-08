@@ -30,8 +30,8 @@ def runTestCommand (platform, project)
     String centos = platform.jenkinsLabel.contains('centos') ? '3' : ''
 
     def testCommand = "ctest${centos} --output-on-failure "
-    def testCommandExclude = "--exclude-regex rocprim.warp_reduce"
-    def hmmExcludeRegex = /(rocprim.warp_reduce|rocprim.device_scan)/
+    def testCommandExclude = "--exclude-regex rocprim.device_reduce_by_key"
+    def hmmExcludeRegex = /(rocprim.device_scan|rocprim.device_reduce_by_key|rocprim.block_sort_bitonic)/
     def hmmTestCommandExclude = "--exclude-regex \"${hmmExcludeRegex}\""
     def hmmTestCommand = ''
     if (platform.jenkinsLabel.contains('gfx90a'))
