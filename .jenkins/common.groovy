@@ -27,9 +27,8 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 def runTestCommand (platform, project)
 {
     String sudo = auxiliary.sudo(platform.jenkinsLabel)
-    String centos = platform.jenkinsLabel.contains('centos') ? '3' : ''
 
-    def testCommand = "ctest${centos} --output-on-failure "
+    def testCommand = "ctest --output-on-failure "
     def testCommandExclude = "--exclude-regex rocprim.device_reduce_by_key"
     def hmmExcludeRegex = /(rocprim.device_scan|rocprim.device_reduce_by_key|rocprim.block_sort_bitonic)/
     def hmmTestCommandExclude = "--exclude-regex \"${hmmExcludeRegex}\""
