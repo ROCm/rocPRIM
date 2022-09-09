@@ -194,13 +194,16 @@ struct radix_sort_config_908
                                            kernel_config<256, 15>>>,
         select_type_case<
             (sizeof(Key) == 4 && sizeof(Value) <= 16),
+            radix_sort_config<7, 6, scan, kernel_config<256, 6>, kernel_config<256, 10>>>,
+        select_type_case<
+            (sizeof(Key) == 8 && sizeof(Value) <= 4),
             radix_sort_config<7, 6, scan, kernel_config<256, 12>, kernel_config<256, 10>>>,
         select_type_case<
-            (sizeof(Key) == 8 && sizeof(Value) == 8),
-            radix_sort_config<7, 6, scan, kernel_config<256, 10>, kernel_config<256, 12>>>,
+            (sizeof(Key) == 8 && sizeof(Value) <= 8),
+            radix_sort_config<7, 6, scan, kernel_config<256, 10>, kernel_config<256, 10>>>,
         select_type_case<
             (sizeof(Key) == 8 && sizeof(Value) <= 16),
-            radix_sort_config<7, 6, scan, kernel_config<256, 12>, kernel_config<256, 12>>>,
+            radix_sort_config<7, 6, scan, kernel_config<256, 6>, kernel_config<256, 10>>>,
         radix_sort_config<
             6,
             4,
