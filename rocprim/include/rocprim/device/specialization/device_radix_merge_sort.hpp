@@ -55,7 +55,7 @@ inline hipError_t radix_sort_merge_impl(
     using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
     // TODO: Will be tunable soon
-    using sort_config = kernel_config<1024, 1>;
+    using sort_config = kernel_config<256, 4>;
 
     static constexpr unsigned int sort_block_size       = sort_config::block_size;
     static constexpr unsigned int sort_items_per_thread = sort_config::items_per_thread;
