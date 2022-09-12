@@ -208,24 +208,13 @@ struct radix_sort_single_helper
 
     using key_codec = radix_key_codec<key_type, Descending>;
     using bit_key_type = typename key_codec::bit_key_type;
-    using keys_load_type = ::rocprim::block_load<
-        key_type, BlockSize, ItemsPerThread,
-        ::rocprim::block_load_method::block_load_transpose>;
-    using values_load_type = ::rocprim::block_load<
-        value_type, BlockSize, ItemsPerThread,
-        ::rocprim::block_load_method::block_load_transpose>;
     using sort_type = ::rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread, value_type>;
 
     static constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
 
     struct storage_type
     {
-        union
-        {
-            typename keys_load_type::storage_type keys_load;
-            typename values_load_type::storage_type values_load;
-            typename sort_type::storage_type sort;
-        };
+        typename sort_type::storage_type sort;
     };
 
     template<
@@ -246,7 +235,7 @@ struct radix_sort_single_helper
     {
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
         const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
-        const unsigned int block_offset = flat_block_id * items_per_block;
+        const unsigned int block_offset        = flat_block_id * items_per_block;
         const bool         is_incomplete_block = flat_block_id == (size / items_per_block);
         const unsigned int valid_in_last_block = size - block_offset;
 
@@ -259,25 +248,28 @@ struct radix_sort_single_helper
         value_type values[ItemsPerThread];
         if(!is_incomplete_block)
         {
-            keys_load_type().load(keys_input + block_offset, keys, storage.keys_load);
+            block_load_direct_blocked(flat_id, keys_input + block_offset, keys);
             if ROCPRIM_IF_CONSTEXPR(with_values)
             {
-                ::rocprim::syncthreads();
-                values_load_type().load(values_input + block_offset, values, storage.values_load);
+                block_load_direct_blocked(flat_id, values_input + block_offset, values);
             }
         }
         else
         {
             const key_type out_of_bounds = key_codec::decode(bit_key_type(-1));
-            keys_load_type().load(keys_input + block_offset, keys, valid_in_last_block, out_of_bounds, storage.keys_load);
+            block_load_direct_blocked(flat_id,
+                                      keys_input + block_offset,
+                                      keys,
+                                      valid_in_last_block,
+                                      out_of_bounds);
             if ROCPRIM_IF_CONSTEXPR(with_values)
             {
-                ::rocprim::syncthreads();
-                values_load_type().load(values_input + block_offset, values, valid_in_last_block, storage.values_load);
+                block_load_direct_blocked(flat_id,
+                                          values_input + block_offset,
+                                          values,
+                                          valid_in_last_block);
             }
         }
-
-        ::rocprim::syncthreads();
 
         sort_block<Descending>(sort_type(), keys, values, storage.sort, bit, bit + current_radix_bits);
 
@@ -750,14 +742,14 @@ auto compare_nan_sensitive(const T& a, const T& b)
 
     using bit_key_type = typename float_bit_mask<T>::bit_type;
     static constexpr auto sign_bit = float_bit_mask<T>::sign_bit;
-    
+
     auto a_bits = __builtin_bit_cast(bit_key_type, a);
     auto b_bits = __builtin_bit_cast(bit_key_type, b);
 
     // convert -0.0 to +0.0
     a_bits = a_bits == sign_bit ? 0 : a_bits;
     b_bits = b_bits == sign_bit ? 0 : b_bits;
-    // invert negatives, put 1 into sign bit for positives 
+    // invert negatives, put 1 into sign bit for positives
     a_bits ^= (sign_bit & a_bits) == 0 ? sign_bit : bit_key_type(-1);
     b_bits ^= (sign_bit & b_bits) == 0 ? sign_bit : bit_key_type(-1);
 
