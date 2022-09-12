@@ -316,7 +316,7 @@ auto run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
     hipEvent_t start, stop;
     HIP_CHECK(hipEventCreate(&start));
     HIP_CHECK(hipEventCreate(&stop));
-    
+
     for(auto _ : state)
     {
         // Record start event
