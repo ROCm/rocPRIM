@@ -9,12 +9,12 @@ radix_sort_config<{{ measurement['long_radix_bits'] }}, {{ measurement['short_ra
 {%- endmacro %}
 
 {% macro general_case() -%}
-template<unsigned int arch, class key_type, class value_type, class enable = void> struct default_radix_sort_config :
+template<unsigned int arch, class key_type, class value_type = rocprim::empty_type, class enable = void> struct default_radix_sort_config :
 default_radix_sort_config_base<key_type, value_type> { };
 {%- endmacro %}
 
 {% macro configuration_arch_specific(benchmark_of_architecture, configuration) -%}
-template<> struct default_radix_sort_config<static_cast<unsigned int>({{ benchmark_of_architecture.name }}), {{ configuration.key_type }}, {{ configuration.value_type }}> :
+template<> struct default_radix_sort_config<static_cast<unsigned int>({{ benchmark_of_architecture.name }}), {{ configuration.key_type }}{{ ', '~configuration.value_type if configuration.value_type }}> :
 {%- endmacro %}
 
 {% macro configuration_fallback(benchmark_of_architecture, based_on_type, fallback_selection_criteria) -%}

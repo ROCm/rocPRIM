@@ -126,7 +126,7 @@ class BenchmarksOfArchitecture:
 
         Returns a hashable named tuple type where the names are based on the configuration selection types
         and the values on the instantiated types. If a instanced type is not present for a selection type
-        a None objet will be assigned as value.
+        a None object will be assigned as value.
 
         The created key can be used to access the specific benchmark results for a given combination of instantiated 
         selection types in the benchmarks member variable   
@@ -159,7 +159,7 @@ class BenchmarksOfArchitecture:
     @property
     def best_config_by_selection_types(self):
         """
-        Returns a dictionary containing each instantion of the selction configuration as a key
+        Returns a dictionary containing each instantion of the selection configuration as a key
         and the single best performing benchmark run as a value.
         """
         output = {}
