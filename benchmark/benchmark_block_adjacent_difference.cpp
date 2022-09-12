@@ -264,7 +264,6 @@ auto run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
             d_input, d_output, Trials
         );
         HIP_CHECK(hipGetLastError());
-        HIP_CHECK(hipDeviceSynchronize());
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
@@ -342,7 +341,6 @@ auto run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
             d_input, d_tile_sizes, d_output, Trials
         );
         HIP_CHECK(hipGetLastError());
-        HIP_CHECK(hipDeviceSynchronize());
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, hipStreamDefault));

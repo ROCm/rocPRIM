@@ -257,9 +257,8 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
             dim3(size / items_per_block), dim3(BlockSize), 0, stream,
             d_output, trials
         );
-        
-        HIP_CHECK(hipPeekAtLastError())
-        HIP_CHECK(hipDeviceSynchronize());
+
+        HIP_CHECK(hipPeekAtLastError());
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, hipStreamDefault));

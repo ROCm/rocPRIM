@@ -394,7 +394,6 @@ void run_benchmark(benchmark::State& state,
                 d_input, d_output, selected_operation
             );
         }
-        HIP_CHECK(hipDeviceSynchronize());
         HIP_CHECK(hipStreamSynchronize(stream));
 
         // Record stop event and wait until it completes
