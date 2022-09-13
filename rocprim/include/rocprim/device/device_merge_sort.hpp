@@ -75,53 +75,50 @@ template<unsigned int BlockSize,
          class ValuesOutputIterator,
          class OffsetT,
          class BinaryFunction>
-ROCPRIM_KERNEL
-    __launch_bounds__(BlockSize) void block_merge_kernel(KeysInputIterator    keys_input,
-                                                         KeysOutputIterator   keys_output,
-                                                         ValuesInputIterator  values_input,
-                                                         ValuesOutputIterator values_output,
-                                                         const OffsetT        input_size,
-                                                         const OffsetT        sorted_block_size,
-                                                         BinaryFunction       compare_function)
+ROCPRIM_KERNEL __launch_bounds__(BlockSize) void device_block_merge_oddeven_kernel(
+    KeysInputIterator    keys_input,
+    KeysOutputIterator   keys_output,
+    ValuesInputIterator  values_input,
+    ValuesOutputIterator values_output,
+    const OffsetT        input_size,
+    const OffsetT        sorted_block_size,
+    BinaryFunction       compare_function)
 {
-    block_merge_kernel_impl<BlockSize, ItemsPerThread>(keys_input,
-                                                       keys_output,
-                                                       values_input,
-                                                       values_output,
-                                                       input_size,
-                                                       sorted_block_size,
-                                                       compare_function);
+    block_merge_oddeven_kernel<BlockSize, ItemsPerThread>(keys_input,
+                                                          keys_output,
+                                                          values_input,
+                                                          values_output,
+                                                          input_size,
+                                                          sorted_block_size,
+                                                          compare_function);
 }
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class OffsetT,
-    class BinaryFunction
->
-ROCPRIM_KERNEL
-__launch_bounds__(BlockSize)
-void block_merge_kernel(KeysInputIterator keys_input,
-                        KeysOutputIterator keys_output,
-                        ValuesInputIterator values_input,
-                        ValuesOutputIterator values_output,
-                        const OffsetT input_size,
-                        const OffsetT sorted_block_size,
-                        BinaryFunction compare_function,
-                        const OffsetT* merge_partitions)
+template<unsigned int BlockSize,
+         unsigned int ItemsPerThread,
+         class KeysInputIterator,
+         class KeysOutputIterator,
+         class ValuesInputIterator,
+         class ValuesOutputIterator,
+         class OffsetT,
+         class BinaryFunction>
+ROCPRIM_KERNEL __launch_bounds__(BlockSize) void device_block_merge_mergepath_kernel(
+    KeysInputIterator    keys_input,
+    KeysOutputIterator   keys_output,
+    ValuesInputIterator  values_input,
+    ValuesOutputIterator values_output,
+    const OffsetT        input_size,
+    const OffsetT        sorted_block_size,
+    BinaryFunction       compare_function,
+    const OffsetT*       merge_partitions)
 {
-    block_merge_kernel_impl<BlockSize, ItemsPerThread>(keys_input,
-                                                       keys_output,
-                                                       values_input,
-                                                       values_output,
-                                                       input_size,
-                                                       sorted_block_size,
-                                                       compare_function,
-                                                       merge_partitions);
+    block_merge_mergepath_kernel<BlockSize, ItemsPerThread>(keys_input,
+                                                            keys_output,
+                                                            values_input,
+                                                            values_output,
+                                                            input_size,
+                                                            sorted_block_size,
+                                                            compare_function,
+                                                            merge_partitions);
 }
 
 #define ROCPRIM_DETAIL_HIP_SYNC(name, size, start) \
@@ -150,19 +147,18 @@ void block_merge_kernel(KeysInputIterator keys_input,
         } \
     }
 
-template <unsigned int BlockSize, // BlockSize of the partition kernel
-          unsigned int ItemsPerTile, // ItemsPerTile of the block merge kernel
-          typename KeysInputIterator,
-          typename OffsetT,
-          typename CompareOpT>
-ROCPRIM_KERNEL
-__launch_bounds__(BlockSize)
-void device_mergepath_partition_kernel(KeysInputIterator keys,
-                             const OffsetT input_size,
-                             const unsigned int num_partitions,
-                             OffsetT *merge_partitions,
-                             const CompareOpT compare_op,
-                             const OffsetT sorted_block_size)
+template<unsigned int BlockSize, // BlockSize of the partition kernel
+         unsigned int ItemsPerTile, // ItemsPerTile of the block merge kernel
+         typename KeysInputIterator,
+         typename OffsetT,
+         typename CompareOpT>
+ROCPRIM_KERNEL __launch_bounds__(BlockSize) void device_block_merge_mergepath_partition_kernel(
+    KeysInputIterator  keys,
+    const OffsetT      input_size,
+    const unsigned int num_partitions,
+    OffsetT*           merge_partitions,
+    const CompareOpT   compare_op,
+    const OffsetT      sorted_block_size)
 {
     const OffsetT partition_id = blockIdx.x * BlockSize + threadIdx.x;
 
@@ -196,77 +192,85 @@ void device_mergepath_partition_kernel(KeysInputIterator keys,
     merge_partitions[partition_id] = keys1_beg + partition_diag;
 }
 
-template<
-    class Config,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator,
-    class BinaryFunction
->
-inline
-hipError_t merge_sort_impl(void * temporary_storage,
-                           size_t& storage_size,
-                           KeysInputIterator keys_input,
-                           KeysOutputIterator keys_output,
-                           ValuesInputIterator values_input,
-                           ValuesOutputIterator values_output,
-                           const unsigned int size,
-                           BinaryFunction compare_function,
-                           const hipStream_t stream,
-                           bool debug_synchronous)
+template<unsigned int SortedBlockSize,
+         class Config,
+         class KeysIterator,
+         class ValuesIterator,
+         class OffsetT,
+         class BinaryFunction>
+inline hipError_t merge_sort_block_merge(
+    void*                                                      temporary_storage,
+    size_t&                                                    storage_size,
+    KeysIterator                                               keys,
+    ValuesIterator                                             values,
+    const OffsetT                                              size,
+    BinaryFunction                                             compare_function,
+    const hipStream_t                                          stream,
+    bool                                                       debug_synchronous,
+    typename std::iterator_traits<KeysIterator>::value_type*   keys_double_buffer   = nullptr,
+    typename std::iterator_traits<ValuesIterator>::value_type* values_double_buffer = nullptr)
 {
-    using OffsetT = unsigned int;
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
+    using key_type             = typename std::iterator_traits<KeysIterator>::value_type;
+    using value_type           = typename std::iterator_traits<ValuesIterator>::value_type;
     constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
 
-    // Get default config if Config is default_config
-    using config = default_or_custom_config<
-        Config,
-        default_merge_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
-    >;
+    static constexpr unsigned int merge_oddeven_block_size
+        = Config::merge_oddeven_config::block_size;
+    static constexpr unsigned int merge_oddeven_items_per_thread
+        = Config::merge_oddeven_config::items_per_thread;
+    static constexpr unsigned int merge_oddeven_items_per_block
+        = merge_oddeven_block_size * merge_oddeven_items_per_thread;
 
-    static constexpr unsigned int sort_block_size = config::sort_config::block_size;
-    static constexpr unsigned int sort_items_per_thread = config::sort_config::items_per_thread;
-    static constexpr unsigned int sort_items_per_block = sort_block_size * sort_items_per_thread;
-
-    static constexpr unsigned int merge_impl1_block_size = config::merge_impl1_config::block_size;
-    static constexpr unsigned int merge_impl1_items_per_thread = config::merge_impl1_config::items_per_thread;
-    static constexpr unsigned int merge_impl1_items_per_block = merge_impl1_block_size * merge_impl1_items_per_thread;
-
-    static constexpr unsigned int merge_partition_block_size = config::merge_mergepath_partition_config::block_size;
-    static constexpr unsigned int merge_mergepath_block_size = config::merge_mergepath_config::block_size;
-    static constexpr unsigned int merge_mergepath_items_per_thread = config::merge_mergepath_config::items_per_thread;
+    static constexpr unsigned int merge_partition_block_size
+        = Config::merge_mergepath_partition_config::block_size;
+    static constexpr unsigned int merge_mergepath_block_size
+        = Config::merge_mergepath_config::block_size;
+    static constexpr unsigned int merge_mergepath_items_per_thread
+        = Config::merge_mergepath_config::items_per_thread;
     static constexpr unsigned int merge_mergepath_items_per_block = merge_mergepath_block_size * merge_mergepath_items_per_thread;
 
-    static_assert(merge_mergepath_items_per_block >= sort_items_per_block,
-                  "merge_mergepath_items_per_block must be greater than or equal to sort_items_per_block");
-    static_assert(sort_items_per_block % config::merge_impl1_config::block_size == 0,
-                  "Merge block size must be a divisor of the items per block of the sort step");
+    static_assert(SortedBlockSize % Config::merge_oddeven_config::block_size == 0,
+                  "Merge block size must be a divisor of the SortedBlockSize");
 
-    const unsigned int sort_number_of_blocks = ceiling_div(size, sort_items_per_block);
-    const unsigned int merge_impl1_number_of_blocks = ceiling_div(size, merge_impl1_items_per_block);
+    const unsigned int sort_number_of_blocks = ceiling_div(size, SortedBlockSize);
+    const unsigned int merge_oddeven_number_of_blocks
+        = ceiling_div(size, merge_oddeven_items_per_block);
     const unsigned int merge_mergepath_number_of_blocks = ceiling_div(size, merge_mergepath_items_per_block);
 
-    bool use_mergepath = size > config::min_input_size_mergepath;
+    const bool use_mergepath = size > Config::min_input_size_mergepath;
     // variables below used for mergepath
     const unsigned int merge_num_partitions = merge_mergepath_number_of_blocks + 1;
     const unsigned int merge_partition_number_of_blocks
         = ceiling_div(merge_num_partitions, merge_partition_block_size);
 
-    OffsetT*    d_merge_partitions;
-    key_type*   keys_buffer;
-    value_type* values_buffer;
+    OffsetT*    d_merge_partitions = nullptr;
+    key_type*   keys_buffer        = nullptr;
+    value_type* values_buffer      = nullptr;
 
-    const hipError_t partition_result = detail::temp_storage::partition(
-        temporary_storage,
-        storage_size,
-        detail::temp_storage::make_linear_partition(
-            detail::temp_storage::ptr_aligned_array(&d_merge_partitions,
-                                                    use_mergepath ? merge_num_partitions : 0),
-            detail::temp_storage::ptr_aligned_array(&keys_buffer, size),
-            detail::temp_storage::ptr_aligned_array(&values_buffer, with_values ? size : 0)));
+    hipError_t partition_result;
+    if(keys_double_buffer == nullptr)
+    {
+        partition_result = detail::temp_storage::partition(
+            temporary_storage,
+            storage_size,
+            detail::temp_storage::make_linear_partition(
+                detail::temp_storage::ptr_aligned_array(&keys_buffer, size),
+                detail::temp_storage::ptr_aligned_array(&values_buffer, with_values ? size : 0),
+                detail::temp_storage::ptr_aligned_array(&d_merge_partitions,
+                                                        use_mergepath ? merge_num_partitions : 0)));
+    }
+    else
+    {
+        partition_result = detail::temp_storage::partition(
+            temporary_storage,
+            storage_size,
+            detail::temp_storage::make_linear_partition(
+                detail::temp_storage::ptr_aligned_array(&d_merge_partitions,
+                                                        use_mergepath ? merge_num_partitions : 0)));
+        keys_buffer   = keys_double_buffer;
+        values_buffer = values_double_buffer;
+    }
+
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;
@@ -279,14 +283,12 @@ hipError_t merge_sort_impl(void * temporary_storage,
     {
         std::cout << "-----" << '\n';
         std::cout << "size: " << size << '\n';
-        std::cout << "sort_block_size: " << sort_block_size << '\n';
-        std::cout << "sort_items_per_thread: " << sort_items_per_thread << '\n';
-        std::cout << "sort_items_per_block: " << sort_items_per_block << '\n';
+        std::cout << "SortedBlockSize: " << SortedBlockSize << '\n';
         std::cout << "sort_number_of_blocks: " << sort_number_of_blocks << '\n';
-        std::cout << "merge_impl1_block_size: " << merge_impl1_block_size << '\n';
-        std::cout << "merge_impl1_number_of_blocks: " << merge_impl1_number_of_blocks << '\n';
-        std::cout << "merge_impl1_items_per_thread: " << merge_impl1_items_per_thread << '\n';
-        std::cout << "merge_impl1_items_per_block: " << merge_impl1_items_per_block << '\n';
+        std::cout << "merge_oddeven_block_size: " << merge_oddeven_block_size << '\n';
+        std::cout << "merge_oddeven_number_of_blocks: " << merge_oddeven_number_of_blocks << '\n';
+        std::cout << "merge_oddeven_items_per_thread: " << merge_oddeven_items_per_thread << '\n';
+        std::cout << "merge_oddeven_items_per_block: " << merge_oddeven_items_per_block << '\n';
         std::cout << "merge_mergepath_block_size: " << merge_mergepath_block_size << '\n';
         std::cout << "merge_mergepath_number_of_blocks: " << merge_mergepath_number_of_blocks << '\n';
         std::cout << "merge_mergepath_items_per_thread: " << merge_mergepath_items_per_thread << '\n';
@@ -298,51 +300,71 @@ hipError_t merge_sort_impl(void * temporary_storage,
 
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(block_sort_kernel<sort_block_size, sort_items_per_thread>),
-        dim3(sort_number_of_blocks), dim3(sort_block_size), 0, stream,
-        keys_input, keys_buffer, values_input, values_buffer,
-        size, compare_function
-    );
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_sort_kernel", size, start);
 
     bool temporary_store = true;
-    for(OffsetT block = sort_items_per_block; block < size; block *= 2)
+    for(OffsetT block = SortedBlockSize; block < size; block *= 2)
     {
         temporary_store = !temporary_store;
 
         const auto merge_step = [&](auto keys_input_,
                                     auto keys_output_,
                                     auto values_input_,
-                                    auto values_output_) -> hipError_t {
-            if(use_mergepath)
+                                    auto values_output_) -> hipError_t
+        {
+            if(use_mergepath && block >= merge_mergepath_items_per_block)
             {
-                if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-                hipLaunchKernelGGL(HIP_KERNEL_NAME(device_mergepath_partition_kernel<merge_partition_block_size, merge_mergepath_items_per_block>),
-                                   dim3(merge_partition_number_of_blocks), dim3(merge_partition_block_size), 0, stream,
-                                   keys_input_, size, merge_num_partitions, d_merge_partitions,
-                                   compare_function, block);
-                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("device_mergepath_partition_kernel", size, start);
+                if(debug_synchronous)
+                    start = std::chrono::high_resolution_clock::now();
+                hipLaunchKernelGGL(HIP_KERNEL_NAME(device_block_merge_mergepath_partition_kernel<
+                                                   merge_partition_block_size,
+                                                   merge_mergepath_items_per_block>),
+                                   dim3(merge_partition_number_of_blocks),
+                                   dim3(merge_partition_block_size),
+                                   0,
+                                   stream,
+                                   keys_input_,
+                                   size,
+                                   merge_num_partitions,
+                                   d_merge_partitions,
+                                   compare_function,
+                                   block);
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(
+                    "device_block_merge_mergepath_partition_kernel",
+                    size,
+                    start);
 
-                if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+                if(debug_synchronous)
+                    start = std::chrono::high_resolution_clock::now();
                 hipLaunchKernelGGL(
-                    HIP_KERNEL_NAME(block_merge_kernel<merge_mergepath_block_size, merge_mergepath_items_per_thread>),
-                    dim3(merge_mergepath_number_of_blocks), dim3(merge_mergepath_block_size), 0, stream,
-                    keys_input_, keys_output_, values_input_, values_output_,
-                    size, block, compare_function, d_merge_partitions
-                );
-                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_merge_kernel", size, start);
+                    HIP_KERNEL_NAME(
+                        device_block_merge_mergepath_kernel<merge_mergepath_block_size,
+                                                            merge_mergepath_items_per_thread>),
+                    dim3(merge_mergepath_number_of_blocks),
+                    dim3(merge_mergepath_block_size),
+                    0,
+                    stream,
+                    keys_input_,
+                    keys_output_,
+                    values_input_,
+                    values_output_,
+                    size,
+                    block,
+                    compare_function,
+                    d_merge_partitions);
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("device_block_merge_mergepath_kernel",
+                                                            size,
+                                                            start);
             }
             else
             {
-                if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+                if(debug_synchronous)
+                    start = std::chrono::high_resolution_clock::now();
                 hipLaunchKernelGGL(
                     HIP_KERNEL_NAME(
-                        block_merge_kernel<merge_impl1_block_size, merge_impl1_items_per_thread>),
-                    dim3(merge_impl1_number_of_blocks),
-                    dim3(merge_impl1_block_size),
+                        device_block_merge_oddeven_kernel<merge_oddeven_block_size,
+                                                          merge_oddeven_items_per_thread>),
+                    dim3(merge_oddeven_number_of_blocks),
+                    dim3(merge_oddeven_block_size),
                     0,
                     stream,
                     keys_input_,
@@ -352,7 +374,9 @@ hipError_t merge_sort_impl(void * temporary_storage,
                     size,
                     block,
                     compare_function);
-                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_merge_kernel", size, start)
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("device_block_merge_oddeven_kernel",
+                                                            size,
+                                                            start)
             }
             return hipSuccess;
         };
@@ -360,33 +384,135 @@ hipError_t merge_sort_impl(void * temporary_storage,
         hipError_t error;
         if(temporary_store)
         {
-            error = merge_step(keys_output, keys_buffer, values_output, values_buffer);
+            error = merge_step(keys_buffer, keys, values_buffer, values);
         }
         else
         {
-            error = merge_step(keys_buffer, keys_output, values_buffer, values_output);
+            error = merge_step(keys, keys_buffer, values, values_buffer);
         }
         if(error != hipSuccess) return error;
     }
 
-    if(temporary_store)
+    if(!temporary_store)
     {
-        hipError_t error = ::rocprim::transform(
-            keys_buffer, keys_output, size,
-            ::rocprim::identity<key_type>(), stream, debug_synchronous
-        );
+        hipError_t error = ::rocprim::transform(keys_buffer,
+                                                keys,
+                                                size,
+                                                ::rocprim::identity<key_type>(),
+                                                stream,
+                                                debug_synchronous);
         if(error != hipSuccess) return error;
 
         if(with_values)
         {
-            hipError_t error = ::rocprim::transform(
-                values_buffer, values_output, size,
-                ::rocprim::identity<value_type>(), stream, debug_synchronous
-            );
+            hipError_t error = ::rocprim::transform(values_buffer,
+                                                    values,
+                                                    size,
+                                                    ::rocprim::identity<value_type>(),
+                                                    stream,
+                                                    debug_synchronous);
             if(error != hipSuccess) return error;
         }
     }
 
+    return hipSuccess;
+}
+
+template<class Config,
+         class KeysInputIterator,
+         class KeysOutputIterator,
+         class ValuesInputIterator,
+         class ValuesOutputIterator,
+         class BinaryFunction>
+inline hipError_t merge_sort_impl(void*                temporary_storage,
+                                  size_t&              storage_size,
+                                  KeysInputIterator    keys_input,
+                                  KeysOutputIterator   keys_output,
+                                  ValuesInputIterator  values_input,
+                                  ValuesOutputIterator values_output,
+                                  const unsigned int   size,
+                                  BinaryFunction       compare_function,
+                                  const hipStream_t    stream,
+                                  bool                 debug_synchronous)
+{
+    using key_type   = typename std::iterator_traits<KeysInputIterator>::value_type;
+    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
+
+    // Get default config if Config is default_config
+    using config = default_or_custom_config<
+        Config,
+        default_merge_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>>;
+
+    static constexpr unsigned int sort_block_size       = config::sort_config::block_size;
+    static constexpr unsigned int sort_items_per_thread = config::sort_config::items_per_thread;
+    static constexpr unsigned int sort_items_per_block  = sort_block_size * sort_items_per_thread;
+
+    const unsigned int sort_number_of_blocks = ceiling_div(size, sort_items_per_block);
+
+    if(temporary_storage == nullptr)
+    {
+        if(sort_number_of_blocks > 1)
+        {
+            return merge_sort_block_merge<sort_items_per_block,
+                                          typename config::block_merge_config>(temporary_storage,
+                                                                               storage_size,
+                                                                               keys_output,
+                                                                               values_output,
+                                                                               size,
+                                                                               compare_function,
+                                                                               stream,
+                                                                               debug_synchronous);
+        }
+        else
+        {
+            storage_size = 1;
+            return hipSuccess;
+        }
+    }
+
+    if(size == size_t(0))
+        return hipSuccess;
+
+    if(debug_synchronous)
+    {
+        std::cout << "-----" << '\n';
+        std::cout << "size: " << size << '\n';
+        std::cout << "sort_block_size: " << sort_block_size << '\n';
+        std::cout << "sort_items_per_thread: " << sort_items_per_thread << '\n';
+        std::cout << "sort_items_per_block: " << sort_items_per_block << '\n';
+        std::cout << "sort_number_of_blocks: " << sort_number_of_blocks << '\n';
+    }
+
+    // Start point for time measurements
+    std::chrono::high_resolution_clock::time_point start;
+    if(debug_synchronous)
+        start = std::chrono::high_resolution_clock::now();
+
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(block_sort_kernel<sort_block_size, sort_items_per_thread>),
+                       dim3(sort_number_of_blocks),
+                       dim3(sort_block_size),
+                       0,
+                       stream,
+                       keys_input,
+                       keys_output,
+                       values_input,
+                       values_output,
+                       size,
+                       compare_function);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("block_sort_kernel", size, start);
+
+    if(sort_number_of_blocks > 1)
+    {
+        return merge_sort_block_merge<sort_items_per_block, typename config::block_merge_config>(
+            temporary_storage,
+            storage_size,
+            keys_output,
+            values_output,
+            size,
+            compare_function,
+            stream,
+            debug_synchronous);
+    }
     return hipSuccess;
 }
 

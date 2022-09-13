@@ -385,83 +385,6 @@ hipError_t radix_sort_single_impl(void * temporary_storage,
     return hipSuccess;
 }
 
-template<
-    class Config,
-    bool Descending,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator
->
-inline
-hipError_t radix_sort_merge_impl(void * temporary_storage,
-                                 size_t& storage_size,
-                                 KeysInputIterator keys_input,
-                                 typename std::iterator_traits<KeysInputIterator>::value_type * keys_tmp,
-                                 KeysOutputIterator keys_output,
-                                 ValuesInputIterator values_input,
-                                 typename std::iterator_traits<ValuesInputIterator>::value_type * values_tmp,
-                                 ValuesOutputIterator values_output,
-                                 unsigned int size,
-                                 bool& is_result_in_output,
-                                 unsigned int begin_bit,
-                                 unsigned int end_bit,
-                                 hipStream_t stream,
-                                 bool debug_synchronous)
-{
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
-
-    using config = default_or_custom_config<
-        Config,
-        default_radix_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
-    >;
-
-    constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
-
-    const bool with_double_buffer = keys_tmp != nullptr;
-
-    key_type*   keys_tmp_storage;
-    value_type* values_tmp_storage;
-
-    const hipError_t partition_result = detail::temp_storage::partition(
-        temporary_storage,
-        storage_size,
-        detail::temp_storage::make_linear_partition(
-            detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
-                                                    !with_double_buffer ? size : 0),
-            detail::temp_storage::ptr_aligned_array(&values_tmp_storage,
-                                                    !with_double_buffer && with_values ? size
-                                                                                       : 0)));
-    if(partition_result != hipSuccess || temporary_storage == nullptr)
-    {
-        return partition_result;
-    }
-
-    if(debug_synchronous)
-    {
-        std::cout << "temporary_storage " << temporary_storage << '\n';
-        hipError_t error = hipStreamSynchronize(stream);
-        if(error != hipSuccess) return error;
-    }
-
-    if(!with_double_buffer)
-    {
-        keys_tmp   = keys_tmp_storage;
-        values_tmp = values_tmp_storage;
-    }
-
-    hipError_t error = radix_sort_merge<config, Descending>(
-        keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output, size,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
-    if(error != hipSuccess) return error;
-
-    is_result_in_output = true;
-    return hipSuccess;
-}
-
 template<class Size>
 using offset_type_t = std::conditional_t<
     sizeof(Size) <= 4,
@@ -702,22 +625,20 @@ hipError_t radix_sort_impl(void * temporary_storage,
     }
     else if( size <= merge_sort_limit )
     {
-        return radix_sort_merge_impl<Config, Descending>(
-            temporary_storage,
-            storage_size,
-            keys_input,
-            keys_tmp,
-            keys_output,
-            values_input,
-            values_tmp,
-            values_output,
-            static_cast<unsigned int>(size),
-            is_result_in_output,
-            begin_bit,
-            end_bit,
-            stream,
-            debug_synchronous
-        );
+        return radix_sort_merge_impl<Config, Descending>(temporary_storage,
+                                                         storage_size,
+                                                         keys_input,
+                                                         keys_tmp,
+                                                         keys_output,
+                                                         values_input,
+                                                         values_tmp,
+                                                         values_output,
+                                                         static_cast<unsigned int>(size),
+                                                         is_result_in_output,
+                                                         begin_bit,
+                                                         end_bit,
+                                                         stream,
+                                                         debug_synchronous);
     }
     else
     {

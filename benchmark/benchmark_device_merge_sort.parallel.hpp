@@ -63,7 +63,10 @@ struct device_merge_sort_benchmark : public config_autotune_interface
                    : std::string(Traits<Value>::name()) + ", ")
             + "merge_sort_config<" + pad_string(std::to_string(Config::sort_config::block_size), 4)
             + ", " + pad_string(std::to_string(Config::sort_config::items_per_thread), 2) + ", "
-            + pad_string(std::to_string(Config::merge_impl1_config::block_size), 4) + ">>");
+            + pad_string(
+                std::to_string(Config::block_merge_config::merge_oddeven_config::block_size),
+                4)
+            + ">>");
     }
 
     static constexpr unsigned int batch_size  = 10;

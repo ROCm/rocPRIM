@@ -36,8 +36,9 @@
 #include "../../block/block_exchange.hpp"
 #include "../../block/block_load.hpp"
 #include "../../block/block_load_func.hpp"
-#include "../../block/block_scan.hpp"
 #include "../../block/block_radix_sort.hpp"
+#include "../../block/block_scan.hpp"
+#include "../../block/block_store_func.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -246,9 +247,8 @@ struct radix_sort_single_helper
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
         const unsigned int flat_block_id = ::rocprim::detail::block_id<0>();
         const unsigned int block_offset = flat_block_id * items_per_block;
-        const unsigned int number_of_blocks = (size + items_per_block - 1) / items_per_block;
-        unsigned int valid_in_last_block;
-        const bool last_block = flat_block_id == (number_of_blocks - 1);
+        const bool         is_incomplete_block = flat_block_id == (size / items_per_block);
+        const unsigned int valid_in_last_block = size - block_offset;
 
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
@@ -257,11 +257,10 @@ struct radix_sort_single_helper
 
         key_type keys[ItemsPerThread];
         value_type values[ItemsPerThread];
-        if(!last_block)
+        if(!is_incomplete_block)
         {
-            valid_in_last_block = items_per_block;
             keys_load_type().load(keys_input + block_offset, keys, storage.keys_load);
-            if(with_values)
+            if ROCPRIM_IF_CONSTEXPR(with_values)
             {
                 ::rocprim::syncthreads();
                 values_load_type().load(values_input + block_offset, values, storage.values_load);
@@ -270,9 +269,8 @@ struct radix_sort_single_helper
         else
         {
             const key_type out_of_bounds = key_codec::decode(bit_key_type(-1));
-            valid_in_last_block = size - items_per_block * (number_of_blocks - 1);
             keys_load_type().load(keys_input + block_offset, keys, valid_in_last_block, out_of_bounds, storage.keys_load);
-            if(with_values)
+            if ROCPRIM_IF_CONSTEXPR(with_values)
             {
                 ::rocprim::syncthreads();
                 values_load_type().load(values_input + block_offset, values, valid_in_last_block, storage.values_load);
@@ -284,15 +282,26 @@ struct radix_sort_single_helper
         sort_block<Descending>(sort_type(), keys, values, storage.sort, bit, bit + current_radix_bits);
 
         // Store keys and values
-        #pragma unroll
-        for (unsigned int i = 0; i < ItemsPerThread; ++i)
+        if(!is_incomplete_block)
         {
-            unsigned int item_offset = flat_id * ItemsPerThread + i;
-            if (item_offset < valid_in_last_block)
+            block_store_direct_blocked(flat_id, keys_output + block_offset, keys);
+            if ROCPRIM_IF_CONSTEXPR(with_values)
             {
-                keys_output[block_offset + item_offset] = keys[i];
-                if (with_values)
-                    values_output[block_offset + item_offset] = values[i];
+                block_store_direct_blocked(flat_id, values_output + block_offset, values);
+            }
+        }
+        else
+        {
+            block_store_direct_blocked(flat_id,
+                                       keys_output + block_offset,
+                                       keys,
+                                       valid_in_last_block);
+            if ROCPRIM_IF_CONSTEXPR(with_values)
+            {
+                block_store_direct_blocked(flat_id,
+                                           values_output + block_offset,
+                                           values,
+                                           valid_in_last_block);
             }
         }
     }

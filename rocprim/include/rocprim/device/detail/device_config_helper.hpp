@@ -41,20 +41,37 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+template<unsigned int MergeOddevenBlockSize            = 1024,
+         unsigned int MergeOddevenItemsPerThread       = 1,
+         unsigned int MergeMergepathPartitionBlockSize = 128,
+         unsigned int MergeMergepathBlockSize          = 256,
+         unsigned int MergeMergepathItemsPerThread     = 8,
+         unsigned int MinInputSizeMergepath            = (1 << 17) + 70000>
+struct merge_sort_block_merge_config
+{
+    using merge_oddeven_config = kernel_config<MergeOddevenBlockSize, MergeOddevenItemsPerThread>;
+    using merge_mergepath_partition_config = kernel_config<MergeMergepathPartitionBlockSize, 1>;
+    using merge_mergepath_config
+        = kernel_config<MergeMergepathBlockSize, MergeMergepathItemsPerThread>;
+    static constexpr unsigned int min_input_size_mergepath = MinInputSizeMergepath;
+};
+
 template<unsigned int SortBlockSize,
          unsigned int SortItemsPerThread,
-         unsigned int MergeImpl1BlockSize,
-         unsigned int MergeImplMPPartitionBlockSize,
-         unsigned int MergeImplMPBlockSize,
-         unsigned int MergeImplMPItemsPerThread,
+         unsigned int MergeOddevenBlockSize,
+         unsigned int MergeMergepathPartitionBlockSize,
+         unsigned int MergeMergepathBlockSize,
+         unsigned int MergeMergepathItemsPerThread,
          unsigned int MinInputSizeMergepath>
 struct merge_sort_config_impl
 {
-    using sort_config                      = kernel_config<SortBlockSize, SortItemsPerThread>;
-    using merge_impl1_config               = kernel_config<MergeImpl1BlockSize, 1>;
-    using merge_mergepath_partition_config = kernel_config<MergeImplMPPartitionBlockSize, 1>;
-    using merge_mergepath_config = kernel_config<MergeImplMPBlockSize, MergeImplMPItemsPerThread>;
-    static constexpr unsigned int min_input_size_mergepath = MinInputSizeMergepath;
+    using sort_config        = kernel_config<SortBlockSize, SortItemsPerThread>;
+    using block_merge_config = merge_sort_block_merge_config<MergeOddevenBlockSize,
+                                                             1,
+                                                             MergeMergepathPartitionBlockSize,
+                                                             MergeMergepathBlockSize,
+                                                             MergeMergepathItemsPerThread,
+                                                             MinInputSizeMergepath>;
 };
 
 } // namespace detail
@@ -63,25 +80,24 @@ struct merge_sort_config_impl
 ///
 /// \tparam SortBlockSize - block size in the block-sort step
 /// \tparam SortItemsPerThread - ItemsPerThread in the block-sort step
-/// \tparam MergeImpl1BlockSize - block size in the block merge step using impl1 (used when input_size < MinInputSizeMergepath)
-/// \tparam MergeImplMPPartitionBlockSize - block size of the partition kernel in the block merge step using mergepath impl
-/// \tparam MergeImplMPBlockSize - block size in the block merge step using mergepath impl
-/// \tparam MergeImplMPItemsPerThread - ItemsPerThread in the block merge step using mergepath impl
+/// \tparam MergeOddevenBlockSize - block size in the block merge step using oddeven impl (used when input_size < MinInputSizeMergepath)
+/// \tparam MergeMergepathPartitionBlockSize - block size of the partition kernel in the block merge step using mergepath impl
+/// \tparam MergeMergepathBlockSize - block size in the block merge step using mergepath impl
+/// \tparam MergeMergepathItemsPerThread - ItemsPerThread in the block merge step using mergepath impl
 /// \tparam MinInputSizeMergepath - breakpoint of input-size to use mergepath impl for block merge step
-template<unsigned int     MergeImpl1BlockSize           = 512,
-         unsigned int     SortBlockSize                 = MergeImpl1BlockSize,
-         unsigned int     SortItemsPerThread            = 1,
-         unsigned int     MergeImplMPPartitionBlockSize = 128,
-         unsigned int     MergeImplMPBlockSize          = std::min(SortBlockSize, 128u),
-         unsigned int     MergeImplMPItemsPerThread
-         = SortBlockSize* SortItemsPerThread / MergeImplMPBlockSize,
-         unsigned int     MinInputSizeMergepath = 200000>
+template<unsigned int MergeOddevenBlockSize            = 512,
+         unsigned int SortBlockSize                    = MergeOddevenBlockSize,
+         unsigned int SortItemsPerThread               = 1,
+         unsigned int MergeMergepathPartitionBlockSize = 128,
+         unsigned int MergeMergepathBlockSize          = 256,
+         unsigned int MergeMergepathItemsPerThread     = 8,
+         unsigned int MinInputSizeMergepath            = (1 << 17) + 70000>
 using merge_sort_config = detail::merge_sort_config_impl<SortBlockSize,
                                                          SortItemsPerThread,
-                                                         MergeImpl1BlockSize,
-                                                         MergeImplMPPartitionBlockSize,
-                                                         MergeImplMPBlockSize,
-                                                         MergeImplMPItemsPerThread,
+                                                         MergeOddevenBlockSize,
+                                                         MergeMergepathPartitionBlockSize,
+                                                         MergeMergepathBlockSize,
+                                                         MergeMergepathItemsPerThread,
                                                          MinInputSizeMergepath>;
 
 namespace detail
