@@ -135,7 +135,7 @@ void run_flagged_benchmark(benchmark::State& state,
     for(auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -152,7 +152,7 @@ void run_flagged_benchmark(benchmark::State& state,
         }
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;
@@ -251,7 +251,7 @@ void run_selectop_benchmark(benchmark::State& state,
     for(auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -268,7 +268,7 @@ void run_selectop_benchmark(benchmark::State& state,
         }
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;
@@ -373,7 +373,7 @@ void run_unique_benchmark(benchmark::State& state,
     for(auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -390,7 +390,7 @@ void run_unique_benchmark(benchmark::State& state,
         }
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;
@@ -500,7 +500,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
     for(auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -517,7 +517,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
         }
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;

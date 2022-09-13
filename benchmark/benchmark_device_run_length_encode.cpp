@@ -125,7 +125,7 @@ void run_encode_benchmark(benchmark::State& state, size_t max_length, hipStream_
     for (auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -139,7 +139,7 @@ void run_encode_benchmark(benchmark::State& state, size_t max_length, hipStream_
         HIP_CHECK(hipStreamSynchronize(stream));
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;
@@ -242,7 +242,7 @@ void run_non_trivial_runs_benchmark(benchmark::State& state, size_t max_length, 
     for (auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -256,7 +256,7 @@ void run_non_trivial_runs_benchmark(benchmark::State& state, size_t max_length, 
         HIP_CHECK(hipStreamSynchronize(stream));
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;

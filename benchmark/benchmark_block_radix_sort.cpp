@@ -158,7 +158,7 @@ void run_benchmark(benchmark::State& state, benchmark_kinds benchmark_kind, hipS
     for(auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault)); //?
+        HIP_CHECK(hipEventRecord(start, stream)); //?
 
         if(benchmark_kind == benchmark_kinds::sort_keys)
         {
@@ -179,7 +179,7 @@ void run_benchmark(benchmark::State& state, benchmark_kinds benchmark_kind, hipS
         HIP_CHECK(hipGetLastError());
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;

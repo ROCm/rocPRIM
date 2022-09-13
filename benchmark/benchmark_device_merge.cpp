@@ -120,7 +120,7 @@ void run_merge_keys_benchmark(benchmark::State& state, hipStream_t stream, size_
     for (auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -134,7 +134,7 @@ void run_merge_keys_benchmark(benchmark::State& state, hipStream_t stream, size_
         }
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;
@@ -242,7 +242,7 @@ void run_merge_pairs_benchmark(benchmark::State& state, hipStream_t stream, size
     for (auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -258,7 +258,7 @@ void run_merge_pairs_benchmark(benchmark::State& state, hipStream_t stream, size
         }
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;

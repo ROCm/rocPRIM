@@ -185,7 +185,7 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
     for(auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(start, stream));
 
         execute_warp_reduce_kernel<AllReduce, Segmented, WarpSize, BlockSize, Trials>(d_input,
                                                                                       d_output,
@@ -194,7 +194,7 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
                                                                                       stream);
 
         // Record stop event and wait until it completes
-        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventRecord(stop, stream));
         HIP_CHECK(hipEventSynchronize(stop));
 
         float elapsed_mseconds;
