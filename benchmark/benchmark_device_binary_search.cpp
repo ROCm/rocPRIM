@@ -120,9 +120,15 @@ void run_lower_bound_benchmark(benchmark::State& state, hipStream_t stream,
     }
     HIP_CHECK(hipDeviceSynchronize());
 
+    // HIP events creation
+    hipEvent_t start, stop;
+    HIP_CHECK(hipEventCreate(&start));
+    HIP_CHECK(hipEventCreate(&stop));
+
     for(auto _ : state)
     {
-        auto start = std::chrono::high_resolution_clock::now();
+        // Record start event
+        HIP_CHECK(hipEventRecord(start, hipStreamDefault));
 
         for(size_t i = 0; i < batch_size; i++)
         {
@@ -136,13 +142,20 @@ void run_lower_bound_benchmark(benchmark::State& state, hipStream_t stream,
                 )
             );
         }
-        HIP_CHECK(hipDeviceSynchronize());
 
-        auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-        state.SetIterationTime(elapsed_seconds.count());
+        // Record stop event and wait until it completes
+        HIP_CHECK(hipEventRecord(stop, hipStreamDefault));
+        HIP_CHECK(hipEventSynchronize(stop));
+
+        float elapsed_mseconds;
+        HIP_CHECK(hipEventElapsedTime(&elapsed_mseconds, start, stop));
+        state.SetIterationTime(elapsed_mseconds / 1000);
     }
+
+    // Destroy HIP events
+    HIP_CHECK(hipEventDestroy(start));
+    HIP_CHECK(hipEventDestroy(stop));
+
     state.SetBytesProcessed(state.iterations() * batch_size * needles_size * sizeof(needle_type));
     state.SetItemsProcessed(state.iterations() * batch_size * needles_size);
 
