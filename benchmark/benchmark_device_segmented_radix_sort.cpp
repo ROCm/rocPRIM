@@ -21,11 +21,10 @@
 // SOFTWARE.
 
 #include <iostream>
-#include <chrono>
-#include <vector>
+#include <limits>
 #include <locale>
 #include <string>
-#include <limits>
+#include <vector>
 
 // Google Benchmark
 #include "benchmark/benchmark.h"

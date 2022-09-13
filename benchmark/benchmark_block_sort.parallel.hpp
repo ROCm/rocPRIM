@@ -272,7 +272,6 @@ public:
                 dispatch_block_sort(stable_tag, size, stream, d_input, d_output);
             }
             HIP_CHECK(hipGetLastError());
-            HIP_CHECK(hipStreamSynchronize(stream));
 
             // Record stop event and wait until it completes
             HIP_CHECK(hipEventRecord(stop, stream));

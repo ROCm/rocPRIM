@@ -20,13 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <chrono>
-#include <vector>
-#include <limits>
-#include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
 
 // Google Benchmark
 #include "benchmark/benchmark.h"
@@ -112,7 +111,6 @@ void run_benchmark(benchmark::State& state,
                 )
             );
         }
-        HIP_CHECK(hipStreamSynchronize(stream));
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, stream));

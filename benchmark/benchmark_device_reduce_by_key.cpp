@@ -21,11 +21,10 @@
 // SOFTWARE.
 
 #include <iostream>
-#include <chrono>
-#include <vector>
+#include <limits>
 #include <locale>
 #include <string>
-#include <limits>
+#include <vector>
 
 // Google Benchmark
 #include "benchmark/benchmark.h"
@@ -162,7 +161,6 @@ void run_benchmark(benchmark::State& state, size_t max_length, hipStream_t strea
                 )
             );
         }
-        HIP_CHECK(hipStreamSynchronize(stream));
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, stream));

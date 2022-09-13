@@ -20,11 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <chrono>
-#include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
+#include <string>
 
 // Google Benchmark
 #include "benchmark/benchmark.h"
@@ -394,7 +393,6 @@ void run_benchmark(benchmark::State& state,
                 d_input, d_output, selected_operation
             );
         }
-        HIP_CHECK(hipStreamSynchronize(stream));
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, stream));
@@ -460,7 +458,6 @@ void run_benchmark_memcpy(benchmark::State& state,
         {
             HIP_CHECK(hipMemcpy(d_output, d_input, size * sizeof(T), hipMemcpyDeviceToDevice));
         }
-        HIP_CHECK(hipStreamSynchronize(stream));
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, stream));

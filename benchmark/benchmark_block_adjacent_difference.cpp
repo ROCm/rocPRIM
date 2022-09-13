@@ -33,7 +33,6 @@
 // HIP API
 #include <hip/hip_runtime.h>
 
-#include <chrono>
 #include <iostream>
 #include <limits>
 #include <string>

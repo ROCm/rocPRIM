@@ -20,13 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-#include <chrono>
-#include <vector>
-#include <limits>
-#include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
 
 // Google Benchmark
 #include "benchmark/benchmark.h"
@@ -158,7 +157,7 @@ void run_benchmark(benchmark::State& state, benchmark_kinds benchmark_kind, hipS
     for(auto _ : state)
     {
         // Record start event
-        HIP_CHECK(hipEventRecord(start, stream)); //?
+        HIP_CHECK(hipEventRecord(start, stream));
 
         if(benchmark_kind == benchmark_kinds::sort_keys)
         {

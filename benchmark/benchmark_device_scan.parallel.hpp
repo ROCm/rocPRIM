@@ -243,7 +243,6 @@ struct device_scan_benchmark : public config_autotune_interface
                                            scan_op,
                                            stream)));
             }
-            HIP_CHECK(hipStreamSynchronize(stream));
 
             // Record stop event and wait until it completes
             HIP_CHECK(hipEventRecord(stop, stream));
@@ -352,7 +351,6 @@ struct device_scan_benchmark : public config_autotune_interface
                                                                       stream,
                                                                       debug)));
             }
-            HIP_CHECK(hipStreamSynchronize(stream));
 
             // Record stop event and wait until it completes
             HIP_CHECK(hipEventRecord(stop, stream));

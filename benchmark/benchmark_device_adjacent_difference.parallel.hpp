@@ -197,7 +197,6 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
             {
                 HIP_CHECK(launch());
             }
-            HIP_CHECK(hipStreamSynchronize(stream));
 
             // Record stop event and wait until it completes
             HIP_CHECK(hipEventRecord(stop, stream));
