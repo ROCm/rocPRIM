@@ -82,7 +82,9 @@ inline hipError_t radix_sort_merge_impl(
                 size,
                 radix_merge_compare<Descending, false, key_type>(),
                 stream,
-                debug_synchronous);
+                debug_synchronous,
+                keys_buffer,
+                values_buffer);
         }
         else
         {
