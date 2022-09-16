@@ -258,7 +258,7 @@ struct device_merge_sort_benchmark : public config_autotune_interface
         for(auto _ : state)
         {
             // Record start event
-            HI_CHECK(hipEventRecord(start, stream));
+            HIP_CHECK(hipEventRecord(start, stream));
 
             for(size_t i = 0; i < batch_size; i++)
             {
