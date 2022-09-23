@@ -57,8 +57,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 3>,
                         ::rocprim::kernel_config<256, 12>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -73,8 +72,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 5>,
                         ::rocprim::kernel_config<256, 12>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -89,8 +87,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 2>,
                         ::rocprim::kernel_config<256, 16>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -105,8 +102,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 4>,
                         ::rocprim::kernel_config<256, 12>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -121,8 +117,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 6>,
                         ::rocprim::kernel_config<256, 16>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -137,8 +132,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 2>,
                         ::rocprim::kernel_config<256, 10>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -153,8 +147,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 8>,
                         ::rocprim::kernel_config<256, 8>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -169,8 +162,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 4>,
                         ::rocprim::kernel_config<256, 12>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -185,8 +177,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 6>,
                         ::rocprim::kernel_config<256, 10>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -201,8 +192,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 8>,
                         ::rocprim::kernel_config<256, 6>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -217,8 +207,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -235,8 +224,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 9>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -251,8 +239,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 9>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -267,8 +254,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 12>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -283,8 +269,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 15>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = rocprim::half
@@ -304,8 +289,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx1030)
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = int64_t
@@ -326,8 +310,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 8>,
                         ::rocprim::kernel_config<256, 6>,
-                        5,
-                        262144>
+                        5>
 {};
 
 // Based on key_type = int
@@ -348,8 +331,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 6>,
                         ::rocprim::kernel_config<256, 16>,
-                        5,
-                        262144>
+                        5>
 {};
 
 // Based on key_type = short
@@ -370,8 +352,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 9>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -386,8 +367,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -402,8 +382,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 5>,
                         ::rocprim::kernel_config<256, 6>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -418,8 +397,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 14>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -434,8 +412,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 3>,
                         ::rocprim::kernel_config<256, 8>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -450,8 +427,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 16>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -466,8 +442,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 6>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -482,8 +457,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 8>,
                         ::rocprim::kernel_config<256, 8>,
-                        6,
-                        262144>
+                        6>
 {};
 
 template<>
@@ -498,8 +472,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 6>,
                         ::rocprim::kernel_config<256, 8>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -514,8 +487,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 13>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -530,8 +502,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 8>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -546,8 +517,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 16>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -564,8 +534,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 13>,
                         ::rocprim::kernel_config<256, 14>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -580,8 +549,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 19>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -596,8 +564,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 10>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -612,8 +579,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = rocprim::half
@@ -633,8 +599,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx900),
                         0,
                         ::rocprim::kernel_config<256, 16>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = int64_t
@@ -655,8 +620,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 8>,
-                        5,
-                        262144>
+                        5>
 {};
 
 // Based on key_type = int
@@ -677,8 +641,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 16>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = short
@@ -699,8 +662,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 19>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -715,8 +677,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -731,8 +692,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 4>,
                         ::rocprim::kernel_config<256, 6>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -747,8 +707,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 14>,
                         ::rocprim::kernel_config<256, 14>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -763,8 +722,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 19>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -779,8 +737,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 15>,
                         ::rocprim::kernel_config<256, 14>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -795,8 +752,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 12>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -811,8 +767,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 3>,
                         ::rocprim::kernel_config<256, 6>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -827,8 +782,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -843,8 +797,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 15>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -859,8 +812,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 17>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -875,8 +827,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 12>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -893,8 +844,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 12>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -909,8 +859,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 5>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -925,8 +874,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 18>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -941,8 +889,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 16>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = rocprim::half
@@ -962,8 +909,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx906),
                         0,
                         ::rocprim::kernel_config<256, 12>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = int64_t
@@ -984,8 +930,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 17>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 // Based on key_type = int
@@ -1006,8 +951,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 15>,
                         ::rocprim::kernel_config<256, 14>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = short
@@ -1028,8 +972,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 5>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -1044,8 +987,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 17>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1060,8 +1002,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 4>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1076,8 +1017,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 18>,
                         ::rocprim::kernel_config<256, 16>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1092,8 +1032,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 14>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1108,8 +1047,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 18>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -1124,8 +1062,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 9>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1140,8 +1077,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 6>,
                         ::rocprim::kernel_config<256, 6>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1156,8 +1092,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 14>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1172,8 +1107,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 7>,
                         ::rocprim::kernel_config<256, 12>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1188,8 +1122,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 8>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 template<>
@@ -1204,8 +1137,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 14>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -1222,8 +1154,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 15>,
                         ::rocprim::kernel_config<256, 14>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -1238,8 +1169,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 16>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -1254,8 +1184,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 20>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 template<>
@@ -1270,8 +1199,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 4>,
                         ::rocprim::kernel_config<256, 16>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = rocprim::half
@@ -1291,8 +1219,7 @@ struct default_radix_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                         0,
                         ::rocprim::kernel_config<256, 14>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = int64_t
@@ -1313,8 +1240,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 8>,
                         ::rocprim::kernel_config<256, 10>,
-                        5,
-                        262144>
+                        5>
 {};
 
 // Based on key_type = int
@@ -1335,8 +1261,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 18>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 // Based on key_type = short
@@ -1357,8 +1282,7 @@ struct default_radix_sort_config<
                         0,
                         ::rocprim::kernel_config<256, 16>,
                         ::rocprim::kernel_config<256, 15>,
-                        4,
-                        262144>
+                        4>
 {};
 
 } // end namespace detail

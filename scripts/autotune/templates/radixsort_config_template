@@ -16,8 +16,7 @@ radix_sort_config<
     {{ measurement['force_single_kernel_config'] }},
     ::rocprim::kernel_config<{{ measurement['onesweep_histogram_block_size'] }}, {{ measurement['onesweep_histogram_items_per_thread'] }}>,
     ::rocprim::kernel_config<{{ measurement['onesweep_sort_block_size'] }}, {{ measurement['onesweep_sort_items_per_thread'] }}>,
-    {{ measurement['onesweep_radix_bits'] }},
-    {{ measurement['onesweep_batch_size'] }} > { };
+    {{ measurement['onesweep_radix_bits'] }} > { };
 {%- endmacro %}
 
 {% macro general_case() -%}

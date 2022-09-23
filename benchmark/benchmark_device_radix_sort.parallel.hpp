@@ -59,8 +59,7 @@ struct device_radix_sort_benchmark : public config_autotune_interface
                R"regex((?P<force_single_kernel_config>[0-9]+),\s*)regex"
                R"regex(kernel_config<\s*(?P<onesweep_histogram_block_size>[0-9]+),\s*(?P<onesweep_histogram_items_per_thread>[0-9]+)>,\s*)regex"
                R"regex(kernel_config<\s*(?P<onesweep_sort_block_size>[0-9]+),\s*(?P<onesweep_sort_items_per_thread>[0-9]+)>,\s*)regex"
-               R"regex((?P<onesweep_radix_bits>[0-9]+),\s*)regex"
-               R"regex((?P<onesweep_batch_size>[0-9]+)>>)regex";
+               R"regex((?P<onesweep_radix_bits>[0-9]+)>>)regex";
     }
 
     std::string name() const override
@@ -87,8 +86,7 @@ struct device_radix_sort_benchmark : public config_autotune_interface
             + pad_string(std::to_string(Config::onesweep::histogram::items_per_thread), 2) + ">, "
             + "kernel_config<" + pad_string(std::to_string(Config::onesweep::sort::block_size), 4)
             + ", " + pad_string(std::to_string(Config::onesweep::sort::items_per_thread), 2) + ">, "
-            + std::to_string(Config::onesweep::radix_bits) + ", "
-            + std::to_string(Config::onesweep::batch_size) + ">>");
+            + std::to_string(Config::onesweep::radix_bits) + ">>");
     }
 
     static constexpr unsigned int batch_size  = 10;
