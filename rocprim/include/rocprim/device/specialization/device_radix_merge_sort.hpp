@@ -128,6 +128,7 @@ inline hipError_t radix_sort_merge_impl(
         current_radix_bits);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("radix_block_sort_kernel", size, start);
 
+    is_result_in_output = true;
     if(sort_number_of_blocks > 1)
     {
         if(current_radix_bits == sizeof(key_type) * 8)
@@ -159,7 +160,7 @@ inline hipError_t radix_sort_merge_impl(
                 values_buffer);
         }
     }
-    is_result_in_output = true;
+
     return hipSuccess;
 }
 
