@@ -57,7 +57,8 @@ def runTestCommand (platform, project)
                 if (( \$? != 0 )); then
                     exit 1
                 fi
-                ${hmmTestCommand}
+                #temporarily disable hmm tests
+                #${hmmTestCommand}
             """
 
     platform.runCommand(this, command)
