@@ -32,8 +32,8 @@
 #include <numeric>
 #endif
 
-#include <rocprim/rocprim.hpp>
 #include "benchmark/benchmark.h"
+#include <rocprim/rocprim.hpp>
 
 #define HIP_CHECK(condition)         \
   {                                  \
