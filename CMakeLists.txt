@@ -149,6 +149,8 @@ rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
+
 rocm_create_package(
   NAME rocprim
   DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
