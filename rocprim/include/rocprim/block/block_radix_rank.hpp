@@ -201,7 +201,7 @@ class block_radix_rank
     ROCPRIM_DEVICE void rank_keys_impl(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
                                        storage_type_& storage,
-                                       DigitExtractor digit_callback)
+                                       DigitExtractor digit_extractor)
     {
         static_assert(block_size * ItemsPerThread < 1u << 16,
                       "The maximum amout of items that block_radix_rank can rank is 2**16.");
@@ -216,7 +216,7 @@ class block_radix_rank
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
-            const unsigned int digit = digit_callback(keys[i]);
+            const unsigned int digit = digit_extractor(keys[i]);
             digit_counters[i]        = &get_digit_counter(digit, flat_id, storage);
             thread_prefixes[i]       = (*digit_counters[i])++;
         }
@@ -434,8 +434,8 @@ public:
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
-    /// \param [in] digit_callback - function object used to convert a key to a digit.
-    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// \param [in] digit_extractor - function object used to convert a key to a digit.
+    /// The signature of the \p digit_extractor should be equivalent to the following:
     /// <tt>unsigned int f(const Key &key);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
@@ -477,9 +477,9 @@ public:
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
                                   storage_type&  storage,
-                                  DigitExtractor digit_callback)
+                                  DigitExtractor digit_extractor)
     {
-        rank_keys_impl(keys, ranks, storage.get(), digit_callback);
+        rank_keys_impl(keys, ranks, storage.get(), digit_extractor);
     }
 
     /// \brief Perform ascending radix rank over bit keys partitioned across threads in a block.
@@ -495,8 +495,8 @@ public:
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
-    /// \param [in] digit_callback - function object used to convert a key to a digit.
-    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// \param [in] digit_extractor - function object used to convert a key to a digit.
+    /// The signature of the \p digit_extractor should be equivalent to the following:
     /// <tt>unsigned int f(const Key &key);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
@@ -504,10 +504,10 @@ public:
     template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
-                                  DigitExtractor digit_callback)
+                                  DigitExtractor digit_extractor)
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        rank_keys(keys, ranks, storage.get(), digit_callback);
+        rank_keys(keys, ranks, storage.get(), digit_extractor);
     }
 
     /// \brief Perform descending radix rank over bit keys partitioned across threads in a block.
@@ -520,8 +520,8 @@ public:
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
-    /// \param [in] digit_callback - function object used to convert a key to a digit.
-    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// \param [in] digit_extractor - function object used to convert a key to a digit.
+    /// The signature of the \p digit_extractor should be equivalent to the following:
     /// <tt>unsigned int f(const Key &key);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
@@ -563,14 +563,14 @@ public:
     ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
                                        storage_type&  storage,
-                                       DigitExtractor digit_callback)
+                                       DigitExtractor digit_extractor)
     {
         rank_keys_impl(keys,
                        ranks,
                        storage.get(),
-                       [&digit_callback](const Key& key)
+                       [&digit_extractor](const Key& key)
                        {
-                           const unsigned int digit = digit_callback(key);
+                           const unsigned int digit = digit_extractor(key);
                            return radix_digits - 1 - digit;
                        });
     }
@@ -588,8 +588,8 @@ public:
     /// \param [in] keys - reference to an array of keys provided by a thread.
     /// \param [out] ranks - reference to an array where the final ranks are written to.
     /// \param [in] storage - reference to a temporary storage object of type \p storage_type.
-    /// \param [in] digit_callback - function object used to convert a key to a digit.
-    /// The signature of the \p digit_callback should be equivalent to the following:
+    /// \param [in] digit_extractor - function object used to convert a key to a digit.
+    /// The signature of the \p digit_extractor should be equivalent to the following:
     /// <tt>unsinged int f(const Key &key);</tt>. The signature does not need to have
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
@@ -597,10 +597,10 @@ public:
     template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
                                        unsigned int (&ranks)[ItemsPerThread],
-                                       DigitExtractor digit_callback)
+                                       DigitExtractor digit_extractor)
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        rank_keys_desc(keys, ranks, storage.get(), digit_callback);
+        rank_keys_desc(keys, ranks, storage.get(), digit_extractor);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void
