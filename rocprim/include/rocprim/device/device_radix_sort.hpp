@@ -606,6 +606,8 @@ hipError_t radix_sort_impl(void * temporary_storage,
     constexpr unsigned int single_sort_limit = config::sort_single::block_size * config::sort_single::items_per_thread;
     constexpr unsigned int merge_sort_limit = config::sort_merge::block_size * config::sort_merge::items_per_thread * config::merge_size_limit_blocks;
 
+    is_result_in_output = false;
+
     if( size <= single_sort_limit )
     {
         return radix_sort_single_impl<Config, Descending>(
@@ -1224,7 +1226,7 @@ hipError_t radix_sort_keys(void * temporary_storage,
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     empty_type * values = nullptr;
-    bool         is_result_in_output = false;
+    bool         is_result_in_output;
     hipError_t error = detail::radix_sort_impl<Config, false>(
         temporary_storage, storage_size,
         keys.current(), keys.current(), keys.alternate(),
@@ -1233,7 +1235,7 @@ hipError_t radix_sort_keys(void * temporary_storage,
         begin_bit, end_bit,
         stream, debug_synchronous
     );
-    if(temporary_storage != nullptr && is_result_in_output)
+    if(temporary_storage != nullptr && error == hipSuccess && is_result_in_output)
     {
         keys.swap();
     }
@@ -1337,7 +1339,7 @@ hipError_t radix_sort_keys_desc(void * temporary_storage,
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     empty_type * values = nullptr;
-    bool         is_result_in_output = false;
+    bool         is_result_in_output;
     hipError_t error = detail::radix_sort_impl<Config, true>(
         temporary_storage, storage_size,
         keys.current(), keys.current(), keys.alternate(),
@@ -1464,7 +1466,7 @@ hipError_t radix_sort_pairs(void * temporary_storage,
                             bool debug_synchronous = false)
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
-    bool       is_result_in_output = false;
+    bool       is_result_in_output;
     hipError_t error = detail::radix_sort_impl<Config, false>(
         temporary_storage, storage_size,
         keys.current(), keys.current(), keys.alternate(),
@@ -1586,7 +1588,7 @@ hipError_t radix_sort_pairs_desc(void * temporary_storage,
                                  bool debug_synchronous = false)
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
-    bool       is_result_in_output = false;
+    bool       is_result_in_output;
     hipError_t error = detail::radix_sort_impl<Config, true>(
         temporary_storage, storage_size,
         keys.current(), keys.current(), keys.alternate(),
