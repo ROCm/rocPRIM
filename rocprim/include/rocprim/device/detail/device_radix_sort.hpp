@@ -681,21 +681,9 @@ struct onesweep_histograms_helper
     ROCPRIM_DEVICE ROCPRIM_INLINE void clear_histogram(const unsigned int flat_id,
                                                        storage_type&      storage)
     {
-        constexpr unsigned int counters_per_thread
-            = ::rocprim::detail::ceiling_div(histogram_counters, BlockSize);
-
-        unsigned int i;
-        ROCPRIM_UNROLL
-        for(i = 0; i < counters_per_thread - 1; ++i)
+        for(unsigned int i = flat_id; i < histogram_counters; i += BlockSize)
         {
-            const unsigned int counter = i * BlockSize + flat_id;
-            storage.histogram[counter] = 0;
-        }
-
-        const unsigned int counter = i * BlockSize + flat_id;
-        if(counter < histogram_counters)
-        {
-            storage.histogram[counter] = 0;
+            storage.histogram[i] = 0;
         }
     }
 
@@ -757,34 +745,16 @@ struct onesweep_histograms_helper
             bit_keys[i] = key_codec::encode(keys[i]);
         }
 
+        for(unsigned int bit = begin_bit, place = 0; bit < end_bit; bit += RadixBits, ++place)
         {
-            unsigned int place = 0;
-            unsigned int bit;
-            for(bit = begin_bit; bit + RadixBits <= end_bit; bit += RadixBits)
-            {
-                count_digits_at_place<IsFull>(flat_id,
-                                              stripe,
-                                              bit_keys,
-                                              place,
-                                              bit,
-                                              RadixBits,
-                                              valid_count,
-                                              storage);
-                ++place;
-            }
-
-            if(end_bit - bit > 0)
-            {
-                const unsigned int pass_bits = end_bit - bit;
-                count_digits_at_place<IsFull>(flat_id,
-                                              stripe,
-                                              bit_keys,
-                                              place,
-                                              bit,
-                                              pass_bits,
-                                              valid_count,
-                                              storage);
-            }
+            count_digits_at_place<IsFull>(flat_id,
+                                          stripe,
+                                          bit_keys,
+                                          place,
+                                          bit,
+                                          min(RadixBits, end_bit - bit),
+                                          valid_count,
+                                          storage);
         }
 
         ::rocprim::syncthreads();
@@ -794,23 +764,18 @@ struct onesweep_histograms_helper
         unsigned int place = 0;
         for(unsigned int bit = begin_bit; bit < end_bit; bit += RadixBits)
         {
-            ROCPRIM_UNROLL
-            for(unsigned int i = 0; i < digits_per_thread; ++i)
+            for(unsigned int digit = flat_id; digit < radix_size; digit += BlockSize)
             {
-                const unsigned int digit = flat_id * digits_per_thread + i;
-                if(BlockSize == radix_size || digit < radix_size)
+                counter_type total = 0;
+
+                ROCPRIM_UNROLL
+                for(unsigned int stripe = 0; stripe < atomic_stripes; ++stripe)
                 {
-                    counter_type total = 0;
-
-                    ROCPRIM_UNROLL
-                    for(unsigned int stripe = 0; stripe < atomic_stripes; ++stripe)
-                    {
-                        total += get_counter(stripe, place, digit, storage);
-                    }
-
-                    ::rocprim::detail::atomic_add(&global_digit_counts[place * radix_size + digit],
-                                                  total);
+                    total += get_counter(stripe, place, digit, storage);
                 }
+
+                ::rocprim::detail::atomic_add(&global_digit_counts[place * radix_size + digit],
+                                              total);
             }
             ++place;
         }
