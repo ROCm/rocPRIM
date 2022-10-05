@@ -33,10 +33,28 @@ true false;true false;64 128;1 2 4 8 16" PARENT_SCOPE)
 int int64_t int8_t uint8_t rocprim::half short \
 \
 int,float int64_t,double int8_t,int8_t uint8_t,uint8_t rocprim::half,rocprim::half short,short;\
-6 7 8 9 10;7 8 9 10" PARENT_SCOPE)
+6 7 8 9 10;9 10" PARENT_SCOPE)
     set(output_pattern_suffix "@KeyType_ValueType@_@MergeBlockSizeExponent@_@SortBlockSizeExponent@" PARENT_SCOPE)
+  elseif(file STREQUAL "benchmark_device_merge_sort_block_sort")
+    set(list_across_names "KeyType_ValueType;BlockSize;BlockSortMethod" PARENT_SCOPE)
+    # first list is keys, second list is key,value pairs
+    set(list_across "\
+int int64_t int8_t uint8_t rocprim::half short \
+\
+int,float int64_t,double int8_t,int8_t uint8_t,uint8_t rocprim::half,rocprim::half short,short;\
+256 512 1024;rocprim::block_sort_algorithm::bitonic_sort rocprim::block_sort_algorithm::merge_sort" PARENT_SCOPE)
+    set(output_pattern_suffix "@KeyType_ValueType@_@BlockSize@_@BlockSortMethod@" PARENT_SCOPE)
+  elseif(file STREQUAL "benchmark_device_merge_sort_block_merge")
+    set(list_across_names "KeyType_ValueType;BlockSize;UseMergePath" PARENT_SCOPE)
+    # first list is keys, second list is key,value pairs
+    set(list_across "\
+int int64_t int8_t uint8_t rocprim::half short \
+\
+int,float int64_t,double int8_t,int8_t uint8_t,uint8_t rocprim::half,rocprim::half short,short;\
+128 256 512 1024;true false" PARENT_SCOPE)
+    set(output_pattern_suffix "@KeyType_ValueType@_@BlockSize@_@UseMergePath@" PARENT_SCOPE)
   elseif(file STREQUAL "benchmark_device_radix_sort")
-    set(list_across_names "KeyType_ValueType;RadixBits;ItemsPerThread;" PARENT_SCOPE)
+    set(list_across_names "KeyType_ValueType;RadixBits;ItemsPerThread" PARENT_SCOPE)
     # first list is keys, second list is key,value pairs
     set(list_across "\
 int int64_t uint8_t rocprim::half short \
@@ -46,17 +64,28 @@ int64_t,float int64_t,double int64_t,float2 int64_t,double2 \
 uint8_t,uint8_t rocprim::half,rocprim::half;\
 4 5 6;6 8 10 12 14 15 16" PARENT_SCOPE)
     set(output_pattern_suffix "@KeyType_ValueType@_@RadixBits@_@ItemsPerThread@" PARENT_SCOPE)
-  elseif(file STREQUAL "benchmark_device_radix_sort_single")
+  elseif(file STREQUAL "benchmark_device_radix_sort_block_sort")
     set(list_across_names "KeyType_ValueType;BlockSize" PARENT_SCOPE)
     # first list is keys, second list is key,value pairs
     set(list_across "\
 int int64_t int8_t uint8_t rocprim::half short \
 \
-int,float int,double int,float2 int,double2 \
-int64_t,float int64_t,double int64_t,float2 int64_t,double2 \
+int,float int,double \
+int64_t,float int64_t,double \
 int8_t,int8_t uint8_t,uint8_t rocprim::half,rocprim::half;\
 64 128 256 512 1024" PARENT_SCOPE)
     set(output_pattern_suffix "@KeyType_ValueType@_@BlockSize@" PARENT_SCOPE)
+  elseif(file STREQUAL "benchmark_device_radix_sort_onesweep")
+    set(list_across_names "KeyType_ValueType;BlockSize;RadixBits" PARENT_SCOPE)
+    # first list is keys, second list is key,value pairs
+    set(list_across "\
+int int64_t uint8_t rocprim::half short \
+\
+int,float int,double \
+int64_t,float int64_t,double \
+uint8_t,uint8_t rocprim::half,rocprim::half;\
+128 256 512 1024;4 5 6" PARENT_SCOPE)
+    set(output_pattern_suffix "@KeyType_ValueType@_@BlockSize@_@RadixBits@" PARENT_SCOPE)
   elseif(file STREQUAL "benchmark_device_reduce")
     set(list_across_names "DataType;BlockSize;ItemsPerThread" PARENT_SCOPE)
     set(list_across "int float double int8_t int64_t rocprim::half;64 128 256;1 2 4 8 16" PARENT_SCOPE)

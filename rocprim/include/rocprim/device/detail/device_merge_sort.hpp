@@ -265,11 +265,12 @@ struct block_store_impl<true, BlockSize, ItemsPerThread, Key, Value> {
     }
 };
 
-template <unsigned int BlockSize, unsigned int ItemsPerThread, class Key>
+template<unsigned int BlockSize, unsigned int ItemsPerThread, block_sort_algorithm Algo, class Key>
 struct block_sort_impl
 {
     using stable_key_type = rocprim::tuple<Key, unsigned int>;
-    using block_sort_type = ::rocprim::block_sort<stable_key_type, BlockSize, ItemsPerThread>;
+    using block_sort_type = ::rocprim::
+        block_sort<stable_key_type, BlockSize, ItemsPerThread, rocprim::empty_type, Algo>;
 
     using storage_type = typename block_sort_type::storage_type;
 
@@ -307,8 +308,9 @@ struct block_sort_impl
     }
 };
 
-template<unsigned int BlockSize,
-         unsigned int ItemsPerThread,
+template<unsigned int         BlockSize,
+         unsigned int         ItemsPerThread,
+         block_sort_algorithm Algo,
          class KeysInputIterator,
          class KeysOutputIterator,
          class ValuesInputIterator,
@@ -342,7 +344,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto block_sort_kernel_impl(KeysInputIterato
     key_type keys[ItemsPerThread];
 
     using block_load_keys_impl = block_load_keys_impl<BlockSize, ItemsPerThread, key_type>;
-    using block_sort_impl      = block_sort_impl<BlockSize, ItemsPerThread, key_type>;
+    using block_sort_impl      = block_sort_impl<BlockSize, ItemsPerThread, Algo, key_type>;
     using block_load_values_impl
         = block_load_values_impl<with_values, BlockSize, ItemsPerThread, value_type>;
     using block_store_impl
@@ -425,8 +427,9 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto block_sort_kernel_impl(KeysInputIterato
 // ValueTypes with misaligned datastructures in them (e.g. custom_char_double)
 // when storing/loading those ValueTypes to/from registers.
 // Thus this is a temporary workaround.
-template<unsigned int BlockSize,
-         unsigned int ItemsPerThread,
+template<unsigned int         BlockSize,
+         unsigned int         ItemsPerThread,
+         block_sort_algorithm Algo,
          class KeysInputIterator,
          class KeysOutputIterator,
          class ValuesInputIterator,
@@ -460,7 +463,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto block_sort_kernel_impl(KeysInputIterato
     key_type keys[ItemsPerThread];
 
     using block_load_keys_impl = block_load_keys_impl<BlockSize, ItemsPerThread, key_type>;
-    using block_sort_impl = block_sort_impl<BlockSize, ItemsPerThread, key_type>;
+    using block_sort_impl      = block_sort_impl<BlockSize, ItemsPerThread, Algo, key_type>;
     using block_store_impl
         = block_store_impl<false, BlockSize, ItemsPerThread, key_type, rocprim::empty_type>;
 

@@ -33,21 +33,16 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-struct reduce_config_params
-{
-    unsigned int           block_size;
-    unsigned int           items_per_thread;
-    block_reduce_algorithm block_reduce_method;
-    unsigned int           size_limit;
-};
-
+// Wraps device_reduce public configuration struct into internal reduce_config_params
 template<typename ReduceConfig>
 constexpr reduce_config_params wrap_reduce_config()
 {
-    return reduce_config_params{ReduceConfig::block_size,
-                                ReduceConfig::items_per_thread,
-                                ReduceConfig::block_reduce_method,
-                                ReduceConfig::size_limit};
+    return reduce_config_params{
+        kernel_config_params{ReduceConfig::block_size,
+                             ReduceConfig::items_per_thread,
+                             ReduceConfig::size_limit},
+        ReduceConfig::block_reduce_method
+    };
 }
 
 template<typename ReduceConfig, typename>

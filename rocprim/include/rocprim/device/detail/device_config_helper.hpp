@@ -32,6 +32,7 @@
 #include "../../block/block_store.hpp"
 
 #include "../config_types.hpp"
+#include "rocprim/block/block_sort.hpp"
 
 /// \addtogroup primitivesmodule_deviceconfigs
 /// @{
@@ -41,37 +42,53 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<unsigned int MergeOddevenBlockSize            = 1024,
-         unsigned int MergeOddevenItemsPerThread       = 1,
-         unsigned int MergeMergepathPartitionBlockSize = 128,
-         unsigned int MergeMergepathBlockSize          = 256,
-         unsigned int MergeMergepathItemsPerThread     = 8,
-         unsigned int MinInputSizeMergepath            = (1 << 17) + 70000>
-struct merge_sort_block_merge_config
+struct merge_sort_block_sort_config_params
 {
-    using merge_oddeven_config = kernel_config<MergeOddevenBlockSize, MergeOddevenItemsPerThread>;
-    using merge_mergepath_partition_config = kernel_config<MergeMergepathPartitionBlockSize, 1>;
-    using merge_mergepath_config
-        = kernel_config<MergeMergepathBlockSize, MergeMergepathItemsPerThread>;
-    static constexpr unsigned int min_input_size_mergepath = MinInputSizeMergepath;
+    kernel_config_params block_sort_config = {512, 4};
+    block_sort_algorithm block_sort_method = block_sort_algorithm::merge_sort;
 };
 
-template<unsigned int SortBlockSize,
-         unsigned int SortItemsPerThread,
-         unsigned int MergeOddevenBlockSize,
-         unsigned int MergeMergepathPartitionBlockSize,
-         unsigned int MergeMergepathBlockSize,
-         unsigned int MergeMergepathItemsPerThread,
-         unsigned int MinInputSizeMergepath>
-struct merge_sort_config_impl
+// Necessary to construct a parameterized type of `merge_sort_block_sort_config_params`.
+// Used in passing to host-side sub-algorithms and GPU kernels so non-default parameters can be available during compile-time.
+template<unsigned int BlockSize, unsigned int ItemsPerThread, rocprim::block_sort_algorithm Algo>
+struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_config_params
 {
-    using sort_config        = kernel_config<SortBlockSize, SortItemsPerThread>;
-    using block_merge_config = merge_sort_block_merge_config<MergeOddevenBlockSize,
-                                                             1,
-                                                             MergeMergepathPartitionBlockSize,
-                                                             MergeMergepathBlockSize,
-                                                             MergeMergepathItemsPerThread,
-                                                             MinInputSizeMergepath>;
+    constexpr merge_sort_block_sort_config()
+        : rocprim::detail::merge_sort_block_sort_config_params{
+            {BlockSize, ItemsPerThread},
+            Algo
+    } {};
+};
+
+struct merge_sort_block_merge_config_params
+{
+    kernel_config_params merge_oddeven_config             = {1024, 1, (1 << 17) + 70000};
+    kernel_config_params merge_mergepath_partition_config = {128, 1};
+    kernel_config_params merge_mergepath_config           = {128, 4};
+};
+
+// Necessary to construct a parameterized type of `merge_sort_block_merge_config_params`.
+// Used in passing to host-side sub-algorithms and GPU kernels so non-default parameters can be available during compile-time.
+template<unsigned int OddEvenBlockSize        = 1024,
+         unsigned int OddEvenItemsPerThread   = 1,
+         unsigned int OddEvenSizeLimit        = (1 << 17) + 70000,
+         unsigned int PartitionBlockSize      = 128,
+         unsigned int MergePathBlockSize      = 128,
+         unsigned int MergePathItemsPerThread = 4>
+struct merge_sort_block_merge_config : rocprim::detail::merge_sort_block_merge_config_params
+{
+    constexpr merge_sort_block_merge_config()
+        : rocprim::detail::merge_sort_block_merge_config_params{
+            {  OddEvenBlockSize,   OddEvenItemsPerThread, OddEvenSizeLimit},
+            {PartitionBlockSize,                       1                 },
+            {MergePathBlockSize, MergePathItemsPerThread                 }
+    } {};
+};
+
+struct merge_sort_config_params
+{
+    merge_sort_block_sort_config_params  block_sort_config;
+    merge_sort_block_merge_config_params block_merge_config;
 };
 
 } // namespace detail
@@ -89,16 +106,25 @@ template<unsigned int MergeOddevenBlockSize            = 512,
          unsigned int SortBlockSize                    = MergeOddevenBlockSize,
          unsigned int SortItemsPerThread               = 1,
          unsigned int MergeMergepathPartitionBlockSize = 128,
-         unsigned int MergeMergepathBlockSize          = 256,
-         unsigned int MergeMergepathItemsPerThread     = 8,
+         unsigned int MergeMergepathBlockSize          = 128,
+         unsigned int MergeMergepathItemsPerThread     = 4,
          unsigned int MinInputSizeMergepath            = (1 << 17) + 70000>
-using merge_sort_config = detail::merge_sort_config_impl<SortBlockSize,
-                                                         SortItemsPerThread,
-                                                         MergeOddevenBlockSize,
-                                                         MergeMergepathPartitionBlockSize,
-                                                         MergeMergepathBlockSize,
-                                                         MergeMergepathItemsPerThread,
-                                                         MinInputSizeMergepath>;
+struct merge_sort_config : detail::merge_sort_config_params
+{
+    /// \remark Here we map the public parameters to our internal structure.
+    using block_sort_config
+        = detail::merge_sort_block_sort_config<SortBlockSize,
+                                               SortItemsPerThread,
+                                               block_sort_algorithm::default_algorithm>;
+    using block_merge_config = detail::merge_sort_block_merge_config<MergeOddevenBlockSize,
+                                                                     1,
+                                                                     MinInputSizeMergepath,
+                                                                     MergeMergepathBlockSize,
+                                                                     MergeMergepathBlockSize,
+                                                                     MergeMergepathItemsPerThread>;
+    constexpr merge_sort_config()
+        : detail::merge_sort_config_params{block_sort_config(), block_merge_config()} {};
+};
 
 namespace detail
 {
@@ -139,8 +165,7 @@ struct default_merge_sort_config_base : default_merge_sort_config_base_helper<Ke
 
 template<class HistogramConfig  = kernel_config<256, 8>,
          class SortConfig       = kernel_config<256, 15>,
-         unsigned int RadixBits = 4,
-         unsigned int BatchSize = 1u << 18>
+         unsigned int RadixBits = 4>
 struct radix_sort_onesweep_config
 {
     /// \brief Configration of radix sort onesweep histogram kernel.
@@ -150,9 +175,6 @@ struct radix_sort_onesweep_config
 
     /// \brief The number of bits to sort in one onesweep iteration.
     static constexpr unsigned int radix_bits = RadixBits;
-    /// \brief The number of blocks to sort in a single onesweep iteration batch.
-    /// The total items to sort per iteration should be less than 2 ** 30.
-    static constexpr unsigned int batch_size = BatchSize;
 };
 
 } // namespace detail
@@ -181,30 +203,20 @@ template<unsigned int LongRadixBits,
          bool         ForceSingleKernelConfig = false,
          class OnesweepHistogramConfig        = kernel_config<256, 8>,
          class OnesweepSortConfig             = kernel_config<256, 15>,
-         unsigned int OnesweepRadixBits       = 4,
-         unsigned int OnesweepBatchSize       = 1U << 18>
+         unsigned int OnesweepRadixBits       = 4>
 struct radix_sort_config
 {
-    /// \brief Number of bits in long iterations.
-    static constexpr unsigned int long_radix_bits = LongRadixBits;
-    /// \brief Number of bits in short iterations.
-    static constexpr unsigned int short_radix_bits = ShortRadixBits;
+    /// \remark Here we map the public parameters to our internal structure.
     /// \brief Limit number of blocks to use merge kernel.
     static constexpr unsigned int merge_size_limit_blocks = MergeSizeLimitBlocks;
 
-    /// \brief Configuration of digits scan kernel.
-    using scan = ScanConfig;
-    /// \brief Configuration of radix sort kernel.
-    using sort = SortConfig;
     /// \brief Configuration of radix sort single kernel.
-    using sort_single = SortSingleConfig;
-    /// \brief Configuration of radix sort merge kernel.
-    using sort_merge = SortMergeConfig;
+    using block_sort_config = SortSingleConfig;
+    /// \brief Configuration of merge sort algorithm.
+    using merge_sort_config = default_config;
     /// \brief Configration of radix sort onesweep.
-    using onesweep = detail::radix_sort_onesweep_config<OnesweepHistogramConfig,
-                                                        OnesweepSortConfig,
-                                                        OnesweepRadixBits,
-                                                        OnesweepBatchSize>;
+    using onesweep = detail::
+        radix_sort_onesweep_config<OnesweepHistogramConfig, OnesweepSortConfig, OnesweepRadixBits>;
 
     /// \brief Force use radix sort single kernel configuration.
     static constexpr bool force_single_kernel_config = ForceSingleKernelConfig;
@@ -306,6 +318,12 @@ struct reduce_config
 
 namespace detail
 {
+
+struct reduce_config_params
+{
+    kernel_config_params   reduce_config;
+    block_reduce_algorithm block_reduce_method;
+};
 
 template<class Value>
 struct default_reduce_config_base_helper

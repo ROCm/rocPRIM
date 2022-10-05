@@ -448,7 +448,8 @@ autotune:execute-tuning:
     - .gpus:rocm
   variables:
     #temporarily disabled radix_sort in autotune_filename_regex
-    AUTOTUNE_FILENAME_REGEX: (?!^benchmark_device_radix_sort$)^benchmark
+    #device_merge_sort tuning has now been split up, so ignore it
+    AUTOTUNE_FILENAME_REGEX: (?!^benchmark_device_radix_sort$)(?!^benchmark_device_merge_sort$)^benchmark
     AUTOTUNE_ALGORITHM_REGEX: ""
   timeout: 8h
   artifacts:

@@ -36,10 +36,11 @@
 #include "../types.hpp"
 
 #include "detail/config/device_radix_sort.hpp"
+#include "detail/config/device_radix_sort_onesweep.hpp"
 #include "detail/device_radix_sort.hpp"
 #include "device_transform.hpp"
+#include "specialization/device_radix_block_sort.hpp"
 #include "specialization/device_radix_merge_sort.hpp"
-#include "specialization/device_radix_single_sort.hpp"
 
 /// \addtogroup devicemodule
 /// @{
@@ -67,64 +68,6 @@ namespace detail
     }
 
 #endif
-
-template<
-    class Config,
-    bool Descending,
-    class KeysInputIterator,
-    class KeysOutputIterator,
-    class ValuesInputIterator,
-    class ValuesOutputIterator
->
-inline
-hipError_t radix_sort_single_impl(void * temporary_storage,
-                                 size_t& storage_size,
-                                 KeysInputIterator keys_input,
-                                 KeysOutputIterator keys_output,
-                                 ValuesInputIterator values_input,
-                                 ValuesOutputIterator values_output,
-                                 unsigned int size,
-                                 bool& is_result_in_output,
-                                 unsigned int begin_bit,
-                                 unsigned int end_bit,
-                                 hipStream_t stream,
-                                 bool debug_synchronous)
-{
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
-
-    using config = default_or_custom_config<
-        Config,
-        default_radix_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
-    >;
-
-    const size_t minimum_bytes = ::rocprim::detail::align_size(1);
-    if(temporary_storage == nullptr)
-    {
-        storage_size = minimum_bytes;
-        return hipSuccess;
-    }
-
-    if( size == 0u )
-        return hipSuccess;
-
-    if(debug_synchronous)
-    {
-        std::cout << "temporary_storage " << temporary_storage << '\n';
-        hipError_t error = hipStreamSynchronize(stream);
-        if(error != hipSuccess) return error;
-    }
-
-    hipError_t error = radix_sort_single<config, Descending>(
-        keys_input, keys_output, values_input, values_output, size,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
-    if(error != hipSuccess) return error;
-
-    is_result_in_output = true;
-    return hipSuccess;
-}
 
 template<class Size>
 using offset_type_t = std::conditional_t<
@@ -698,42 +641,59 @@ hipError_t radix_sort_impl(void * temporary_storage,
         default_radix_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
     >;
 
-    constexpr unsigned int single_sort_limit = config::sort_single::block_size * config::sort_single::items_per_thread;
-    constexpr unsigned int merge_sort_limit = config::sort_merge::block_size * config::sort_merge::items_per_thread * config::merge_size_limit_blocks;
+    kernel_config_params single_sort_params;
+    hipError_t           e = get_radix_sort_block_sort_config<typename Config::block_sort_config,
+                                                    key_type,
+                                                    value_type>(stream, single_sort_params);
+    if(e != hipSuccess)
+        return e;
+    constexpr unsigned int merge_sort_limit = config::merge_size_limit_blocks * 1024;
 
-    is_result_in_output = false;
-
-    if(size <= single_sort_limit)
+    unsigned int single_sort_items_per_block
+        = single_sort_params.block_size * single_sort_params.items_per_thread;
+    if(size <= single_sort_items_per_block)
     {
-        return radix_sort_single_impl<Config, Descending>(temporary_storage,
-                                                          storage_size,
-                                                          keys_input,
-                                                          keys_output,
-                                                          values_input,
-                                                          values_output,
-                                                          static_cast<unsigned int>(size),
-                                                          is_result_in_output,
-                                                          begin_bit,
-                                                          end_bit,
-                                                          stream,
-                                                          debug_synchronous);
+        if(temporary_storage == nullptr)
+        {
+            storage_size = ::rocprim::detail::align_size(1);
+            return hipSuccess;
+        }
+
+        if(size == 0u)
+        {
+            is_result_in_output = true;
+            return hipSuccess;
+        }
+        is_result_in_output = true;
+        return radix_sort_block_sort<typename Config::block_sort_config, Descending>(
+            keys_input,
+            keys_output,
+            values_input,
+            values_output,
+            static_cast<unsigned int>(size),
+            single_sort_items_per_block,
+            begin_bit,
+            end_bit,
+            stream,
+            debug_synchronous);
     }
     else if(size <= merge_sort_limit)
     {
-        return radix_sort_merge_impl<Config, Descending>(temporary_storage,
-                                                         storage_size,
-                                                         keys_input,
-                                                         keys_tmp,
-                                                         keys_output,
-                                                         values_input,
-                                                         values_tmp,
-                                                         values_output,
-                                                         static_cast<unsigned int>(size),
-                                                         is_result_in_output,
-                                                         begin_bit,
-                                                         end_bit,
-                                                         stream,
-                                                         debug_synchronous);
+        is_result_in_output = true;
+        return radix_sort_merge_impl<typename Config::merge_sort_config, Descending>(
+            temporary_storage,
+            storage_size,
+            keys_input,
+            keys_tmp,
+            keys_output,
+            values_input,
+            values_tmp,
+            values_output,
+            static_cast<unsigned int>(size),
+            begin_bit,
+            end_bit,
+            stream,
+            debug_synchronous);
     }
     else
     {

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef ROCPRIM_BENCHMARK_DEVICE_MERGE_SORT_PARALLEL_HPP_
-#define ROCPRIM_BENCHMARK_DEVICE_MERGE_SORT_PARALLEL_HPP_
+#ifndef ROCPRIM_BENCHMARK_DETAIL_BENCHMARK_DEVICE_MERGE_SORT_BLOCK_SORT_PARALLEL_HPP_
+#define ROCPRIM_BENCHMARK_DETAIL_BENCHMARK_DEVICE_MERGE_SORT_BLOCK_SORT_PARALLEL_HPP_
 
 #include <cstddef>
 #include <string>
@@ -40,19 +40,26 @@
 
 namespace rp = rocprim;
 
+constexpr const char* get_block_sort_method_name(rocprim::block_sort_algorithm alg)
+{
+    switch(alg)
+    {
+        case rocprim::block_sort_algorithm::merge_sort: return "merge_sort";
+        case rocprim::block_sort_algorithm::bitonic_sort:
+            return "bitonic_sort";
+            // Not using `default: ...` because it kills effectiveness of -Wswitch
+    }
+    return "unknown_algorithm";
+}
+
 template<typename Config>
 std::string config_name()
 {
-    rocprim::detail::merge_sort_block_sort_config_params bs_config =
-        typename Config::block_sort_config();
-    rocprim::detail::merge_sort_block_merge_config_params bm_config =
-        typename Config::block_merge_config();
-    const unsigned int sort_block_size          = bs_config.block_sort_config.block_size;
-    const unsigned int sort_items_per_thread    = bs_config.block_sort_config.items_per_thread;
-    const unsigned int merge_oddeven_block_size = bm_config.merge_oddeven_config.block_size;
-    return "merge_sort_config<" + pad_string(std::to_string(sort_block_size), 4) + ", "
-           + pad_string(std::to_string(sort_items_per_thread), 2) + ", "
-           + pad_string(std::to_string(merge_oddeven_block_size), 4) + ">";
+    const rocprim::detail::merge_sort_block_sort_config_params config = Config();
+    return "merge_sort_block_sort_config_params<"
+           + pad_string(std::to_string(config.block_sort_config.block_size), 4) + ", "
+           + pad_string(std::to_string(config.block_sort_config.items_per_thread), 2) + ", "
+           + std::string(get_block_sort_method_name(config.block_sort_method)) + ">";
 }
 
 template<>
@@ -63,20 +70,21 @@ inline std::string config_name<rocprim::default_config>()
 
 template<typename Key    = int,
          typename Value  = rocprim::empty_type,
-         typename Config = rocprim::default_config>
-struct device_merge_sort_benchmark : public config_autotune_interface
+         typename Config = rocprim::detail::
+             merge_sort_block_sort_config<256, 4, rocprim::block_sort_algorithm::merge_sort>>
+struct device_merge_sort_block_sort_benchmark : public config_autotune_interface
 {
     static std::string get_name_pattern()
     {
         return R"regex((?P<algo>\S*?)<)regex"
-               R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*merge_sort_config<\s*)regex"
-               R"regex((?P<sort_block_size>[0-9]+),\s*(?P<sort_items_per_thread>[0-9]+),\s*(?P<merge_block_size>[0-9]+)>>)regex";
+               R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*merge_sort_block_sort_config_params<\s*)regex"
+               R"regex((?P<block_size>[0-9]+),\s*(?P<items_per_thread>[0-9]+),\s*(?P<method>[A-z0-9]+)>>)regex";
     }
 
     std::string name() const override
     {
         using namespace std::string_literals;
-        return std::string("device_merge_sort<" + std::string(Traits<Key>::name()) + ", "
+        return std::string("device_merge_sort_block_sort<" + std::string(Traits<Key>::name()) + ", "
                            + (std::is_same<Value, rocprim::empty_type>::value
                                   ? ""s
                                   : std::string(Traits<Value>::name()) + ", ")
@@ -116,32 +124,20 @@ struct device_merge_sort_benchmark : public config_autotune_interface
                             hipMemcpyHostToDevice));
 
         ::rocprim::less<key_type> lesser_op;
-
-        void*  d_temporary_storage     = nullptr;
-        size_t temporary_storage_bytes = 0;
-        HIP_CHECK(rp::merge_sort<Config>(d_temporary_storage,
-                                         temporary_storage_bytes,
-                                         d_keys_input,
-                                         d_keys_output,
-                                         size,
-                                         lesser_op,
-                                         stream,
-                                         false));
-
-        HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
-        HIP_CHECK(hipDeviceSynchronize());
-
+        rocprim::empty_type*      values_ptr = nullptr;
+        unsigned int              items_per_block;
         // Warm-up
         for(size_t i = 0; i < warmup_size; i++)
         {
-            HIP_CHECK(rp::merge_sort<Config>(d_temporary_storage,
-                                             temporary_storage_bytes,
-                                             d_keys_input,
-                                             d_keys_output,
-                                             size,
-                                             lesser_op,
-                                             stream,
-                                             false));
+            HIP_CHECK(rp::detail::merge_sort_block_sort<Config>(d_keys_input,
+                                                                d_keys_output,
+                                                                values_ptr,
+                                                                values_ptr,
+                                                                size,
+                                                                items_per_block,
+                                                                lesser_op,
+                                                                stream,
+                                                                false));
         }
         HIP_CHECK(hipDeviceSynchronize());
 
@@ -157,14 +153,15 @@ struct device_merge_sort_benchmark : public config_autotune_interface
 
             for(size_t i = 0; i < batch_size; i++)
             {
-                HIP_CHECK(rp::merge_sort<Config>(d_temporary_storage,
-                                                 temporary_storage_bytes,
-                                                 d_keys_input,
-                                                 d_keys_output,
-                                                 size,
-                                                 lesser_op,
-                                                 stream,
-                                                 false));
+                HIP_CHECK(rp::detail::merge_sort_block_sort<Config>(d_keys_input,
+                                                                    d_keys_output,
+                                                                    values_ptr,
+                                                                    values_ptr,
+                                                                    size,
+                                                                    items_per_block,
+                                                                    lesser_op,
+                                                                    stream,
+                                                                    false));
             }
 
             // Record stop event and wait until it completes
@@ -183,7 +180,6 @@ struct device_merge_sort_benchmark : public config_autotune_interface
         state.SetBytesProcessed(state.iterations() * batch_size * size * sizeof(key_type));
         state.SetItemsProcessed(state.iterations() * batch_size * size);
 
-        HIP_CHECK(hipFree(d_temporary_storage));
         HIP_CHECK(hipFree(d_keys_input));
         HIP_CHECK(hipFree(d_keys_output));
     }
@@ -231,36 +227,23 @@ struct device_merge_sort_benchmark : public config_autotune_interface
                             hipMemcpyHostToDevice));
 
         ::rocprim::less<key_type> lesser_op;
+        unsigned int              items_per_block;
 
-        void*  d_temporary_storage     = nullptr;
-        size_t temporary_storage_bytes = 0;
-        HIP_CHECK(rp::merge_sort<Config>(d_temporary_storage,
-                                         temporary_storage_bytes,
-                                         d_keys_input,
-                                         d_keys_output,
-                                         d_values_input,
-                                         d_values_output,
-                                         size,
-                                         lesser_op,
-                                         stream,
-                                         false));
-
-        HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
         HIP_CHECK(hipDeviceSynchronize());
 
         // Warm-up
         for(size_t i = 0; i < warmup_size; i++)
         {
-            HIP_CHECK(rp::merge_sort<Config>(d_temporary_storage,
-                                             temporary_storage_bytes,
-                                             d_keys_input,
-                                             d_keys_output,
-                                             d_values_input,
-                                             d_values_output,
-                                             size,
-                                             lesser_op,
-                                             stream,
-                                             false));
+
+            HIP_CHECK(rp::detail::merge_sort_block_sort<Config>(d_keys_input,
+                                                                d_keys_output,
+                                                                d_values_input,
+                                                                d_values_output,
+                                                                size,
+                                                                items_per_block,
+                                                                lesser_op,
+                                                                stream,
+                                                                false));
         }
         HIP_CHECK(hipDeviceSynchronize());
 
@@ -276,16 +259,15 @@ struct device_merge_sort_benchmark : public config_autotune_interface
 
             for(size_t i = 0; i < batch_size; i++)
             {
-                HIP_CHECK(rp::merge_sort<Config>(d_temporary_storage,
-                                                 temporary_storage_bytes,
-                                                 d_keys_input,
-                                                 d_keys_output,
-                                                 d_values_input,
-                                                 d_values_output,
-                                                 size,
-                                                 lesser_op,
-                                                 stream,
-                                                 false));
+                HIP_CHECK(rp::detail::merge_sort_block_sort<Config>(d_keys_input,
+                                                                    d_keys_output,
+                                                                    d_values_input,
+                                                                    d_values_output,
+                                                                    size,
+                                                                    items_per_block,
+                                                                    lesser_op,
+                                                                    stream,
+                                                                    false));
             }
 
             // Record stop event and wait until it completes
@@ -305,7 +287,6 @@ struct device_merge_sort_benchmark : public config_autotune_interface
                                 * (sizeof(key_type) + sizeof(value_type)));
         state.SetItemsProcessed(state.iterations() * batch_size * size);
 
-        HIP_CHECK(hipFree(d_temporary_storage));
         HIP_CHECK(hipFree(d_keys_input));
         HIP_CHECK(hipFree(d_keys_output));
         HIP_CHECK(hipFree(d_values_input));
@@ -318,29 +299,24 @@ struct device_merge_sort_benchmark : public config_autotune_interface
     }
 };
 
-#ifdef BENCHMARK_CONFIG_TUNING
-
-template<unsigned int MergeBlockSizeExponent,
-         unsigned int SortBlockSizeExponent,
+template<unsigned int                  BlockSize,
+         rocprim::block_sort_algorithm Algo,
          typename Key,
          typename Value = rocprim::empty_type>
-struct device_merge_sort_benchmark_generator
+struct device_merge_sort_block_sort_benchmark_generator
 {
     template<unsigned int ItemsPerThreadExponent>
     struct create_ipt
     {
-        static constexpr unsigned int merge_block_size = 1u << MergeBlockSizeExponent;
-        static constexpr unsigned int sort_block_size  = 1u << SortBlockSizeExponent;
         static constexpr unsigned int items_per_thread = 1u << ItemsPerThreadExponent;
+        using generated_config
+            = rocprim::detail::merge_sort_block_sort_config<BlockSize, items_per_thread, Algo>;
 
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
         {
             storage.emplace_back(
-                std::make_unique<device_merge_sort_benchmark<
-                    Key,
-                    Value,
-                    rocprim::
-                        merge_sort_config<merge_block_size, sort_block_size, items_per_thread>>>());
+                std::make_unique<
+                    device_merge_sort_block_sort_benchmark<Key, Value, generated_config>>());
         }
     };
 
@@ -348,14 +324,19 @@ struct device_merge_sort_benchmark_generator
     {
         // Sort_items_per_block must be equal or larger than merge_items_per_block, so make
         // the items_per_thread at least as large so the sort_items_per_block
-        // would be atleast MergeBlockSize.
+        // would be atleast 1024.
         static constexpr unsigned int min_items_per_thread_exponent
-            = std::min(1u, 10u - SortBlockSizeExponent);
+            = rocprim::Log2<(1024 / BlockSize)>::VALUE;
 
         // Very large block sizes don't work with large items_per_blocks since
         // shared memory is limited
+        static constexpr unsigned int max_shared_memory = 65536;
+        static constexpr unsigned int max_size_per_element
+            = std::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value));
+        static constexpr unsigned int max_items_per_thread
+            = max_shared_memory / (BlockSize * max_size_per_element);
         static constexpr unsigned int max_items_per_thread_exponent
-            = std::min(4u, 11u - SortBlockSizeExponent);
+            = rocprim::Log2<max_items_per_thread>::VALUE - 1;
 
         static_for_each<make_index_range<unsigned int,
                                          min_items_per_thread_exponent,
@@ -364,6 +345,4 @@ struct device_merge_sort_benchmark_generator
     }
 };
 
-#endif // BENCHMARK_CONFIG_TUNING
-
-#endif // ROCPRIM_BENCHMARK_DEVICE_MERGE_SORT_PARALLEL_HPP_
+#endif // ROCPRIM_BENCHMARK_DETAIL_BENCHMARK_DEVICE_MERGE_SORT_BLOCK_SORT_PARALLEL_HPP_

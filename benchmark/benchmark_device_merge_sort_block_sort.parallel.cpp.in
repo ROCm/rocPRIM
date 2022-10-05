@@ -22,10 +22,10 @@
 
 #include <cstdint>
 
-#include "benchmark_device_radix_sort_block_sort.parallel.hpp"
+#include "benchmark_device_merge_sort_block_sort.parallel.hpp"
 #include "benchmark_utils.hpp"
 
 namespace {
     auto benchmarks = config_autotune_register::create_bulk(
-    device_radix_sort_block_sort_benchmark_generator<@BlockSize@, @KeyType_ValueType@>::create);
+    device_merge_sort_block_sort_benchmark_generator<@BlockSize@, @BlockSortMethod@, @KeyType_ValueType@>::create);
 }
