@@ -1012,7 +1012,7 @@ struct onesweep_iteration_helper
         for(unsigned int i = 0; i < digits_per_thread; ++i)
         {
             const unsigned int digit = flat_id * digits_per_thread + i;
-            if(BlockSize == radix_size || digit < radix_size)
+            if(radix_size % BlockSize == 0 || digit < radix_size)
             {
                 onesweep_lookback_state* block_state
                     = &lookback_states[block_id * radix_size + digit];
@@ -1133,7 +1133,7 @@ struct onesweep_iteration_helper
             for(unsigned int i = 0; i < digits_per_thread; ++i)
             {
                 const unsigned int digit = flat_id * digits_per_thread + i;
-                if(BlockSize == radix_size || digit < radix_size)
+                if(radix_size % BlockSize == 0 || digit < radix_size)
                 {
                     global_digit_offsets_out[digit] = storage.global_digit_offsets[digit]
                                                       + exclusive_digit_prefix[i] + digit_counts[i];

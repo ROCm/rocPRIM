@@ -611,7 +611,7 @@ public:
         for(unsigned int i = 0; i < digits_per_thread; ++i)
         {
             const unsigned int digit = flat_id * digits_per_thread + i;
-            if(block_size == radix_digits || digit < radix_digits)
+            if(radix_digits % block_size == 0 || digit < radix_digits)
             {
                 // The counter for thread 0 holds the prefix of all the digits at this point.
                 prefix[i] = get_digit_counter(digit, 0, storage.get());
@@ -628,7 +628,7 @@ public:
         for(unsigned int i = 0; i < digits_per_thread; ++i)
         {
             const unsigned int digit = flat_id * digits_per_thread + i;
-            if(block_size == radix_digits || digit < radix_digits)
+            if(radix_digits % block_size == 0 || digit < radix_digits)
             {
                 // The counter for thread 0 holds the prefix of all the digits at this point.
                 // To find the count, subtract the prefix of the next digit with that of the
