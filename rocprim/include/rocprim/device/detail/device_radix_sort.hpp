@@ -1043,6 +1043,8 @@ struct onesweep_iteration_helper
 
                 // Update the state for the current block.
                 const unsigned int inclusive_digit_prefix = exclusive_prefix + digit_counts[i];
+                // Note that this should not deadlock, as HSA guarantees that blocks with a lower block ID launch before
+                // those with a higher block id.
                 onesweep_lookback_state(onesweep_lookback_state::COMPLETE, inclusive_digit_prefix)
                     .store(block_state);
 
