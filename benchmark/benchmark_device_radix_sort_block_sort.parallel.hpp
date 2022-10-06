@@ -310,7 +310,7 @@ struct device_radix_sort_block_sort_benchmark_generator
 
         // Very large block sizes don't work with large items_per_blocks since
         // shared memory is limited
-        static constexpr unsigned int max_shared_memory    = 65536u - 2000;
+        static constexpr unsigned int max_shared_memory    = TUNING_SHARED_MEMORY_MAX - 2000;
         static constexpr unsigned int max_size_per_element = std::max(sizeof(Key), sizeof(Value));
         static constexpr unsigned int max_items_per_thread
             = std::min(32u, max_shared_memory / (BlockSize * max_size_per_element));

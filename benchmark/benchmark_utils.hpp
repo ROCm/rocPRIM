@@ -46,6 +46,7 @@
         }                                                                                   \
     }
 
+#define TUNING_SHARED_MEMORY_MAX 65536u
 // Support half operators on host side
 
 ROCPRIM_HOST inline

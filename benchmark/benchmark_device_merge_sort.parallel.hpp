@@ -40,39 +40,11 @@
 
 namespace rp = rocprim;
 
-template<typename Config>
-std::string config_name()
-{
-    rocprim::detail::merge_sort_block_sort_config_params bs_config =
-        typename Config::block_sort_config();
-    rocprim::detail::merge_sort_block_merge_config_params bm_config =
-        typename Config::block_merge_config();
-    const unsigned int sort_block_size          = bs_config.block_sort_config.block_size;
-    const unsigned int sort_items_per_thread    = bs_config.block_sort_config.items_per_thread;
-    const unsigned int merge_oddeven_block_size = bm_config.merge_oddeven_config.block_size;
-    return "merge_sort_config<" + pad_string(std::to_string(sort_block_size), 4) + ", "
-           + pad_string(std::to_string(sort_items_per_thread), 2) + ", "
-           + pad_string(std::to_string(merge_oddeven_block_size), 4) + ">";
-}
-
-template<>
-inline std::string config_name<rocprim::default_config>()
-{
-    return "default_config";
-}
-
 template<typename Key    = int,
          typename Value  = rocprim::empty_type,
          typename Config = rocprim::default_config>
 struct device_merge_sort_benchmark : public config_autotune_interface
 {
-    static std::string get_name_pattern()
-    {
-        return R"regex((?P<algo>\S*?)<)regex"
-               R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*merge_sort_config<\s*)regex"
-               R"regex((?P<sort_block_size>[0-9]+),\s*(?P<sort_items_per_thread>[0-9]+),\s*(?P<merge_block_size>[0-9]+)>>)regex";
-    }
-
     std::string name() const override
     {
         using namespace std::string_literals;
@@ -80,7 +52,7 @@ struct device_merge_sort_benchmark : public config_autotune_interface
                            + (std::is_same<Value, rocprim::empty_type>::value
                                   ? ""s
                                   : std::string(Traits<Value>::name()) + ", ")
-                           + config_name<Config>() + ">");
+                           + "default_config>");
     }
 
     static constexpr unsigned int batch_size  = 10;
@@ -317,53 +289,5 @@ struct device_merge_sort_benchmark : public config_autotune_interface
         do_run(state, size, stream);
     }
 };
-
-#ifdef BENCHMARK_CONFIG_TUNING
-
-template<unsigned int MergeBlockSizeExponent,
-         unsigned int SortBlockSizeExponent,
-         typename Key,
-         typename Value = rocprim::empty_type>
-struct device_merge_sort_benchmark_generator
-{
-    template<unsigned int ItemsPerThreadExponent>
-    struct create_ipt
-    {
-        static constexpr unsigned int merge_block_size = 1u << MergeBlockSizeExponent;
-        static constexpr unsigned int sort_block_size  = 1u << SortBlockSizeExponent;
-        static constexpr unsigned int items_per_thread = 1u << ItemsPerThreadExponent;
-
-        void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-        {
-            storage.emplace_back(
-                std::make_unique<device_merge_sort_benchmark<
-                    Key,
-                    Value,
-                    rocprim::
-                        merge_sort_config<merge_block_size, sort_block_size, items_per_thread>>>());
-        }
-    };
-
-    static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-    {
-        // Sort_items_per_block must be equal or larger than merge_items_per_block, so make
-        // the items_per_thread at least as large so the sort_items_per_block
-        // would be atleast MergeBlockSize.
-        static constexpr unsigned int min_items_per_thread_exponent
-            = std::min(1u, 10u - SortBlockSizeExponent);
-
-        // Very large block sizes don't work with large items_per_blocks since
-        // shared memory is limited
-        static constexpr unsigned int max_items_per_thread_exponent
-            = std::min(4u, 11u - SortBlockSizeExponent);
-
-        static_for_each<make_index_range<unsigned int,
-                                         min_items_per_thread_exponent,
-                                         max_items_per_thread_exponent>,
-                        create_ipt>(storage);
-    }
-};
-
-#endif // BENCHMARK_CONFIG_TUNING
 
 #endif // ROCPRIM_BENCHMARK_DEVICE_MERGE_SORT_PARALLEL_HPP_

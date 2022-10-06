@@ -381,7 +381,7 @@ struct device_radix_sort_onesweep_benchmark_generator
                                                            ItemsPerThread,
                                                            RadixBits,
                                                            false>::storage_type;
-        return sizeof(sharedmem_storage) < 65536u;
+        return sizeof(sharedmem_storage) < TUNING_SHARED_MEMORY_MAX;
     }
 
     template<unsigned int ItemsPerThread, typename Enable = void>
@@ -412,6 +412,7 @@ struct device_radix_sort_onesweep_benchmark_generator
     {
         create_ipt<1u>()(storage);
         create_ipt<4u>()(storage);
+        create_ipt<6u>()(storage);
         create_ipt<8u>()(storage);
         create_ipt<12u>()(storage);
         create_ipt<16u>()(storage);

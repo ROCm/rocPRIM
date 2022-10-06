@@ -33,40 +33,7 @@ BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
-/*
-template<typename RadixSortConfig, typename, typename>
-struct wrapped_radix_sort_config
-{
-    template<target_arch Arch>
-    struct architecture_config
-    {
-        static constexpr radix_sort_config_params params = RadixSortConfig();
-    };
-};
 
-template<typename Key, typename Value>
-struct wrapped_radix_sort_config<default_config, Key, Value>
-{
-    template<target_arch Arch>
-    struct architecture_config
-    {
-        static constexpr radix_sort_config_params params
-            = default_radix_sort_config<static_cast<unsigned int>(Arch), Key, Value>();
-    };
-};
-
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-template<typename RadixSortConfig, typename Key, typename Value>
-template<target_arch Arch>
-constexpr radix_sort_config_params
-    wrapped_radix_sort_config<RadixSortConfig, Key, Value>::architecture_config<Arch>::params;
-
-template<typename Key, typename Value>
-template<target_arch Arch>
-constexpr radix_sort_config_params
-    wrapped_radix_sort_config<default_config, Key, Value>::architecture_config<Arch>::params;
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-*/
 // Sub-algorithm block_sort:
 template<typename RadixSortBlockSortConfig, typename, typename>
 struct wrapped_radix_sort_block_sort_config

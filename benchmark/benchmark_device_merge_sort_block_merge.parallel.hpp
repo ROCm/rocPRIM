@@ -44,7 +44,7 @@ template<typename Config>
 std::string config_name()
 {
     const rocprim::detail::merge_sort_block_merge_config_params config = Config();
-    return "merge_sort_block_merge_config_params<"
+    return "merge_sort_block_merge_config<"
            + pad_string(std::to_string(config.merge_oddeven_config.block_size), 4) + ", "
            + pad_string(std::to_string(config.merge_oddeven_config.items_per_thread), 2) + ", "
            + pad_string(std::to_string(config.merge_oddeven_config.size_limit), 8) + ", "
@@ -59,17 +59,19 @@ inline std::string config_name<rocprim::default_config>()
     return "default_config";
 }
 
-template<typename Key   = int,
-         typename Value = rocprim::empty_type,
-         typename Config
-         = rocprim::detail::merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>>
+template<typename Key    = int,
+         typename Value  = rocprim::empty_type,
+         typename Config = rocprim::default_config>
 struct device_merge_sort_block_merge_benchmark : public config_autotune_interface
 {
     static std::string get_name_pattern()
     {
         return R"regex((?P<algo>\S*?)<)regex"
-               R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*merge_sort_block_merge_config_params<\s*)regex"
-               R"regex((?P<block_size>[0-9]+),\s*(?P<items_per_thread>[0-9]+),\s*(?P<method>[A-z0-9]+)>>)regex";
+               R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*merge_sort_block_merge_config<\s*)regex"
+               R"regex((?P<oddeven_block_size>[0-9]+),\s*(?P<oddeven_items_per_thread>[0-9]+),\s*)regex"
+               R"regex((?P<oddeven_size_limit>[0-9]+),\s*)regex"
+               R"regex((?P<mergepath_partition_block_size>[0-9]+),\s*(?P<mergepath_block_size>[0-9]+),\s*)regex"
+               R"regex((?P<mergepath_items_per_thread>[0-9]+)>>)regex";
     }
 
     std::string name() const override
@@ -391,7 +393,7 @@ template<unsigned int BlockSize,
          typename Value = rocprim::empty_type>
 struct device_merge_sort_block_merge_benchmark_generator
 {
-    static constexpr unsigned int getLimit()
+    static constexpr unsigned int get_limit()
     {
         return use_mergepath ? 0 : UINT32_MAX;
     }
@@ -402,7 +404,7 @@ struct device_merge_sort_block_merge_benchmark_generator
         static constexpr unsigned int items_per_thread = 1u << ItemsPerThreadExponent;
         using generated_config = rocprim::detail::merge_sort_block_merge_config<BlockSize,
                                                                                 items_per_thread,
-                                                                                getLimit(),
+                                                                                get_limit(),
                                                                                 128,
                                                                                 BlockSize,
                                                                                 items_per_thread>;
@@ -421,7 +423,7 @@ struct device_merge_sort_block_merge_benchmark_generator
 
         // Very large block sizes don't work with large items_per_thread since
         // shared memory is limited
-        static constexpr unsigned int max_shared_memory    = 65536;
+        static constexpr unsigned int max_shared_memory    = TUNING_SHARED_MEMORY_MAX;
         static constexpr unsigned int max_size_per_element = sizeof(Key) + sizeof(Value);
         static constexpr unsigned int max_items_per_thread
             = max_shared_memory / (BlockSize * max_size_per_element);

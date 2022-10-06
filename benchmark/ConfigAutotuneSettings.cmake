@@ -26,15 +26,6 @@ function(read_config_autotune_settings file list_across_names list_across output
     set(list_across "int int64_t uint8_t rocprim::half float double;\
 true false;true false;64 128;1 2 4 8 16" PARENT_SCOPE)
     set(output_pattern_suffix "@DataType@_@Left@_@InPlace@_@BlockSize@_@ItemsPerThread@" PARENT_SCOPE)
-  elseif(file STREQUAL "benchmark_device_merge_sort")
-    set(list_across_names "KeyType_ValueType;MergeBlockSizeExponent;SortBlockSizeExponent" PARENT_SCOPE)
-    # first list is keys, second list is key,value pairs
-    set(list_across "\
-int int64_t int8_t uint8_t rocprim::half short \
-\
-int,float int64_t,double int8_t,int8_t uint8_t,uint8_t rocprim::half,rocprim::half short,short;\
-6 7 8 9 10;9 10" PARENT_SCOPE)
-    set(output_pattern_suffix "@KeyType_ValueType@_@MergeBlockSizeExponent@_@SortBlockSizeExponent@" PARENT_SCOPE)
   elseif(file STREQUAL "benchmark_device_merge_sort_block_sort")
     set(list_across_names "KeyType_ValueType;BlockSize;BlockSortMethod" PARENT_SCOPE)
     # first list is keys, second list is key,value pairs

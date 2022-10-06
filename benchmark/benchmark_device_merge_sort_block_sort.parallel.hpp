@@ -70,14 +70,13 @@ inline std::string config_name<rocprim::default_config>()
 
 template<typename Key    = int,
          typename Value  = rocprim::empty_type,
-         typename Config = rocprim::detail::
-             merge_sort_block_sort_config<256, 4, rocprim::block_sort_algorithm::merge_sort>>
+         typename Config = rocprim::default_config>
 struct device_merge_sort_block_sort_benchmark : public config_autotune_interface
 {
     static std::string get_name_pattern()
     {
         return R"regex((?P<algo>\S*?)<)regex"
-               R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*merge_sort_block_sort_config_params<\s*)regex"
+               R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*merge_sort_block_sort_config<\s*)regex"
                R"regex((?P<block_size>[0-9]+),\s*(?P<items_per_thread>[0-9]+),\s*(?P<method>[A-z0-9]+)>>)regex";
     }
 
@@ -330,7 +329,7 @@ struct device_merge_sort_block_sort_benchmark_generator
 
         // Very large block sizes don't work with large items_per_blocks since
         // shared memory is limited
-        static constexpr unsigned int max_shared_memory = 65536;
+        static constexpr unsigned int max_shared_memory = TUNING_SHARED_MEMORY_MAX;
         static constexpr unsigned int max_size_per_element
             = std::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value));
         static constexpr unsigned int max_items_per_thread

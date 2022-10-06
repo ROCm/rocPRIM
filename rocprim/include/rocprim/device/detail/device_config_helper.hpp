@@ -79,9 +79,9 @@ struct merge_sort_block_merge_config : rocprim::detail::merge_sort_block_merge_c
 {
     constexpr merge_sort_block_merge_config()
         : rocprim::detail::merge_sort_block_merge_config_params{
-            {  OddEvenBlockSize,   OddEvenItemsPerThread, OddEvenSizeLimit},
-            {PartitionBlockSize,                       1                 },
-            {MergePathBlockSize, MergePathItemsPerThread                 }
+            {OddEvenBlockSize, OddEvenItemsPerThread, OddEvenSizeLimit},
+            {PartitionBlockSize, 1},
+            {MergePathBlockSize, MergePathItemsPerThread}
     } {};
 };
 

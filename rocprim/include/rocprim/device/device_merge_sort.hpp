@@ -436,18 +436,6 @@ inline hipError_t merge_sort_block_merge(
     return hipSuccess;
 }
 
-template<class Config>
-ROCPRIM_KERNEL void device_debug(unsigned int* vector)
-{
-    static constexpr merge_sort_block_sort_config_params params = device_params<Config>();
-
-    if(rocprim::detail::block_thread_id<0>() == 0 && block_id<0>() == 0)
-    {
-        vector[0] = params.block_sort_config.block_size;
-        vector[1] = params.block_sort_config.items_per_thread;
-    }
-}
-
 template<class Config,
          class KeysInputIterator,
          class KeysOutputIterator,
