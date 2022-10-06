@@ -98,10 +98,10 @@ def compare_results(old, new):
     for (name, difference) in results:
         if difference < -10:
             success = False
-            print(f'{bcolors.FAIL}X{bcolors.ENDC} {name}: {bcolors.FAIL}{difference:.0f}{bcolors.ENDC}%')
+            print(f'{bcolors.FAIL}X {bcolors.ENDC} {name}: {bcolors.FAIL}{difference:.0f}{bcolors.ENDC}%')
         elif difference < -2:
             success = False
-            print(f'{bcolors.WARNING}!{bcolors.ENDC} {name}: {bcolors.WARNING}{difference:.0f}{bcolors.ENDC}%')
+            print(f'{bcolors.WARNING}! {bcolors.ENDC} {name}: {bcolors.WARNING}{difference:.0f}{bcolors.ENDC}%')
         else:
             print(f'{bcolors.OKGREEN}OK{bcolors.ENDC} {name}: {bcolors.OKGREEN}{difference:.0f}{bcolors.ENDC}%')
 
