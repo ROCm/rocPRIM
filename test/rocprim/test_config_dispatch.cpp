@@ -82,6 +82,14 @@ TEST(RocprimConfigDispatchTests, ParseCommonArches)
 #ifndef WIN32
 TEST(RocprimConfigDispatchTests, DeviceIdFromStream)
 {
+    // see https://github.com/ROCm-Developer-Tools/hipamd/issues/52
+    rocprim::detail::target_arch host_arch;
+    rocprim::detail::host_target_arch(hipStreamDefault, host_arch);
+    if(host_arch == target_arch::gfx1030)
+    {
+        GTEST_SKIP() << "skip test due to known bug on gfx1030";
+    }
+
     using rocprim::detail::get_device_from_stream;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
