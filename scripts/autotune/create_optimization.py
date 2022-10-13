@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-
+#
+# MIT License
+#
 # Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,7 +25,7 @@
 """
 This Python script is intended for the creation of autotuned configurations
 for the supported rocPRIM algorithms based on benchmark results. The script
-does not update the configurations automatically, the user is responsible for 
+does not update the configurations automatically, the user is responsible for
 installation and the correctness of the files
 """
 
@@ -58,10 +60,10 @@ def tokenize_benchmark_name(input_name: str, name_regex: str) -> Dict[str, str]:
 
 def translate_settings_to_cpp_metaprogramming(fallback_configuration) -> str:
     """
-    Translates a list of named fallback configuration entries to 
+    Translates a list of named fallback configuration entries to
     C++ metaprogramming idioms.
     """
-    
+
     setting_list: List[str] = []
     for typename, entry in fallback_configuration.items():
         if entry["based_on"]["datatype"] == EMPTY_TYPENAME:
@@ -81,7 +83,7 @@ def translate_settings_to_cpp_metaprogramming(fallback_configuration) -> str:
                     setting_list.append(f"(sizeof({typename}) <= {value})")
                 else:
                     print(f"WARNING: {config_setting} is not known")
-    
+
     return "std::enable_if_t<(" + " && ".join(setting_list) + ")>"
 
 class BenchmarksOfArchitecture:
@@ -105,7 +107,7 @@ class BenchmarksOfArchitecture:
         Returns a named tuple type where the names are based on the configuration selection types
         and the values on the instantiated types.
         """
-    
+
         Instance = collections.namedtuple(typename='Instance', field_names=[cfg_type.name for cfg_type in config_selection_types])
         return Instance(**{field : instanced_types[field] for field in Instance._fields})
 
@@ -135,7 +137,7 @@ class BenchmarksOfArchitecture:
         """
         Finds a suitable configuration if only the architecture is specified.
         """
-        
+
         # For now, return the best performing configuration that has:
         # int in non-optional types, the empty type in optional types
         instanced_types: Dict[str, str] = {cfg_type.name: EMPTY_TYPENAME if cfg_type.is_optional else 'int' for cfg_type in config_selection_types}
@@ -166,7 +168,7 @@ class Algorithm:
         self.name: str = algorithm_name
         self.architectures: Dict(str, BenchmarksOfArchitecture) = {}
         self.fallback_entries = fallback_entries
-    
+
     def add_measurement(self, single_benchmark_data: Dict[str, str]):
         """
         Adds a single benchmark run with a specific configuration and selected types.
@@ -182,7 +184,7 @@ class Algorithm:
         Generate the content of the configuration file, including license
         and header guards, based on general template file.
         """
- 
+
         configuration_lines: List[str] = self.__get_configurations()
         configuration: str = '\n'.join(configuration_lines)
 
@@ -224,7 +226,7 @@ class Algorithm:
                 # Add a line with a comment describing the fallback case
                 out_lines.append(f'// Based on {print_config}')
                 out_lines.append(self._create_fallback_case(benchmarks_of_architecture, fallback_configuration, measurement))
-        
+
         return out_lines
 
     def __get_configurations(self) -> List[str]:
@@ -250,12 +252,12 @@ class Algorithm:
             # Fallback cases
             configuration_lines += self.__create_fallback_cases(
                 self.fallback_entries, benchmarks_of_architecture)
-        
+
         return configuration_lines
 
     def __get_fallback_match(self, benchmarks_of_architecture, fallback_configuration) -> Dict[str, str]:
         """
-        fallback_configuration is a dict of (name, fallback entry) pairs. 
+        fallback_configuration is a dict of (name, fallback entry) pairs.
         Returns the configuration that matches the entry for each pair.
         """
         for benchmark in benchmarks_of_architecture.best_config_by_selection_types.values():
@@ -265,7 +267,7 @@ class Algorithm:
 
                 # The typename the fallback is based on
                 fallback_typename: str = fallback_configuration[cfg_type.name]['based_on']['datatype']
-                
+
                 # The typenames match if they are equal or if the fallback is based on the empty type
                 # and the benchmark's typename is None (meaning that the tokenizer found no type)
 
@@ -282,15 +284,15 @@ class Algorithm:
 """
 Each algorithm class specifies methods to generate each C++ configuration specification.
 The generated configuration file contains configs for four cases:
-- No architecture or instantiation of configuration selection types is provided 
+- No architecture or instantiation of configuration selection types is provided
   (general base case).
-- Only the architecture is specified, no instantiation of configuration selection 
+- Only the architecture is specified, no instantiation of configuration selection
   types is provided (base case for arch).
-- The architecture and an instantiation of configuration selection types is 
-  provided (specialized case for arch). 
-- The architecture and an instantiation of configuration selection types is 
+- The architecture and an instantiation of configuration selection types is
+  provided (specialized case for arch).
+- The architecture and an instantiation of configuration selection types is
   provided, but there is no benchmark with the same instantiation of types.
-  The configuration is based on a fallback (fallback case). 
+  The configuration is based on a fallback (fallback case).
 
 config_selection_types is a list of types that are used to select a configuration.
 The fallback file will be used to generate fallback cases, in addition
@@ -298,12 +300,12 @@ to the typenames specified in the benchmark runs. Generating fallbacks only happ
 when there is only a single non-optional type.
 
 If the type is optional, the generated fallback cases will use the empty type instead
-of the full list of fallback entries. The config_selection_types should specify at 
+of the full list of fallback entries. The config_selection_types should specify at
 least one non-optional type.
 
 The 'name' fields should correspond to a named capturing group in the regex field of the benchmark,
 these names should be valid C++ identifiers. The matched values in the name field of
-the benchmark should also be valid C++ typenames. This is required as these names will be in the 
+the benchmark should also be valid C++ typenames. This is required as these names will be in the
 generated C++ code.
 """
 
@@ -476,7 +478,7 @@ class BenchmarkDataManager:
     Aggregates the data from multiple benchmark files containing single benchmark runs
     with different configurations.
     """
-    
+
     def __init__(self, fallback_config_file: str):
         self.algorithms: Dict[str, Algorithm] = {}
         abs_path_to_script_dir: str = os.path.dirname(os.path.abspath(__file__))
@@ -546,7 +548,7 @@ def main():
     for benchmark_run_file in args.benchmark_files:
         bench_path = benchmark_run_file
         benchmark_manager.add_run(bench_path)
-    
+
     benchmark_manager.write_configs_to_files(args.out_basedir)
 
 if __name__ == '__main__':
