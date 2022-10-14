@@ -23,7 +23,6 @@
 
 #include "../detail/device_radix_sort.hpp"
 #include "../device_merge_sort.hpp"
-#include "../specialization/device_radix_block_sort.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
