@@ -104,7 +104,10 @@ struct device_radix_sort_onesweep_benchmark : public config_autotune_interface
 
         if(std::is_floating_point<key_type>::value)
         {
-            return get_random_data<key_type>(size, (key_type)-1000, (key_type) + 1000, size);
+            return get_random_data<key_type>(size,
+                                             static_cast<key_type>(-1000),
+                                             static_cast<key_type>(1000),
+                                             size);
         }
         else
         {

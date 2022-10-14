@@ -56,7 +56,7 @@ template<typename Config>
 std::string config_name()
 {
     const rocprim::detail::merge_sort_block_sort_config_params config = Config();
-    return "merge_sort_block_sort_config_params<"
+    return "merge_sort_block_sort_config<"
            + pad_string(std::to_string(config.block_sort_config.block_size), 4) + ", "
            + pad_string(std::to_string(config.block_sort_config.items_per_thread), 2) + ", "
            + std::string(get_block_sort_method_name(config.block_sort_method)) + ">";

@@ -40,10 +40,9 @@
 
 namespace rp = rocprim;
 
-template<typename Key   = int,
-         typename Value = rocprim::empty_type,
-         typename Config
-         = rocprim::detail::default_radix_sort_config<ROCPRIM_TARGET_ARCH, Key, Value>>
+template<typename Key    = int,
+         typename Value  = rocprim::empty_type,
+         typename Config = rocprim::default_config>
 struct device_radix_sort_benchmark : public config_autotune_interface
 {
     static std::string get_name_pattern()
@@ -54,10 +53,11 @@ struct device_radix_sort_benchmark : public config_autotune_interface
     std::string name() const override
     {
         using namespace std::string_literals;
-        return std::string("device_radix_sort<" + std::string(Traits<Key>::name()) + ", "
+        return std::string("device_radix_sort<" + std::string(Traits<Key>::name())
                            + (std::is_same<Value, rocprim::empty_type>::value
                                   ? ""s
-                                  : std::string(Traits<Value>::name()) + ", default_config"));
+                                  : ", " + std::string(Traits<Value>::name()))
+                           + ", default_config>");
     }
 
     static constexpr unsigned int batch_size  = 10;
@@ -69,7 +69,10 @@ struct device_radix_sort_benchmark : public config_autotune_interface
 
         if(std::is_floating_point<key_type>::value)
         {
-            return get_random_data<key_type>(size, (key_type)-1000, (key_type) + 1000, size);
+            return get_random_data<key_type>(size,
+                                             static_cast<key_type>(-1000),
+                                             static_cast<key_type>(1000),
+                                             size);
         }
         else
         {
