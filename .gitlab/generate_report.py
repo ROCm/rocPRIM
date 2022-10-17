@@ -81,11 +81,11 @@ def load_benchmarks(benchmark_dir):
 def compare_results(old, new):
     results = []
     incomparable = 0
-    for (arch_old, names_old), (arch_new, names_new) in zip(old.items(), new.items()):
-        if arch_old == arch_new:
-            for (name_old, value_old), (name_new, value_new) in zip(names_old.items(), names_new.items()):
-                if name_old == name_new:
-                    results.append((f'{name_old} ({arch_old})', ((value_new - value_old) / value_old) * 100))
+    for (arch, names) in new.items():
+        if arch in old:
+            for (name, value_new) in names.items():
+                if name in old[arch]:
+                    results.append((f'{name} ({arch})', ((value_new - old[arch][name]) / old[arch][name]) * 100))
                 else:
                     incomparable = incomparable + 1
 
