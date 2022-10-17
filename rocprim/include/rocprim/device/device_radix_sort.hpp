@@ -642,11 +642,11 @@ hipError_t radix_sort_impl(void * temporary_storage,
     >;
 
     kernel_config_params single_sort_params;
-    hipError_t           e = get_radix_sort_block_sort_config<typename Config::block_sort_config,
-                                                    key_type,
-                                                    value_type>(stream, single_sort_params);
-    if(e != hipSuccess)
-        return e;
+    hipError_t error = get_radix_sort_block_sort_config<typename Config::block_sort_config,
+                                                        key_type,
+                                                        value_type>(stream, single_sort_params);
+    if(error != hipSuccess)
+        return error;
     constexpr unsigned int merge_sort_limit = config::merge_size_limit_blocks * 1024;
 
     unsigned int single_sort_items_per_block
