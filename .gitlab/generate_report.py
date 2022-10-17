@@ -63,7 +63,7 @@ def load_benchmarks(benchmark_dir):
             results.setdefault(arch, {})
             for single_benchmark in benchmark_run_data['benchmarks']:
                 name = single_benchmark['name'].replace('/manual_time','')
-                name = re.sub(r"(^device.*?)(,\s[A-z_]*_config<.*>>)$", "\\1>", name, 0, re.MULTILINE)
+                name = re.sub(r"(^device.*?)(,\s[A-z_]*_config.*>)$", "\\1>", name, 0, re.MULTILINE)
                 results[arch][name] = single_benchmark['bytes_per_second']
         except KeyError as err:
             print(f'KeyError: {err}, while reading file: {file_path}', file=sys.stderr, flush=True)
