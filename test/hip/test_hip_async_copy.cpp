@@ -147,7 +147,9 @@ protected:
     }
 };
 
-TEST_F(HipAsyncCopyTests, AsyncCopyDepthFirst)
+// Skip test due to known bug on gfx1030, see:
+// https://github.com/ROCm-Developer-Tools/hipamd/issues/52
+TEST_F(HipAsyncCopyTests, DISABLED_AsyncCopyDepthFirst)
 {
     for(size_t i = 0; i < sizes.size(); i++)
     {
@@ -165,7 +167,9 @@ TEST_F(HipAsyncCopyTests, AsyncCopyDepthFirst)
     ASSERT_EQ(expecteds, outputs);
 }
 
-TEST_F(HipAsyncCopyTests, AsyncCopyBreadthFirst)
+// Skip test due to known bug on gfx1030, see:
+// https://github.com/ROCm-Developer-Tools/hipamd/issues/52
+TEST_F(HipAsyncCopyTests, DISABLED_AsyncCopyBreadthFirst)
 {
     for(size_t i = 0; i < sizes.size(); i++)
     {
