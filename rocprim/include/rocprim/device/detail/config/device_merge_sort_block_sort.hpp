@@ -54,7 +54,7 @@ struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arc
 
 template<>
 struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arch::gfx1030), int>
-    : merge_sort_block_sort_config<256, 8, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::bitonic_sort>
 {};
 
 template<>
@@ -74,12 +74,12 @@ template<>
 struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arch::gfx1030),
                                             int8_t,
                                             int8_t>
-    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::bitonic_sort>
 {};
 
 template<>
 struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arch::gfx1030), int8_t>
-    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::bitonic_sort>
 {};
 
 template<>
@@ -110,14 +110,14 @@ struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arc
 template<>
 struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arch::gfx1030),
                                             uint8_t>
-    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::bitonic_sort>
 {};
 
 template<>
 struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arch::gfx1030),
                                             uint8_t,
                                             uint8_t>
-    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::bitonic_sort>
 {};
 
 // Based on key_type = rocprim::half, value_type = rocprim::empty_type
@@ -152,7 +152,7 @@ struct default_merge_sort_block_sort_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 4)
                       && (sizeof(key_type) > 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_sort_config<256, 8, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::bitonic_sort>
 {};
 
 // Based on key_type = short, value_type = rocprim::empty_type
@@ -175,7 +175,7 @@ struct default_merge_sort_block_sort_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::bitonic_sort>
 {};
 
 template<>
@@ -456,7 +456,7 @@ template<>
 struct default_merge_sort_block_sort_config<static_cast<unsigned int>(target_arch::gfx908),
                                             int64_t,
                                             double>
-    : merge_sort_block_sort_config<256, 4, block_sort_algorithm::merge_sort>
+    : merge_sort_block_sort_config<512, 4, block_sort_algorithm::merge_sort>
 {};
 
 template<>
