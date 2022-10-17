@@ -33,25 +33,13 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-// Wraps device_reduce public configuration struct into internal reduce_config_params
-template<typename ReduceConfig>
-constexpr reduce_config_params wrap_reduce_config()
-{
-    return reduce_config_params{
-        kernel_config_params{ReduceConfig::block_size,
-                             ReduceConfig::items_per_thread,
-                             ReduceConfig::size_limit},
-        ReduceConfig::block_reduce_method
-    };
-}
-
 template<typename ReduceConfig, typename>
 struct wrapped_reduce_config
 {
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr reduce_config_params params = wrap_reduce_config<ReduceConfig>();
+        static constexpr reduce_config_params params = ReduceConfig();
     };
 };
 
@@ -62,7 +50,7 @@ struct wrapped_reduce_config<default_config, Value>
     struct architecture_config
     {
         static constexpr reduce_config_params params
-            = wrap_reduce_config<default_reduce_config<static_cast<unsigned int>(Arch), Value>>();
+            = default_reduce_config<static_cast<unsigned int>(Arch), Value>();
     };
 };
 

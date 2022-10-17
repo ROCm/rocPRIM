@@ -290,6 +290,12 @@ template<class Value, class Key>
 struct default_radix_sort_config_base : default_radix_sort_config_base_helper<Key, Value>::type
 {};
 
+struct reduce_config_params
+{
+    kernel_config_params   reduce_config;
+    block_reduce_algorithm block_reduce_method;
+};
+
 } // namespace detail
 
 /// \brief Configuration of device-level reduce primitives.
@@ -298,32 +304,22 @@ struct default_radix_sort_config_base : default_radix_sort_config_base_helper<Ke
 /// \tparam ItemsPerThread - number of items processed by each thread.
 /// \tparam BlockReduceMethod - algorithm for block reduce.
 /// \tparam SizeLimit - limit on the number of items reduced by a single launch
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    ::rocprim::block_reduce_algorithm BlockReduceMethod,
-    unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT
->
-struct reduce_config
+template<unsigned int                      BlockSize      = 256,
+         unsigned int                      ItemsPerThread = 8,
+         ::rocprim::block_reduce_algorithm BlockReduceMethod
+         = ::rocprim::block_reduce_algorithm::default_algorithm,
+         unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
+struct reduce_config : rocprim::detail::reduce_config_params
 {
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Algorithm for block reduce.
-    static constexpr block_reduce_algorithm block_reduce_method = BlockReduceMethod;
-    /// \brief Limit on the number of items reduced by a single launch
-    static constexpr unsigned int size_limit = SizeLimit;
+    constexpr reduce_config()
+        : rocprim::detail::reduce_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit},
+            BlockReduceMethod
+    } {};
 };
 
 namespace detail
 {
-
-struct reduce_config_params
-{
-    kernel_config_params   reduce_config;
-    block_reduce_algorithm block_reduce_method;
-};
 
 template<class Value>
 struct default_reduce_config_base_helper
