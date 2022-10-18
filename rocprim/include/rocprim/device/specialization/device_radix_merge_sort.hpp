@@ -23,6 +23,7 @@
 
 #include "../detail/device_radix_sort.hpp"
 #include "../device_merge_sort.hpp"
+#include "device_radix_block_sort.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -50,39 +51,105 @@ inline hipError_t radix_sort_merge_impl(
     hipStream_t                                                     stream,
     bool                                                            debug_synchronous)
 {
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
+    using key_type   = typename std::iterator_traits<KeysInputIterator>::value_type;
+    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
     const unsigned int current_radix_bits = end_bit - bit;
-    if(current_radix_bits == sizeof(key_type) * 8)
+
+    static constexpr bool with_custom_config = !std::is_same<Config, default_config>::value;
+
+    // In device_radix_sort, we use this device_radix_sort_merge_sort specialization only
+    // for low input sizes (< 1M elements), so we hardcode a kernel configuration most
+    // suitable for this.
+    using block_sort_config  = kernel_config<256, 4>;
+    using block_merge_config = typename std::
+        conditional<with_custom_config, typename Config::block_merge_config, default_config>::type;
+
+    // Wrap our radix_sort_block_sort kernel config in a merge_sort_block_sort_config
+    // just so device_merge_sort_compile_time_verifier can check.
+    using wrapped_bs_config = wrapped_merge_sort_block_sort_config<
+        merge_sort_block_sort_config<block_sort_config::block_size,
+                                     block_sort_config::items_per_thread,
+                                     block_sort_algorithm::default_algorithm>,
+        key_type,
+        value_type>;
+    using wrapped_bm_config
+        = wrapped_merge_sort_block_merge_config<block_merge_config, key_type, value_type>;
+
+    (void)device_merge_sort_compile_time_verifier<
+        wrapped_bs_config,
+        wrapped_bm_config>; // Some helpful checks during compile-time
+
+    unsigned int sort_items_per_block
+        = block_sort_config::block_size
+          * block_sort_config::
+              items_per_thread; // We will get this later from the block_sort algorithm
+
+    if(temporary_storage == nullptr)
     {
-        return merge_sort_impl<Config>(temporary_storage,
-                                       storage_size,
-                                       keys_input,
-                                       keys_output,
-                                       values_input,
-                                       values_output,
-                                       size,
-                                       radix_merge_compare<Descending, false, key_type>(),
-                                       stream,
-                                       debug_synchronous,
-                                       keys_buffer,
-                                       values_buffer);
-    }
-    else
-    {
-        return merge_sort_impl<Config>(
+        return merge_sort_block_merge<block_merge_config>(
             temporary_storage,
             storage_size,
-            keys_input,
             keys_output,
-            values_input,
             values_output,
             size,
-            radix_merge_compare<Descending, true, key_type>(bit, current_radix_bits),
+            sort_items_per_block,
+            radix_merge_compare<Descending, false, key_type>(),
             stream,
             debug_synchronous,
             keys_buffer,
             values_buffer);
     }
+
+    if(size == size_t(0))
+    {
+        return hipSuccess;
+    }
+
+    radix_sort_block_sort<block_sort_config, Descending>(keys_input,
+                                                         keys_output,
+                                                         values_input,
+                                                         values_output,
+                                                         size,
+                                                         sort_items_per_block,
+                                                         bit,
+                                                         end_bit,
+                                                         stream,
+                                                         debug_synchronous);
+    // ^ sort_items_per_block is now updated
+    if(size > sort_items_per_block)
+    {
+        if(current_radix_bits == sizeof(key_type) * 8)
+        {
+            return merge_sort_block_merge<block_merge_config>(
+                temporary_storage,
+                storage_size,
+                keys_output,
+                values_output,
+                size,
+                sort_items_per_block,
+                radix_merge_compare<Descending, false, key_type>(),
+                stream,
+                debug_synchronous,
+                keys_buffer,
+                values_buffer);
+        }
+        else
+        {
+            return merge_sort_block_merge<block_merge_config>(
+                temporary_storage,
+                storage_size,
+                keys_output,
+                values_output,
+                size,
+                sort_items_per_block,
+                radix_merge_compare<Descending, true, key_type>(bit, current_radix_bits),
+                stream,
+                debug_synchronous,
+                keys_buffer,
+                values_buffer);
+        }
+    }
+    return hipSuccess;
 }
 
 } // end namespace detail

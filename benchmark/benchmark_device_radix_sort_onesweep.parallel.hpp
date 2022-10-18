@@ -43,12 +43,13 @@ namespace rp = rocprim;
 template<typename Config>
 std::string config_name()
 {
+    constexpr rocprim::detail::radix_sort_onesweep_config_params params = Config();
     return "radix_sort_onesweep_config<kernel_config<"
-           + pad_string(std::to_string(Config::histogram::block_size), 4) + ", "
-           + pad_string(std::to_string(Config::histogram::items_per_thread), 2)
-           + ">, kernel_config<" + pad_string(std::to_string(Config::sort::block_size), 4) + ","
-           + pad_string(std::to_string(Config::sort::items_per_thread), 2) + ">,"
-           + pad_string(std::to_string(Config::radix_bits), 2) + ">";
+           + pad_string(std::to_string(params.histogram.block_size), 4) + ", "
+           + pad_string(std::to_string(params.histogram.items_per_thread), 2) + ">, kernel_config<"
+           + pad_string(std::to_string(params.sort.block_size), 4) + ","
+           + pad_string(std::to_string(params.sort.items_per_thread), 2) + ">,"
+           + pad_string(std::to_string(params.radix_bits_per_place), 2) + ">";
 }
 
 template<>
@@ -57,32 +58,19 @@ inline std::string config_name<rocprim::default_config>()
     return "default_config";
 }
 
-template<typename Key   = int,
-         typename Value = rocprim::empty_type,
-         typename Config2
-         = rocprim::detail::default_radix_sort_onesweep_config<ROCPRIM_TARGET_ARCH, Key, Value>>
+template<typename Key    = int,
+         typename Value  = rocprim::empty_type,
+         typename Config = rocprim::default_config>
 struct device_radix_sort_onesweep_benchmark : public config_autotune_interface
 {
-    using Config = rocprim::radix_sort_config<
-        0,
-        0,
-        rp::kernel_config<256, 1>,
-        rp::kernel_config<256, 1>,
-        rp::kernel_config<256, 1>,
-        rp::kernel_config<256, 1>,
-        1024u,
-        false,
-        rp::kernel_config<Config2::histogram::block_size, Config2::histogram::items_per_thread>,
-        rp::kernel_config<Config2::sort::block_size, Config2::sort::items_per_thread>,
-        Config2::radix_bits>;
 
     static std::string get_name_pattern()
     {
         return R"regex((?P<algo>\S*?)<)regex"
                R"regex((?P<key_type>\S*),(?:\s*(?P<value_type>\S*),)?\s*radix_sort_onesweep_config<)regex"
-               R"regex(kernel_config<\s*(?P<onesweep_histogram_block_size>[0-9]+),\s*(?P<onesweep_histogram_items_per_thread>[0-9]+)>,\s*)regex"
-               R"regex(kernel_config<\s*(?P<onesweep_sort_block_size>[0-9]+),\s*(?P<onesweep_sort_items_per_thread>[0-9]+)>,\s*)regex"
-               R"regex((?P<onesweep_radix_bits>[0-9]+)>>)regex";
+               R"regex(kernel_config<\s*(?P<histogram_block_size>[0-9]+),\s*(?P<histogram_items_per_thread>[0-9]+)>,\s*)regex"
+               R"regex(kernel_config<\s*(?P<sort_block_size>[0-9]+),\s*(?P<sort_items_per_thread>[0-9]+)>,\s*)regex"
+               R"regex((?P<radix_bits>[0-9]+)>>)regex";
     }
 
     std::string name() const override
@@ -92,7 +80,7 @@ struct device_radix_sort_onesweep_benchmark : public config_autotune_interface
                            + (std::is_same<Value, rocprim::empty_type>::value
                                   ? ""s
                                   : std::string(Traits<Value>::name()) + ", ")
-                           + config_name<Config2>() + ">");
+                           + config_name<Config>() + ">");
     }
 
     static constexpr unsigned int batch_size  = 10;

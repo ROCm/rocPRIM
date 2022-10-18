@@ -49,76 +49,76 @@ template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              int,
                                              float>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 1024, 2>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 512, 2>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030), int>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 512, 2>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 512, 2>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              int64_t,
                                              double>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 1024, 1>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 1024, 1>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              int64_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 1024, 1>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 1024, 1>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              int8_t,
                                              int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              rocprim::half,
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 4>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 4>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030), short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              short,
                                              short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 256, 4>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 256, 4>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx1030),
                                              uint8_t,
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = rocprim::half, value_type = rocprim::empty_type
@@ -129,7 +129,7 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int64_t, value_type = rocprim::empty_type
@@ -141,7 +141,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 8)
                       && (sizeof(key_type) > 4)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 1024, 1>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 1024, 1>
 {};
 
 // Based on key_type = int, value_type = rocprim::empty_type
@@ -153,7 +153,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 4)
                       && (sizeof(key_type) > 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 512, 2>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 512, 2>
 {};
 
 // Based on key_type = short, value_type = rocprim::empty_type
@@ -165,7 +165,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (sizeof(key_type) > 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int8_t, value_type = rocprim::empty_type
@@ -176,82 +176,82 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              int,
                                              float>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 256, 4>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 256, 4>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900), int>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              int64_t,
                                              double>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 512, 2>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 512, 2>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              int64_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              int8_t,
                                              int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900), int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              rocprim::half,
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900), short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              short,
                                              short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 256, 4>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 256, 4>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx900),
                                              uint8_t,
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = rocprim::half, value_type = rocprim::empty_type
@@ -262,7 +262,7 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int64_t, value_type = rocprim::empty_type
@@ -274,7 +274,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 8)
                       && (sizeof(key_type) > 4)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int, value_type = rocprim::empty_type
@@ -286,7 +286,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 4)
                       && (sizeof(key_type) > 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = short, value_type = rocprim::empty_type
@@ -298,7 +298,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (sizeof(key_type) > 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int8_t, value_type = rocprim::empty_type
@@ -309,82 +309,82 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              int,
                                              float>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906), int>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              int64_t,
                                              double>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 512, 2>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 512, 2>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              int64_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              int8_t,
                                              int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906), int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              rocprim::half,
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906), short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              short,
                                              short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx906),
                                              uint8_t,
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = rocprim::half, value_type = rocprim::empty_type
@@ -395,7 +395,7 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int64_t, value_type = rocprim::empty_type
@@ -407,7 +407,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 8)
                       && (sizeof(key_type) > 4)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int, value_type = rocprim::empty_type
@@ -419,7 +419,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 4)
                       && (sizeof(key_type) > 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = short, value_type = rocprim::empty_type
@@ -431,7 +431,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (sizeof(key_type) > 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int8_t, value_type = rocprim::empty_type
@@ -442,82 +442,82 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              int,
                                              float>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908), int>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              int64_t,
                                              double>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 16>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 16>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              int64_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              int8_t,
                                              int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908), int8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 256, 4>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 256, 4>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              rocprim::half,
                                              rocprim::half>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 512, 2>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 512, 2>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908), short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              short,
                                              short>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 template<>
 struct default_merge_sort_block_merge_config<static_cast<unsigned int>(target_arch::gfx908),
                                              uint8_t,
                                              uint8_t>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = rocprim::half, value_type = rocprim::empty_type
@@ -528,7 +528,7 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 256, 4>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 256, 4>
 {};
 
 // Based on key_type = int64_t, value_type = rocprim::empty_type
@@ -540,7 +540,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 8)
                       && (sizeof(key_type) > 4)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int, value_type = rocprim::empty_type
@@ -552,7 +552,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 4)
                       && (sizeof(key_type) > 2)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = short, value_type = rocprim::empty_type
@@ -564,7 +564,7 @@ struct default_merge_sort_block_merge_config<
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 2)
                       && (sizeof(key_type) > 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 // Based on key_type = int8_t, value_type = rocprim::empty_type
@@ -575,7 +575,7 @@ struct default_merge_sort_block_merge_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 1)
                       && (std::is_same<value_type, rocprim::empty_type>::value))>>
-    : merge_sort_block_merge_config<1024, 1, (1 << 17) + 70000, 128, 128, 8>
+    : merge_sort_block_merge_config<256, 1, (1 << 17) + 70000, 128, 128, 8>
 {};
 
 } // end namespace detail

@@ -76,108 +76,77 @@ using offset_type_t = std::conditional_t<
     size_t
 >;
 
-template<class Config>
-struct onesweep_params
+template<class Config, bool Descending, class KeysInputIterator, class Offset>
+ROCPRIM_KERNEL
+    __launch_bounds__(device_params<Config>().histogram.block_size) void onesweep_histograms_kernel(
+        KeysInputIterator  keys_input,
+        Offset*            global_digit_counts,
+        const Offset       size,
+        const Offset       full_blocks,
+        const unsigned int begin_bit,
+        const unsigned int end_bit)
 {
-    static constexpr unsigned int radix_bits_per_place = Config::onesweep::radix_bits;
-    static constexpr unsigned int radix_size_per_place = 1u << radix_bits_per_place;
+    static constexpr radix_sort_onesweep_config_params params = device_params<Config>();
+    onesweep_histograms<params.histogram.block_size,
+                        params.histogram.items_per_thread,
+                        params.radix_bits_per_place,
+                        Descending>(keys_input,
+                                    global_digit_counts,
+                                    size,
+                                    full_blocks,
+                                    begin_bit,
+                                    end_bit);
+}
 
-    struct histogram
-    {
-        static constexpr unsigned int block_size = Config::onesweep::histogram::block_size;
-        static constexpr unsigned int items_per_thread
-            = Config::onesweep::histogram::items_per_thread;
-        static constexpr unsigned int items_per_block = block_size * items_per_thread;
+template<class Config, class Offset>
+ROCPRIM_KERNEL __launch_bounds__(
+    device_params<Config>()
+        .histogram.block_size) void onesweep_scan_histograms_kernel(Offset* global_digit_offsets)
+{
+    static constexpr radix_sort_onesweep_config_params params = device_params<Config>();
+    onesweep_scan_histograms<params.histogram.block_size, params.radix_bits_per_place>(
+        global_digit_offsets);
+}
 
-        unsigned int bins;
-    };
-
-    struct sort
-    {
-        static constexpr unsigned int block_size       = Config::onesweep::sort::block_size;
-        static constexpr unsigned int items_per_thread = Config::onesweep::sort::items_per_thread;
-        static constexpr unsigned int items_per_block  = block_size * items_per_thread;
-
-        static constexpr unsigned int max_items_per_full_batch = 1u << 30;
-        static constexpr unsigned int blocks_per_full_batch
-            = max_items_per_full_batch / items_per_block;
-        static constexpr unsigned int items_per_full_batch
-            = blocks_per_full_batch * items_per_block;
-
-        unsigned int batches;
-        unsigned int items_per_batch;
-        unsigned int lookback_states;
-    };
-
-    unsigned int bits;
-    unsigned int places;
-
-    histogram histogram;
-    sort      sort;
-
-    onesweep_params(size_t input_size, unsigned int begin_bit, unsigned int end_bit)
-    {
-        this->bits   = end_bit - begin_bit;
-        this->places = ceiling_div(this->bits, radix_bits_per_place);
-
-        this->histogram.bins = radix_size_per_place * this->places;
-
-        this->sort.batches         = ceiling_div(input_size, sort::items_per_full_batch);
-        this->sort.items_per_batch = static_cast<unsigned int>(
-            ::rocprim::min<size_t>(input_size, sort::items_per_full_batch));
-        this->sort.lookback_states
-            = radix_size_per_place * ceiling_div(this->sort.items_per_batch, sort::items_per_block);
-    }
-};
-
-template<unsigned int BlockSize,
-         unsigned int ItemsPerThread,
-         unsigned int RadixBits,
-         bool         Descending,
+template<class Config,
+         bool Descending,
          class KeysInputIterator,
+         class ValuesInputIterator,
          class Offset>
-ROCPRIM_KERNEL
-    __launch_bounds__(BlockSize) void onesweep_histograms_kernel(KeysInputIterator keys_input,
-                                                                 Offset*      global_digit_counts,
-                                                                 const Offset size,
-                                                                 const Offset full_blocks,
-                                                                 const unsigned int begin_bit,
-                                                                 const unsigned int end_bit)
+inline hipError_t radix_sort_onesweep_global_offsets(KeysInputIterator keys_input,
+                                                     ValuesInputIterator,
+                                                     Offset*            global_digit_offsets,
+                                                     const Offset       size,
+                                                     const unsigned int digit_places,
+                                                     const unsigned     begin_bit,
+                                                     const unsigned     end_bit,
+                                                     const hipStream_t  stream,
+                                                     const bool         debug_synchronous)
 {
-    onesweep_histograms<BlockSize, ItemsPerThread, RadixBits, Descending>(keys_input,
-                                                                          global_digit_counts,
-                                                                          size,
-                                                                          full_blocks,
-                                                                          begin_bit,
-                                                                          end_bit);
-}
+    using key_type   = typename std::iterator_traits<KeysInputIterator>::value_type;
+    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
+    using config     = wrapped_radix_sort_onesweep_config<Config, key_type, value_type>;
 
-template<unsigned int BlockSize, unsigned int RadixBits, class Offset>
-ROCPRIM_KERNEL
-    __launch_bounds__(BlockSize) void onesweep_scan_histograms_kernel(Offset* global_digit_offsets)
-{
-    onesweep_scan_histograms<BlockSize, RadixBits>(global_digit_offsets);
-}
+    detail::target_arch target_arch;
+    hipError_t          result = host_target_arch(stream, target_arch);
+    if(result != hipSuccess)
+    {
+        return result;
+    }
+    const radix_sort_onesweep_config_params params = dispatch_target_arch<config>(target_arch);
 
-template<bool Descending, class OnesweepParams, class KeysInputIterator, class Offset>
-inline hipError_t radix_sort_onesweep_global_offsets(const OnesweepParams& params,
-                                                     KeysInputIterator     keys_input,
-                                                     Offset*               global_digit_offsets,
-                                                     const Offset          size,
-                                                     const unsigned int    digit_places,
-                                                     const unsigned        begin_bit,
-                                                     const unsigned        end_bit,
-                                                     const hipStream_t     stream,
-                                                     const bool            debug_synchronous)
-{
-    const Offset blocks
-        = ::rocprim::detail::ceiling_div<Offset>(size, OnesweepParams::histogram::items_per_block);
-    const Offset full_blocks
-        = size % OnesweepParams::histogram::items_per_block == 0 ? blocks : blocks - 1;
+    const unsigned int items_per_block
+        = params.histogram.block_size * params.histogram.items_per_thread;
+
+    const Offset blocks      = ::rocprim::detail::ceiling_div<Offset>(size, items_per_block);
+    const Offset full_blocks = size % items_per_block == 0 ? blocks : blocks - 1;
+
+    const unsigned int radix_size_per_place = 1u << params.radix_bits_per_place;
+    const unsigned int places = ceiling_div(end_bit - begin_bit, params.radix_bits_per_place);
+    const unsigned int bins   = radix_size_per_place * places;
 
     // Reset the histogram
-    hipError_t error
-        = hipMemsetAsync(global_digit_offsets, 0, sizeof(Offset) * params.histogram.bins, stream);
+    hipError_t error = hipMemsetAsync(global_digit_offsets, 0, sizeof(Offset) * bins, stream);
     if(error != hipSuccess)
         return error;
 
@@ -191,21 +160,17 @@ inline hipError_t radix_sort_onesweep_global_offsets(const OnesweepParams& param
     }
 
     // Compute a histogram for each digit.
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(onesweep_histograms_kernel<OnesweepParams::histogram::block_size,
-                                                   OnesweepParams::histogram::items_per_thread,
-                                                   OnesweepParams::radix_bits_per_place,
-                                                   Descending>),
-        dim3(blocks),
-        dim3(OnesweepParams::histogram::block_size),
-        0,
-        stream,
-        keys_input,
-        global_digit_offsets,
-        size,
-        full_blocks,
-        begin_bit,
-        end_bit);
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(onesweep_histograms_kernel<config, Descending>),
+                       dim3(blocks),
+                       dim3(params.histogram.block_size),
+                       0,
+                       stream,
+                       keys_input,
+                       global_digit_offsets,
+                       size,
+                       full_blocks,
+                       begin_bit,
+                       end_bit);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("compute_global_digit_histograms", size, start);
 
     // Scan each histogram separately to get the final offsets.
@@ -214,65 +179,63 @@ inline hipError_t radix_sort_onesweep_global_offsets(const OnesweepParams& param
         start = std::chrono::high_resolution_clock::now();
     }
 
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(onesweep_scan_histograms_kernel<OnesweepParams::histogram::block_size,
-                                                        OnesweepParams::radix_bits_per_place>),
-        dim3(digit_places), // One block for every digit place.
-        dim3(OnesweepParams::histogram::block_size),
-        0,
-        stream,
-        global_digit_offsets);
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(onesweep_scan_histograms_kernel<config>),
+                       dim3(digit_places), // One block for every digit place.
+                       dim3(params.histogram.block_size),
+                       0,
+                       stream,
+                       global_digit_offsets);
 
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("scan_global_digit_histograms",
-                                                params.histogram.bins,
-                                                start);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("scan_global_digit_histograms", bins, start);
     return hipSuccess;
 }
 
-template<unsigned int BlockSize,
-         unsigned int ItemsPerThread,
-         unsigned int RadixBits,
-         bool         Descending,
+template<class Config,
+         bool Descending,
          class KeysInputIterator,
          class KeysOutputIterator,
          class ValuesInputIterator,
          class ValuesOutputIterator,
          class Offset>
-ROCPRIM_KERNEL __launch_bounds__(BlockSize) void onesweep_iteration_kernel(
-    KeysInputIterator        keys_input,
-    KeysOutputIterator       keys_output,
-    ValuesInputIterator      values_input,
-    ValuesOutputIterator     values_output,
-    const unsigned int       size,
-    Offset*                  global_digit_offsets_in,
-    Offset*                  global_digit_offsets_out,
-    onesweep_lookback_state* lookback_states,
-    const unsigned int       bit,
-    const unsigned int       current_radix_bits,
-    const unsigned int       full_blocks)
+ROCPRIM_KERNEL
+    __launch_bounds__(device_params<Config>().sort.block_size) void onesweep_iteration_kernel(
+        KeysInputIterator        keys_input,
+        KeysOutputIterator       keys_output,
+        ValuesInputIterator      values_input,
+        ValuesOutputIterator     values_output,
+        const unsigned int       size,
+        Offset*                  global_digit_offsets_in,
+        Offset*                  global_digit_offsets_out,
+        onesweep_lookback_state* lookback_states,
+        const unsigned int       bit,
+        const unsigned int       current_radix_bits,
+        const unsigned int       full_blocks)
 {
-    onesweep_iteration<BlockSize, ItemsPerThread, RadixBits, Descending>(keys_input,
-                                                                         keys_output,
-                                                                         values_input,
-                                                                         values_output,
-                                                                         size,
-                                                                         global_digit_offsets_in,
-                                                                         global_digit_offsets_out,
-                                                                         lookback_states,
-                                                                         bit,
-                                                                         current_radix_bits,
-                                                                         full_blocks);
+    static constexpr radix_sort_onesweep_config_params params = device_params<Config>();
+    onesweep_iteration<params.sort.block_size,
+                       params.sort.items_per_thread,
+                       params.radix_bits_per_place,
+                       Descending>(keys_input,
+                                   keys_output,
+                                   values_input,
+                                   values_output,
+                                   size,
+                                   global_digit_offsets_in,
+                                   global_digit_offsets_out,
+                                   lookback_states,
+                                   bit,
+                                   current_radix_bits,
+                                   full_blocks);
 }
 
-template<bool Descending,
-         class OnesweepParams,
+template<class Config,
+         bool Descending,
          class KeysInputIterator,
          class KeysOutputIterator,
          class ValuesInputIterator,
          class ValuesOutputIterator,
          class Offset>
 inline hipError_t radix_sort_onesweep_iteration(
-    const OnesweepParams&                                           params,
     KeysInputIterator                                               keys_input,
     typename std::iterator_traits<KeysInputIterator>::value_type*   keys_tmp,
     KeysOutputIterator                                              keys_output,
@@ -290,21 +253,42 @@ inline hipError_t radix_sort_onesweep_iteration(
     const hipStream_t                                               stream,
     const bool                                                      debug_synchronous)
 {
-    const unsigned int current_radix_bits
-        = ::rocprim::min(OnesweepParams::radix_bits_per_place, end_bit - bit);
+    using key_type   = typename std::iterator_traits<KeysInputIterator>::value_type;
+    using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
+    using config     = wrapped_radix_sort_onesweep_config<Config, key_type, value_type>;
 
-    for(Offset batch = 0; batch < params.sort.batches; ++batch)
+    detail::target_arch target_arch;
+    hipError_t          result = host_target_arch(stream, target_arch);
+    if(result != hipSuccess)
     {
-        const Offset       offset             = batch * params.sort.items_per_batch;
+        return result;
+    }
+    const radix_sort_onesweep_config_params params = dispatch_target_arch<config>(target_arch);
+
+    const unsigned int items_per_block = params.sort.block_size * params.sort.items_per_thread;
+    const unsigned int current_radix_bits
+        = ::rocprim::min(params.radix_bits_per_place, end_bit - bit);
+
+    const unsigned int radix_size_per_place     = 1u << params.radix_bits_per_place;
+    const unsigned int max_items_per_full_batch = 1u << 30;
+    const unsigned int items_per_full_batch
+        = max_items_per_full_batch - max_items_per_full_batch % items_per_block;
+
+    const unsigned int batches = ceiling_div(size, items_per_full_batch);
+    const unsigned int items_per_batch
+        = static_cast<unsigned int>(::rocprim::min<size_t>(size, items_per_full_batch));
+
+    for(Offset batch = 0; batch < batches; ++batch)
+    {
+        const Offset       offset             = batch * items_per_batch;
         const Offset       items_left         = size - offset;
-        const unsigned int current_batch_size = static_cast<unsigned int>(
-            ::rocprim::min<Offset>(items_left, params.sort.items_per_batch));
+        const unsigned int current_batch_size
+            = static_cast<unsigned int>(::rocprim::min<Offset>(items_left, items_per_batch));
         const unsigned int blocks
-            = ::rocprim::detail::ceiling_div<Offset>(current_batch_size,
-                                                     OnesweepParams::sort::items_per_block);
+            = ::rocprim::detail::ceiling_div<Offset>(current_batch_size, items_per_block);
         const unsigned int full_blocks
-            = current_batch_size % OnesweepParams::sort::items_per_block == 0 ? blocks : blocks - 1;
-        const unsigned int num_lookback_states = OnesweepParams::radix_size_per_place * blocks;
+            = current_batch_size % items_per_block == 0 ? blocks : blocks - 1;
+        const unsigned int num_lookback_states = radix_size_per_place * blocks;
 
         // Reset lookback scan states to zero, indicating empty prefix.
         hipError_t error = hipMemsetAsync(lookback_states,
@@ -317,13 +301,12 @@ inline hipError_t radix_sort_onesweep_iteration(
         std::chrono::high_resolution_clock::time_point start;
         if(debug_synchronous)
         {
-            std::cout << "radix_bits " << OnesweepParams::radix_bits_per_place << '\n';
-            std::cout << "items_per_block " << OnesweepParams::sort::items_per_block << '\n';
-            std::cout << "items_per_full_batch " << OnesweepParams::sort::items_per_full_batch
-                      << '\n';
+            std::cout << "radix_bits " << params.radix_bits_per_place << '\n';
+            std::cout << "items_per_block " << items_per_block << '\n';
+            std::cout << "items_per_full_batch " << items_per_full_batch << '\n';
             std::cout << "bit " << bit << '\n';
             std::cout << "current_radix_bits " << current_radix_bits << '\n';
-            std::cout << "batches " << params.sort.batches << '\n';
+            std::cout << "batches " << batches << '\n';
             std::cout << "batch " << batch << '\n';
             std::cout << "items_left " << items_left << '\n';
             std::cout << "current_batch_size " << current_batch_size << '\n';
@@ -335,95 +318,79 @@ inline hipError_t radix_sort_onesweep_iteration(
 
         if(from_input && to_output)
         {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(onesweep_iteration_kernel<OnesweepParams::sort::block_size,
-                                                          OnesweepParams::sort::items_per_thread,
-                                                          OnesweepParams::radix_bits_per_place,
-                                                          Descending>),
-                dim3(blocks),
-                dim3(OnesweepParams::sort::block_size),
-                0,
-                stream,
-                keys_input + offset,
-                keys_output,
-                values_input + offset,
-                values_output,
-                current_batch_size,
-                global_digit_offsets_in,
-                global_digit_offsets_out,
-                lookback_states,
-                bit,
-                current_radix_bits,
-                full_blocks);
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(onesweep_iteration_kernel<config, Descending>),
+                               dim3(blocks),
+                               dim3(params.sort.block_size),
+                               0,
+                               stream,
+                               keys_input + offset,
+                               keys_output,
+                               values_input + offset,
+                               values_output,
+                               current_batch_size,
+                               global_digit_offsets_in,
+                               global_digit_offsets_out,
+                               lookback_states,
+                               bit,
+                               current_radix_bits,
+                               full_blocks);
         }
         else if(from_input)
         {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(onesweep_iteration_kernel<OnesweepParams::sort::block_size,
-                                                          OnesweepParams::sort::items_per_thread,
-                                                          OnesweepParams::radix_bits_per_place,
-                                                          Descending>),
-                dim3(blocks),
-                dim3(OnesweepParams::sort::block_size),
-                0,
-                stream,
-                keys_input + offset,
-                keys_tmp,
-                values_input + offset,
-                values_tmp,
-                current_batch_size,
-                global_digit_offsets_in,
-                global_digit_offsets_out,
-                lookback_states,
-                bit,
-                current_radix_bits,
-                full_blocks);
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(onesweep_iteration_kernel<config, Descending>),
+                               dim3(blocks),
+                               dim3(params.sort.block_size),
+                               0,
+                               stream,
+                               keys_input + offset,
+                               keys_tmp,
+                               values_input + offset,
+                               values_tmp,
+                               current_batch_size,
+                               global_digit_offsets_in,
+                               global_digit_offsets_out,
+                               lookback_states,
+                               bit,
+                               current_radix_bits,
+                               full_blocks);
         }
         else if(to_output)
         {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(onesweep_iteration_kernel<OnesweepParams::sort::block_size,
-                                                          OnesweepParams::sort::items_per_thread,
-                                                          OnesweepParams::radix_bits_per_place,
-                                                          Descending>),
-                dim3(blocks),
-                dim3(OnesweepParams::sort::block_size),
-                0,
-                stream,
-                keys_tmp + offset,
-                keys_output,
-                values_tmp + offset,
-                values_output,
-                current_batch_size,
-                global_digit_offsets_in,
-                global_digit_offsets_out,
-                lookback_states,
-                bit,
-                current_radix_bits,
-                full_blocks);
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(onesweep_iteration_kernel<config, Descending>),
+                               dim3(blocks),
+                               dim3(params.sort.block_size),
+                               0,
+                               stream,
+                               keys_tmp + offset,
+                               keys_output,
+                               values_tmp + offset,
+                               values_output,
+                               current_batch_size,
+                               global_digit_offsets_in,
+                               global_digit_offsets_out,
+                               lookback_states,
+                               bit,
+                               current_radix_bits,
+                               full_blocks);
         }
         else
         {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(onesweep_iteration_kernel<OnesweepParams::sort::block_size,
-                                                          OnesweepParams::sort::items_per_thread,
-                                                          OnesweepParams::radix_bits_per_place,
-                                                          Descending>),
-                dim3(blocks),
-                dim3(OnesweepParams::sort::block_size),
-                0,
-                stream,
-                keys_output + offset,
-                keys_tmp,
-                values_output + offset,
-                values_tmp,
-                current_batch_size,
-                global_digit_offsets_in,
-                global_digit_offsets_out,
-                lookback_states,
-                bit,
-                current_radix_bits,
-                full_blocks);
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(onesweep_iteration_kernel<config, Descending>),
+                               dim3(blocks),
+                               dim3(params.sort.block_size),
+                               0,
+                               stream,
+                               keys_output + offset,
+                               keys_tmp,
+                               values_output + offset,
+                               values_tmp,
+                               current_batch_size,
+                               global_digit_offsets_in,
+                               global_digit_offsets_out,
+                               lookback_states,
+                               bit,
+                               current_radix_bits,
+                               full_blocks);
         }
 
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("onesweep_iteration", size, start);
@@ -460,12 +427,28 @@ inline hipError_t radix_sort_onesweep_impl(
     using value_type  = typename std::iterator_traits<ValuesInputIterator>::value_type;
     using offset_type = offset_type_t<Size>;
 
-    using config = default_or_custom_config<
-        Config,
-        default_radix_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>>;
+    using config = wrapped_radix_sort_onesweep_config<Config, key_type, value_type>;
 
-    using params_type = onesweep_params<config>;
-    params_type params(size, begin_bit, end_bit);
+    detail::target_arch target_arch;
+    hipError_t          result = host_target_arch(stream, target_arch);
+    if(result != hipSuccess)
+    {
+        return result;
+    }
+    const radix_sort_onesweep_config_params params = dispatch_target_arch<config>(target_arch);
+
+    const unsigned int sort_items_per_block = params.sort.block_size * params.sort.items_per_thread;
+    const unsigned int radix_size_per_place = 1u << params.radix_bits_per_place;
+    const unsigned int max_items_per_full_batch = 1u << 30;
+    const unsigned int items_per_full_batch
+        = max_items_per_full_batch - max_items_per_full_batch % sort_items_per_block;
+
+    const unsigned int places = ceiling_div(end_bit - begin_bit, params.radix_bits_per_place);
+    const unsigned int bins   = radix_size_per_place * places;
+    const unsigned int items_per_batch
+        = static_cast<unsigned int>(::rocprim::min<size_t>(size, items_per_full_batch));
+    const unsigned int num_lookback_states
+        = radix_size_per_place * ceiling_div(items_per_batch, sort_items_per_block);
 
     constexpr bool with_values        = !std::is_same<value_type, ::rocprim::empty_type>::value;
     const bool     with_double_buffer = keys_tmp != nullptr;
@@ -480,10 +463,10 @@ inline hipError_t radix_sort_onesweep_impl(
         temporary_storage,
         storage_size,
         detail::temp_storage::make_linear_partition(
-            detail::temp_storage::ptr_aligned_array(&global_digit_offsets, params.histogram.bins),
+            detail::temp_storage::ptr_aligned_array(&global_digit_offsets, bins),
             detail::temp_storage::ptr_aligned_array(&global_digit_offsets_tmp,
-                                                    params_type::radix_size_per_place),
-            detail::temp_storage::ptr_aligned_array(&lookback_states, params.sort.lookback_states),
+                                                    radix_size_per_place),
+            detail::temp_storage::ptr_aligned_array(&lookback_states, num_lookback_states),
             detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
                                                     !with_double_buffer ? size : 0),
             detail::temp_storage::ptr_aligned_array(&values_tmp_storage,
@@ -500,10 +483,10 @@ inline hipError_t radix_sort_onesweep_impl(
 
     if(debug_synchronous)
     {
-        std::cout << "radix_size " << params_type::radix_size_per_place << '\n';
-        std::cout << "digit_places " << params.places << '\n';
-        std::cout << "histograms_size " << params.histogram.bins << '\n';
-        std::cout << "num_lookback_states " << params.sort.lookback_states << '\n';
+        std::cout << "radix_size " << radix_size_per_place << '\n';
+        std::cout << "digit_places " << places << '\n';
+        std::cout << "histograms_size " << bins << '\n';
+        std::cout << "num_lookback_states " << num_lookback_states << '\n';
         hipError_t error = hipStreamSynchronize(stream);
         if(error != hipSuccess)
             return error;
@@ -512,15 +495,15 @@ inline hipError_t radix_sort_onesweep_impl(
     // Compute the global digit offset, for each digit and for each digit place.
     {
         hipError_t error
-            = radix_sort_onesweep_global_offsets<Descending>(params,
-                                                             keys_input,
-                                                             global_digit_offsets,
-                                                             static_cast<offset_type>(size),
-                                                             params.places,
-                                                             begin_bit,
-                                                             end_bit,
-                                                             stream,
-                                                             debug_synchronous);
+            = radix_sort_onesweep_global_offsets<Config, Descending>(keys_input,
+                                                                     values_input,
+                                                                     global_digit_offsets,
+                                                                     static_cast<offset_type>(size),
+                                                                     places,
+                                                                     begin_bit,
+                                                                     end_bit,
+                                                                     stream,
+                                                                     debug_synchronous);
         if(error != hipSuccess)
             return error;
     }
@@ -532,7 +515,7 @@ inline hipError_t radix_sort_onesweep_impl(
     }
 
     // Copy input keys and values if necessary (in-place sorting: input and output iterators are equal).
-    bool to_output  = with_double_buffer || (params.places - 1) % 2 == 0;
+    bool to_output  = with_double_buffer || (places - 1) % 2 == 0;
     bool from_input = true;
     if(!with_double_buffer && to_output)
     {
@@ -568,10 +551,9 @@ inline hipError_t radix_sort_onesweep_impl(
 
     // Sort each digit place iteratively.
     for(unsigned bit = begin_bit, place = 0; bit < end_bit;
-        bit += params_type::radix_bits_per_place, ++place)
+        bit += params.radix_bits_per_place, ++place)
     {
-        hipError_t error = radix_sort_onesweep_iteration<Descending>(
-            params,
+        hipError_t error = radix_sort_onesweep_iteration<Config, Descending>(
             keys_input,
             keys_tmp,
             keys_output,
@@ -579,7 +561,7 @@ inline hipError_t radix_sort_onesweep_impl(
             values_tmp,
             values_output,
             static_cast<offset_type>(size),
-            global_digit_offsets + place * params_type::radix_size_per_place,
+            global_digit_offsets + place * radix_size_per_place,
             global_digit_offsets_tmp,
             lookback_states,
             from_input,
@@ -641,12 +623,19 @@ hipError_t radix_sort_impl(void * temporary_storage,
         default_radix_sort_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
     >;
 
+    // The following hardcoded radix_sort_block_sort kernel configuration provides
+    // superior performance when input_size is small (< ~100000). This is because
+    // compute unit utilization is higher with this hardcoded configuration.
+    using low_sizes_block_sort_config = kernel_config<256, 4>;
+
     kernel_config_params single_sort_params;
-    hipError_t error = get_radix_sort_block_sort_config<typename Config::block_sort_config,
-                                                        key_type,
-                                                        value_type>(stream, single_sort_params);
+    hipError_t           error
+        = get_radix_sort_block_sort_config<low_sizes_block_sort_config, key_type, value_type>(
+            stream,
+            single_sort_params);
     if(error != hipSuccess)
         return error;
+
     constexpr unsigned int merge_sort_limit = config::merge_size_limit_blocks * 1024;
 
     unsigned int single_sort_items_per_block
@@ -665,7 +654,7 @@ hipError_t radix_sort_impl(void * temporary_storage,
             return hipSuccess;
         }
         is_result_in_output = true;
-        return radix_sort_block_sort<typename Config::block_sort_config, Descending>(
+        return radix_sort_block_sort<low_sizes_block_sort_config, Descending>(
             keys_input,
             keys_output,
             values_input,
@@ -677,7 +666,8 @@ hipError_t radix_sort_impl(void * temporary_storage,
             stream,
             debug_synchronous);
     }
-    else if(size <= merge_sort_limit)
+    // For sizeof(key_type) <= 2, onesweep is 2x/3x faster (also with values) when input_size > 100K, so don't use radix_sort_merge_sort then.
+    else if(size <= merge_sort_limit && (sizeof(key_type) > 2 || size < 100000))
     {
         is_result_in_output = true;
         return radix_sort_merge_impl<typename Config::merge_sort_config, Descending>(
@@ -697,20 +687,20 @@ hipError_t radix_sort_impl(void * temporary_storage,
     }
     else
     {
-        return radix_sort_onesweep_impl<Config, Descending>(temporary_storage,
-                                                            storage_size,
-                                                            keys_input,
-                                                            keys_tmp,
-                                                            keys_output,
-                                                            values_input,
-                                                            values_tmp,
-                                                            values_output,
-                                                            size,
-                                                            is_result_in_output,
-                                                            begin_bit,
-                                                            end_bit,
-                                                            stream,
-                                                            debug_synchronous);
+        return radix_sort_onesweep_impl<typename Config::onesweep, Descending>(temporary_storage,
+                                                                               storage_size,
+                                                                               keys_input,
+                                                                               keys_tmp,
+                                                                               keys_output,
+                                                                               values_input,
+                                                                               values_tmp,
+                                                                               values_output,
+                                                                               size,
+                                                                               is_result_in_output,
+                                                                               begin_bit,
+                                                                               end_bit,
+                                                                               stream,
+                                                                               debug_synchronous);
     }
 }
 

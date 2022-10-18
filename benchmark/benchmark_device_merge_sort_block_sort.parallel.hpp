@@ -104,7 +104,9 @@ struct device_merge_sort_block_sort_benchmark : public config_autotune_interface
         std::vector<key_type> keys_input;
         if(std::is_floating_point<key_type>::value)
         {
-            keys_input = get_random_data<key_type>(size, (key_type)-1000, (key_type) + 1000);
+            keys_input = get_random_data<key_type>(size,
+                                                   static_cast<key_type>(-1000),
+                                                   static_cast<key_type>(1000));
         }
         else
         {
@@ -195,7 +197,9 @@ struct device_merge_sort_block_sort_benchmark : public config_autotune_interface
         std::vector<key_type> keys_input;
         if(std::is_floating_point<key_type>::value)
         {
-            keys_input = get_random_data<key_type>(size, (key_type)-1000, (key_type) + 1000);
+            keys_input = get_random_data<key_type>(size,
+                                                   static_cast<key_type>(-1000),
+                                                   static_cast<key_type>(1000));
         }
         else
         {

@@ -62,14 +62,14 @@ struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_con
 
 struct merge_sort_block_merge_config_params
 {
-    kernel_config_params merge_oddeven_config             = {1024, 1, (1 << 17) + 70000};
+    kernel_config_params merge_oddeven_config             = {256, 1, (1 << 17) + 70000};
     kernel_config_params merge_mergepath_partition_config = {128, 1};
     kernel_config_params merge_mergepath_config           = {128, 4};
 };
 
 // Necessary to construct a parameterized type of `merge_sort_block_merge_config_params`.
 // Used in passing to host-side sub-algorithms and GPU kernels so non-default parameters can be available during compile-time.
-template<unsigned int OddEvenBlockSize        = 1024,
+template<unsigned int OddEvenBlockSize        = 256,
          unsigned int OddEvenItemsPerThread   = 1,
          unsigned int OddEvenSizeLimit        = (1 << 17) + 70000,
          unsigned int PartitionBlockSize      = 128,
@@ -163,18 +163,31 @@ template<class Key, class Value>
 struct default_merge_sort_config_base : default_merge_sort_config_base_helper<Key, Value>::type
 {};
 
-template<class HistogramConfig  = kernel_config<256, 8>,
-         class SortConfig       = kernel_config<256, 15>,
+struct radix_sort_onesweep_config_params
+{
+    kernel_config_params histogram = {256, 12};
+    kernel_config_params sort      = {256, 12};
+
+    /// \brief The number of bits to sort in one onesweep iteration.
+    unsigned int radix_bits_per_place = 4;
+};
+
+template<class HistogramConfig  = kernel_config<256, 12>,
+         class SortConfig       = kernel_config<256, 12>,
          unsigned int RadixBits = 4>
-struct radix_sort_onesweep_config
+struct radix_sort_onesweep_config : radix_sort_onesweep_config_params
 {
     /// \brief Configration of radix sort onesweep histogram kernel.
     using histogram = HistogramConfig;
     /// \brief Configration of radix sort onesweep sort kernel.
     using sort = SortConfig;
 
-    /// \brief The number of bits to sort in one onesweep iteration.
-    static constexpr unsigned int radix_bits = RadixBits;
+    constexpr radix_sort_onesweep_config()
+        : radix_sort_onesweep_config_params{
+            {HistogramConfig::block_size, HistogramConfig::items_per_thread},
+            {     SortConfig::block_size,      SortConfig::items_per_thread},
+            RadixBits
+    } {};
 };
 
 } // namespace detail

@@ -34,6 +34,42 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+// sub-algorithm onesweep:
+template<typename RadixSortOnesweepConfig, typename, typename>
+struct wrapped_radix_sort_onesweep_config
+{
+    template<target_arch Arch>
+    struct architecture_config
+    {
+        static constexpr radix_sort_onesweep_config_params params = RadixSortOnesweepConfig();
+    };
+};
+
+template<typename Key, typename Value>
+struct wrapped_radix_sort_onesweep_config<default_config, Key, Value>
+{
+    template<target_arch Arch>
+    struct architecture_config
+    {
+        static constexpr radix_sort_onesweep_config_params params
+            = default_radix_sort_onesweep_config<static_cast<unsigned int>(Arch), Key, Value>();
+    };
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+template<typename RadixSortOnesweepConfig, typename Key, typename Value>
+template<target_arch Arch>
+constexpr radix_sort_onesweep_config_params
+    wrapped_radix_sort_onesweep_config<RadixSortOnesweepConfig, Key, Value>::architecture_config<
+        Arch>::params;
+
+template<typename Key, typename Value>
+template<target_arch Arch>
+constexpr radix_sort_onesweep_config_params
+    wrapped_radix_sort_onesweep_config<default_config, Key, Value>::architecture_config<
+        Arch>::params;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 // Sub-algorithm block_sort:
 template<typename RadixSortBlockSortConfig, typename, typename>
 struct wrapped_radix_sort_block_sort_config

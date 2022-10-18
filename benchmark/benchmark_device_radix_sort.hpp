@@ -299,95 +299,11 @@ struct device_radix_sort_benchmark : public config_autotune_interface
     }
 };
 
-#ifdef BENCHMARK_CONFIG_TUNING
-
-inline constexpr unsigned int get_max_items_per_thread(size_t key_bytes, size_t value_bytes)
-{
-    size_t total_bytes = key_bytes + value_bytes;
-    if(total_bytes <= 12)
-    {
-        return 20;
+#define CREATE_RADIX_SORT_BENCHMARK(...)                         \
+    {                                                            \
+        const device_radix_sort_benchmark<__VA_ARGS__> instance; \
+        REGISTER_BENCHMARK(benchmarks, size, stream, instance);  \
     }
-    else if(12 < total_bytes && total_bytes <= 18)
-    {
-        return 15;
-    }
-    else //(18 < total_bytes)
-    {
-        return 10;
-    }
-}
-
-template<unsigned int SortItemsPerThread, typename Key, typename Value>
-constexpr bool enable_config = sizeof(Key) + sizeof(Value) <= 8 || SortItemsPerThread <= 12;
-
-template<unsigned int RadixBits,
-         unsigned int SortItemsPerThread,
-         typename Key,
-         typename Value  = rocprim::empty_type,
-         typename Enable = void>
-struct device_radix_sort_benchmark_generator;
-
-template<unsigned int RadixBits, unsigned int SortItemsPerThread, typename Key, typename Value>
-struct device_radix_sort_benchmark_generator<
-    RadixBits,
-    SortItemsPerThread,
-    Key,
-    Value,
-    std::enable_if_t<enable_config<SortItemsPerThread, Key, Value>>>
-{
-    template<unsigned int HistogramItemsPerThread>
-    struct create_ipt1
-    {
-        void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-        {
-            storage.emplace_back(
-                std::make_unique<device_radix_sort_benchmark<
-                    Key,
-                    Value,
-                    // Note: first 4 parameters are not used by the radix sort algorithm,
-                    //   and the 4 parameters after that are not used by this benchmark.
-                    rocprim::radix_sort_config<4,
-                                               4,
-                                               rocprim::kernel_config<256, 7>,
-                                               rocprim::kernel_config<256, 10>,
-                                               rocprim::kernel_config<256, 10>,
-                                               rocprim::kernel_config<1024, 1>,
-                                               1024,
-                                               false,
-                                               rocprim::kernel_config<256, HistogramItemsPerThread>,
-                                               rocprim::kernel_config<256, SortItemsPerThread>,
-                                               RadixBits>>>());
-        }
-    };
-
-    static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
-    {
-        static constexpr unsigned int max_items_per_thread
-            = get_max_items_per_thread(sizeof(Key), sizeof(Value));
-        static_for_each<make_index_range<unsigned int, 1, max_items_per_thread>, create_ipt1>(
-            storage);
-    }
-};
-
-template<unsigned int RadixBits, unsigned int SortItemsPerThread, typename Key, typename Value>
-struct device_radix_sort_benchmark_generator<
-    RadixBits,
-    SortItemsPerThread,
-    Key,
-    Value,
-    std::enable_if_t<!enable_config<SortItemsPerThread, Key, Value>>>
-{
-    static void create(std::vector<std::unique_ptr<config_autotune_interface>>&) {}
-};
-
-#else // BENCHMARK_CONFIG_TUNING
-
-    #define CREATE_RADIX_SORT_BENCHMARK(...)                         \
-        {                                                            \
-            const device_radix_sort_benchmark<__VA_ARGS__> instance; \
-            REGISTER_BENCHMARK(benchmarks, size, stream, instance);  \
-        }
 
 inline void add_sort_keys_benchmarks(std::vector<benchmark::internal::Benchmark*>& benchmarks,
                                      hipStream_t                                   stream,
@@ -426,7 +342,5 @@ inline void add_sort_pairs_benchmarks(std::vector<benchmark::internal::Benchmark
     CREATE_RADIX_SORT_BENCHMARK(uint8_t, uint8_t)
     CREATE_RADIX_SORT_BENCHMARK(rocprim::half, rocprim::half)
 }
-
-#endif // BENCHMARK_CONFIG_TUNING
 
 #endif // ROCPRIM_BENCHMARK_DEVICE_RADIX_SORT_PARALLEL_HPP_

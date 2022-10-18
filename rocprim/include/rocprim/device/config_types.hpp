@@ -40,11 +40,14 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief Special type used to show that the given device-level operation
 /// will be executed with optimal configuration dependent on types of the function's parameters
 /// and the target device architecture specified by ROCPRIM_TARGET_ARCH.
+/// Algorithms supporting dynamic dispatch will ignore ROCPRIM_TARGET_ARCH and
+/// launch using optimal configuration based on the target architecture derived from the stream.
 struct default_config
 {
     using block_sort_config  = default_config;
     using block_merge_config = default_config;
     using merge_sort_config  = default_config;
+    using onesweep           = default_config;
 };
 
 namespace detail
