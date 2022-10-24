@@ -226,6 +226,10 @@ def block_sort_config_get_best(input: Dict) -> Dict[str, str]:
 # You can find this value in the tuning template
 def merge_sort_block_merge_config_get_best(input: Dict) -> Dict[str, str]:
     input_mergepath = list(filter(lambda x: (int(x.get('oddeven_size_limit')) == 0), input))
+    # Since merge_sort_block_merge is used after radix_sort_block_sort<256, 4>, and
+    # mergepath_block_size * mergepath_items_per_thread >= 256*4 should hold (TODO: this will be solved in the near future):
+    input_mergepath = list(filter(lambda x: (int(x.get('mergepath_block_size'))*int(x.get('mergepath_items_per_thread')) <= 1024), input_mergepath))
+
     best_mergepath = max(input_mergepath, key=lambda x: x.get('items_per_second', 0.0))
     return best_mergepath
 
