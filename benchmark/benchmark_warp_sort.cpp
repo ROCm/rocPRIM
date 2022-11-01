@@ -194,14 +194,14 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t size)
 
 #define CREATE_SORT_BENCHMARK(K, BS, WS, IPT) \
     benchmark::RegisterBenchmark( \
-        "warp_sort<"#K", "#BS", "#WS", "#IPT">.sort(only keys)", \
+        "warp_sort<Datatype:"#K", Block Size:"#BS", Warp Size:"#WS", Items Per Thread:"#IPT", SortByKey:False>", \
         run_benchmark<K, BS, WS, IPT>, \
         stream, size \
     )
 
 #define CREATE_SORTBYKEY_BENCHMARK(K, V, BS, WS, IPT) \
     benchmark::RegisterBenchmark( \
-        "warp_sort<"#K", "#BS", "#WS", "#IPT", "#V">.sort", \
+        "warp_sort<Datatype:"#K",Block Size:"#BS",Warp Size:"#WS",Items Per Thread:"#IPT",Value:"#V", SortByKey:True>", \
         run_benchmark<K, BS, WS, IPT, V, true>, \
         stream, size \
     )
@@ -242,6 +242,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
 
+    std::cout << "benchmark_warp_sort" << std::endl;
+    
     // HIP
     hipStream_t stream = 0; // default
 

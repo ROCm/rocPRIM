@@ -456,14 +456,14 @@ void run_benchmark_memcpy(benchmark::State& state,
 
 #define CREATE_BENCHMARK(METHOD, OPERATION, T, SIZE, BLOCK_SIZE, IPT) \
 benchmark::RegisterBenchmark( \
-    (#METHOD "_" #OPERATION "<" #T "," #SIZE ",BS:" #BLOCK_SIZE ",IPT:" #IPT ">"), \
+    (#METHOD "_" #OPERATION "<Datatype: " #T ", Size: " #SIZE ", Block Size:" #BLOCK_SIZE ", Items Per Thread::" #IPT ">"), \
     run_benchmark<T, BLOCK_SIZE, IPT, METHOD, OPERATION \
     >, SIZE, stream \
 )
 
 #define CREATE_BENCHMARK_MEMCPY(T, SIZE) \
 benchmark::RegisterBenchmark( \
-    ("Memcpy<" #T "," #SIZE">"), run_benchmark_memcpy<T>, SIZE, stream \
+    ("Memcpy<Datatype: " #T ", Size:" #SIZE">"), run_benchmark_memcpy<T>, SIZE, stream \
 )
 
 template<class T>
@@ -482,6 +482,8 @@ int main(int argc, char *argv[])
     benchmark::Initialize(&argc, argv);
     const int trials = parser.get<int>("trials");
 
+    std::cout << "benchmark_device_memory" << std::endl;
+    
     // HIP
     hipStream_t stream = 0; // default
 

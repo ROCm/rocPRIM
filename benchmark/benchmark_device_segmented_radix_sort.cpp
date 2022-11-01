@@ -379,7 +379,7 @@ void add_sort_keys_benchmarks(std::vector<benchmark::internal::Benchmark *> &ben
             }
             benchmarks.push_back(
                 benchmark::RegisterBenchmark(
-                    (std::string("sort_keys<") + name + ">(" + std::to_string(segment_count) +
+                    (std::string("sort_keys<Key:") + name + ">(Segment Count:" + std::to_string(segment_count) +
                         " segments with length ~" + std::to_string(segment_length) +")").c_str(),
                     [=](benchmark::State &state) { run_sort_keys_benchmark<KeyT>(state, segment_count, segment_length, target_size, stream); }
                 )
@@ -408,7 +408,7 @@ void add_sort_pairs_benchmarks(std::vector<benchmark::internal::Benchmark *> &be
             }
             benchmarks.push_back(
                 benchmark::RegisterBenchmark(
-                    (std::string("sort_pairs<") + key_name + ", " + value_name + ">(" + std::to_string(segment_count) +
+                    (std::string("sort_pairs<Key:") + key_name + ", Value:" + value_name + ">(Segment Count:" + std::to_string(segment_count) +
                         " segments with length ~" + std::to_string(segment_length) +")").c_str(),
                     [=](benchmark::State &state) { run_sort_pairs_benchmark<KeyT, ValueT>(state, segment_count, segment_length, target_size, stream); }
                 )
@@ -429,6 +429,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
 
+    std::cout << "benchmark_device_segmented_radix_sort" << std::endl;
+    
     // HIP
     hipStream_t stream = 0; // default
 

@@ -155,7 +155,7 @@ void run_lower_bound_benchmark(benchmark::State& state, hipStream_t stream,
 #define CREATE_LOWER_BOUND_BENCHMARK(T, K, SORTED) \
 benchmark::RegisterBenchmark( \
     ( \
-        std::string("lower_bound") + "<" #T ">(" #K "\% " + \
+        std::string("lower_bound") + "<Datatype:" #T ">(Needle Type:" #K "\% " + \
         (SORTED ? "sorted" : "random") + " needles)" \
     ).c_str(), \
     [=](benchmark::State& state) { run_lower_bound_benchmark<T>(state, stream, size, size * K / 100, SORTED); } \
@@ -177,6 +177,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
 
+    std::cout << "benchmark_device_binary_search" << std::endl;
+    
     // HIP
     hipStream_t stream = 0; // default
 

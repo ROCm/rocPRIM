@@ -376,19 +376,19 @@ void run_three_way_benchmark(benchmark::State& state,
 
 #define CREATE_PARTITION_FLAGGED_BENCHMARK(T, F, p) \
 benchmark::RegisterBenchmark( \
-    ("partition(flags)<" #T "," #F ", "#T", unsigned int>(p = " #p")"), \
+    ("partition(flags)<Datatype:" #T ", Flag Type:" #F ", Output Datatype:"#T", Selected Count Output Datatype:unsigned int>(Probability:" #p")"), \
     run_flagged_benchmark<T, F>, size, stream, p \
 )
 
 #define CREATE_PARTITION_IF_BENCHMARK(T, p) \
 benchmark::RegisterBenchmark( \
-    ("partition(if)<" #T ", "#T", unsigned int>(p = " #p")"), \
+    ("partition(if)<Datatype:" #T ", Output Datatype:"#T", Selected Count Output Datatype:unsigned int>(Probability:" #p")"), \
     run_if_benchmark<T>, size, stream, p \
 )
 
 #define CREATE_PARTITION_THREE_WAY_BENCHMARK(T, p1, p2) \
 benchmark::RegisterBenchmark( \
-    ("partition(three_way)<" #T ", "#T", unsigned int>(p1 = " #p1", p2 = "#p2")"), \
+    ("partition(three_way)<Datatype:" #T ", Output Datatype:"#T", Selected Count Output Datatype:unsigned int>(1st Probability:" #p1", 2nd Probability:"#p2")"), \
     run_three_way_benchmark<T>, size, stream, p1, p2 \
 )
 
@@ -422,6 +422,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
 
+    std::cout << "benchmark_device_partition" << std::endl;
+    
     // HIP
     hipStream_t stream = 0; // default
 

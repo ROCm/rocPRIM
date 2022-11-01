@@ -170,8 +170,8 @@ void run_benchmark(benchmark::State& state, size_t desired_segments, hipStream_t
 
 #define CREATE_BENCHMARK(T, SEGMENTS) \
 benchmark::RegisterBenchmark( \
-    (std::string("segmented_reduce") + "<" #T ">" + \
-        "(~" + std::to_string(SEGMENTS) + " segments)" \
+    (std::string("segmented_reduce") + "<Datatype:" #T ">" + \
+        "(Segment Count:~" + std::to_string(SEGMENTS) + " segments)" \
     ).c_str(), \
     run_benchmark<T>, \
     SEGMENTS, stream, size \
@@ -217,6 +217,8 @@ int main(int argc, char *argv[])
     benchmark::Initialize(&argc, argv);
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
+    
+    std::cout << "benchmark_device_segmented_reduce" << std::endl;    
 
     // HIP
     hipStream_t stream = 0; // default

@@ -200,7 +200,7 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
 
 #define CREATE_BENCHMARK(T, WS, BS) \
 benchmark::RegisterBenchmark( \
-    (std::string("warp_reduce<" #T ", " #WS ", " #BS ">.") + name).c_str(), \
+    (std::string("warp_reduce<Datatype:" #T ", Warp Size:" #WS ", Block Size:" #BS ">.SubAlgorithm Name:") + name).c_str(), \
     run_benchmark<AllReduce, Segmented, T, WS, BS>, \
     stream, size \
 )
@@ -242,6 +242,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
 
+    std::cout << "benchmark_warp_reduce" << std::endl;
+    
     // HIP
     hipStream_t stream = 0; // default
 

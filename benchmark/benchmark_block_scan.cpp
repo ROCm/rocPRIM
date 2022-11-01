@@ -191,7 +191,7 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
 // IPT - items per thread
 #define CREATE_BENCHMARK(T, BS, IPT) \
     benchmark::RegisterBenchmark( \
-        (std::string("block_scan<"#T", "#BS", "#IPT", " + algorithm_name + ">.") + method_name).c_str(), \
+        (std::string("block_scan<Datatype:"#T", Block Size:"#BS", Items Per Thread:"#IPT", SubAlgorithm Name:" + algorithm_name + ">.Method Name:") + method_name).c_str(), \
         run_benchmark<Benchmark, T, BS, IPT>, \
         stream, size \
     )

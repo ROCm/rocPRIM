@@ -258,13 +258,13 @@ void run_merge_pairs_benchmark(benchmark::State& state, hipStream_t stream, size
 
 #define CREATE_MERGE_KEYS_BENCHMARK(Key) \
 benchmark::RegisterBenchmark( \
-    (std::string("merge") + "<" #Key ">").c_str(), \
+    (std::string("merge") + "<Key Type:" #Key ">").c_str(), \
     [=](benchmark::State& state) { run_merge_keys_benchmark<Key>(state, stream, size); } \
 )
 
 #define CREATE_MERGE_PAIRS_BENCHMARK(Key, Value) \
 benchmark::RegisterBenchmark( \
-    (std::string("merge") + "<" #Key ", " #Value ">").c_str(), \
+    (std::string("merge") + "<Key Type:" #Key ", Value Type:" #Value ">").c_str(), \
     [=](benchmark::State& state) { run_merge_pairs_benchmark<Key, Value>(state, stream, size); } \
 )
 
@@ -280,6 +280,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
 
+    std::cout << "benchmark_device_merge" << std::endl;
+    
     // HIP
     hipStream_t stream = 0; // default
 
