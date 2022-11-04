@@ -339,7 +339,7 @@ auto run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
 
 #define CREATE_BENCHMARK(T, BS, IPT, WITH_TILE) \
 benchmark::RegisterBenchmark( \
-    (std::string("block_adjacent_difference<" #T ", " #BS ">.") + name + ("<" #IPT ", " #WITH_TILE ">")).c_str(), \
+    (std::string("block_adjacent_difference<Datatype:" #T ", Block Size:" #BS ">.Difference Type:") + name + ("<Items Per Thread:" #IPT ", With Tile:" #WITH_TILE ">")).c_str(), \
     run_benchmark<Benchmark, T, BS, IPT, WITH_TILE>, \
     stream, size \
 )
