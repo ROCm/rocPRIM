@@ -2,6 +2,11 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
+## [rocPRIM-2.11.1 for ROCm 5.3.2]
+### Fixed
+- Fix device_merge when using different types for `keys_input1` and `keys_input2`.
+- Added a test case for using device_merge with different types for `keys_input1` and `keys_input2`. 
+
 ## [rocPRIM-2.11.0 for ROCm 5.3.0]
 ### Added
 - New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
