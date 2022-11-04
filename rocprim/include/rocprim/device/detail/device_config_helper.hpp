@@ -60,6 +60,62 @@ struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_con
     } {};
 };
 
+constexpr unsigned int merge_sort_items_per_thread(const unsigned int item_scale)
+{
+    if(item_scale < 32)
+    {
+        return 8;
+    }
+    else if(item_scale < 64)
+    {
+        return 4;
+    }
+    else if(item_scale < 128)
+    {
+        return 2;
+    }
+    return 1;
+}
+constexpr unsigned int merge_sort_block_size(const unsigned int item_scale)
+{
+    if(item_scale < 16)
+    {
+        return 128;
+    }
+    else if(item_scale < 32)
+    {
+        return 64;
+    }
+    return 32;
+}
+
+// Calculate kernel configurations, such that it will not exceed shared memory maximum
+template<class Key, class Value>
+struct merge_sort_block_sort_config_base
+{
+    static constexpr unsigned int item_scale
+        = ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value));
+    // multiply by 2 to ensure block_sort's items_per_block >= block_merge's items_per_block
+    static constexpr unsigned int block_size       = merge_sort_block_size(item_scale) * 2;
+    static constexpr unsigned int items_per_thread = merge_sort_items_per_thread(item_scale);
+    using type                                     = merge_sort_block_sort_config<block_size,
+                                              items_per_thread,
+                                              block_sort_algorithm::merge_sort>;
+};
+
+// Calculate kernel configurations, such that it will not exceed shared memory maximum
+template<class Key, class Value>
+struct radix_sort_block_sort_config_base
+{
+    static constexpr unsigned int item_scale = ::rocprim::max(sizeof(Key), sizeof(Value));
+
+    // multiply by 2 to ensure block_sort's items_per_block >= block_merge's items_per_block
+    static constexpr unsigned int block_size = merge_sort_block_size(item_scale) * 2;
+    static constexpr unsigned int items_per_thread
+        = rocprim::min(4u, merge_sort_items_per_thread(item_scale));
+    using type = kernel_config<block_size, items_per_thread>;
+};
+
 struct merge_sort_block_merge_config_params
 {
     kernel_config_params merge_oddeven_config             = {256, 1, (1 << 17) + 70000};
@@ -83,6 +139,21 @@ struct merge_sort_block_merge_config : rocprim::detail::merge_sort_block_merge_c
             {PartitionBlockSize, 1},
             {MergePathBlockSize, MergePathItemsPerThread}
     } {};
+};
+
+template<class Key, class Value>
+struct merge_sort_block_merge_config_base
+{
+    static constexpr unsigned int item_scale = ::rocprim::max(sizeof(Key), sizeof(Value));
+
+    static constexpr unsigned int block_size       = merge_sort_block_size(item_scale);
+    static constexpr unsigned int items_per_thread = merge_sort_items_per_thread(item_scale);
+    using type                                     = merge_sort_block_merge_config<block_size,
+                                               1,
+                                               (1 << 17) + 70000,
+                                               128,
+                                               block_size,
+                                               items_per_thread>;
 };
 
 struct merge_sort_config_params
@@ -188,6 +259,19 @@ struct radix_sort_onesweep_config : radix_sort_onesweep_config_params
             {     SortConfig::block_size,      SortConfig::items_per_thread},
             RadixBits
     } {};
+};
+
+// Calculate kernel configurations, such that it will not exceed shared memory maximum
+template<class Key, class Value>
+struct radix_sort_onesweep_config_base
+{
+    static constexpr unsigned int item_scale = ::rocprim::max(sizeof(Key), sizeof(Value));
+
+    static constexpr unsigned int block_size = merge_sort_block_size(item_scale) * 4;
+    using type                               = radix_sort_onesweep_config<
+        kernel_config<256, 12>,
+        kernel_config<block_size, ::rocprim::max(1u, 65000u / block_size / item_scale)>,
+        4>;
 };
 
 } // namespace detail

@@ -42,7 +42,8 @@ template<unsigned int arch,
          class key_type,
          class value_type = rocprim::empty_type,
          class enable     = void>
-struct default_merge_sort_block_merge_config : merge_sort_block_merge_config_params
+struct default_merge_sort_block_merge_config
+    : merge_sort_block_merge_config_base<key_type, value_type>::type
 {};
 
 template<>

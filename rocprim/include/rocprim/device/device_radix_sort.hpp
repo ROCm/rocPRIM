@@ -626,7 +626,12 @@ hipError_t radix_sort_impl(void * temporary_storage,
     // The following hardcoded radix_sort_block_sort kernel configuration provides
     // superior performance when input_size is small (< ~100000). This is because
     // compute unit utilization is higher with this hardcoded configuration.
-    using low_sizes_block_sort_config = kernel_config<256, 4>;
+    // Use <256u, 4u>, unless smaller is needed to not exceed shared memory maximum.
+    using default_radix_sort_block_sort_config =
+        typename rocprim::detail::radix_sort_block_sort_config_base<key_type, value_type>::type;
+    using low_sizes_block_sort_config
+        = kernel_config<rocprim::min(256u, default_radix_sort_block_sort_config::block_size),
+                        rocprim::min(4u, default_radix_sort_block_sort_config::items_per_thread)>;
 
     kernel_config_params single_sort_params;
     hipError_t           error

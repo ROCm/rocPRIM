@@ -11,7 +11,7 @@ kernel_config<{{ measurement['sort_block_size'] }}, {{ measurement['sort_items_p
 
 {% macro general_case() -%}
 template<unsigned int arch, class key_type, class value_type = rocprim::empty_type, class enable = void> struct default_radix_sort_onesweep_config :
-radix_sort_onesweep_config_params { };
+radix_sort_onesweep_config_base<key_type, value_type>::type { };
 {%- endmacro %}
 
 {% macro configuration_arch_specific(benchmark_of_architecture, configuration) -%}
