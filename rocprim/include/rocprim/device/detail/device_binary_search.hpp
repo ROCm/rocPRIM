@@ -46,7 +46,7 @@ Size lower_bound_n(RandomAccessIterator first,
     while(left < right)
     {
         const Size mid = get_binary_search_middle(left, right);
-        if(compare_op(first[mid], value))
+        if(compare_op(typename std::iterator_traits<RandomAccessIterator>::value_type(first[mid]), value))
         {
             left = mid + 1;
         }
@@ -70,7 +70,7 @@ Size upper_bound_n(RandomAccessIterator first,
     while(left < right)
     {
         const Size mid = get_binary_search_middle(left, right);
-        if(compare_op(value, first[mid]))
+        if(compare_op(value, typename std::iterator_traits<RandomAccessIterator>::value_type(first[mid])))
         {
             right = mid;
         }
