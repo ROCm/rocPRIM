@@ -23,6 +23,12 @@
 #ifndef TEST_BLOCK_RADIX_RANK_KERNELS_HPP_
 #define TEST_BLOCK_RADIX_RANK_KERNELS_HPP_
 
+enum class rank_algorithm
+{
+    basic,
+    memoize,
+};
+
 static constexpr size_t       n_sizes                   = 12;
 static constexpr unsigned int items_per_thread[n_sizes] = {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
 static constexpr unsigned int rank_desc[n_sizes]
@@ -32,17 +38,18 @@ static constexpr unsigned int max_radix_bits[n_sizes]  = {4, 3, 5, 3, 1, 5, 4, 2
 static constexpr unsigned int pass_radix_bits[n_sizes] = {0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 1};
 
 template<typename T,
-         unsigned int BlockSize,
-         unsigned int ItemsPerThread,
-         unsigned int MaxRadixBits,
-         bool         MemoizeOuterScan>
+         unsigned int   BlockSize,
+         unsigned int   ItemsPerThread,
+         unsigned int   MaxRadixBits,
+         rank_algorithm Algorithm>
 __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      items_input,
                                                          unsigned int* const ranks_output,
                                                          const bool          descending,
                                                          const unsigned int  start_bit,
                                                          const unsigned int  radix_bits)
 {
-    using block_rank_type = rocprim::block_radix_rank<BlockSize, MaxRadixBits, MemoizeOuterScan>;
+    using block_rank_type
+        = rocprim::block_radix_rank<BlockSize, MaxRadixBits, Algorithm == rank_algorithm::memoize>;
 
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
     const unsigned int     lid             = threadIdx.x;
@@ -68,24 +75,24 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      ite
 }
 
 template<typename T,
-         unsigned int BlockSize,
-         unsigned int ItemsPerThread,
-         unsigned int StartBit,
-         unsigned int MaxRadixBits,
-         unsigned int RadixBits,
-         bool         Descending,
-         bool         MemoizeOuterScan>
+         unsigned int   BlockSize,
+         unsigned int   ItemsPerThread,
+         unsigned int   StartBit,
+         unsigned int   MaxRadixBits,
+         unsigned int   RadixBits,
+         bool           Descending,
+         rank_algorithm Algorithm>
 void test_block_radix_rank()
 {
-    constexpr size_t block_size         = BlockSize;
-    constexpr size_t items_per_thread   = ItemsPerThread;
-    constexpr size_t items_per_block    = block_size * items_per_thread;
-    constexpr size_t start_bit          = StartBit;
-    constexpr size_t max_radix_bits     = MaxRadixBits;
-    constexpr size_t radix_bits         = RadixBits;
-    constexpr size_t end_bit            = start_bit + radix_bits;
-    constexpr bool   descending         = Descending;
-    constexpr bool   memoize_outer_scan = MemoizeOuterScan;
+    constexpr size_t         block_size       = BlockSize;
+    constexpr size_t         items_per_thread = ItemsPerThread;
+    constexpr size_t         items_per_block  = block_size * items_per_thread;
+    constexpr size_t         start_bit        = StartBit;
+    constexpr size_t         max_radix_bits   = MaxRadixBits;
+    constexpr size_t         radix_bits       = RadixBits;
+    constexpr size_t         end_bit          = start_bit + radix_bits;
+    constexpr bool           descending       = Descending;
+    constexpr rank_algorithm algorithm        = Algorithm;
 
     const size_t grid_size = 23;
     const size_t size      = items_per_block * grid_size;
@@ -152,7 +159,7 @@ void test_block_radix_rank()
         // Running kernel
         hipLaunchKernelGGL(
             HIP_KERNEL_NAME(
-                rank_kernel<T, block_size, items_per_thread, max_radix_bits, memoize_outer_scan>),
+                rank_kernel<T, block_size, items_per_thread, max_radix_bits, algorithm>),
             dim3(grid_size),
             dim3(block_size),
             0,
@@ -182,8 +189,8 @@ void test_block_radix_rank()
 template<unsigned int First,
          unsigned int Last,
          typename T,
-         unsigned int BlockSize,
-         bool         MemoizeOuterScan>
+         unsigned int   BlockSize,
+         rank_algorithm Algorithm>
 struct static_for
 {
     static constexpr unsigned int radix_bits
@@ -198,13 +205,13 @@ struct static_for
                               max_radix_bits[First],
                               radix_bits,
                               rank_desc[First],
-                              MemoizeOuterScan>();
-        static_for<First + 1, Last, T, BlockSize, MemoizeOuterScan>::run();
+                              Algorithm>();
+        static_for<First + 1, Last, T, BlockSize, Algorithm>::run();
     }
 };
 
-template<unsigned int Last, typename T, unsigned int BlockSize, bool MemoizeOuterScan>
-struct static_for<Last, Last, T, BlockSize, MemoizeOuterScan>
+template<unsigned int Last, typename T, unsigned int BlockSize, rank_algorithm Algorithm>
+struct static_for<Last, Last, T, BlockSize, Algorithm>
 {
     static void run() {}
 };

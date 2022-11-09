@@ -34,7 +34,7 @@ typed_test_def(suite_name, name_suffix, RankBasic)
         GTEST_SKIP();
     }
 
-    static_for<0, n_sizes, type, block_size, false>::run();
+    static_for<0, n_sizes, type, block_size, rank_algorithm::basic>::run();
 }
 
 typed_test_def(suite_name, name_suffix, RankBasicMemoize)
@@ -47,5 +47,5 @@ typed_test_def(suite_name, name_suffix, RankBasicMemoize)
         GTEST_SKIP();
     }
 
-    static_for<0, n_sizes, type, block_size, true>::run();
+    static_for<0, n_sizes, type, block_size, rank_algorithm::memoize>::run();
 }
