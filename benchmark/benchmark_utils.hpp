@@ -464,8 +464,10 @@ inline const char* Traits<long long>::name()
 {
     return "int64_t";
 }
+#ifndef WIN32
 template <>
 inline const char* Traits<int64_t>::name() { return "int64_t"; }
+#endif
 template <>
 inline const char* Traits<float>::name() { return "float"; }
 template <>
