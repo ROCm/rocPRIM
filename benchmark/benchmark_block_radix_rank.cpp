@@ -46,6 +46,7 @@ enum class benchmark_kind
 {
     RANK_BASIC,
     RANK_MEMOIZE,
+    RANK_MATCH,
 };
 
 template<typename T,
@@ -58,8 +59,10 @@ template<typename T,
 __global__ __launch_bounds__(BlockSize) void rank_kernel(const T*      keys_input,
                                                          unsigned int* ranks_output)
 {
-    using rank_type
-        = rp::block_radix_rank<BlockSize, RadixBits, Kind == benchmark_kind::RANK_MEMOIZE>;
+    using rank_type = std::conditional_t<
+        Kind == benchmark_kind::RANK_MATCH,
+        rp::block_radix_rank_match<BlockSize, RadixBits>,
+        rp::block_radix_rank<BlockSize, RadixBits, Kind == benchmark_kind::RANK_MEMOIZE>>;
 
     const unsigned int lid          = threadIdx.x;
     const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
@@ -166,7 +169,8 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
 // clang-format off
 #define CREATE_BENCHMARK_KINDS(type, block, ipt)                    \
     CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_BASIC), \
-    CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_MEMOIZE)
+    CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_MEMOIZE), \
+    CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_MATCH)
 
 #define BENCHMARK_TYPE(type, block)          \
     CREATE_BENCHMARK_KINDS(type, block, 1),  \
