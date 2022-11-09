@@ -643,6 +643,173 @@ public:
     }
 };
 
+template<unsigned int BlockSizeX,
+         unsigned int RadixBits,
+         unsigned int BlockSizeY = 1,
+         unsigned int BlockSizeZ = 1>
+class block_radix_rank_match
+{
+    using digit_counter = uint32_t;
+
+    using block_scan_type = ::rocprim::block_scan<digit_counter,
+                                                  BlockSizeX,
+                                                  ::rocprim::block_scan_algorithm::using_warp_scan,
+                                                  BlockSizeY,
+                                                  BlockSizeZ>;
+
+    static constexpr unsigned int block_size   = BlockSizeX * BlockSizeY * BlockSizeZ;
+    static constexpr unsigned int radix_digits = 1 << RadixBits;
+
+    static constexpr unsigned int warp_threads = warpSize; //device_warp_size();
+    static constexpr unsigned int warps = ::rocprim::detail::ceiling_div(block_size, warp_threads);
+    static constexpr unsigned int padded_warps = warps % 2 == 0 ? warps + 1 : warps;
+    static constexpr unsigned int counters     = padded_warps * radix_digits;
+    static constexpr unsigned int raking_segment
+        = ::rocprim::detail::ceiling_div(counters, block_size);
+    static constexpr unsigned int padded_raking_segment
+        = raking_segment % 2 == 0 ? raking_segment + 1 : raking_segment;
+
+    struct storage_type_
+    {
+        typename block_scan_type::storage_type block_scan;
+
+        union
+        {
+            digit_counter warp_digit_counters[radix_digits * padded_warps];
+            digit_counter raking_grid[block_size * padded_raking_segment];
+        };
+    };
+
+    template<typename Key, unsigned int ItemsPerThread, typename DigitExtractor>
+    ROCPRIM_DEVICE void rank_keys_impl(const Key (&keys)[ItemsPerThread],
+                                       unsigned int (&ranks)[ItemsPerThread],
+                                       storage_type_& storage,
+                                       DigitExtractor digit_extractor)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < padded_raking_segment; ++i)
+            storage.raking_grid[flat_id * padded_raking_segment + i] = 0;
+
+        ::rocprim::syncthreads();
+
+        digit_counter*     digit_counters[ItemsPerThread];
+        const unsigned int warp_id = flat_id / warp_threads;
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; ++i)
+        {
+            const unsigned int digit = digit_extractor(keys[i]);
+
+            lane_mask_type peer_mask
+                = ::rocprim::ballot(1); // TODO: Is there a better way to get this value?
+
+            ROCPRIM_UNROLL
+            for(unsigned int b = 0; b < RadixBits; ++b)
+            {
+                const unsigned int   bit_set      = digit & (1u << b);
+                const lane_mask_type bit_set_mask = ::rocprim::ballot(bit_set);
+                peer_mask &= (bit_set ? bit_set_mask : ~bit_set_mask);
+            }
+
+            digit_counters[i] = &storage.warp_digit_counters[digit * padded_warps + warp_id];
+            const digit_counter warp_digit_prefix = *digit_counters[i];
+
+            ::rocprim::wave_barrier();
+
+            const unsigned int digit_count       = rocprim::bit_count(peer_mask);
+            const unsigned int peer_digit_prefix = rocprim::masked_bit_count(peer_mask);
+
+            if(peer_digit_prefix == 0)
+            {
+                *digit_counters[i] = warp_digit_prefix + digit_count;
+            }
+
+            ::rocprim::wave_barrier();
+
+            ranks[i] = warp_digit_prefix + peer_digit_prefix;
+        }
+
+        ::rocprim::syncthreads();
+
+        digit_counter scan_counters[padded_raking_segment];
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < padded_raking_segment; ++i)
+        {
+            scan_counters[i] = storage.raking_grid[flat_id * padded_raking_segment + i];
+        }
+
+        block_scan_type().exclusive_scan(scan_counters, scan_counters, 0);
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < padded_raking_segment; ++i)
+        {
+            storage.raking_grid[flat_id * padded_raking_segment + i] = scan_counters[i];
+        }
+
+        ::rocprim::syncthreads();
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; ++i)
+        {
+            ranks[i] += *digit_counters[i];
+        }
+    }
+
+    template<bool Descending, typename Key, unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE void rank_keys_impl(const Key (&keys)[ItemsPerThread],
+                                       unsigned int (&ranks)[ItemsPerThread],
+                                       storage_type_&     storage,
+                                       const unsigned int begin_bit,
+                                       const unsigned int pass_bits)
+    {
+        using key_codec    = ::rocprim::detail::radix_key_codec<Key, Descending>;
+        using bit_key_type = typename key_codec::bit_key_type;
+
+        bit_key_type bit_keys[ItemsPerThread];
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; ++i)
+        {
+            bit_keys[i] = key_codec::encode(keys[i]);
+        }
+
+        rank_keys_impl(bit_keys,
+                       ranks,
+                       storage,
+                       [begin_bit, pass_bits](const bit_key_type& key)
+                       { return key_codec::extract_digit(key, begin_bit, pass_bits); });
+    }
+
+public:
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // hides storage_type implementation for Doxygen
+    using storage_type = detail::raw_storage<storage_type_>;
+#else
+    using storage_type = storage_type_; // only for Doxygen
+#endif
+
+    template<typename Key, unsigned ItemsPerThread>
+    ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
+                                  unsigned int (&ranks)[ItemsPerThread],
+                                  storage_type& storage,
+                                  unsigned int  begin_bit = 0,
+                                  unsigned int  pass_bits = RadixBits)
+    {
+        rank_keys_impl<false>(keys, ranks, storage.get(), begin_bit, pass_bits);
+    }
+
+    template<typename Key, unsigned ItemsPerThread>
+    ROCPRIM_DEVICE void rank_keys_desc(const Key (&keys)[ItemsPerThread],
+                                       unsigned int (&ranks)[ItemsPerThread],
+                                       storage_type& storage,
+                                       unsigned int  begin_bit = 0,
+                                       unsigned int  pass_bits = RadixBits)
+    {
+        rank_keys_impl<true>(keys, ranks, storage.get(), begin_bit, pass_bits);
+    }
+};
+
 END_ROCPRIM_NAMESPACE
 
 /// @}

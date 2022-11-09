@@ -22,6 +22,7 @@
 #define ROCPRIM_INTRINSICS_WARP_HPP_
 
 #include "../config.hpp"
+#include "../types.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 

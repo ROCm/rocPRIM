@@ -27,6 +27,7 @@ enum class rank_algorithm
 {
     basic,
     memoize,
+    match,
 };
 
 static constexpr size_t       n_sizes                   = 12;
@@ -48,29 +49,56 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      ite
                                                          const unsigned int  start_bit,
                                                          const unsigned int  radix_bits)
 {
-    using block_rank_type
-        = rocprim::block_radix_rank<BlockSize, MaxRadixBits, Algorithm == rank_algorithm::memoize>;
+    using block_rank_type = std::conditional_t<
+        Algorithm == rank_algorithm::match,
+        rocprim::block_radix_rank_match<BlockSize, MaxRadixBits>,
+        rocprim::block_radix_rank<BlockSize, MaxRadixBits, Algorithm == rank_algorithm::memoize>>;
+
+    using keys_exchange_type  = rocprim::block_exchange<T, BlockSize, ItemsPerThread>;
+    using ranks_exchange_type = rocprim::block_exchange<unsigned int, BlockSize, ItemsPerThread>;
+
+    constexpr bool warp_striped = Algorithm == rank_algorithm::match;
 
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
     const unsigned int     lid             = threadIdx.x;
     const unsigned int     block_offset    = blockIdx.x * items_per_block;
 
+    ROCPRIM_SHARED_MEMORY union
+    {
+        typename keys_exchange_type::storage_type  keys_exchange;
+        typename block_rank_type::storage_type     rank;
+        typename ranks_exchange_type::storage_type ranks_exchange;
+    } storage;
+
     T            keys[ItemsPerThread];
     unsigned int ranks[ItemsPerThread];
 
     rocprim::block_load_direct_blocked(lid, items_input + block_offset, keys);
-
-    ROCPRIM_SHARED_MEMORY typename block_rank_type::storage_type storage;
+    if ROCPRIM_IF_CONSTEXPR(warp_striped)
+    {
+        // block_radix_rank_match requires warp striped input and output. Instead of using
+        // rocprim::block_load_direct_warp_striped though, we load directly and exchange the
+        // values manually, as we can also test with block sizes that do not divide the hardware
+        // warp size that way.
+        keys_exchange_type().blocked_to_warp_striped(keys, keys, storage.keys_exchange);
+        rocprim::syncthreads();
+    }
 
     if(descending)
     {
-        block_rank_type().rank_keys_desc(keys, ranks, storage, start_bit, radix_bits);
+        block_rank_type().rank_keys_desc(keys, ranks, storage.rank, start_bit, radix_bits);
     }
     else
     {
-        block_rank_type().rank_keys(keys, ranks, storage, start_bit, radix_bits);
+        block_rank_type().rank_keys(keys, ranks, storage.rank, start_bit, radix_bits);
     }
 
+    if ROCPRIM_IF_CONSTEXPR(warp_striped)
+    {
+        // See the comment above.
+        rocprim::syncthreads();
+        ranks_exchange_type().warp_striped_to_blocked(ranks, ranks, storage.ranks_exchange);
+    }
     rocprim::block_store_direct_blocked(lid, ranks_output + block_offset, ranks);
 }
 
@@ -105,7 +133,7 @@ void test_block_radix_rank()
     SCOPED_TRACE(testing::Message() << "with radix_bits = " << radix_bits);
     SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-    for(size_t seed_index = 0; seed_index < 1; ++seed_index)
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; ++seed_index)
     {
         seed_type seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
