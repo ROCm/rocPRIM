@@ -244,12 +244,14 @@ struct radix_sort_onesweep_config_params
     unsigned int radix_bits_per_place = 4;
 
     /// \brief The internal block radix rank algorithm to use during the onesweep iteration.
-    block_radix_rank_algorithm radix_rank_algorithm = block_radix_rank_algorithm::basic;
+    block_radix_rank_algorithm radix_rank_algorithm = block_radix_rank_algorithm::default_algorithm;
 };
 
-template<class HistogramConfig  = kernel_config<256, 12>,
-         class SortConfig       = kernel_config<256, 12>,
-         unsigned int RadixBits = 4>
+template<class HistogramConfig                = kernel_config<256, 12>,
+         class SortConfig                     = kernel_config<256, 12>,
+         unsigned int               RadixBits = 4,
+         block_radix_rank_algorithm RadixRankAlgorithm
+         = block_radix_rank_algorithm::default_algorithm>
 struct radix_sort_onesweep_config : radix_sort_onesweep_config_params
 {
     /// \brief Configration of radix sort onesweep histogram kernel.
@@ -261,7 +263,8 @@ struct radix_sort_onesweep_config : radix_sort_onesweep_config_params
         : radix_sort_onesweep_config_params{
             {HistogramConfig::block_size, HistogramConfig::items_per_thread},
             {     SortConfig::block_size,      SortConfig::items_per_thread},
-            RadixBits
+            RadixBits,
+            RadixRankAlgorithm,
     } {};
 };
 

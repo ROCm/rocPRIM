@@ -40,6 +40,17 @@
 
 namespace rp = rocprim;
 
+constexpr const char* radix_rank_algorithm_name(rp::block_radix_rank_algorithm algorithm)
+{
+    switch(algorithm)
+    {
+        case rp::block_radix_rank_algorithm::basic: return "block_radix_rank_algorithm::basic";
+        case rp::block_radix_rank_algorithm::basic_memoize:
+            return "block_radix_rank_algorithm::basic_memoize";
+        case rp::block_radix_rank_algorithm::match: return "block_radix_rank_algorithm::match";
+    }
+}
+
 template<typename Config>
 std::string config_name()
 {
@@ -48,7 +59,8 @@ std::string config_name()
            + ",ipt:" + std::to_string(params.histogram.items_per_thread) + "},sort:{"
            + ",bs:" + std::to_string(params.sort.block_size)
            + ",ipt:" + std::to_string(params.sort.items_per_thread)
-           + "},bits_per_place:" + std::to_string(params.radix_bits_per_place) + "}";
+           + "},bits_per_place:" + std::to_string(params.radix_bits_per_place) + ","
+           + ",algorithm" + radix_rank_algorithm_name(params.radix_rank_algorithm) + "}";
 }
 
 template<>
@@ -348,7 +360,7 @@ template<unsigned int BlockSize,
          typename Value = rocprim::empty_type>
 struct device_radix_sort_onesweep_benchmark_generator
 {
-    template<unsigned int ItemsPerThread>
+    template<unsigned int ItemsPerThread, rocprim::block_radix_rank_algorithm RadixRankAlgorithm>
     static constexpr bool is_buildable()
     {
         using sharedmem_storage =
@@ -358,15 +370,20 @@ struct device_radix_sort_onesweep_benchmark_generator
                                                            BlockSize,
                                                            ItemsPerThread,
                                                            RadixBits,
-                                                           false>::storage_type;
+                                                           false,
+                                                           RadixRankAlgorithm>::storage_type;
         return sizeof(sharedmem_storage) < TUNING_SHARED_MEMORY_MAX;
     }
 
-    template<unsigned int ItemsPerThread, typename Enable = void>
+    template<unsigned int                        ItemsPerThread,
+             rocprim::block_radix_rank_algorithm RadixRankAlgorithm,
+             typename Enable = void>
     struct create_ipt;
 
-    template<unsigned int ItemsPerThread>
-    struct create_ipt<ItemsPerThread, std::enable_if_t<(is_buildable<ItemsPerThread>())>>
+    template<unsigned int ItemsPerThread, rocprim::block_radix_rank_algorithm RadixRankAlgorithm>
+    struct create_ipt<ItemsPerThread,
+                      RadixRankAlgorithm,
+                      std::enable_if_t<(is_buildable<ItemsPerThread, RadixRankAlgorithm>())>>
     {
         using generated_config = rocprim::detail::radix_sort_onesweep_config<
             rocprim::kernel_config<BlockSize, ItemsPerThread>,
@@ -380,22 +397,24 @@ struct device_radix_sort_onesweep_benchmark_generator
         }
     };
 
-    template<unsigned int ItemsPerThread>
-    struct create_ipt<ItemsPerThread, std::enable_if_t<(!is_buildable<ItemsPerThread>())>>
+    template<unsigned int ItemsPerThread, rocprim::block_radix_rank_algorithm RadixRankAlgorithm>
+    struct create_ipt<ItemsPerThread,
+                      RadixRankAlgorithm,
+                      std::enable_if_t<(!is_buildable<ItemsPerThread, RadixRankAlgorithm>())>>
     {
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>&) {}
     };
 
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
-        create_ipt<1u>()(storage);
-        create_ipt<4u>()(storage);
-        create_ipt<6u>()(storage);
-        create_ipt<8u>()(storage);
-        create_ipt<12u>()(storage);
-        create_ipt<16u>()(storage);
-        create_ipt<18u>()(storage);
-        create_ipt<22u>()(storage);
+        create_ipt<1u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_ipt<4u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_ipt<6u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_ipt<8u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_ipt<12u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_ipt<16u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_ipt<18u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_ipt<22u, rocprim::block_radix_rank_algorithm::basic>()(storage);
     }
 };
 
