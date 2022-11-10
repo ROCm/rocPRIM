@@ -43,13 +43,13 @@
 #cmakedefine ROCPRIM_TEST_TYPE_SLICE  @ROCPRIM_TEST_TYPE_SLICE@
 
 #if   ROCPRIM_TEST_SUITE_SLICE == 0
-    TYPED_TEST_P(SUITE, RankBasic  ) { test_block_radix_rank_algorithm<rank_algorithm::basic, TestFixture>(); }
+    TYPED_TEST_P(SUITE, RankBasic  ) { test_block_radix_rank_algorithm<rocprim::block_radix_rank_algorithm::basic, TestFixture>(); }
     REGISTER_TYPED_TEST_SUITE_P(SUITE, RankBasic);
 #elif ROCPRIM_TEST_SUITE_SLICE == 1
-    TYPED_TEST_P(SUITE, RankMemoize) { test_block_radix_rank_algorithm<rank_algorithm::memoize, TestFixture>(); }
+    TYPED_TEST_P(SUITE, RankMemoize) { test_block_radix_rank_algorithm<rocprim::block_radix_rank_algorithm::basic_memoize, TestFixture>(); }
     REGISTER_TYPED_TEST_SUITE_P(SUITE, RankMemoize);
 #elif ROCPRIM_TEST_SUITE_SLICE == 2
-    TYPED_TEST_P(SUITE, RankMatch  ) { test_block_radix_rank_algorithm<rank_algorithm::match, TestFixture>(); }
+    TYPED_TEST_P(SUITE, RankMatch  ) { test_block_radix_rank_algorithm<rocprim::block_radix_rank_algorithm::match, TestFixture>(); }
     REGISTER_TYPED_TEST_SUITE_P(SUITE, RankMatch);
 #endif
 
