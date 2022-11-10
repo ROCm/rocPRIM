@@ -33,6 +33,14 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
+enum class block_radix_rank_algorithm
+{
+    basic,
+    basic_memoize,
+    match,
+    default_algorithm = basic,
+};
+
 /// \brief The block_radix_rank class is a block level parallel primitive that provides
 /// methods for ranking items partitioned across threads in a block. This algorithm
 /// associates each item with the index it would gain if the keys were sorted into an array,
@@ -702,8 +710,7 @@ class block_radix_rank_match
         {
             const unsigned int digit = digit_extractor(keys[i]);
 
-            lane_mask_type peer_mask
-                = ::rocprim::ballot(1); // TODO: Is there a better way to get this value?
+            lane_mask_type peer_mask = ::rocprim::ballot(1);
 
             ROCPRIM_UNROLL
             for(unsigned int b = 0; b < RadixBits; ++b)
@@ -783,6 +790,9 @@ class block_radix_rank_match
     }
 
 public:
+    constexpr static unsigned int digits_per_thread
+        = ::rocprim::detail::ceiling_div(radix_digits, block_size);
+
 #ifndef DOXYGEN_SHOULD_SKIP_THIS // hides storage_type implementation for Doxygen
     using storage_type = detail::raw_storage<storage_type_>;
 #else
@@ -807,6 +817,53 @@ public:
                                        unsigned int  pass_bits = RadixBits)
     {
         rank_keys_impl<true>(keys, ranks, storage.get(), begin_bit, pass_bits);
+    }
+
+    template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
+    ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
+                                  unsigned int (&ranks)[ItemsPerThread],
+                                  storage_type&  storage,
+                                  DigitExtractor digit_extractor)
+    {
+        rank_keys_impl(keys, ranks, storage.get(), digit_extractor);
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        get_exclusive_digit_prefix(unsigned int (&prefix)[digits_per_thread], storage_type& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(radix_digits % block_size == 0 || digit < radix_digits)
+            {
+                prefix[i] = storage.get().warp_digit_counters[digit * padded_warps];
+            }
+        }
+    }
+
+    template<unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE void get_digit_counts(unsigned int (&counts)[digits_per_thread],
+                                         storage_type& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(radix_digits % block_size == 0 || digit < radix_digits)
+            {
+                const unsigned int counter
+                    = storage.get().warp_digit_counters[digit * padded_warps];
+                const unsigned int next_counter
+                    = digit + 1 == radix_digits
+                          ? block_size * ItemsPerThread
+                          : storage.get().warp_digit_counters[(digit + 1) * padded_warps];
+                counts[i] = next_counter - counter;
+            }
+        }
     }
 };
 

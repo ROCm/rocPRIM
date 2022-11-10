@@ -32,13 +32,6 @@ public:
 
 TYPED_TEST_SUITE_P(RocprimBlockRadixRank);
 
-enum class rank_algorithm
-{
-    basic,
-    memoize,
-    match,
-};
-
 static constexpr size_t       n_sizes                   = 12;
 static constexpr unsigned int items_per_thread[n_sizes] = {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
 static constexpr unsigned int rank_desc[n_sizes]
@@ -48,10 +41,10 @@ static constexpr unsigned int max_radix_bits[n_sizes]  = {4, 3, 5, 3, 1, 5, 4, 2
 static constexpr unsigned int pass_radix_bits[n_sizes] = {0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 1};
 
 template<typename T,
-         unsigned int   BlockSize,
-         unsigned int   ItemsPerThread,
-         unsigned int   MaxRadixBits,
-         rank_algorithm Algorithm>
+         unsigned int                        BlockSize,
+         unsigned int                        ItemsPerThread,
+         unsigned int                        MaxRadixBits,
+         rocprim::block_radix_rank_algorithm Algorithm>
 __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      items_input,
                                                          unsigned int* const ranks_output,
                                                          const bool          descending,
@@ -59,14 +52,16 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      ite
                                                          const unsigned int  radix_bits)
 {
     using block_rank_type = std::conditional_t<
-        Algorithm == rank_algorithm::match,
+        Algorithm == rocprim::block_radix_rank_algorithm::match,
         rocprim::block_radix_rank_match<BlockSize, MaxRadixBits>,
-        rocprim::block_radix_rank<BlockSize, MaxRadixBits, Algorithm == rank_algorithm::memoize>>;
+        rocprim::block_radix_rank<BlockSize,
+                                  MaxRadixBits,
+                                  Algorithm == rocprim::block_radix_rank_algorithm::memoize>>;
 
     using keys_exchange_type  = rocprim::block_exchange<T, BlockSize, ItemsPerThread>;
     using ranks_exchange_type = rocprim::block_exchange<unsigned int, BlockSize, ItemsPerThread>;
 
-    constexpr bool warp_striped = Algorithm == rank_algorithm::match;
+    constexpr bool warp_striped = Algorithm == rocprim::block_radix_rank_algorithm::match;
 
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
     const unsigned int     lid             = threadIdx.x;
@@ -112,13 +107,13 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      ite
 }
 
 template<typename T,
-         unsigned int   BlockSize,
-         unsigned int   ItemsPerThread,
-         unsigned int   StartBit,
-         unsigned int   MaxRadixBits,
-         unsigned int   RadixBits,
-         bool           Descending,
-         rank_algorithm Algorithm>
+         unsigned int                        BlockSize,
+         unsigned int                        ItemsPerThread,
+         unsigned int                        StartBit,
+         unsigned int                        MaxRadixBits,
+         unsigned int                        RadixBits,
+         bool                                Descending,
+         rocprim::block_radix_rank_algorithm Algorithm>
 void test_block_radix_rank()
 {
     constexpr size_t         block_size       = BlockSize;
@@ -129,7 +124,7 @@ void test_block_radix_rank()
     constexpr size_t         radix_bits       = RadixBits;
     constexpr size_t         end_bit          = start_bit + radix_bits;
     constexpr bool           descending       = Descending;
-    constexpr rank_algorithm algorithm        = Algorithm;
+    constexpr rocprim::block_radix_rank_algorithm algorithm        = Algorithm;
 
     const size_t grid_size = 23;
     const size_t size      = items_per_block * grid_size;
@@ -226,8 +221,8 @@ void test_block_radix_rank()
 template<unsigned int First,
          unsigned int Last,
          typename T,
-         unsigned int   BlockSize,
-         rank_algorithm Algorithm>
+         unsigned int                        BlockSize,
+         rocprim::block_radix_rank_algorithm Algorithm>
 struct static_for
 {
     static constexpr unsigned int radix_bits
@@ -247,13 +242,16 @@ struct static_for
     }
 };
 
-template<unsigned int Last, typename T, unsigned int BlockSize, rank_algorithm Algorithm>
+template<unsigned int Last,
+         typename T,
+         unsigned int                        BlockSize,
+         rocprim::block_radix_rank_algorithm Algorithm>
 struct static_for<Last, Last, T, BlockSize, Algorithm>
 {
     static void run() {}
 };
 
-template<rank_algorithm Algorithm, typename TestFixture>
+template<rocprim::block_radix_rank_algorithm Algorithm, typename TestFixture>
 void test_block_radix_rank_algorithm()
 {
     using type                  = typename TestFixture::params::input_type;
@@ -264,7 +262,7 @@ void test_block_radix_rank_algorithm()
         GTEST_SKIP();
     }
 
-    static_for<0, n_sizes, type, block_size, rank_algorithm::match>::run();
+    static_for<0, n_sizes, type, block_size, Algorithm>::run();
 }
 
 #endif // TEST_BLOCK_RADIX_RANK_KERNELS_HPP_

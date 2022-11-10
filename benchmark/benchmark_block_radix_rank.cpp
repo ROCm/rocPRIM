@@ -42,27 +42,22 @@ const size_t DEFAULT_N = 1024 * 1024 * 128;
 
 namespace rp = rocprim;
 
-enum class benchmark_kind
-{
-    RANK_BASIC,
-    RANK_MEMOIZE,
-    RANK_MATCH,
-};
-
 template<typename T,
-         unsigned int   BlockSize,
-         unsigned int   ItemsPerThread,
-         unsigned int   RadixBits,
-         bool           Descending,
-         benchmark_kind Kind,
-         unsigned int   Trials>
+         unsigned int                   BlockSize,
+         unsigned int                   ItemsPerThread,
+         unsigned int                   RadixBits,
+         bool                           Descending,
+         rp::block_radix_rank_algorithm Algorithm,
+         unsigned int                   Trials>
 __global__ __launch_bounds__(BlockSize) void rank_kernel(const T*      keys_input,
                                                          unsigned int* ranks_output)
 {
     using rank_type = std::conditional_t<
-        Kind == benchmark_kind::RANK_MATCH,
+        Algorithm == rp::block_radix_rank_algorithm::match,
         rp::block_radix_rank_match<BlockSize, RadixBits>,
-        rp::block_radix_rank<BlockSize, RadixBits, Kind == benchmark_kind::RANK_MEMOIZE>>;
+        rp::block_radix_rank<BlockSize,
+                             RadixBits,
+                             Algorithm == rp::block_radix_rank_algorithm::basic_memoize>>;
 
     const unsigned int lid          = threadIdx.x;
     const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
@@ -98,12 +93,12 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T*      keys_inpu
 }
 
 template<typename T,
-         unsigned int   BlockSize,
-         unsigned int   ItemsPerThread,
-         benchmark_kind Kind,
-         unsigned int   RadixBits  = 4,
-         bool           Descending = false,
-         unsigned int   Trials     = 10>
+         unsigned int                   BlockSize,
+         unsigned int                   ItemsPerThread,
+         rp::block_radix_rank_algorithm Algorithm,
+         unsigned int                   RadixBits  = 4,
+         bool                           Descending = false,
+         unsigned int                   Trials     = 10>
 void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
@@ -133,15 +128,19 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
     {
         auto start = std::chrono::high_resolution_clock::now();
 
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(
-                rank_kernel<T, BlockSize, ItemsPerThread, RadixBits, Descending, Kind, Trials>),
-            dim3(grid_size),
-            dim3(BlockSize),
-            0,
-            stream,
-            d_input,
-            d_output);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(rank_kernel<T,
+                                                       BlockSize,
+                                                       ItemsPerThread,
+                                                       RadixBits,
+                                                       Descending,
+                                                       Algorithm,
+                                                       Trials>),
+                           dim3(grid_size),
+                           dim3(BlockSize),
+                           0,
+                           stream,
+                           d_input,
+                           d_output);
         HIP_CHECK(hipPeekAtLastError());
         HIP_CHECK(hipDeviceSynchronize());
 
@@ -167,10 +166,10 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
         size)
 
 // clang-format off
-#define CREATE_BENCHMARK_KINDS(type, block, ipt)                    \
-    CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_BASIC), \
-    CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_MEMOIZE), \
-    CREATE_BENCHMARK(type, block, ipt, benchmark_kind::RANK_MATCH)
+#define CREATE_BENCHMARK_KINDS(type, block, ipt)                                       \
+    CREATE_BENCHMARK(type, block, ipt, rp::block_radix_rank_algorithm::basic),         \
+    CREATE_BENCHMARK(type, block, ipt, rp::block_radix_rank_algorithm::basic_memoize), \
+    CREATE_BENCHMARK(type, block, ipt, rp::block_radix_rank_algorithm::match)
 
 #define BENCHMARK_TYPE(type, block)          \
     CREATE_BENCHMARK_KINDS(type, block, 1),  \
