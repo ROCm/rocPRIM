@@ -116,14 +116,14 @@ template<typename T,
          rocprim::block_radix_rank_algorithm Algorithm>
 void test_block_radix_rank()
 {
-    constexpr size_t         block_size       = BlockSize;
-    constexpr size_t         items_per_thread = ItemsPerThread;
-    constexpr size_t         items_per_block  = block_size * items_per_thread;
-    constexpr size_t         start_bit        = StartBit;
-    constexpr size_t         max_radix_bits   = MaxRadixBits;
-    constexpr size_t         radix_bits       = RadixBits;
-    constexpr size_t         end_bit          = start_bit + radix_bits;
-    constexpr bool           descending       = Descending;
+    constexpr size_t                              block_size       = BlockSize;
+    constexpr size_t                              items_per_thread = ItemsPerThread;
+    constexpr size_t                              items_per_block  = block_size * items_per_thread;
+    constexpr size_t                              start_bit        = StartBit;
+    constexpr size_t                              max_radix_bits   = MaxRadixBits;
+    constexpr size_t                              radix_bits       = RadixBits;
+    constexpr size_t                              end_bit          = start_bit + radix_bits;
+    constexpr bool                                descending       = Descending;
     constexpr rocprim::block_radix_rank_algorithm algorithm        = Algorithm;
 
     const size_t grid_size = 23;
