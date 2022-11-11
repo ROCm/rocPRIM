@@ -388,7 +388,8 @@ struct device_radix_sort_onesweep_benchmark_generator
         using generated_config = rocprim::detail::radix_sort_onesweep_config<
             rocprim::kernel_config<BlockSize, ItemsPerThread>,
             rocprim::kernel_config<BlockSize, ItemsPerThread>,
-            RadixBits>;
+            RadixBits,
+            RadixRankAlgorithm>;
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
         {
             storage.emplace_back(
@@ -405,16 +406,24 @@ struct device_radix_sort_onesweep_benchmark_generator
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>&) {}
     };
 
+    template<rocprim::block_radix_rank_algorithm RadixRankAlgorithm>
+    static void create_algo(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
+    {
+        create_ipt<1u, RadixRankAlgorithm>()(storage);
+        create_ipt<4u, RadixRankAlgorithm>()(storage);
+        create_ipt<6u, RadixRankAlgorithm>()(storage);
+        create_ipt<8u, RadixRankAlgorithm>()(storage);
+        create_ipt<12u, RadixRankAlgorithm>()(storage);
+        create_ipt<16u, RadixRankAlgorithm>()(storage);
+        create_ipt<18u, RadixRankAlgorithm>()(storage);
+        create_ipt<22u, RadixRankAlgorithm>()(storage);
+    }
+
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
-        create_ipt<1u, rocprim::block_radix_rank_algorithm::basic>()(storage);
-        create_ipt<4u, rocprim::block_radix_rank_algorithm::basic>()(storage);
-        create_ipt<6u, rocprim::block_radix_rank_algorithm::basic>()(storage);
-        create_ipt<8u, rocprim::block_radix_rank_algorithm::basic>()(storage);
-        create_ipt<12u, rocprim::block_radix_rank_algorithm::basic>()(storage);
-        create_ipt<16u, rocprim::block_radix_rank_algorithm::basic>()(storage);
-        create_ipt<18u, rocprim::block_radix_rank_algorithm::basic>()(storage);
-        create_ipt<22u, rocprim::block_radix_rank_algorithm::basic>()(storage);
+        create_algo<rocprim::block_radix_rank_algorithm::basic>(storage);
+        create_algo<rocprim::block_radix_rank_algorithm::basic_memoize>(storage);
+        create_algo<rocprim::block_radix_rank_algorithm::match>(storage);
     }
 };
 
