@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "common_test_header.hpp"
+// required test headers
+#include "../common_test_header.hpp"
+#include "test_utils_types.hpp"
 
 // required rocprim headers
-#include <rocprim/functional.hpp>
 #include <rocprim/device/device_merge.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
 
-// required test headers
-#include "test_utils_types.hpp"
+#include <gtest/gtest.h>
+
+#include <hip/hip_runtime.h>
+
+#include <algorithm>
+#include <numeric>
+#include <vector>
 
 // Params for tests
 template<
@@ -57,16 +66,16 @@ using custom_double2 = test_utils::custom_test_type<double>;
 
 typedef ::testing::Types<
     DeviceMergeParams<int, double>,
-    DeviceMergeParams<unsigned long, unsigned int, ::rocprim::greater<unsigned long> >,
+    DeviceMergeParams<unsigned long, unsigned int, rocprim::greater<unsigned long>>,
     DeviceMergeParams<float, custom_double2>,
     DeviceMergeParams<int, float>,
     DeviceMergeParams<int8_t, int8_t>,
     DeviceMergeParams<uint8_t, uint8_t>,
-    DeviceMergeParams<rocprim::half, rocprim::half, test_utils::half_less>,
-    DeviceMergeParams<rocprim::bfloat16, rocprim::bfloat16, test_utils::bfloat16_less>,
-    DeviceMergeParams<custom_double2, custom_int2, ::rocprim::greater<custom_double2> >,
-    DeviceMergeParams<custom_int2, char>
-> RocprimDeviceMergeTestsParams;
+    DeviceMergeParams<rocprim::half, rocprim::half, rocprim::less<rocprim::half>>,
+    DeviceMergeParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
+    DeviceMergeParams<custom_double2, custom_int2, rocprim::greater<custom_double2>>,
+    DeviceMergeParams<custom_int2, char>>
+    RocprimDeviceMergeTestsParams;
 
 // size1, size2
 std::vector<std::tuple<size_t, size_t>> get_sizes()
@@ -94,7 +103,7 @@ TYPED_TEST_SUITE(RocprimDeviceMergeTests, RocprimDeviceMergeTestsParams);
 TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
@@ -124,7 +133,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
         for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
         {
             unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-            SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+            SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
             // Generate data
             std::vector<key_type> keys_input1 = test_utils::get_random_data<key_type>(size1, 0, size1, seed_value);
@@ -233,7 +242,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
-    SCOPED_TRACE(testing::Message() << "with device_id= " << device_id);
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using key_type = typename TestFixture::key_type;
@@ -266,7 +275,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
         for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
         {
             unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
-            SCOPED_TRACE(testing::Message() << "with seed= " << seed_value);
+            SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
             // Generate data
             std::vector<key_type> keys_input1 = test_utils::get_random_data<key_type>(size1, 0, size1, seed_value);
@@ -432,4 +441,83 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
         }
 
     }
+}
+
+TEST(RocprimDeviceMergeTests, MergeMismatchedIteratorTypes)
+{
+    const int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    std::vector<int> keys_input1(1'024);
+    std::generate(keys_input1.begin(),
+                  keys_input1.end(),
+                  [n = 0]() mutable
+                  {
+                      const int temp = n;
+                      n += 2;
+                      return temp;
+                  });
+
+    std::vector<int> expected_keys_output(2 * keys_input1.size());
+    std::iota(expected_keys_output.begin(), expected_keys_output.end(), 0);
+
+    int* d_keys_input1 = nullptr;
+    int* d_keys_output = nullptr;
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input1,
+                                                 keys_input1.size() * sizeof(keys_input1[0])));
+    HIP_CHECK(
+        test_common_utils::hipMallocHelper(&d_keys_output,
+                                           expected_keys_output.size() * sizeof(keys_input1[0])));
+
+    HIP_CHECK(hipMemcpy(d_keys_input1,
+                        keys_input1.data(),
+                        keys_input1.size() * sizeof(keys_input1[0]),
+                        hipMemcpyHostToDevice));
+
+    const auto d_keys_input2 = rocprim::make_transform_iterator(rocprim::make_counting_iterator(0),
+                                                                [] __host__ __device__(int value)
+                                                                { return value * 2 + 1; });
+
+    static constexpr bool debug_synchronous = false;
+
+    size_t temp_storage_size_bytes = 0;
+    HIP_CHECK(rocprim::merge(nullptr,
+                             temp_storage_size_bytes,
+                             d_keys_input1,
+                             d_keys_input2,
+                             d_keys_output,
+                             keys_input1.size(),
+                             keys_input1.size(),
+                             rocprim::less<int>{},
+                             hipStreamDefault,
+                             debug_synchronous));
+
+    ASSERT_GT(temp_storage_size_bytes, 0);
+
+    void* d_temp_storage = nullptr;
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+
+    HIP_CHECK(rocprim::merge(d_temp_storage,
+                             temp_storage_size_bytes,
+                             d_keys_input1,
+                             d_keys_input2,
+                             d_keys_output,
+                             keys_input1.size(),
+                             keys_input1.size(),
+                             rocprim::less<int>{},
+                             hipStreamDefault,
+                             debug_synchronous));
+
+    std::vector<int> keys_output(expected_keys_output.size());
+    HIP_CHECK(hipMemcpy(keys_output.data(),
+                        d_keys_output,
+                        keys_output.size() * sizeof(keys_output[0]),
+                        hipMemcpyDeviceToHost));
+
+    ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(keys_output, expected_keys_output));
+
+    HIP_CHECK(hipFree(d_temp_storage));
+    HIP_CHECK(hipFree(d_keys_output));
+    HIP_CHECK(hipFree(d_keys_input1));
 }

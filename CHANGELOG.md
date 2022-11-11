@@ -6,11 +6,15 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 ## Changed
 - `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem 
   sizes larger than 2^32 items.
+- Device algorithms now return `hipErrorInvalidValue` if the amount of passed temporary memory is insufficient.
+- Lists of sizes for tests are unified, restored scan/reduce tests for `half` and `bfloat16` values.
 ### Removed
 - `block_sort::sort()` overload for keys and values with a dynamic size. This overload was documented but the
   implementation is missing. To avoid further confusion the documentation is removed until a decision is made on
   implementing the function.
-  
+### Fixed
+- Fixed the compilation failure in `device_merge` if the two key iterators don't match.
+
 ## [Unreleased rocPRIM-2.11.0 for ROCm 5.3.0]
 ### Added
 - New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
@@ -21,6 +25,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - CMake functionality to improve build parallelism of the test suite that splits compilation units by
 function or by parameters.
 - Reverse iterator.
+- Support for problem sizes over `UINT_MAX` in device functions `inclusive_scan_by_key` and `exclusive_scan_by_key`.
 ## Changed
 - Improved the performance of warp primitives using the swizzle operation on Navi
 - Improved build parallelism of the test suite by splitting up large compilation units
