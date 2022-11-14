@@ -808,9 +808,9 @@ class block_radix_rank_match
         const unsigned int warp_id = ::rocprim::warp_id();
 
         ROCPRIM_UNROLL
-        for(unsigned int i = flat_id; i < counters; i += block_size)
+        for(unsigned int i = 0; i < counters_per_thread; ++i)
         {
-            storage.counters[i] = 0;
+            storage.counters[flat_id * counters_per_thread + i] = 0;
         }
 
         ::rocprim::syncthreads();
