@@ -285,14 +285,14 @@ class block_radix_rank
                 prefix[i] = get_digit_counter(digit, 0, storage);
                 // To find the count, subtract the prefix of the next digit with that of the
                 // current digit.
-                const unsigned int next_prefix
-                    = digit + 1 == radix_digits
-                          ? block_size * ItemsPerThread
-                          : get_digit_counter(digit + 1, 0, storage);
-                counts[i] = next_prefix - prefix[i];
+                const unsigned int next_prefix = digit + 1 == radix_digits
+                                                     ? block_size * ItemsPerThread
+                                                     : get_digit_counter(digit + 1, 0, storage);
+                counts[i]                      = next_prefix - prefix[i];
             }
         }
     }
+
 public:
     /// \brief The number of digits that each thread manages when computing the digit prefix
     /// and counts. This is only relevant to the overload of rank_keys that computes the
@@ -693,7 +693,7 @@ public:
     template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
-                                  storage_type& storage,
+                                  storage_type&  storage,
                                   DigitExtractor digit_extractor,
                                   unsigned int (&prefix)[digits_per_thread],
                                   unsigned int (&counts)[digits_per_thread])
@@ -841,7 +841,7 @@ class block_radix_rank_match
             ::rocprim::wave_barrier();
 
             // The total number of threads in the warp which also have this digit.
-            const unsigned int digit_count       = rocprim::bit_count(peer_mask);
+            const unsigned int digit_count = rocprim::bit_count(peer_mask);
             // The number of threads in the warp that have the same digit AND whose lane id is lower
             // than the current thread's.
             const unsigned int peer_digit_prefix = rocprim::masked_bit_count(peer_mask);
@@ -928,11 +928,10 @@ class block_radix_rank_match
                 prefix[i] = get_digit_counter(digit, 0, storage);
                 // To find the count, subtract the prefix of the next digit with that of the
                 // current digit.
-                const unsigned int next_prefix
-                    = digit + 1 == radix_digits
-                          ? block_size * ItemsPerThread
-                          : get_digit_counter(digit + 1, 0, storage);
-                counts[i] = next_prefix - prefix[i];
+                const unsigned int next_prefix = digit + 1 == radix_digits
+                                                     ? block_size * ItemsPerThread
+                                                     : get_digit_counter(digit + 1, 0, storage);
+                counts[i]                      = next_prefix - prefix[i];
             }
         }
     }
@@ -1232,7 +1231,7 @@ public:
     template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
                                   unsigned int (&ranks)[ItemsPerThread],
-                                  storage_type& storage,
+                                  storage_type&  storage,
                                   DigitExtractor digit_extractor,
                                   unsigned int (&prefix)[digits_per_thread],
                                   unsigned int (&counts)[digits_per_thread])
