@@ -706,9 +706,9 @@ template<unsigned int BlockSizeX,
          unsigned int BlockSizeZ = 1>
 class block_radix_rank_match
 {
-    using digit_counter = uint32_t;
+    using digit_counter_type = uint32_t;
 
-    using block_scan_type = ::rocprim::block_scan<digit_counter,
+    using block_scan_type = ::rocprim::block_scan<digit_counter_type,
                                                   BlockSizeX,
                                                   ::rocprim::block_scan_algorithm::using_warp_scan,
                                                   BlockSizeY,
@@ -717,14 +717,18 @@ class block_radix_rank_match
     static constexpr unsigned int block_size   = BlockSizeX * BlockSizeY * BlockSizeZ;
     static constexpr unsigned int radix_digits = 1 << RadixBits;
 
-    static constexpr unsigned int warp_threads = warpSize;
-    static constexpr unsigned int warps = ::rocprim::detail::ceiling_div(block_size, warp_threads);
-    static constexpr unsigned int padded_warps = warps % 2 == 0 ? warps + 1 : warps;
-    static constexpr unsigned int counters     = padded_warps * radix_digits;
-    static constexpr unsigned int raking_segment
-        = ::rocprim::detail::ceiling_div(counters, block_size);
-    static constexpr unsigned int padded_raking_segment
-        = raking_segment % 2 == 0 ? raking_segment + 1 : raking_segment;
+    static constexpr unsigned int warp_size = warpSize;
+    // Force the number of warps to an uneven amount to reduce the number of lds bank conflicts.
+    static constexpr unsigned int warps = ::rocprim::detail::ceiling_div(block_size, warp_size) | 1;
+    // The number of counters that are actively being used.
+    static constexpr unsigned int active_counters = warps * radix_digits;
+    // We want to use a regular block scan to scan the per-warp counters. This requires the
+    // total number of counters to be divisible by the block size. To facilitate this, just add
+    // a bunch of counters that are not otherwise used.
+    static constexpr unsigned int counters_per_thread
+        = ::rocprim::detail::ceiling_div(active_counters, block_size);
+    // The total number of counters, factoring in the unused ones for the block scan.
+    static constexpr unsigned int counters = counters_per_thread * block_size;
 
     constexpr static unsigned int digits_per_thread_
         = ::rocprim::detail::ceiling_div(radix_digits, block_size);
@@ -732,19 +736,13 @@ class block_radix_rank_match
     struct storage_type_
     {
         typename block_scan_type::storage_type block_scan;
-
-        union
-        {
-            digit_counter warp_digit_counters[radix_digits * padded_warps];
-            digit_counter raking_grid[block_size * padded_raking_segment];
-        };
+        digit_counter_type                     counters[counters];
     };
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE void get_digit_counter(const unsigned int digit,
-                                                         const unsigned int warp,
-                                                         storage_type_& storage)
+    ROCPRIM_DEVICE ROCPRIM_INLINE digit_counter_type&
+        get_digit_counter(const unsigned int digit, const unsigned int warp, storage_type_& storage)
     {
-        return storage.warp_digit_counters[digit * padded_warps + warp];
+        return storage.counters[digit * warps + warp];
     }
 
     template<typename Key, unsigned int ItemsPerThread, typename DigitExtractor>
@@ -754,21 +752,29 @@ class block_radix_rank_match
                                        DigitExtractor digit_extractor)
     {
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+        const unsigned int warp_id = ::rocprim::warp_id();
 
         ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < padded_raking_segment; ++i)
-            storage.raking_grid[flat_id * padded_raking_segment + i] = 0;
+        for(unsigned int i = flat_id; i < counters; i += block_size)
+        {
+            storage.counters[i] = 0;
+        }
 
         ::rocprim::syncthreads();
 
-        digit_counter*     digit_counters[ItemsPerThread];
-        const unsigned int warp_id = flat_id / warp_threads;
+        digit_counter_type* digit_counters[ItemsPerThread];
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
+            // Get the digit for this key.
             const unsigned int digit = digit_extractor(keys[i]);
 
+            // Get the digit counter for this key on the current warp.
+            digit_counters[i] = &get_digit_counter(digit, warp_id, storage);
+            const digit_counter_type warp_digit_prefix = *digit_counters[i];
+
+            // Construct a mask of threads in this wave which have the same digit.
             lane_mask_type peer_mask = ::rocprim::ballot(1);
 
             ROCPRIM_UNROLL
@@ -779,14 +785,15 @@ class block_radix_rank_match
                 peer_mask &= (bit_set ? bit_set_mask : ~bit_set_mask);
             }
 
-            digit_counters[i] = &get_digit_counter(digit, warp_id, storage);
-            const digit_counter warp_digit_prefix = *digit_counters[i];
-
             ::rocprim::wave_barrier();
 
+            // The total number of threads in the warp which also have this digit.
             const unsigned int digit_count       = rocprim::bit_count(peer_mask);
+            // The number of threads in the warp that have the same digit AND whose lane id is lower
+            // than the current thread's.
             const unsigned int peer_digit_prefix = rocprim::masked_bit_count(peer_mask);
 
+            // The first thread with a particular digit gets to update the shared counter.
             if(peer_digit_prefix == 0)
             {
                 *digit_counters[i] = warp_digit_prefix + digit_count;
@@ -794,29 +801,32 @@ class block_radix_rank_match
 
             ::rocprim::wave_barrier();
 
+            // Compute the warp-local rank.
             ranks[i] = warp_digit_prefix + peer_digit_prefix;
         }
 
         ::rocprim::syncthreads();
 
-        digit_counter scan_counters[padded_raking_segment];
+        // Scan the per-warp counters to get a rank-offset per warp counter.
+        digit_counter_type scan_counters[counters_per_thread];
 
         ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < padded_raking_segment; ++i)
+        for(unsigned int i = 0; i < counters_per_thread; ++i)
         {
-            scan_counters[i] = storage.raking_grid[flat_id * padded_raking_segment + i];
+            scan_counters[i] = storage.counters[flat_id * counters_per_thread + i];
         }
 
         block_scan_type().exclusive_scan(scan_counters, scan_counters, 0);
 
         ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < padded_raking_segment; ++i)
+        for(unsigned int i = 0; i < counters_per_thread; ++i)
         {
-            storage.raking_grid[flat_id * padded_raking_segment + i] = scan_counters[i];
+            storage.counters[flat_id * counters_per_thread + i] = scan_counters[i];
         }
 
         ::rocprim::syncthreads();
 
+        // Add the per-warp rank counter to get the final rank.
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
