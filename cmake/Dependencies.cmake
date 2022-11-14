@@ -161,6 +161,8 @@ if(BUILD_BENCHMARK)
       BUILD_PROJECT  TRUE
       UPDATE_DISCONNECTED TRUE
     )
+    set(HAVE_STD_REGEX ON)
+    set(RUN_HAVE_STD_REGEX 1)
   endif()
   find_package(benchmark REQUIRED CONFIG PATHS ${GOOGLEBENCHMARK_ROOT})
 endif()
