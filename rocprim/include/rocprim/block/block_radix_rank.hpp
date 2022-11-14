@@ -110,6 +110,8 @@ class block_radix_rank
     static constexpr unsigned int packing_ratio
         = sizeof(packed_counter_type) / sizeof(digit_counter_type);
     static constexpr unsigned int column_size = radix_digits / packing_ratio;
+    static constexpr unsigned int digits_per_thread_
+        = ::rocprim::detail::ceiling_div(radix_digits, block_size);
 
     // Struct used for creating a raw_storage object for this primitive's temporary storage.
     struct storage_type_
@@ -266,9 +268,33 @@ class block_radix_rank
                        { return key_codec::extract_digit(key, begin_bit, pass_bits); });
     }
 
+    template<unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE void digit_prefix_count(unsigned int (&prefix)[digits_per_thread_],
+                                           unsigned int (&counts)[digits_per_thread_],
+                                           storage_type_& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(radix_digits % block_size == 0 || digit < radix_digits)
+            {
+                // The counter for thread 0 holds the prefix of all the digits at this point.
+                prefix[i] = get_digit_counter(digit, 0, storage);
+                // To find the count, subtract the prefix of the next digit with that of the
+                // current digit.
+                const unsigned int next_prefix
+                    = digit + 1 == radix_digits
+                          ? block_size * ItemsPerThread
+                          : get_digit_counter(digit + 1, 0, storage);
+                counts[i] = next_prefix - prefix[i];
+            }
+        }
+    }
 public:
-    static constexpr unsigned int digits_per_thread
-        = ::rocprim::detail::ceiling_div(radix_digits, block_size);
+    static constexpr unsigned int digits_per_thread = digits_per_thread_;
 
     /// \brief Struct used to allocate a temporary memory that is required for thread
     /// communication during operations provided by related parallel primitive.
@@ -611,43 +637,16 @@ public:
         rank_keys_desc(keys, ranks, storage.get(), digit_extractor);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE void
-        get_exclusive_digit_prefix(unsigned int (&prefix)[digits_per_thread], storage_type& storage)
+    template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
+    ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
+                                  unsigned int (&ranks)[ItemsPerThread],
+                                  storage_type& storage,
+                                  DigitExtractor digit_extractor,
+                                  unsigned int (&prefix)[digits_per_thread],
+                                  unsigned int (&counts)[digits_per_thread])
     {
-        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-        ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < digits_per_thread; ++i)
-        {
-            const unsigned int digit = flat_id * digits_per_thread + i;
-            if(radix_digits % block_size == 0 || digit < radix_digits)
-            {
-                // The counter for thread 0 holds the prefix of all the digits at this point.
-                prefix[i] = get_digit_counter(digit, 0, storage.get());
-            }
-        }
-    }
-
-    template<unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE ROCPRIM_INLINE void get_digit_counts(unsigned int (&counts)[digits_per_thread],
-                                                        storage_type& storage)
-    {
-        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-        ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < digits_per_thread; ++i)
-        {
-            const unsigned int digit = flat_id * digits_per_thread + i;
-            if(radix_digits % block_size == 0 || digit < radix_digits)
-            {
-                // The counter for thread 0 holds the prefix of all the digits at this point.
-                // To find the count, subtract the prefix of the next digit with that of the
-                // current digit.
-                const unsigned int counter = get_digit_counter(digit, 0, storage.get());
-                const unsigned int next_counter
-                    = digit + 1 == radix_digits ? block_size * ItemsPerThread
-                                                : get_digit_counter(digit + 1, 0, storage.get());
-                counts[i] = next_counter - counter;
-            }
-        }
+        rank_keys(keys, ranks, storage, digit_extractor);
+        digit_prefix_count<ItemsPerThread>(prefix, counts, storage.get());
     }
 };
 
@@ -718,7 +717,7 @@ class block_radix_rank_match
     static constexpr unsigned int block_size   = BlockSizeX * BlockSizeY * BlockSizeZ;
     static constexpr unsigned int radix_digits = 1 << RadixBits;
 
-    static constexpr unsigned int warp_threads = warpSize; //device_warp_size();
+    static constexpr unsigned int warp_threads = warpSize;
     static constexpr unsigned int warps = ::rocprim::detail::ceiling_div(block_size, warp_threads);
     static constexpr unsigned int padded_warps = warps % 2 == 0 ? warps + 1 : warps;
     static constexpr unsigned int counters     = padded_warps * radix_digits;
@@ -726,6 +725,9 @@ class block_radix_rank_match
         = ::rocprim::detail::ceiling_div(counters, block_size);
     static constexpr unsigned int padded_raking_segment
         = raking_segment % 2 == 0 ? raking_segment + 1 : raking_segment;
+
+    constexpr static unsigned int digits_per_thread_
+        = ::rocprim::detail::ceiling_div(radix_digits, block_size);
 
     struct storage_type_
     {
@@ -737,6 +739,13 @@ class block_radix_rank_match
             digit_counter raking_grid[block_size * padded_raking_segment];
         };
     };
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE void get_digit_counter(const unsigned int digit,
+                                                         const unsigned int warp,
+                                                         storage_type_& storage)
+    {
+        return storage.warp_digit_counters[digit * padded_warps + warp];
+    }
 
     template<typename Key, unsigned int ItemsPerThread, typename DigitExtractor>
     ROCPRIM_DEVICE void rank_keys_impl(const Key (&keys)[ItemsPerThread],
@@ -770,7 +779,7 @@ class block_radix_rank_match
                 peer_mask &= (bit_set ? bit_set_mask : ~bit_set_mask);
             }
 
-            digit_counters[i] = &storage.warp_digit_counters[digit * padded_warps + warp_id];
+            digit_counters[i] = &get_digit_counter(digit, warp_id, storage);
             const digit_counter warp_digit_prefix = *digit_counters[i];
 
             ::rocprim::wave_barrier();
@@ -839,9 +848,34 @@ class block_radix_rank_match
                        { return key_codec::extract_digit(key, begin_bit, pass_bits); });
     }
 
+    template<unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE void digit_prefix_count(unsigned int (&prefix)[digits_per_thread_],
+                                           unsigned int (&counts)[digits_per_thread_],
+                                           storage_type_& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(radix_digits % block_size == 0 || digit < radix_digits)
+            {
+                // The counter for warp 0 holds the prefix of all the digits at this point.
+                prefix[i] = get_digit_counter(digit, 0, storage);
+                // To find the count, subtract the prefix of the next digit with that of the
+                // current digit.
+                const unsigned int next_prefix
+                    = digit + 1 == radix_digits
+                          ? block_size * ItemsPerThread
+                          : get_digit_counter(digit + 1, 0, storage);
+                counts[i] = next_prefix - prefix[i];
+            }
+        }
+    }
+
 public:
-    constexpr static unsigned int digits_per_thread
-        = ::rocprim::detail::ceiling_div(radix_digits, block_size);
+    constexpr static unsigned int digits_per_thread = digits_per_thread_;
 
     /// \brief Struct used to allocate a temporary memory that is required for thread
     /// communication during operations provided by related parallel primitive.
@@ -1078,42 +1112,16 @@ public:
         rank_keys_impl(keys, ranks, storage.get(), digit_extractor);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE void
-        get_exclusive_digit_prefix(unsigned int (&prefix)[digits_per_thread], storage_type& storage)
+    template<typename Key, unsigned ItemsPerThread, typename DigitExtractor>
+    ROCPRIM_DEVICE void rank_keys(const Key (&keys)[ItemsPerThread],
+                                  unsigned int (&ranks)[ItemsPerThread],
+                                  storage_type& storage,
+                                  DigitExtractor digit_extractor,
+                                  unsigned int (&prefix)[digits_per_thread],
+                                  unsigned int (&counts)[digits_per_thread])
     {
-        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-
-        ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < digits_per_thread; ++i)
-        {
-            const unsigned int digit = flat_id * digits_per_thread + i;
-            if(radix_digits % block_size == 0 || digit < radix_digits)
-            {
-                prefix[i] = storage.get().warp_digit_counters[digit * padded_warps];
-            }
-        }
-    }
-
-    template<unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE void get_digit_counts(unsigned int (&counts)[digits_per_thread],
-                                         storage_type& storage)
-    {
-        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
-        ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < digits_per_thread; ++i)
-        {
-            const unsigned int digit = flat_id * digits_per_thread + i;
-            if(radix_digits % block_size == 0 || digit < radix_digits)
-            {
-                const unsigned int counter
-                    = storage.get().warp_digit_counters[digit * padded_warps];
-                const unsigned int next_counter
-                    = digit + 1 == radix_digits
-                          ? block_size * ItemsPerThread
-                          : storage.get().warp_digit_counters[(digit + 1) * padded_warps];
-                counts[i] = next_counter - counter;
-            }
-        }
+        rank_keys(keys, ranks, storage, digit_extractor);
+        digit_prefix_count<ItemsPerThread>(prefix, counts, storage.get());
     }
 };
 

@@ -1009,18 +1009,18 @@ struct onesweep_iteration_helper
 
         // Compute the block-based key ranks, the digit counts, and the prefix sum of the digit counts.
         unsigned int ranks[ItemsPerThread];
+        // Tile-wide digit offset
+        unsigned int exclusive_digit_prefix[digits_per_thread];
+        // Tile-wide digit count
+        unsigned int digit_counts[digits_per_thread];
         radix_rank_type{}.rank_keys(
             bit_keys,
             ranks,
             storage.rank,
             [bit, current_radix_bits](const bit_key_type& key)
-            { return key_codec::extract_digit(key, bit, current_radix_bits); });
-        // Tile-wide digit offset
-        unsigned int exclusive_digit_prefix[digits_per_thread];
-        radix_rank_type{}.get_exclusive_digit_prefix(exclusive_digit_prefix, storage.rank);
-        // Tile-wide digit count
-        unsigned int digit_counts[digits_per_thread];
-        radix_rank_type{}.template get_digit_counts<ItemsPerThread>(digit_counts, storage.rank);
+            { return key_codec::extract_digit(key, bit, current_radix_bits); },
+            exclusive_digit_prefix,
+            digit_counts);
 
         ::rocprim::syncthreads();
 
