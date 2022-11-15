@@ -28,16 +28,24 @@
 
 #include "block_scan.hpp"
 
+#include <cstdint>
+
 /// \addtogroup blockmodule
 /// @{
 
 BEGIN_ROCPRIM_NAMESPACE
 
+/// \brief Available algorithms for the block_radix_rank primitive.
 enum class block_radix_rank_algorithm
 {
+    /// \brief The basic block radix rank algorithm. Keys and ranks are assumed in blocked order.
     basic,
+    /// \brief The basic block radix rank algorithm, configured to memoize intermediate values. This trades
+    /// register usage for less shared memory operations. Keys and ranks are assumed in blocked order.
     basic_memoize,
+    /// \brief Warp-based radix ranking algorithm. Keys and ranks are assumed in warp-striped order for this algorithm.
     match,
+    /// \brief The default radix ranking algorithm.
     default_algorithm = basic,
 };
 
@@ -110,9 +118,15 @@ class block_radix_rank
     static constexpr unsigned int packing_ratio
         = sizeof(packed_counter_type) / sizeof(digit_counter_type);
     static constexpr unsigned int column_size = radix_digits / packing_ratio;
-    static constexpr unsigned int digits_per_thread_
+
+public:
+    /// \brief The number of digits that each thread manages when computing the digit prefix
+    /// and counts. This is only relevant to the overload of rank_keys that computes the
+    /// digit prefix and counts.
+    static constexpr unsigned int digits_per_thread
         = ::rocprim::detail::ceiling_div(radix_digits, block_size);
 
+private:
     // Struct used for creating a raw_storage object for this primitive's temporary storage.
     struct storage_type_
     {
@@ -269,8 +283,8 @@ class block_radix_rank
     }
 
     template<unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE void digit_prefix_count(unsigned int (&prefix)[digits_per_thread_],
-                                           unsigned int (&counts)[digits_per_thread_],
+    ROCPRIM_DEVICE void digit_prefix_count(unsigned int (&prefix)[digits_per_thread],
+                                           unsigned int (&counts)[digits_per_thread],
                                            storage_type_& storage)
     {
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
@@ -294,11 +308,6 @@ class block_radix_rank
     }
 
 public:
-    /// \brief The number of digits that each thread manages when computing the digit prefix
-    /// and counts. This is only relevant to the overload of rank_keys that computes the
-    /// digit prefix and counts.
-    static constexpr unsigned int digits_per_thread = digits_per_thread_;
-
     /// \brief Struct used to allocate a temporary memory that is required for thread
     /// communication during operations provided by related parallel primitive.
     ///
@@ -659,6 +668,8 @@ public:
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
     /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
+    /// \param [in] prefix - An exclusive prefix scan of the counts per digit.
+    /// \param [in] counts - The number of keys with a particular digit in the input, per digit.
     ///
     /// \par Storage reusage
     /// A synchronization barrier should be placed before \p storage is reused
@@ -700,6 +711,45 @@ public:
     {
         rank_keys(keys, ranks, storage, digit_extractor);
         digit_prefix_count<ItemsPerThread>(prefix, counts, storage.get());
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        get_exclusive_digit_prefix(unsigned int (&prefix)[digits_per_thread], storage_type& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(radix_digits % block_size == 0 || digit < radix_digits)
+            {
+                // The counter for thread 0 holds the prefix of all the digits at this point.
+                prefix[i] = get_digit_counter(digit, 0, storage.get());
+            }
+        }
+    }
+
+    template<unsigned int ItemsPerThread>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void get_digit_counts(unsigned int (&counts)[digits_per_thread],
+                                                        storage_type& storage)
+    {
+        const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < digits_per_thread; ++i)
+        {
+            const unsigned int digit = flat_id * digits_per_thread + i;
+            if(radix_digits % block_size == 0 || digit < radix_digits)
+            {
+                // The counter for thread 0 holds the prefix of all the digits at this point.
+                // To find the count, subtract the prefix of the next digit with that of the
+                // current digit.
+                const unsigned int counter = get_digit_counter(digit, 0, storage.get());
+                const unsigned int next_counter
+                    = digit + 1 == radix_digits ? block_size * ItemsPerThread
+                                                : get_digit_counter(digit + 1, 0, storage.get());
+                counts[i] = next_counter - counter;
+            }
+        }
     }
 };
 
@@ -772,7 +822,8 @@ class block_radix_rank_match
 
     static constexpr unsigned int warp_size = warpSize;
     // Force the number of warps to an uneven amount to reduce the number of lds bank conflicts.
-    static constexpr unsigned int warps = ::rocprim::detail::ceiling_div(block_size, warp_size) | 1;
+    static constexpr unsigned int warps
+        = ::rocprim::detail::ceiling_div(block_size, warp_size) | 1u;
     // The number of counters that are actively being used.
     static constexpr unsigned int active_counters = warps * radix_digits;
     // We want to use a regular block scan to scan the per-warp counters. This requires the
@@ -783,9 +834,14 @@ class block_radix_rank_match
     // The total number of counters, factoring in the unused ones for the block scan.
     static constexpr unsigned int counters = counters_per_thread * block_size;
 
-    constexpr static unsigned int digits_per_thread_
+public:
+    /// \brief The number of digits that each thread manages when computing the digit prefix
+    /// and counts. This is only relevant to the overload of rank_keys that computes the
+    /// digit prefix and counts.
+    constexpr static unsigned int digits_per_thread
         = ::rocprim::detail::ceiling_div(radix_digits, block_size);
 
+private:
     struct storage_type_
     {
         typename block_scan_type::storage_type block_scan;
@@ -869,7 +925,7 @@ class block_radix_rank_match
             scan_counters[i] = storage.counters[flat_id * counters_per_thread + i];
         }
 
-        block_scan_type().exclusive_scan(scan_counters, scan_counters, 0);
+        block_scan_type().exclusive_scan(scan_counters, scan_counters, 0, storage.block_scan);
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < counters_per_thread; ++i)
@@ -912,8 +968,8 @@ class block_radix_rank_match
     }
 
     template<unsigned int ItemsPerThread>
-    ROCPRIM_DEVICE void digit_prefix_count(unsigned int (&prefix)[digits_per_thread_],
-                                           unsigned int (&counts)[digits_per_thread_],
+    ROCPRIM_DEVICE void digit_prefix_count(unsigned int (&prefix)[digits_per_thread],
+                                           unsigned int (&counts)[digits_per_thread],
                                            storage_type_& storage)
     {
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
@@ -937,11 +993,6 @@ class block_radix_rank_match
     }
 
 public:
-    /// \brief The number of digits that each thread manages when computing the digit prefix
-    /// and counts. This is only relevant to the overload of rank_keys that computes the
-    /// digit prefix and counts.
-    constexpr static unsigned int digits_per_thread = digits_per_thread_;
-
     /// \brief Struct used to allocate a temporary memory that is required for thread
     /// communication during operations provided by related parallel primitive.
     ///
@@ -1197,6 +1248,8 @@ public:
     /// <tt>const &</tt>, but function object must not modify the objects passed to it.
     /// This function will be used during ranking to extract the digit that indicates
     /// the key's value. Values return by this function object must be in range [0; 1 << RadixBits).
+    /// \param [in] prefix - An exclusive prefix scan of the counts per digit.
+    /// \param [in] counts - The number of keys with a particular digit in the input, per digit.
     ///
     /// \par Storage reusage
     /// A synchronization barrier should be placed before \p storage is reused
