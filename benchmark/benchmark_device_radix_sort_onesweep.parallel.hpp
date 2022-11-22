@@ -422,7 +422,6 @@ struct device_radix_sort_onesweep_benchmark_generator
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
         create_algo<rocprim::block_radix_rank_algorithm::basic>(storage);
-        create_algo<rocprim::block_radix_rank_algorithm::basic_memoize>(storage);
         create_algo<rocprim::block_radix_rank_algorithm::match>(storage);
     }
 };
