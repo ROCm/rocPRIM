@@ -51,13 +51,7 @@ __global__ __launch_bounds__(BlockSize) void rank_kernel(const T* const      ite
                                                          const unsigned int  start_bit,
                                                          const unsigned int  radix_bits)
 {
-    using block_rank_type = std::conditional_t<
-        Algorithm == rocprim::block_radix_rank_algorithm::match,
-        rocprim::block_radix_rank_match<BlockSize, MaxRadixBits>,
-        rocprim::block_radix_rank<BlockSize,
-                                  MaxRadixBits,
-                                  Algorithm == rocprim::block_radix_rank_algorithm::basic_memoize>>;
-
+    using block_rank_type     = rocprim::block_radix_rank<BlockSize, MaxRadixBits, Algorithm>;
     using keys_exchange_type  = rocprim::block_exchange<T, BlockSize, ItemsPerThread>;
     using ranks_exchange_type = rocprim::block_exchange<unsigned int, BlockSize, ItemsPerThread>;
 

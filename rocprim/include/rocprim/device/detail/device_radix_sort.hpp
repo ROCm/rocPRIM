@@ -911,12 +911,7 @@ struct onesweep_iteration_helper
 
     using key_codec       = radix_key_codec<Key, Descending>;
     using bit_key_type    = typename key_codec::bit_key_type;
-    using radix_rank_type = std::conditional_t<
-        RadixRankAlgorithm == block_radix_rank_algorithm::match,
-        block_radix_rank_match<BlockSize, RadixBits>,
-        block_radix_rank<BlockSize,
-                         RadixBits,
-                         RadixRankAlgorithm == block_radix_rank_algorithm::basic_memoize>>;
+    using radix_rank_type = ::rocprim::block_radix_rank<BlockSize, RadixBits, RadixRankAlgorithm>;
 
     static constexpr bool load_warp_striped
         = RadixRankAlgorithm == block_radix_rank_algorithm::match;

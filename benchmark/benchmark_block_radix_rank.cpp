@@ -52,12 +52,7 @@ template<typename T,
 __global__ __launch_bounds__(BlockSize) void rank_kernel(const T*      keys_input,
                                                          unsigned int* ranks_output)
 {
-    using rank_type = std::conditional_t<
-        Algorithm == rp::block_radix_rank_algorithm::match,
-        rp::block_radix_rank_match<BlockSize, RadixBits>,
-        rp::block_radix_rank<BlockSize,
-                             RadixBits,
-                             Algorithm == rp::block_radix_rank_algorithm::basic_memoize>>;
+    using rank_type = rp::block_radix_rank<BlockSize, RadixBits, Algorithm>;
 
     const unsigned int lid          = threadIdx.x;
     const unsigned int block_offset = blockIdx.x * ItemsPerThread * BlockSize;
