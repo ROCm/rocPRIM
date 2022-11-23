@@ -2,14 +2,18 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [Unreleased rocPRIM-2.12.0 for ROCm 5.4.0]
+## [Unreleased rocPRIM-2.13.0 for ROCm 5.5.0]
+### Added
 - New block level `radix_rank` primitive.
-## Changed
-- `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem
+### Changed
+- Improved the performance of `block_radix_sort` and `device_radix_sort`.
+
+## [Unreleased rocPRIM-2.12.0 for ROCm 5.4.0]
+### Changed
+- `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem 
   sizes larger than 2^32 items.
 - Device algorithms now return `hipErrorInvalidValue` if the amount of passed temporary memory is insufficient.
 - Lists of sizes for tests are unified, restored scan/reduce tests for `half` and `bfloat16` values.
-- Improved the performance of `block_radix_sort` and `device_radix_sort`.
 ### Removed
 - `block_sort::sort()` overload for keys and values with a dynamic size. This overload was documented but the
   implementation is missing. To avoid further confusion the documentation is removed until a decision is made on
@@ -17,7 +21,15 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 ### Fixed
 - Fixed the compilation failure in `device_merge` if the two key iterators don't match.
 
-## [Unreleased rocPRIM-2.11.0 for ROCm 5.3.0]
+## [rocPRIM-2.11.1 for ROCm 5.3.3]
+### Fixed
+- Fixed the compilation failure in device_merge if the two key iterators don't match.
+
+## [rocPRIM-2.11.0 for ROCm 5.3.2]
+### Known Issue
+- device_merge no longer correctly supports using different types for `keys_input1` and `keys_input2` (starting from the 5.3.0 release).
+
+## [rocPRIM-2.11.0 for ROCm 5.3.0]
 ### Added
 - New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
   on pairs of adjacent items distributed between threads in a block.
