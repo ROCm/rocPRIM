@@ -520,10 +520,12 @@ inline hipError_t radix_sort_onesweep_impl(
     bool from_input = true;
     if(!with_double_buffer && to_output)
     {
-        const bool keys_equal = ::rocprim::detail::are_iterators_equal(keys_input, keys_output);
-        const bool values_equal
-            = with_values && ::rocprim::detail::are_iterators_equal(values_input, values_output);
-        if(keys_equal || values_equal)
+        const bool keys_alias
+            = ::rocprim::detail::can_iterators_alias(keys_input, keys_output, size);
+        const bool values_alias
+            = with_values
+              && ::rocprim::detail::can_iterators_alias(values_input, values_output, size);
+        if(keys_alias || values_alias)
         {
             hipError_t error = ::rocprim::transform(keys_input,
                                                     keys_tmp,
