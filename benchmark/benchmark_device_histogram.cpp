@@ -635,12 +635,13 @@ void add_range_benchmarks(std::vector<benchmark::internal::Benchmark*>& benchmar
     benchmarks.insert(benchmarks.end(), bs.begin(), bs.end());
 }
 
-#define CREATE_MULTI_RANGE_BENCHMARK(CHANNELS, ACTIVE_CHANNELS, T, BINS)                        \
-    benchmark::RegisterBenchmark(                                                               \
-        (std::string("multi_histogram_range") + "<" #CHANNELS ", " #ACTIVE_CHANNELS ", " #T ">" \
-         + "(" + std::to_string(BINS) + " bins)")                                               \
-            .c_str(),                                                                           \
-        [=](benchmark::State& state)                                                            \
+#define CREATE_MULTI_RANGE_BENCHMARK(CHANNELS, ACTIVE_CHANNELS, T, BINS)                          \
+    benchmark::RegisterBenchmark(                                                                 \
+        bench_naming::format_name(                                                                \
+            "{lvl:device,algo:histogram_range,key_type:" #T ",bins:" + std::to_string(BINS)       \
+            + ",channels:" #CHANNELS ",active_channels:" #ACTIVE_CHANNELS ",cfg:default_config}") \
+            .c_str(),                                                                             \
+        [=](benchmark::State& state)                                                              \
         { run_multi_range_benchmark<T, CHANNELS, ACTIVE_CHANNELS>(state, BINS, stream, size); })
 
 void add_multi_range_benchmarks(std::vector<benchmark::internal::Benchmark*>& benchmarks,

@@ -281,17 +281,19 @@ void run_merge_pairs_benchmark(benchmark::State& state, hipStream_t stream, size
     HIP_CHECK(hipFree(d_values_output));
 }
 
-#define CREATE_MERGE_KEYS_BENCHMARK(Key) \
-benchmark::RegisterBenchmark( \
-    (std::string("merge") + "<" #Key ">").c_str(), \
-    [=](benchmark::State& state) { run_merge_keys_benchmark<Key>(state, stream, size); } \
-)
+#define CREATE_MERGE_KEYS_BENCHMARK(Key)                                                          \
+    benchmark::RegisterBenchmark(                                                                 \
+        bench_naming::format_name("{lvl:device,algo:merge,key_type:" #Key ",cfg:default_config}") \
+            .c_str(),                                                                             \
+        [=](benchmark::State& state) { run_merge_keys_benchmark<Key>(state, stream, size); })
 
-#define CREATE_MERGE_PAIRS_BENCHMARK(Key, Value) \
-benchmark::RegisterBenchmark( \
-    (std::string("merge") + "<" #Key ", " #Value ">").c_str(), \
-    [=](benchmark::State& state) { run_merge_pairs_benchmark<Key, Value>(state, stream, size); } \
-)
+#define CREATE_MERGE_PAIRS_BENCHMARK(Key, Value)                                                   \
+    benchmark::RegisterBenchmark(bench_naming::format_name("{lvl:device,algo:merge,key_type:" #Key \
+                                                           ",value_type:" #Value                   \
+                                                           ",cfg:default_config}")                 \
+                                     .c_str(),                                                     \
+                                 [=](benchmark::State& state)                                      \
+                                 { run_merge_pairs_benchmark<Key, Value>(state, stream, size); })
 
 int main(int argc, char *argv[])
 {
