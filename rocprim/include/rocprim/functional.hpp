@@ -41,7 +41,7 @@ BEGIN_ROCPRIM_NAMESPACE
         printf("%s\n", #message);                                        \
 }
 #else	
-#warning "GPU printf warnings for invalid rocPRIM warp operations on Navi GPUs temporarily disabled due to performance issues with printf." 	
+#warning "GPU printf warnings for invalid rocPRIM warp operations on Navi GPUs temporarily disabled, due to performance issues with printf." 	
 #define ROCPRIM_PRINT_ERROR_ONCE(message) \
 { }	
 #endif 
