@@ -361,7 +361,7 @@ test:docs:
     - pip3 install --user -r $CI_PROJECT_DIR/docs/requirements.txt
   script:
     - cd docs
-    - sphinx-build . _build
+    - make
   artifacts:
     paths:
       - $CI_PROJECT_DIR/docs/_build
