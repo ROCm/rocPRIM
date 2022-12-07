@@ -57,7 +57,7 @@ std::string config_name()
     constexpr rocprim::detail::radix_sort_onesweep_config_params params = Config();
     return "{histogram:{bs:" + std::to_string(params.histogram.block_size)
            + ",ipt:" + std::to_string(params.histogram.items_per_thread) + "},sort:{"
-           + ",bs:" + std::to_string(params.sort.block_size)
+           + "bs:" + std::to_string(params.sort.block_size)
            + ",ipt:" + std::to_string(params.sort.items_per_thread)
            + "},bits_per_place:" + std::to_string(params.radix_bits_per_place) + ",algorithm"
            + radix_rank_algorithm_name(params.radix_rank_algorithm) + "}";
