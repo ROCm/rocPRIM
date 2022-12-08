@@ -59,8 +59,8 @@ std::string config_name()
            + ",ipt:" + std::to_string(params.histogram.items_per_thread) + "},sort:{"
            + "bs:" + std::to_string(params.sort.block_size)
            + ",ipt:" + std::to_string(params.sort.items_per_thread)
-           + "},bits_per_place:" + std::to_string(params.radix_bits_per_place) + ",algorithm"
-           + radix_rank_algorithm_name(params.radix_rank_algorithm) + "}";
+           + "},bits_per_place:" + std::to_string(params.radix_bits_per_place)
+           + ",algorithm:" + radix_rank_algorithm_name(params.radix_rank_algorithm) + "}";
 }
 
 template<>
