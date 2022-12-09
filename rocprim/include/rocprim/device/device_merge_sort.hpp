@@ -29,7 +29,6 @@
 #include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 
-#include "detail/config/device_merge_sort.hpp"
 #include "detail/device_merge.hpp"
 #include "detail/device_merge_sort.hpp"
 #include "detail/device_merge_sort_mergepath.hpp"

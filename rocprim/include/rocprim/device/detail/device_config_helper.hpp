@@ -43,9 +43,10 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+/// \brief Default values are provided by \p merge_sort_block_sort_config_base.
 struct merge_sort_block_sort_config_params
 {
-    kernel_config_params block_sort_config = {512, 4};
+    kernel_config_params block_sort_config = {0, 0};
     block_sort_algorithm block_sort_method = block_sort_algorithm::merge_sort;
 };
 
@@ -117,11 +118,12 @@ struct radix_sort_block_sort_config_base
     using type = kernel_config<block_size, items_per_thread>;
 };
 
+/// \brief Default values are provided by \p merge_sort_block_merge_config_base.
 struct merge_sort_block_merge_config_params
 {
-    kernel_config_params merge_oddeven_config             = {256, 1, (1 << 17) + 70000};
-    kernel_config_params merge_mergepath_partition_config = {128, 1};
-    kernel_config_params merge_mergepath_config           = {128, 4};
+    kernel_config_params merge_oddeven_config             = {0, 0, 0};
+    kernel_config_params merge_mergepath_partition_config = {0, 0};
+    kernel_config_params merge_mergepath_config           = {0, 0};
 };
 
 // Necessary to construct a parameterized type of `merge_sort_block_merge_config_params`.
@@ -201,47 +203,14 @@ struct merge_sort_config : detail::merge_sort_config_params
 namespace detail
 {
 
-template<class Key, class Value, bool = is_scalar<Key>::value>
-struct default_merge_sort_config_base_helper
-{
-    using type = select_type<
-        // clang-format off
-            select_type_case<(sizeof(Key) == 1 && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
-            select_type_case<(sizeof(Key) == 2 && sizeof(Value) <= 16), merge_sort_config<512U, 256U, 4U>>,
-            select_type_case<(sizeof(Key) == 4 && sizeof(Value) <= 16), merge_sort_config<512U, 256U, 4U>>,
-            select_type_case<(sizeof(Key) == 8 && sizeof(Value) <= 16), merge_sort_config<256U, 256U, 4U>>,
-        // clang-format on
-        merge_sort_config<
-            limit_block_size<1024U,
-                             ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value)),
-                             ROCPRIM_WARP_SIZE_64>::value>>;
-};
-
-template<class Key, class Value>
-struct default_merge_sort_config_base_helper<Key, Value, false>
-{
-    using type = select_type<
-        // clang-format off
-            select_type_case<(sizeof(Key) == 8  && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
-            select_type_case<(sizeof(Key) == 16 && sizeof(Value) <= 16), merge_sort_config<512U, 512U, 2U>>,
-        // clang-format on
-        merge_sort_config<
-            limit_block_size<512U,
-                             ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value)),
-                             ROCPRIM_WARP_SIZE_64>::value>>;
-};
-
-template<class Key, class Value>
-struct default_merge_sort_config_base : default_merge_sort_config_base_helper<Key, Value>::type
-{};
-
+/// \brief Default values are provided by \p radix_sort_onesweep_config_base.
 struct radix_sort_onesweep_config_params
 {
-    kernel_config_params histogram = {256, 12};
-    kernel_config_params sort      = {256, 12};
+    kernel_config_params histogram = {0, 0};
+    kernel_config_params sort      = {0, 0};
 
     /// \brief The number of bits to sort in one onesweep iteration.
-    unsigned int radix_bits_per_place = 4;
+    unsigned int radix_bits_per_place = 1;
 
     /// \brief The internal block radix rank algorithm to use during the onesweep iteration.
     block_radix_rank_algorithm radix_rank_algorithm = block_radix_rank_algorithm::default_algorithm;
@@ -328,71 +297,6 @@ struct radix_sort_config
 
 namespace detail
 {
-
-template<class Key, class Value>
-struct default_radix_sort_config_base_helper
-{
-    static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
-        ::rocprim::max(sizeof(Key), sizeof(Value)), sizeof(int));
-
-    using scan = kernel_config<256, 2>;
-
-    using type = select_type<
-        select_type_case<
-            (sizeof(Key) == 1 && sizeof(Value) <= 8),
-            radix_sort_config<4, 4, scan, kernel_config<256, 10>, kernel_config<256, 19>>>,
-        select_type_case<
-            (sizeof(Key) == 2 && sizeof(Value) <= 8),
-            radix_sort_config<6, 5, scan, kernel_config<256, 10>, kernel_config<256, 17>>>,
-        select_type_case<
-            (sizeof(Key) == 4 && sizeof(Value) <= 8),
-            radix_sort_config<7, 6, scan, kernel_config<256, 15>, kernel_config<256, 15>>>,
-        select_type_case<
-            (sizeof(Key) == 8 && sizeof(Value) <= 8),
-            radix_sort_config<7, 6, scan, kernel_config<256, 15>, kernel_config<256, 12>>>,
-        radix_sort_config<
-            6,
-            4,
-            scan,
-            kernel_config<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-                          ::rocprim::max(1u, 15u / item_scale)>,
-            kernel_config<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-                          ::rocprim::max(1u, 10u / item_scale)>,
-            kernel_config<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-                          ::rocprim::max(1u, 10u / item_scale)>>>;
-};
-
-template<class Key>
-struct default_radix_sort_config_base_helper<Key, empty_type>
-    : select_type<select_type_case<sizeof(Key) == 1,
-                                   radix_sort_config<4,
-                                                     3,
-                                                     kernel_config<256, 2>,
-                                                     kernel_config<256, 10>,
-                                                     kernel_config<256, 19>>>,
-                  select_type_case<sizeof(Key) == 2,
-                                   radix_sort_config<6,
-                                                     5,
-                                                     kernel_config<256, 2>,
-                                                     kernel_config<256, 10>,
-                                                     kernel_config<256, 16>>>,
-                  select_type_case<sizeof(Key) == 4,
-                                   radix_sort_config<7,
-                                                     6,
-                                                     kernel_config<256, 2>,
-                                                     kernel_config<256, 17>,
-                                                     kernel_config<256, 15>>>,
-                  select_type_case<sizeof(Key) == 8,
-                                   radix_sort_config<7,
-                                                     6,
-                                                     kernel_config<256, 2>,
-                                                     kernel_config<256, 15>,
-                                                     kernel_config<256, 12>>>>
-{};
-
-template<class Value, class Key>
-struct default_radix_sort_config_base : default_radix_sort_config_base_helper<Key, Value>::type
-{};
 
 struct reduce_config_params
 {
