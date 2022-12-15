@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
-## [Unreleased rocPRIM-2.13.0 for ROCm 5.5.0]
+## [rocPRIM-2.13.0 for ROCm 5.5.0]
 ### Added
 - New block level `radix_rank` primitive.
 - New block level `radix_rank_match` primitive.
@@ -11,7 +11,7 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 ### Known Issues
 - Disabled GPU error messages relating to incorrect warp operation usage with Navi GPUs on Windows, due to GPU printf performance issues on Windows. 
 
-## [Unreleased rocPRIM-2.12.0 for ROCm 5.4.0]
+## [rocPRIM-2.12.0 for ROCm 5.4.0]
 ### Changed
 - `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem
   sizes larger than 2^32 items.
