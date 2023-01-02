@@ -118,6 +118,7 @@ void TestSortKeyValue()
                                stream,
                                device_key_output,
                                device_value_output);
+            HIP_CHECK(hipGetLastError());
         }
 
         // Reading results back
@@ -233,6 +234,7 @@ void TestSortKey(std::vector<size_t> sizes)
                     stream,
                     device_key_output,
                     size);
+                HIP_CHECK(hipGetLastError());
             }
 
             // Reading results back

@@ -163,6 +163,7 @@ TEST_F(HipAsyncCopyTests, AsyncCopyDepthFirst)
                                streams[i],
                                d_inputs[i],
                                sizes[i]);
+            HIP_CHECK(hipGetLastError());
         }
         HIP_CHECK(hipMemcpyAsync(outputs[i].data(), d_inputs[i], size_bytes, hipMemcpyDeviceToHost, streams[i]));
     }
@@ -189,6 +190,7 @@ TEST_F(HipAsyncCopyTests, AsyncCopyBreadthFirst)
                                streams[i],
                                d_inputs[i],
                                sizes[i]);
+            HIP_CHECK(hipGetLastError());
         }
     }
     for(size_t i = 0; i < sizes.size(); i++)
@@ -234,6 +236,7 @@ TEST(HipAsyncCopyTestsExtra, StreamInStruct)
         dim3(grid_size), dim3(block_size), 0, stream_wrapper.stream,
         d_input, size
     );
+    HIP_CHECK(hipGetLastError());
 
     vector_type output(size);
     HIP_CHECK(hipMemcpyAsync(output.data(), d_input, size_bytes, hipMemcpyDeviceToHost, stream_wrapper.stream));
