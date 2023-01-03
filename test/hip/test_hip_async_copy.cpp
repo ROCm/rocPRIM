@@ -156,11 +156,13 @@ TEST_F(HipAsyncCopyTests, AsyncCopyDepthFirst)
         const unsigned int grid_size = (sizes[i] + block_size - 1) / block_size;
         if(size > 0)
         {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(increment_kernel),
-                dim3(grid_size), dim3(block_size), 0, streams[i],
-                d_inputs[i], sizes[i]
-            );
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(increment_kernel),
+                               dim3(grid_size),
+                               dim3(block_size),
+                               0,
+                               streams[i],
+                               d_inputs[i],
+                               sizes[i]);
         }
         HIP_CHECK(hipMemcpyAsync(outputs[i].data(), d_inputs[i], size_bytes, hipMemcpyDeviceToHost, streams[i]));
     }
@@ -180,11 +182,13 @@ TEST_F(HipAsyncCopyTests, AsyncCopyBreadthFirst)
         const unsigned int grid_size = (sizes[i] + block_size - 1) / block_size;
         if(size > 0)
         {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(increment_kernel),
-                dim3(grid_size), dim3(block_size), 0, streams[i],
-                d_inputs[i], sizes[i]
-            );
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(increment_kernel),
+                               dim3(grid_size),
+                               dim3(block_size),
+                               0,
+                               streams[i],
+                               d_inputs[i],
+                               sizes[i]);
         }
     }
     for(size_t i = 0; i < sizes.size(); i++)
