@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -103,19 +103,21 @@ void TestSortKeyValue()
                             output_value.size() * sizeof(value_type),
                             hipMemcpyHostToDevice));
 
-        // Running kernel
-        hipLaunchKernelGGL(HIP_KERNEL_NAME(sort_pairs_kernel<block_size,
-                                                             items_per_thread,
-                                                             key_type,
-                                                             value_type,
-                                                             algo,
-                                                             binary_op_type>),
-                           dim3(grid_size),
-                           dim3(block_size),
-                           0,
-                           stream,
-                           device_key_output,
-                           device_value_output);
+        // Running kernel, ignored if invalid size
+        if(size > 0) {
+            hipLaunchKernelGGL(HIP_KERNEL_NAME(sort_pairs_kernel<block_size,
+                                                                 items_per_thread,
+                                                                 key_type,
+                                                                 value_type,
+                                                                 algo,
+                                                                 binary_op_type>),
+                               dim3(grid_size),
+                               dim3(block_size),
+                               0,
+                               stream,
+                               device_key_output,
+                               device_value_output);
+        }
 
         // Reading results back
         HIP_CHECK(hipMemcpy(output_key.data(),
@@ -219,15 +221,17 @@ void TestSortKey(std::vector<size_t> sizes)
                                 hipMemcpyHostToDevice));
 
             const unsigned int grid_size = rocprim::detail::ceiling_div(size, items_per_block);
-            // Running kernel
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(sort_keys_kernel<block_size, items_per_thread, key_type, algo>),
-                dim3(grid_size),
-                dim3(block_size),
-                0,
-                stream,
-                device_key_output,
-                size);
+            // Running kernel, ignored if invalid size
+            if(size > 0) {
+                hipLaunchKernelGGL(
+                    HIP_KERNEL_NAME(sort_keys_kernel<block_size, items_per_thread, key_type, algo>),
+                    dim3(grid_size),
+                    dim3(block_size),
+                    0,
+                    stream,
+                    device_key_output,
+                    size);
+            }
 
             // Reading results back
             HIP_CHECK(hipMemcpy(output.data(),
