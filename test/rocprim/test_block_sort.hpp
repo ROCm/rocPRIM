@@ -104,7 +104,8 @@ void TestSortKeyValue()
                             hipMemcpyHostToDevice));
 
         // Running kernel, ignored if invalid size
-        if(size > 0) {
+        if(size > 0) 
+        {
             hipLaunchKernelGGL(HIP_KERNEL_NAME(sort_pairs_kernel<block_size,
                                                                  items_per_thread,
                                                                  key_type,
@@ -222,7 +223,8 @@ void TestSortKey(std::vector<size_t> sizes)
 
             const unsigned int grid_size = rocprim::detail::ceiling_div(size, items_per_block);
             // Running kernel, ignored if invalid size
-            if(size > 0) {
+            if(size > 0) 
+            {
                 hipLaunchKernelGGL(
                     HIP_KERNEL_NAME(sort_keys_kernel<block_size, items_per_thread, key_type, algo>),
                     dim3(grid_size),

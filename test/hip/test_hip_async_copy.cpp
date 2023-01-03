@@ -154,7 +154,8 @@ TEST_F(HipAsyncCopyTests, AsyncCopyDepthFirst)
         const auto size_bytes = sizes[i] * sizeof(T);
         HIP_CHECK(hipMemcpyAsync(d_inputs[i], inputs[i].data(), size_bytes, hipMemcpyHostToDevice, streams[i]));
         const unsigned int grid_size = (sizes[i] + block_size - 1) / block_size;
-        if (size > 0) {
+        if (size > 0) 
+        {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(increment_kernel),
                 dim3(grid_size), dim3(block_size), 0, streams[i],
@@ -177,7 +178,8 @@ TEST_F(HipAsyncCopyTests, AsyncCopyBreadthFirst)
     for(size_t i = 0; i < sizes.size(); i++)
     {
         const unsigned int grid_size = (sizes[i] + block_size - 1) / block_size;
-        if (size > 0) {
+        if (size > 0) 
+        {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(increment_kernel),
                 dim3(grid_size), dim3(block_size), 0, streams[i],
