@@ -76,7 +76,7 @@ def delete_dir(dir_path) :
         run_cmd( "rm" , f"-rf {linux_path}")
 
 def cmake_path(os_path):
-    if OS_info == "nt":
+    if OS_info["ID"] == "windows":
         return os_path.replace("\\", "/")
     else:
         return os.path.realpath(os_path)     
