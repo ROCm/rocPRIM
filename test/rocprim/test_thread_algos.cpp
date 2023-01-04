@@ -27,7 +27,6 @@
  *
  ******************************************************************************/
 
-
 #include "rocprim/thread/thread_load.hpp"
 #include "rocprim/thread/thread_store.hpp"
 #include "rocprim/thread/thread_reduce.hpp"
