@@ -14,20 +14,11 @@ else()
   set(rocm_bin "C:/hip/bin")
 endif()
 
-#set(CMAKE_CXX_COMPILER "${rocm_bin}/hipcc.bat")
-#set(CMAKE_C_COMPILER "${rocm_bin}/hipcc.bat")
 set(CMAKE_CXX_COMPILER "${rocm_bin}/clang++.exe")
 set(CMAKE_C_COMPILER "${rocm_bin}/clang.exe")
 
-#set(CMAKE_CXX_LINKER "${rocm_bin}/hipcc.bat" )
-
-# TODO remove, just to speed up slow cmake
-set(CMAKE_C_COMPILER_WORKS 1)
-set(CMAKE_CXX_COMPILER_WORKS 1)
-#
-
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -IC:/hip/include -IC:/hip/lib/clang/12.0.0 -DWIN32 -D_CRT_SECURE_NO_WARNINGS")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${HIP_DIR}/include -DWIN32 -D_CRT_SECURE_NO_WARNINGS")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWIN32 -D_CRT_SECURE_NO_WARNINGS")
 
 # flags for clang direct use
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fms-extensions -fms-compatibility")
@@ -36,8 +27,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fms-extensions -fms-compatib
 
 # flags for clang direct use with hip
 # -x hip causes linker error
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x hip -IC:/hip/include/hip -D__HIP_PLATFORM_HCC__ -D__HIP_ROCclr__ -DHIP_CLANG_HCC_COMPAT_MODE=1")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${HIP_DIR}/include/hip -D__HIP_PLATFORM_HCC__ -D__HIP_ROCclr__ -DHIP_CLANG_HCC_COMPAT_MODE=1")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x hip -IC:/hip/include/hip -D__HIP_PLATFORM_AMD__ -D__HIP_ROCclr__ -DHIP_CLANG_HCC_COMPAT_MODE=1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIP_ROCclr__ -DHIP_CLANG_HCC_COMPAT_MODE=1")
 
 if (DEFINED ENV{VCPKG_PATH})
   file(TO_CMAKE_PATH "$ENV{VCPKG_PATH}" VCPKG_PATH)
