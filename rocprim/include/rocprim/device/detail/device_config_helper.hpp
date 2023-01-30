@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,7 @@ namespace detail
 struct merge_sort_block_sort_config_params
 {
     kernel_config_params block_sort_config = {0, 0};
-    block_sort_algorithm block_sort_method = block_sort_algorithm::merge_sort;
+    block_sort_algorithm block_sort_method = block_sort_algorithm::stable_merge_sort;
 };
 
 // Necessary to construct a parameterized type of `merge_sort_block_sort_config_params`.
@@ -102,7 +102,7 @@ struct merge_sort_block_sort_config_base
     static constexpr unsigned int items_per_thread = merge_sort_items_per_thread(item_scale);
     using type                                     = merge_sort_block_sort_config<block_size,
                                               items_per_thread,
-                                              block_sort_algorithm::merge_sort>;
+                                              block_sort_algorithm::stable_merge_sort>;
 };
 
 // Calculate kernel configurations, such that it will not exceed shared memory maximum
@@ -189,7 +189,7 @@ struct merge_sort_config : detail::merge_sort_config_params
     using block_sort_config
         = detail::merge_sort_block_sort_config<SortBlockSize,
                                                SortItemsPerThread,
-                                               block_sort_algorithm::default_algorithm>;
+                                               block_sort_algorithm::stable_merge_sort>;
     using block_merge_config = detail::merge_sort_block_merge_config<MergeOddevenBlockSize,
                                                                      1,
                                                                      MinInputSizeMergepath,
