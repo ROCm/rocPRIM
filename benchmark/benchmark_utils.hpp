@@ -425,6 +425,184 @@ inline std::string pad_string(std::string str, const size_t len)
     return str;
 }
 
+struct bench_naming
+{
+public:
+    enum format
+    {
+        json,
+        human,
+        txt
+    };
+    static format& get_format()
+    {
+        static format storage = human;
+        return storage;
+    }
+    static void set_format(std::string argument)
+    {
+        format result = human;
+        if(argument == "json")
+        {
+            result = json;
+        }
+        else if(argument == "txt")
+        {
+            result = txt;
+        }
+        get_format() = result;
+    }
+
+private:
+    static std::string matches_as_json(std::sregex_iterator& matches)
+    {
+        std::stringstream result;
+        int               brackets_count = 1;
+        result << "{";
+        bool insert_comma = false;
+        for(std::sregex_iterator i = matches; i != std::sregex_iterator(); ++i)
+        {
+            std::smatch m = *i;
+            if(insert_comma)
+            {
+                result << ",";
+            }
+            else
+            {
+                insert_comma = true;
+            }
+            result << "\"" << m[1].str() << "\":";
+            if(m[2].length() > 0)
+            {
+                if(m[2].str().find_first_not_of("0123456789") == std::string::npos)
+                {
+                    result << m[2].str();
+                }
+                else
+                {
+                    result << "\"" << m[2].str() << "\"";
+                }
+                if(m[3].length() > 0 && brackets_count > 0)
+                {
+                    int n = std::min(brackets_count, static_cast<int>(m[3].length()));
+                    brackets_count -= n;
+                    for(int c = 0; c < n; c++)
+                    {
+                        result << "}";
+                    }
+                }
+            }
+            else
+            {
+                brackets_count++;
+                result << "{";
+                insert_comma = false;
+            }
+        }
+        while(brackets_count > 0)
+        {
+            brackets_count--;
+            result << "}";
+        }
+        return result.str();
+    }
+
+    static std::string matches_as_human(std::sregex_iterator& matches)
+    {
+        std::stringstream result;
+        int               brackets_count = 0;
+        bool              insert_comma   = false;
+        for(std::sregex_iterator i = matches; i != std::sregex_iterator(); ++i)
+        {
+            std::smatch m = *i;
+            if(insert_comma)
+            {
+                result << ",";
+            }
+            else
+            {
+                insert_comma = true;
+            }
+            if(m[2].length() > 0)
+            {
+                result << m[2].str();
+                if(m[3].length() > 0 && brackets_count > 0)
+                {
+                    int n = std::min(brackets_count, static_cast<int>(m[3].length()));
+                    brackets_count -= n;
+                    for(int c = 0; c < n; c++)
+                    {
+                        result << ">";
+                    }
+                }
+            }
+            else
+            {
+                brackets_count++;
+                result << "<";
+                insert_comma = false;
+            }
+        }
+        while(brackets_count > 0)
+        {
+            brackets_count--;
+            result << ">";
+        }
+        return result.str();
+    }
+
+public:
+    static std::string format_name(std::string string)
+    {
+        format     format = get_format();
+std::regex r("([A-z0-9]*):\\s*((?:custom_type<[A-z0-9,]*>)|[A-z:\\(\\)\\.<>\\s0-9]*)(\\}*)");
+        // First we perform some checks
+        bool checks[4] = {false};
+        for(std::sregex_iterator i = std::sregex_iterator(string.begin(), string.end(), r);
+            i != std::sregex_iterator();
+            ++i)
+        {
+            std::smatch m = *i;
+            if(m[1].str() == "lvl")
+            {
+                checks[0] = true;
+            }
+            else if(m[1].str() == "algo")
+            {
+                checks[1] = true;
+            }
+            else if(m[1].str() == "cfg")
+            {
+                checks[2] = true;
+            }
+        }
+        std::string string_substitute = std::regex_replace(string, r, "");
+        checks[3] = string_substitute.find_first_not_of(" ,{}") == std::string::npos;
+        for(bool check_name_format : checks)
+        {
+            if(!check_name_format)
+            {
+                std::cout << "Benchmark name \"" << string
+                          << "\" not in the correct format (e.g. "
+                             "{lvl:block,algo:reduce,cfg:default_config} )"
+                          << std::endl;
+                exit(1);
+            }
+        }
+
+        // Now we generate the desired format
+        std::sregex_iterator matches = std::sregex_iterator(string.begin(), string.end(), r);
+
+        switch(format)
+        {
+            case format::json: return matches_as_json(matches);
+            case format::human: return matches_as_human(matches);
+            case format::txt: return string;
+        }
+        return string;
+    }
+};
+
 template <typename T>
 struct Traits
 {
