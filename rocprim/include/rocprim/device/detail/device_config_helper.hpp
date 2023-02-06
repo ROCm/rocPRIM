@@ -64,27 +64,23 @@ struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_con
 
 constexpr unsigned int merge_sort_items_per_thread(const unsigned int item_scale)
 {
-    if(item_scale < 32)
+    if(item_scale <= 4)
     {
         return 8;
     }
-    else if(item_scale < 64)
+    else if(item_scale <= 64)
     {
         return 4;
     }
-    else if(item_scale < 128)
-    {
-        return 2;
-    }
-    return 1;
+    return 2;
 }
 constexpr unsigned int merge_sort_block_size(const unsigned int item_scale)
 {
-    if(item_scale < 16)
+    if(item_scale <= 64)
     {
         return 128;
     }
-    else if(item_scale < 32)
+    else if(item_scale <= 128)
     {
         return 64;
     }
@@ -95,8 +91,7 @@ constexpr unsigned int merge_sort_block_size(const unsigned int item_scale)
 template<class Key, class Value>
 struct merge_sort_block_sort_config_base
 {
-    static constexpr unsigned int item_scale
-        = ::rocprim::max(sizeof(Key) + sizeof(unsigned int), sizeof(Value));
+    static constexpr unsigned int item_scale = ::rocprim::max(sizeof(Key), sizeof(Value));
     // multiply by 2 to ensure block_sort's items_per_block >= block_merge's items_per_block
     static constexpr unsigned int block_size       = merge_sort_block_size(item_scale) * 2;
     static constexpr unsigned int items_per_thread = merge_sort_items_per_thread(item_scale);
