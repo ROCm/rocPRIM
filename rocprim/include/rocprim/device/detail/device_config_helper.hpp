@@ -55,11 +55,9 @@ struct merge_sort_block_sort_config_params
 template<unsigned int BlockSize, unsigned int ItemsPerThread, rocprim::block_sort_algorithm Algo>
 struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_config_params
 {
+    using sort_config = kernel_config<BlockSize, ItemsPerThread>;
     constexpr merge_sort_block_sort_config()
-        : rocprim::detail::merge_sort_block_sort_config_params{
-            {BlockSize, ItemsPerThread},
-            Algo
-    } {};
+        : rocprim::detail::merge_sort_block_sort_config_params{sort_config(), Algo} {};
 };
 
 constexpr unsigned int merge_sort_items_per_thread(const unsigned int item_scale)
@@ -101,6 +99,8 @@ struct merge_sort_block_sort_config_base
 };
 
 // Calculate kernel configurations, such that it will not exceed shared memory maximum
+// No radix_sort_block_sort_params and radix_sort_block_sort_config exist since the only
+// configuration member is a kernel_config.
 template<class Key, class Value>
 struct radix_sort_block_sort_config_base
 {
@@ -111,6 +111,11 @@ struct radix_sort_block_sort_config_base
     static constexpr unsigned int items_per_thread
         = rocprim::min(4u, merge_sort_items_per_thread(item_scale));
     using type = kernel_config<block_size, items_per_thread>;
+
+    // The items per block should be a power of two, as this is a requirement for the
+    // radix sort merge sort.
+    static_assert(is_power_of_two(block_size * items_per_thread),
+                  "Sorted items per block should be a power of two.");
 };
 
 /// \brief Default values are provided by \p merge_sort_block_merge_config_base.
@@ -154,50 +159,6 @@ struct merge_sort_block_merge_config_base
                                                items_per_thread>;
 };
 
-struct merge_sort_config_params
-{
-    merge_sort_block_sort_config_params  block_sort_config;
-    merge_sort_block_merge_config_params block_merge_config;
-};
-
-} // namespace detail
-
-/// \brief Configuration of device-level merge primitives.
-///
-/// \tparam SortBlockSize - block size in the block-sort step
-/// \tparam SortItemsPerThread - ItemsPerThread in the block-sort step
-/// \tparam MergeOddevenBlockSize - block size in the block merge step using oddeven impl (used when input_size < MinInputSizeMergepath)
-/// \tparam MergeMergepathPartitionBlockSize - block size of the partition kernel in the block merge step using mergepath impl
-/// \tparam MergeMergepathBlockSize - block size in the block merge step using mergepath impl
-/// \tparam MergeMergepathItemsPerThread - ItemsPerThread in the block merge step using mergepath impl
-/// \tparam MinInputSizeMergepath - breakpoint of input-size to use mergepath impl for block merge step
-template<unsigned int MergeOddevenBlockSize            = 512,
-         unsigned int SortBlockSize                    = MergeOddevenBlockSize,
-         unsigned int SortItemsPerThread               = 1,
-         unsigned int MergeMergepathPartitionBlockSize = 128,
-         unsigned int MergeMergepathBlockSize          = 128,
-         unsigned int MergeMergepathItemsPerThread     = 4,
-         unsigned int MinInputSizeMergepath            = (1 << 17) + 70000>
-struct merge_sort_config : detail::merge_sort_config_params
-{
-    /// \remark Here we map the public parameters to our internal structure.
-    using block_sort_config
-        = detail::merge_sort_block_sort_config<SortBlockSize,
-                                               SortItemsPerThread,
-                                               block_sort_algorithm::stable_merge_sort>;
-    using block_merge_config = detail::merge_sort_block_merge_config<MergeOddevenBlockSize,
-                                                                     1,
-                                                                     MinInputSizeMergepath,
-                                                                     MergeMergepathBlockSize,
-                                                                     MergeMergepathBlockSize,
-                                                                     MergeMergepathItemsPerThread>;
-    constexpr merge_sort_config()
-        : detail::merge_sort_config_params{block_sort_config(), block_merge_config()} {};
-};
-
-namespace detail
-{
-
 /// \brief Default values are provided by \p radix_sort_onesweep_config_base.
 struct radix_sort_onesweep_config_params
 {
@@ -211,13 +172,22 @@ struct radix_sort_onesweep_config_params
     block_radix_rank_algorithm radix_rank_algorithm = block_radix_rank_algorithm::default_algorithm;
 };
 
+} // namespace detail
+
+/// \brief Configuration of subalgorithm Onesweep.
+///
+/// \tparam HistogramConfig - configuration of histogram kernel.
+/// \tparam SortConfig - configuration of sort kernel.
+/// \tparam RadixBits - number of bits per iteration.
+/// \tparam RadixRankAlgorithm - algorithm used for radix rank.
 template<class HistogramConfig                = kernel_config<256, 12>,
          class SortConfig                     = kernel_config<256, 12>,
          unsigned int               RadixBits = 4,
          block_radix_rank_algorithm RadixRankAlgorithm
          = block_radix_rank_algorithm::default_algorithm>
-struct radix_sort_onesweep_config : radix_sort_onesweep_config_params
+struct radix_sort_onesweep_config : detail::radix_sort_onesweep_config_params
 {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
     /// \brief Configration of radix sort onesweep histogram kernel.
     using histogram = HistogramConfig;
     /// \brief Configration of radix sort onesweep sort kernel.
@@ -230,7 +200,11 @@ struct radix_sort_onesweep_config : radix_sort_onesweep_config_params
             RadixBits,
             RadixRankAlgorithm,
     } {};
+#endif
 };
+
+namespace detail
+{
 
 // Calculate kernel configurations, such that it will not exceed shared memory maximum
 template<class Key, class Value>
@@ -244,54 +218,6 @@ struct radix_sort_onesweep_config_base
         kernel_config<block_size, ::rocprim::max(1u, 65000u / block_size / item_scale)>,
         4>;
 };
-
-} // namespace detail
-
-/// \brief Configuration of device-level radix sort operation.
-///
-/// Radix sort is excecuted in a single tile (at size < BlocksPerItem) or
-/// few iterations (passes) depending on total number of bits to be sorted
-/// (\p begin_bit and \p end_bit), each iteration sorts either \p LongRadixBits or \p ShortRadixBits bits
-/// choosen to cover whole bit range in optimal way.
-///
-/// For example, if \p LongRadixBits is 7, \p ShortRadixBits is 6, \p begin_bit is 0 and \p end_bit is 32
-/// there will be 5 iterations: 7 + 7 + 6 + 6 + 6 = 32 bits.
-///
-/// \tparam LongRadixBits - number of bits in long iterations.
-/// \tparam ShortRadixBits - number of bits in short iterations, must be equal to or less than \p LongRadixBits.
-/// \tparam ScanConfig - configuration of digits scan kernel. Must be \p kernel_config.
-/// \tparam SortConfig - configuration of radix sort kernel. Must be \p kernel_config.
-template<unsigned int LongRadixBits,
-         unsigned int ShortRadixBits,
-         class ScanConfig,
-         class SortConfig,
-         class SortSingleConfig               = kernel_config<256, 10>,
-         class SortMergeConfig                = kernel_config<1024, 1>,
-         unsigned int MergeSizeLimitBlocks    = 1024U,
-         bool         ForceSingleKernelConfig = false,
-         class OnesweepHistogramConfig        = kernel_config<256, 8>,
-         class OnesweepSortConfig             = kernel_config<256, 15>,
-         unsigned int OnesweepRadixBits       = 4>
-struct radix_sort_config
-{
-    /// \remark Here we map the public parameters to our internal structure.
-    /// \brief Limit number of blocks to use merge kernel.
-    static constexpr unsigned int merge_size_limit_blocks = MergeSizeLimitBlocks;
-
-    /// \brief Configuration of radix sort single kernel.
-    using block_sort_config = SortSingleConfig;
-    /// \brief Configuration of merge sort algorithm.
-    using merge_sort_config = default_config;
-    /// \brief Configration of radix sort onesweep.
-    using onesweep = detail::
-        radix_sort_onesweep_config<OnesweepHistogramConfig, OnesweepSortConfig, OnesweepRadixBits>;
-
-    /// \brief Force use radix sort single kernel configuration.
-    static constexpr bool force_single_kernel_config = ForceSingleKernelConfig;
-};
-
-namespace detail
-{
 
 struct reduce_config_params
 {

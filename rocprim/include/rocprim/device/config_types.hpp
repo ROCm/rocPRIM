@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -44,10 +44,18 @@ BEGIN_ROCPRIM_NAMESPACE
 /// launch using optimal configuration based on the target architecture derived from the stream.
 struct default_config
 {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    // default_config should be able to act as if any other config, members from those configs are provided here
+    // merge_sort_config
     using block_sort_config  = default_config;
     using block_merge_config = default_config;
+    // radix_sort_config_v2
+    using single_sort_config = default_config;
     using merge_sort_config  = default_config;
-    using onesweep           = default_config;
+    using onesweep_config    = default_config;
+    // merge_sort_block_sort_config
+    using sort_config = default_config;
+#endif
 };
 
 namespace detail

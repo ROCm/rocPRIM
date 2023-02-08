@@ -2,6 +2,10 @@
 
 Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/en/latest/](https://rocprim.readthedocs.io/en/latest/)
 
+## [Unreleased rocPRIM-x.x.x for ROCm 5.6.0]
+### Changed
+- Deprecated configuration `radix_sort_config` for device-level radix sort as it no longer matches the algorithm's parameters. New configuration `radix_sort_config_v2` is preferred instead.
+
 ## [Unreleased rocPRIM-2.13.0 for ROCm 5.5.0]
 ### Added
 - New block level `radix_rank` primitive.
