@@ -374,7 +374,7 @@ benchmark:
     - .benchmark-base
   variables:
     BENCHMARK_FILENAME_REGEX: ^benchmark
-    BENCHMARK_ALGORITHM_REGEX: "benchmark_device_merge_sort_block_sort"
+    BENCHMARK_ALGORITHM_REGEX: ""
   script:
     - 'printf "CI Variables used in benchmarks:\nBENCHMARK_RESULT_DIR: %s\nBENCHMARK_FILENAME_REGEX: %s\nBENCHMARK_ALGORITHM_REGEX: %s \n" "$BENCHMARK_RESULT_DIR" "$BENCHMARK_FILENAME_REGEX" "$BENCHMARK_ALGORITHM_REGEX"'
     - cd "${CI_PROJECT_DIR}"
