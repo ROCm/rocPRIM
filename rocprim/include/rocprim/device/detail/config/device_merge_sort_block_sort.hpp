@@ -1090,8 +1090,8 @@ struct default_merge_sort_block_sort_config<
     static_cast<unsigned int>(target_arch::gfx908),
     key_type,
     value_type,
-    std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 8)
-                      && (sizeof(value_type) <= 16) && (sizeof(value_type) > 8))>>
+    std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 16)
+                      && (sizeof(value_type) <= 16) && (sizeof(value_type) > 4))>>
     : merge_sort_block_sort_config<256, 4, block_sort_algorithm::stable_merge_sort>
 {};
 
@@ -1101,8 +1101,8 @@ struct default_merge_sort_block_sort_config<
     static_cast<unsigned int>(target_arch::unknown),
     key_type,
     value_type,
-    std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 8)
-                      && (sizeof(value_type) <= 16) && (sizeof(value_type) > 8))>>
+    std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 16)
+                      && (sizeof(value_type) <= 16) && (sizeof(value_type) > 4))>>
     : merge_sort_block_sort_config<256, 4, block_sort_algorithm::stable_merge_sort>
 {};
 
@@ -1112,8 +1112,8 @@ struct default_merge_sort_block_sort_config<
     static_cast<unsigned int>(target_arch::gfx90a),
     key_type,
     value_type,
-    std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 8)
-                      && (sizeof(value_type) <= 16) && (sizeof(value_type) > 8))>>
+    std::enable_if_t<(!bool(rocprim::is_floating_point<key_type>::value) && (sizeof(key_type) <= 16)
+                      && (sizeof(value_type) <= 16) && (sizeof(value_type) > 4))>>
     : merge_sort_block_sort_config<256, 4, block_sort_algorithm::stable_merge_sort>
 {};
 
