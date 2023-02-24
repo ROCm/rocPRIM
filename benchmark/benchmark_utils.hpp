@@ -24,16 +24,13 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <random>
 #include <regex>
 #include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#ifdef WIN32
-#include <numeric>
-#endif
 
 #include "benchmark/benchmark.h"
 #include <rocprim/rocprim.hpp>
@@ -645,7 +642,7 @@ inline const char* Traits<long long>::name()
     return "int64_t";
 }
 // On MSVC `int64_t` and `long long` are the same, leading to multiple definition errors
-#ifndef WIN32
+#ifndef _WIN32
 template <>
 inline const char* Traits<int64_t>::name() { return "int64_t"; }
 #endif

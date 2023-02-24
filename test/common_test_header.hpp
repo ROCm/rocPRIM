@@ -24,18 +24,15 @@
 #define ROCPRIM_COMMON_TEST_HEADER
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <iostream>
-#include <type_traits>
-#include <tuple>
-#include <vector>
-#include <utility>
-#include <random>
-#include <cmath>
-
-#ifdef WIN32
 #include <numeric>
-#endif
+#include <random>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 // Google Test
 #include <gtest/gtest.h>

@@ -31,20 +31,21 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \addtogroup utilsmodule_functional
 /// @{
 
-#ifndef WIN32
-#define ROCPRIM_PRINT_ERROR_ONCE(message) \
-{                                          \
-    unsigned int idx = threadIdx.x + (blockIdx.x * blockDim.x); \
-    idx += threadIdx.y + (blockIdx.y * blockDim.y);             \
-    idx += threadIdx.z + (blockIdx.z * blockDim.z);             \
-    if (idx == 0)                                                        \
-        printf("%s\n", #message);                                        \
-}
-#else	
-#warning "GPU printf warnings for invalid rocPRIM warp operations on Navi GPUs temporarily disabled, due to performance issues with printf." 	
-#define ROCPRIM_PRINT_ERROR_ONCE(message) \
-{ }	
-#endif 
+#if ROCPRIM_NAVI
+ROCPRIM_PRAGMA_MESSAGE("GPU printf warnings for invalid rocPRIM warp operations on Navi GPUs "
+                       "temporarily disabled, due to performance issues with printf.")
+    #define ROCPRIM_PRINT_ERROR_ONCE(message) \
+        {}
+#else
+    #define ROCPRIM_PRINT_ERROR_ONCE(message)                           \
+        {                                                               \
+            unsigned int idx = threadIdx.x + (blockIdx.x * blockDim.x); \
+            idx += threadIdx.y + (blockIdx.y * blockDim.y);             \
+            idx += threadIdx.z + (blockIdx.z * blockDim.z);             \
+            if(idx == 0)                                                \
+                printf("%s\n", #message);                               \
+        }
+#endif
 
 template<class T>
 ROCPRIM_HOST_DEVICE inline

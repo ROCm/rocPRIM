@@ -175,23 +175,27 @@ if(BUILD_BENCHMARK)
 endif(BUILD_BENCHMARK)
 
 if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-  set(CMAKE_FIND_DEBUG_MODE TRUE)
-  find_package(ROCM 0.7.3 CONFIG QUIET PATHS /opt/rocm)
-  set(CMAKE_FIND_DEBUG_MODE FALSE)
+  find_package(ROCM 0.7.3 CONFIG QUIET PATHS "${ROCM_ROOT}")
 endif()
 if(NOT ROCM_FOUND)
-  if(NOT EXISTS "${FETCHCONTENT_BASE_DIR}/rocm-cmake-src")
-    message(STATUS "ROCm CMake not found. Fetching...")
-    set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
-    FetchContent_Declare(
-      rocm-cmake
-      URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
-    )
-    FetchContent_MakeAvailable(rocm-cmake)
+  message(STATUS "ROCm CMake not found. Fetching...")
+  # We don't really want to consume the build and test targets of ROCm CMake.
+  # CMake 3.18 allows omitting them, even though there's a CMakeLists.txt in source root.
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
+    set(SOURCE_SUBDIR_ARG SOURCE_SUBDIR "DISABLE ADDING TO BUILD")
+  else()
+    set(SOURCE_SUBDIR_ARG)
   endif()
-  find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH HINTS "${rocm-cmake_SOURCE_DIR}")
+  set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
+  FetchContent_Declare(
+    rocm-cmake
+    URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
+    ${SOURCE_SUBDIR_ARG}
+  )
+  FetchContent_MakeAvailable(rocm-cmake)
+  find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH PATHS "${rocm-cmake_SOURCE_DIR}")
 else()
-  find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS /opt/rocm)
+  find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS "${ROCM_ROOT}")
 endif()
 
 # Restore user global state
