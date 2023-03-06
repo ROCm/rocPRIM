@@ -10,6 +10,8 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - Improved the performance of `block_radix_sort` and `device_radix_sort`.
 ### Known Issues
 - Disabled GPU error messages relating to incorrect warp operation usage with Navi GPUs on Windows, due to GPU printf performance issues on Windows. 
+### Fixed
+- Fixed benchmark build on Windows
 
 ## [rocPRIM-2.12.0 for ROCm 5.4.0]
 ### Changed
