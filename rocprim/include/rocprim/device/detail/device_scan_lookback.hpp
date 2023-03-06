@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,73 +45,55 @@ BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
-
-template<
-    bool Exclusive,
-    class Config,
-    class InputIterator,
-    class OutputIterator,
-    class BinaryFunction,
-    class ResultType,
-    class LookbackScanState
->
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-void lookback_scan_kernel_impl(InputIterator input,
-                               OutputIterator output,
-                               const size_t size,
-                               ResultType initial_value,
-                               BinaryFunction scan_op,
-                               LookbackScanState scan_state,
-                               const unsigned int number_of_blocks,
-                               ordered_block_id<unsigned int> ordered_bid,
-                               ResultType * previous_last_element = nullptr,
-                               ResultType * new_last_element = nullptr,
-                               bool override_first_value = false,
-                               bool save_last_value = false)
+template<bool Exclusive,
+         class Config,
+         class InputIterator,
+         class OutputIterator,
+         class BinaryFunction,
+         class ResultType,
+         class LookbackScanState>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+    lookback_scan_kernel_impl(InputIterator      input,
+                              OutputIterator     output,
+                              const size_t       size,
+                              ResultType         initial_value,
+                              BinaryFunction     scan_op,
+                              LookbackScanState  scan_state,
+                              const unsigned int number_of_blocks,
+                              ResultType*        previous_last_element = nullptr,
+                              ResultType*        new_last_element      = nullptr,
+                              bool               override_first_value  = false,
+                              bool               save_last_value       = false)
 {
     using result_type = ResultType;
-    static_assert(
-        std::is_same<result_type, typename LookbackScanState::value_type>::value,
-        "value_type of LookbackScanState must be result_type"
-    );
+    static_assert(std::is_same<result_type, typename LookbackScanState::value_type>::value,
+                  "value_type of LookbackScanState must be result_type");
 
-    constexpr auto block_size = Config::block_size;
-    constexpr auto items_per_thread = Config::items_per_thread;
-    constexpr unsigned int items_per_block = block_size * items_per_thread;
+    constexpr auto         block_size       = Config::block_size;
+    constexpr auto         items_per_thread = Config::items_per_thread;
+    constexpr unsigned int items_per_block  = block_size * items_per_thread;
 
-    using block_load_type = ::rocprim::block_load<
-        result_type, block_size, items_per_thread,
-        Config::block_load_method
-    >;
-    using block_store_type = ::rocprim::block_store<
-        result_type, block_size, items_per_thread,
-        Config::block_store_method
-    >;
-    using block_scan_type = ::rocprim::block_scan<
-        result_type, block_size,
-        Config::block_scan_method
-    >;
+    using block_load_type = ::rocprim::
+        block_load<result_type, block_size, items_per_thread, Config::block_load_method>;
+    using block_store_type = ::rocprim::
+        block_store<result_type, block_size, items_per_thread, Config::block_store_method>;
+    using block_scan_type
+        = ::rocprim::block_scan<result_type, block_size, Config::block_scan_method>;
 
-    using order_bid_type = ordered_block_id<unsigned int>;
-    using lookback_scan_prefix_op_type = lookback_scan_prefix_op<
-        result_type, BinaryFunction, LookbackScanState
-    >;
+    using lookback_scan_prefix_op_type
+        = lookback_scan_prefix_op<result_type, BinaryFunction, LookbackScanState>;
 
-    ROCPRIM_SHARED_MEMORY struct
+    ROCPRIM_SHARED_MEMORY union
     {
-        typename order_bid_type::storage_type ordered_bid;
-        union
-        {
-            typename block_load_type::storage_type load;
-            typename block_store_type::storage_type store;
-            typename block_scan_type::storage_type scan;
-        };
+        typename block_load_type::storage_type  load;
+        typename block_store_type::storage_type store;
+        typename block_scan_type::storage_type  scan;
     } storage;
 
-    const auto flat_block_thread_id = ::rocprim::detail::block_thread_id<0>();
-    const auto flat_block_id = ordered_bid.get(flat_block_thread_id, storage.ordered_bid);
-    const unsigned int block_offset = flat_block_id * items_per_block;
-    const auto valid_in_last_block = size - items_per_block * (number_of_blocks - 1);
+    const auto         flat_block_thread_id = ::rocprim::detail::block_thread_id<0>();
+    const auto         flat_block_id        = ::rocprim::detail::block_id<0>();
+    const unsigned int block_offset         = flat_block_id * items_per_block;
+    const auto         valid_in_last_block  = size - items_per_block * (number_of_blocks - 1);
 
     // For input values
     result_type values[items_per_thread];
@@ -119,23 +101,15 @@ void lookback_scan_kernel_impl(InputIterator input,
     // load input values into values
     if(flat_block_id == (number_of_blocks - 1)) // last block
     {
-        block_load_type()
-            .load(
-                input + block_offset,
-                values,
-                valid_in_last_block,
-                *(input + block_offset),
-                storage.load
-            );
+        block_load_type().load(input + block_offset,
+                               values,
+                               valid_in_last_block,
+                               *(input + block_offset),
+                               storage.load);
     }
     else
     {
-        block_load_type()
-            .load(
-                input + block_offset,
-                values,
-                storage.load
-            );
+        block_load_type().load(input + block_offset, values, storage.load);
     }
     ::rocprim::syncthreads(); // sync threads to reuse shared memory
 
