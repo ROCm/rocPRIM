@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -137,11 +137,10 @@ TYPED_TEST(RocprimIntrinsicsTests, ShuffleUp)
             SCOPED_TRACE(testing::Message() << "where logical_warp_size = " << i);
 
             auto deltas = test_utils::get_random_data<unsigned int>(
-                std::max<size_t>(1, logical_warp_size/2),
+                std::max<size_t>(1, logical_warp_size / 2),
                 1U,
                 std::max<unsigned int>(1, logical_warp_size - 1),
-                seed_index
-            );
+                seed_value);
 
             for(auto delta : deltas)
             {
@@ -240,11 +239,10 @@ TYPED_TEST(RocprimIntrinsicsTests, ShuffleDown)
             SCOPED_TRACE(testing::Message() << "where logical_warp_size = " << i);
 
             auto deltas = test_utils::get_random_data<unsigned int>(
-                std::max<size_t>(1, logical_warp_size/2),
+                std::max<size_t>(1, logical_warp_size / 2),
                 1U,
                 std::max<unsigned int>(1, logical_warp_size - 1),
-                seed_index
-            );
+                seed_value);
 
             for(auto delta : deltas)
             {
@@ -351,11 +349,11 @@ TYPED_TEST(RocprimIntrinsicsTests, ShuffleIndex)
             const unsigned int logical_warp_size = i;
             SCOPED_TRACE(testing::Message() << "where logical_warp_size = " << i);
 
-            auto src_lanes = test_utils::get_random_data<int>(
-                hardware_warp_size/logical_warp_size,
-                0, std::max<int>(0, logical_warp_size-1),
-                seed_index
-            );
+            auto src_lanes
+                = test_utils::get_random_data<int>(hardware_warp_size / logical_warp_size,
+                                                   0,
+                                                   std::max<int>(0, logical_warp_size - 1),
+                                                   seed_value);
 
             // Calculate expected results on host
             std::vector<T> expected(size, 0);
@@ -456,11 +454,10 @@ TEST(RocprimIntrinsicsTests, ShuffleUpCustomStruct)
             SCOPED_TRACE(testing::Message() << "where logical_warp_size = " << i);
 
             auto deltas = test_utils::get_random_data<unsigned int>(
-                std::max<size_t>(1, logical_warp_size/2),
+                std::max<size_t>(1, logical_warp_size / 2),
                 1U,
                 std::max<unsigned int>(1, logical_warp_size - 1),
-                seed_index
-            );
+                seed_value);
 
             for(auto delta : deltas)
             {
@@ -555,11 +552,10 @@ TEST(RocprimIntrinsicsTests, ShuffleUpCustomAlignedStruct)
             SCOPED_TRACE(testing::Message() << "where logical_warp_size = " << i);
 
             auto deltas = test_utils::get_random_data<unsigned int>(
-                std::max<size_t>(1, logical_warp_size/2),
+                std::max<size_t>(1, logical_warp_size / 2),
                 1U,
                 std::max<unsigned int>(1, logical_warp_size - 1),
-                seed_index
-            );
+                seed_value);
 
             for(auto delta : deltas)
             {
