@@ -12,6 +12,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - Deprecated configurations `scan_config` and `scan_by_key_config` for device-level scans, as they no longer match the algorithm's parameters. New configurations `scan_config_v2` and `scan_by_key_config_v2` are preferred instead.
 ### Fixed
 - Fixed build issue caused by missing header in `thread/thread_search.hpp`.
+- Renamed `rocprim::MatchAny` to `rocprim::match_any` and fixed it for devices with 64-bit warp size.
 
 ## [rocPRIM-2.13.0 for ROCm 5.5.0]
 ### Added
