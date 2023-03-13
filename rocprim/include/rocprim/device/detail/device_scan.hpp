@@ -33,6 +33,8 @@
 #include "../../block/block_scan.hpp"
 #include "../../block/block_store.hpp"
 
+#include "../../device/device_scan_config.hpp"
+
 #include "device_scan_common.hpp"
 #include "lookback_scan_state.hpp"
 #include "ordered_block_id.hpp"
@@ -109,17 +111,18 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     using result_type = ResultType;
     static_assert(std::is_same<result_type, typename LookbackScanState::value_type>::value,
                   "value_type of LookbackScanState must be result_type");
+    static constexpr scan_config_params params = device_params<Config>();
 
-    constexpr auto         block_size       = Config::block_size;
-    constexpr auto         items_per_thread = Config::items_per_thread;
+    constexpr auto         block_size       = params.kernel_config.block_size;
+    constexpr auto         items_per_thread = params.kernel_config.items_per_thread;
     constexpr unsigned int items_per_block  = block_size * items_per_thread;
 
     using block_load_type = ::rocprim::
-        block_load<result_type, block_size, items_per_thread, Config::block_load_method>;
+        block_load<result_type, block_size, items_per_thread, params.block_load_method>;
     using block_store_type = ::rocprim::
-        block_store<result_type, block_size, items_per_thread, Config::block_store_method>;
+        block_store<result_type, block_size, items_per_thread, params.block_store_method>;
     using block_scan_type
-        = ::rocprim::block_scan<result_type, block_size, Config::block_scan_method>;
+        = ::rocprim::block_scan<result_type, block_size, params.block_scan_method>;
 
     using lookback_scan_prefix_op_type
         = lookback_scan_prefix_op<result_type, BinaryFunction, LookbackScanState>;

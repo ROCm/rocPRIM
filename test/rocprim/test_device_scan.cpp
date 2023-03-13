@@ -108,23 +108,35 @@ typedef ::testing::Types<
     DeviceScanParams<test_utils::custom_test_array_type<int, 10>>>
     RocprimDeviceScanTestsParams;
 
-template <unsigned int SizeLimit>
-struct size_limit_config {
-    using type = rocprim::scan_config<256,
-                                      16,
-                                      rocprim::block_load_method::block_load_transpose,
-                                      rocprim::block_store_method::block_store_transpose,
-                                      rocprim::block_scan_algorithm::using_warp_scan,
-                                      SizeLimit>;
+template<unsigned int SizeLimit, bool ByKey>
+struct size_limit_config
+{
+    using type = std::conditional_t<
+        ByKey,
+        rocprim::scan_by_key_config<256,
+                                    16,
+                                    rocprim::block_load_method::block_load_transpose,
+                                    rocprim::block_store_method::block_store_transpose,
+                                    rocprim::block_scan_algorithm::using_warp_scan,
+                                    SizeLimit>,
+        rocprim::scan_config<256,
+                             16,
+                             rocprim::block_load_method::block_load_transpose,
+                             rocprim::block_store_method::block_store_transpose,
+                             rocprim::block_scan_algorithm::using_warp_scan,
+                             SizeLimit>
+
+        >;
 };
 
-template <>
-struct size_limit_config<ROCPRIM_GRID_SIZE_LIMIT> {
+template<bool ByKey>
+struct size_limit_config<ROCPRIM_GRID_SIZE_LIMIT, ByKey>
+{
     using type = rocprim::default_config;
 };
 
-template <unsigned int SizeLimit>
-using size_limit_config_t = typename size_limit_config<SizeLimit>::type;
+template<unsigned int SizeLimit, bool ByKey>
+using size_limit_config_t = typename size_limit_config<SizeLimit, ByKey>::type;
 
 // use float for accumulation of bfloat16 and half inputs if operator is plus
 template <typename input_type, typename input_op_type> struct accum_type {
@@ -224,7 +236,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    using Config = size_limit_config_t<TestFixture::size_limit>;
+    using Config = size_limit_config_t<TestFixture::size_limit, false>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -354,7 +366,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 
     const bool debug_synchronous = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    using Config = size_limit_config_t<TestFixture::size_limit>;
+    using Config = size_limit_config_t<TestFixture::size_limit, false>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -479,7 +491,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
     constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
 
     const bool debug_synchronous = TestFixture::debug_synchronous;
-    using Config = size_limit_config_t<TestFixture::size_limit>;
+    using Config                 = size_limit_config_t<TestFixture::size_limit, true>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -626,7 +638,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
     constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
 
     const bool debug_synchronous = TestFixture::debug_synchronous;
-    using Config = size_limit_config_t<TestFixture::size_limit>;
+    using Config                 = size_limit_config_t<TestFixture::size_limit, true>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -1292,7 +1304,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 
     const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    using Config                                = size_limit_config_t<TestFixture::size_limit>;
+    using Config = size_limit_config_t<TestFixture::size_limit, false>;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);

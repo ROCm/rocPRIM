@@ -265,6 +265,16 @@ template<class Value>
 struct default_reduce_config_base : default_reduce_config_base_helper<Value>::type
 {};
 
+/// \brief Provides the kernel parameters for exclusive_scan and inclusive_scan based
+///        on autotuned configurations or user-provided configurations.
+struct scan_config_params
+{
+    kernel_config_params            kernel_config{};
+    ::rocprim::block_load_method    block_load_method{};
+    ::rocprim::block_store_method   block_store_method{};
+    ::rocprim::block_scan_algorithm block_scan_method{};
+};
+
 } // namespace detail
 
 /// \brief Configuration of device-level scan primitives.
@@ -281,20 +291,21 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_config
+struct scan_config : ::rocprim::detail::scan_config_params
 {
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    // Requirement dictated by init_lookback_scan_state_kernel.
+    static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
+                  "Block size should at most be ROCPRIM_DEFAULT_MAX_BLOCK_SIZE.");
+
+    constexpr scan_config()
+        : ::rocprim::detail::scan_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit},
+            BlockLoadMethod,
+            BlockStoreMethod,
+            BlockScanMethod
+    } {};
+#endif
 };
 
 namespace detail
@@ -317,6 +328,16 @@ template<class Value>
 struct default_scan_config_base : default_scan_config_base_helper<Value>::type
 {};
 
+/// \brief Provides the kernel parameters for exclusive_scan_by_key and inclusive_scan_by_key based
+///        on autotuned configurations or user-provided configurations.
+struct scan_by_key_config_params
+{
+    kernel_config_params            kernel_config;
+    ::rocprim::block_load_method    block_load_method;
+    ::rocprim::block_store_method   block_store_method;
+    ::rocprim::block_scan_algorithm block_scan_method;
+};
+
 } // namespace detail
 
 /// \brief Configuration of device-level scan-by-key operation.
@@ -333,20 +354,21 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_by_key_config
+struct scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
 {
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    // Requirement dictated by init_lookback_scan_state_kernel.
+    static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
+                  "Block size should at most be ROCPRIM_DEFAULT_MAX_BLOCK_SIZE.");
+
+    constexpr scan_by_key_config()
+        : ::rocprim::detail::scan_by_key_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit},
+            BlockLoadMethod,
+            BlockStoreMethod,
+            BlockScanMethod
+    } {};
+#endif
 };
 
 namespace detail
@@ -358,7 +380,7 @@ struct default_scan_by_key_config_base_helper
     static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
         sizeof(Key) + sizeof(Value), 2 * sizeof(int));
 
-    using type = scan_config<
+    using type = scan_by_key_config<
         limit_block_size<256U, sizeof(Key) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
         ::rocprim::max(1u, 16u / item_scale),
         ::rocprim::block_load_method::block_load_transpose,
