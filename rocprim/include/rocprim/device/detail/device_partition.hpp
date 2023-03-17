@@ -34,7 +34,6 @@
 #include "../../block/block_scan.hpp"
 #include "../../block/block_discontinuity.hpp"
 
-#include "device_scan_lookback.hpp"
 #include "lookback_scan_state.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE

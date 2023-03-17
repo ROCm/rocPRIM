@@ -5,6 +5,8 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 ## [Unreleased rocPRIM-x.x.x for ROCm 5.6.0]
 ### Changed
 - Deprecated configuration `radix_sort_config` for device-level radix sort as it no longer matches the algorithm's parameters. New configuration `radix_sort_config_v2` is preferred instead.
+- Removed erroneous implementation of device-level `inclusive_scan` and `exclusive_scan`. The prior default implementation using lookback-scan now is the only available implementation.
+- Removed switch to disable lookback-scan in `scan_config` and `scan_by_key_config`.
 
 ## [Unreleased rocPRIM-2.13.0 for ROCm 5.5.0]
 ### Added

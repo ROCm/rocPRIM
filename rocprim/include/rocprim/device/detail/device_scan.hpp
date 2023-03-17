@@ -21,17 +21,17 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_DEVICE_SCAN_LOOKBACK_HPP_
 #define ROCPRIM_DEVICE_DETAIL_DEVICE_SCAN_LOOKBACK_HPP_
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 
 #include "../../detail/various.hpp"
-#include "../../intrinsics.hpp"
 #include "../../functional.hpp"
+#include "../../intrinsics.hpp"
 #include "../../types.hpp"
 
 #include "../../block/block_load.hpp"
-#include "../../block/block_store.hpp"
 #include "../../block/block_scan.hpp"
+#include "../../block/block_store.hpp"
 
 #include "device_scan_common.hpp"
 #include "lookback_scan_state.hpp"
@@ -45,6 +45,47 @@ BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
+
+// Helper functions for performing exclusive or inclusive
+// block scan in single_scan.
+template<bool Exclusive,
+         class BlockScan,
+         class T,
+         unsigned int ItemsPerThread,
+         class BinaryFunction>
+ROCPRIM_DEVICE ROCPRIM_INLINE auto single_scan_block_scan(T (&input)[ItemsPerThread],
+                                                          T (&output)[ItemsPerThread],
+                                                          T initial_value,
+                                                          typename BlockScan::storage_type& storage,
+                                                          BinaryFunction scan_op) ->
+    typename std::enable_if<Exclusive>::type
+{
+    BlockScan().exclusive_scan(input, // input
+                               output, // output
+                               initial_value,
+                               storage,
+                               scan_op);
+}
+
+template<bool Exclusive,
+         class BlockScan,
+         class T,
+         unsigned int ItemsPerThread,
+         class BinaryFunction>
+ROCPRIM_DEVICE ROCPRIM_INLINE auto single_scan_block_scan(T (&input)[ItemsPerThread],
+                                                          T (&output)[ItemsPerThread],
+                                                          T initial_value,
+                                                          typename BlockScan::storage_type& storage,
+                                                          BinaryFunction scan_op) ->
+    typename std::enable_if<!Exclusive>::type
+{
+    (void)initial_value;
+    BlockScan().inclusive_scan(input, // input
+                               output, // output
+                               storage,
+                               scan_op);
+}
+
 template<bool Exclusive,
          class Config,
          class InputIterator,
@@ -120,19 +161,18 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         if(override_first_value)
         {
             if(Exclusive)
-                initial_value = scan_op(previous_last_element[0], static_cast<result_type>(*(input-1)));
+                initial_value
+                    = scan_op(previous_last_element[0], static_cast<result_type>(*(input - 1)));
             else if(flat_block_thread_id == 0)
                 values[0] = scan_op(previous_last_element[0], values[0]);
         }
 
         result_type reduction;
-        lookback_block_scan<Exclusive, block_scan_type>(
-            values, // input/output
-            initial_value,
-            reduction,
-            storage.scan,
-            scan_op
-        );
+        lookback_block_scan<Exclusive, block_scan_type>(values, // input/output
+                                                        initial_value,
+                                                        reduction,
+                                                        storage.scan,
+                                                        scan_op);
 
         if(flat_block_thread_id == 0)
         {
@@ -142,32 +182,22 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     else
     {
         // Scan of block values
-        auto prefix_op = lookback_scan_prefix_op_type(
-            flat_block_id, scan_op, scan_state
-        );
-        lookback_block_scan<Exclusive, block_scan_type>(
-            values, // input/output
-            storage.scan,
-            prefix_op,
-            scan_op
-        );
+        auto prefix_op = lookback_scan_prefix_op_type(flat_block_id, scan_op, scan_state);
+        lookback_block_scan<Exclusive, block_scan_type>(values, // input/output
+                                                        storage.scan,
+                                                        prefix_op,
+                                                        scan_op);
     }
     ::rocprim::syncthreads(); // sync threads to reuse shared memory
 
     // Save values into output array
     if(flat_block_id == (number_of_blocks - 1)) // last block
     {
-        block_store_type()
-            .store(
-                output + block_offset,
-                values,
-                valid_in_last_block,
-                storage.store
-            );
+        block_store_type().store(output + block_offset, values, valid_in_last_block, storage.store);
 
-        if(save_last_value &&
-           (::rocprim::detail::block_thread_id<0>() ==
-           (valid_in_last_block - 1) / items_per_thread))
+        if(save_last_value
+           && (::rocprim::detail::block_thread_id<0>()
+               == (valid_in_last_block - 1) / items_per_thread))
         {
             for(unsigned int i = 0; i < items_per_thread; i++)
             {
@@ -180,16 +210,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     }
     else
     {
-        block_store_type()
-            .store(
-                output + block_offset,
-                values,
-                storage.store
-            );
+        block_store_type().store(output + block_offset, values, storage.store);
     }
 }
 
-} // end of detail namespace
+} // end of namespace detail
 
 END_ROCPRIM_NAMESPACE
 

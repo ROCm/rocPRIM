@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -112,7 +112,6 @@ template <unsigned int SizeLimit>
 struct size_limit_config {
     using type = rocprim::scan_config<256,
                                       16,
-                                      ROCPRIM_DETAIL_USE_LOOKBACK_SCAN,
                                       rocprim::block_load_method::block_load_transpose,
                                       rocprim::block_store_method::block_store_transpose,
                                       rocprim::block_scan_algorithm::using_warp_scan,

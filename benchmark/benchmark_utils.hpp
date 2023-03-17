@@ -43,8 +43,8 @@
         hipError_t error = condition;                                                       \
         if(error != hipSuccess)                                                             \
         {                                                                                   \
-            std::cout << "HIP error: " << hipGetErrorString(error) << " line: " << __LINE__ \
-                      << std::endl;                                                         \
+            std::cout << "HIP error: " << hipGetErrorString(error) << " file: " << __FILE__ \
+                      << " line: " << __LINE__ << std::endl;                                \
             exit(error);                                                                    \
         }                                                                                   \
     }
