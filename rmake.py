@@ -101,11 +101,13 @@ def config_cmd():
         #set CPACK_PACKAGING_INSTALL_PREFIX= defined as blank as it is appended to end of path for archive creation
         cmake_platform_opts.append( f"-DWIN32=ON -DCPACK_PACKAGING_INSTALL_PREFIX=") #" -DCPACK_PACKAGING_INSTALL_PREFIX={rocm_path}"
         cmake_platform_opts.append( f"-DCMAKE_INSTALL_PREFIX=\"C:/hipSDK\"" )
+        rocm_cmake_path = '"' + cmake_path(os.getenv("ROCM_CMAKE_PATH", "C:/hipSDK")) + '"'        
         generator = f"-G Ninja"
         # "-G \"Visual Studio 16 2019\" -A x64"  #  -G NMake ")  #
         cmake_options.append( generator )
     else:
         rocm_path = os.getenv( 'ROCM_PATH', "/opt/rocm")
+        rocm_cmake_path = '"' + rocm_path + '"'        
         if (OS_info["ID"] in ['centos', 'rhel']):
           cmake_executable = "cmake3"
         else:
@@ -135,7 +137,7 @@ def config_cmd():
         deps_dir = os.path.abspath(os.path.join(build_dir, 'deps')).replace('\\','/')
     else:
         deps_dir = args.deps_dir
-    cmake_base_options = f"-DROCM_PATH={rocm_path} -DCMAKE_PREFIX_PATH:PATH={rocm_path}" # -DCMAKE_INSTALL_PREFIX=rocmath-install" #-DCMAKE_INSTALL_LIBDIR=
+    cmake_base_options = f"-DROCM_PATH={rocm_path} -DCMAKE_PREFIX_PATH:PATH={rocm_path[:-1]};{rocm_cmake_path[1:]}" # -DCMAKE_INSTALL_PREFIX=rocmath-install" #-DCMAKE_INSTALL_LIBDIR=
     cmake_options.append( cmake_base_options )
 
     print( cmake_options )
@@ -160,7 +162,7 @@ def config_cmd():
         cmake_options.append( f"-DBUILD_TEST=ON -DBUILD_DIR={build_dir}" )
 
     if args.build_clients:
-        cmake_options.append( f"-DBUILD_TEST=ON -DBUILD_EXAMPLE=ON -DBUILD_DIR={build_dir}" )
+        cmake_options.append( f"-DBUILD_TEST=ON -DBUILD_BENCHMARK=ON -DBUILD_EXAMPLE=ON -DBUILD_DIR={build_dir}" )
 
     cmake_options.append( f"-DAMDGPU_TARGETS={args.gpu_architecture}" )
 
