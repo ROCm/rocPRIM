@@ -6,7 +6,7 @@ Operations and Sequences
 
 A ``rocPRIM`` operation is a computation over a sequence of objects returning one value (e.g. ``reduce``) , another sequence (e.g. ``sort``) or multiple sequences (e.g. ``partition``). The elements of the sequence could be of any type or class, although template specialization allows ``rocPRIM`` to optimize the computations over the usual numerical datatypes. Operations handle sequences by expecting ``iterators`` as input and mutable ones as output.
 
-A high level view of the available operations could be consulted there: :doc:`/operations`. As you can see, those are really generic operations that are difficult to avoid on a day to day basis.
+A high level view of the available operations could be consulted there: :doc:`/ops_summary`. As you can see, those are really generic operations that are difficult to avoid on a day to day basis.
 
 Scope
 -----

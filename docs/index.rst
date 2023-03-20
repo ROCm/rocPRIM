@@ -1,16 +1,5 @@
-.. rocPRIMs documentation master file
++++++++++++++++++++++++
+ rocPRIM Documentation 
++++++++++++++++++++++++
 
-Welcome to rocPRIM's documentation!
-==================================
-
-.. toctree::
-   :maxdepth: 3 
-   :caption: Contents:
-
-   api/library_root
-   
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`search`
+``rocPRIM`` is a header-only library providing HIP parallel primitives to ease the maintainability of performant and yet portable GPU-accelerated code on AMD ROCm platform.
