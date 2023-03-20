@@ -51,7 +51,6 @@
     #ifndef ROCPRIM_DEFAULT_MAX_BLOCK_SIZE
         #define ROCPRIM_DEFAULT_MAX_BLOCK_SIZE 256
     #endif
-
     #ifndef ROCPRIM_DEFAULT_MIN_WARPS_PER_EU
         #define ROCPRIM_DEFAULT_MIN_WARPS_PER_EU 1
     #endif
@@ -60,7 +59,7 @@
         // Currently HIP on Windows has a bug involving inline device functions generating
         // local memory/register allocation errors during compilation.  Current workaround is to
         // use __attribute__((always_inline)) for the affected functions
-        #ifdef WIN32
+        #ifdef _WIN32
           #define ROCPRIM_INLINE inline __attribute__((always_inline))
         #else
           #define ROCPRIM_INLINE inline
