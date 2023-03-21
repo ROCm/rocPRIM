@@ -2,9 +2,13 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
+## [rocPRIM-2.12.1 for ROCm 5.4.4]
+### Fixed
+- Fixed compilation and execution issues for benchmarks with HIP on Windows
+
 ## [rocPRIM-2.12.0 for ROCm 5.4.0]
 ### Changed
-- `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem 
+- `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem
   sizes larger than 2^32 items.
 ### Removed
 - `block_sort::sort()` overload for keys and values with a dynamic size. This overload was documented but the
