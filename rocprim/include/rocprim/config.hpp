@@ -60,9 +60,9 @@
         // local memory/register allocation errors during compilation.  Current workaround is to
         // use __attribute__((always_inline)) for the affected functions
         #ifdef _WIN32
-          #define ROCPRIM_INLINE inline __attribute__((always_inline))
+            #define ROCPRIM_INLINE inline __attribute__((always_inline))
         #else
-          #define ROCPRIM_INLINE inline
+            #define ROCPRIM_INLINE inline
         #endif
     #else
         // Prefer simpler signatures to let Sphinx/Breathe parse them
