@@ -1,13 +1,6 @@
 ### Build dirs ###
 build/
 
-### Docs dirs ###
-doc/html/
-doc/xml/
-doc/latex/
-doc/*.tag
-doc/build/
-
 # Created by https://www.gitignore.io/api/c++,cmake
 
 ### C++ ###
