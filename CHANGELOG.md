@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/en/latest/](https://rocprim.readthedocs.io/en/latest/)
 
-## [Unreleased rocPRIM-2.13.0 for ROCm 5.5.0]
+## [rocPRIM-2.13.0 for ROCm 5.5.0]
 ### Added
 - New block level `radix_rank` primitive.
 - New block level `radix_rank_match` primitive.
