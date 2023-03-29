@@ -530,14 +530,6 @@ class BenchmarkDataManager:
         The benchmarks within the file may belong to different algorithms.
         """
 
-        with open(benchmark_run_file_path, "r+") as file_handle:
-            # Fix Google Benchmark comma issue
-            contents = file_handle.read()
-            contents = re.sub(r"(\s*\"[^\"]*\"[^,])(^\s*\"[^\"]*\":)", "\\1,\\2", contents, 0, re.MULTILINE)
-            file_handle.seek(0)
-            file_handle.write(contents)
-            file_handle.truncate()
-
         with open(benchmark_run_file_path, "r") as file_handle:
             benchmark_run_data = json.load(file_handle)
 
