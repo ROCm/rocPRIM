@@ -69,6 +69,7 @@
         #define ROCPRIM_FORCE_INLINE inline
         #define ROCPRIM_INLINE inline
     #endif
+    #define ROCPRIM_FORCE_INLINE __attribute__((always_inline))
 #endif
 
 #ifndef ROCPRIM_DISABLE_DPP
