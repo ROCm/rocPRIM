@@ -20,7 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-image: rocm/rocm-terminal:latest
+include:
+  - project: 'amd/ci-templates'
+    ref: main
+    file:
+      - /defaults.yaml
+      - /deps-cmake.yaml
+      - /deps-docs.yaml
+      - /deps-rocm.yaml
+      - /deps-vcpkg.yaml
+      - /gpus-rocm.yaml
+      - /rules.yaml
 
 stages:
   - build:cmake_latest   # Tests if builds succeed (CMake)
@@ -366,11 +376,175 @@ test:deb:
 
 test:doc:
   stage: test
-  needs: []
-  before_script:
-    - $SUDO_CMD rm /etc/apt/sources.list.d/rocm.list
-    - $SUDO_CMD apt-get update -qq
-    - $SUDO_CMD apt-get install -y -qq doxygen
+  extends:
+    - .rules:test
+    - .build:docs
+
+.benchmark-base:
+  stage: benchmark
+  extends:
+    - .rules:benchmark
+  variables:
+    BENCHMARK_RESULT_DIR: ${CI_PROJECT_DIR}/benchmark_results
+    BENCHMARK_RESULT_CACHE_DIR: ${BENCHMARK_RESULT_DIR}_cache
+
+benchmark:
+  needs:
+    - build:benchmark
+  extends:
+    - .cmake-minimum
+    - .gpus:rocm
+    - .benchmark-base
+  variables:
+    BENCHMARK_FILENAME_REGEX: ^benchmark
+    BENCHMARK_ALGORITHM_REGEX: ""
   script:
-    - cd doc
-    - $SUDO_CMD doxygen Doxyfile
+    - 'printf "CI Variables used in benchmarks:\nBENCHMARK_RESULT_DIR: %s\nBENCHMARK_FILENAME_REGEX: %s\nBENCHMARK_ALGORITHM_REGEX: %s \n" "$BENCHMARK_RESULT_DIR" "$BENCHMARK_FILENAME_REGEX" "$BENCHMARK_ALGORITHM_REGEX"'
+    - cd "${CI_PROJECT_DIR}"
+    - mkdir -p "${BENCHMARK_RESULT_DIR}"
+    - python3
+      .gitlab/run_benchmarks.py
+      --benchmark_dir "${BUILD_DIR}/benchmark"
+      --benchmark_gpu_architecture "${GPU_TARGET}"
+      --benchmark_output_dir "${BENCHMARK_RESULT_DIR}"
+      --benchmark_filename_regex "${BENCHMARK_FILENAME_REGEX}"
+      --benchmark_filter_regex "${BENCHMARK_ALGORITHM_REGEX}"
+  artifacts:
+    paths:
+      - ${BENCHMARK_RESULT_DIR}
+    expire_in: 1 week
+
+benchmark:cache-or-report:
+  needs:
+    - benchmark
+  extends:
+    - .benchmark-base
+  tags:
+    - single-cache
+  cache:
+    key: benchmark-cache
+    paths:
+      - ${BENCHMARK_RESULT_CACHE_DIR}
+  script:
+    # If on MR branch, generate report, else cache results
+    - >
+      if [ ! -z "${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}" ]; then
+        if [ ! -d "${BENCHMARK_RESULT_CACHE_DIR}" ]; then
+          echo 'ERROR: Cache directory does not exist'
+          exit 1
+        elif [ ! -d "${BENCHMARK_RESULT_DIR}" ]; then
+          echo 'ERROR: Benchmark results directory does not exist'
+          exit 1
+        else
+          echo 'INFO: Files in cache (reference benchmarks):'
+          ls -al ${BENCHMARK_RESULT_CACHE_DIR}
+          echo 'INFO: Generating report...'
+          python3 .gitlab/generate_report.py --old ${BENCHMARK_RESULT_CACHE_DIR} --new ${BENCHMARK_RESULT_DIR}
+        fi
+      elif [ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" ]; then
+        echo 'INFO: Caching benchmark results...'
+        mkdir -p ${BENCHMARK_RESULT_CACHE_DIR}
+        cp -R ${BENCHMARK_RESULT_DIR}/*.json ${BENCHMARK_RESULT_CACHE_DIR}
+      else
+        echo 'ERROR: Neither on a merge-request branch or the default branch'
+        exit 1
+      fi
+
+
+.autotune-base:
+  stage: autotune
+  extends:
+    - .rules:manual
+  variables:
+    AUTOTUNE_RESULT_DIR: ${CI_PROJECT_DIR}/autotune_results
+
+autotune:execute-tuning:
+  needs:
+    - autotune:build
+  extends:
+    - .autotune-base
+    - .cmake-minimum
+    - .gpus:rocm
+  variables:
+    AUTOTUNE_FILENAME_REGEX: ^benchmark
+    AUTOTUNE_ALGORITHM_REGEX: ""
+  timeout: 8h
+  artifacts:
+    paths:
+      - ${AUTOTUNE_RESULT_DIR}/*.json
+  script:
+    - 'printf "CI Variables used in benchmarks:\nAUTOTUNE_RESULT_DIR: %s\nAUTOTUNE_FILENAME_REGEX: %s\nAUTOTUNE_ALGORITHM_REGEX: %s \n" "$AUTOTUNE_RESULT_DIR" "$AUTOTUNE_FILENAME_REGEX" "$AUTOTUNE_ALGORITHM_REGEX"'
+    - cd "${CI_PROJECT_DIR}"
+    - mkdir -p "${AUTOTUNE_RESULT_DIR}"
+    - python3
+      .gitlab/run_benchmarks.py
+      --benchmark_dir "${BUILD_DIR}/benchmark"
+      --benchmark_gpu_architecture "${GPU_TARGET}"
+      --benchmark_output_dir "${AUTOTUNE_RESULT_DIR}"
+      --benchmark_filename_regex "${AUTOTUNE_FILENAME_REGEX}"
+      --benchmark_filter_regex "${AUTOTUNE_ALGORITHM_REGEX}"
+
+autotune:generate-config:
+  image: python:3.10.5-buster
+  needs:
+    - job: "autotune:execute-tuning"
+      optional: true
+  extends:
+    - .rules:manual
+    - .autotune-base
+  variables:
+    AUTOTUNE_CONFIG_REPO_PATH: /rocprim/include/rocprim/device/detail/config
+    AUTOTUNE_RESULT_CACHE_DIR: ${AUTOTUNE_RESULT_DIR}_cache
+  tags:
+    - single-cache
+  cache:
+    key: autotune-cache
+    paths:
+      - autotune_results_cache/
+  script:
+    # Set cache dir variables depending on if this is a MR or not
+    - >
+      if [ ! -z "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}" ]; then
+        AUTOTUNE_RESULT_CACHE_BRANCH_DIR="${AUTOTUNE_RESULT_CACHE_DIR}/${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}"
+        AUTOTUNE_RESULT_CACHE_TARGET_BRANCH_DIR="${AUTOTUNE_RESULT_CACHE_DIR}/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+      else 
+        AUTOTUNE_RESULT_CACHE_BRANCH_DIR="${AUTOTUNE_RESULT_CACHE_DIR}/${CI_COMMIT_BRANCH}"
+      fi
+    # If the global cache dir does not exist, create it
+    - mkdir -p $AUTOTUNE_RESULT_CACHE_DIR
+    # If there are fresh results in the artifacts, cache them in the branch cache
+    # If there are no fresh results, check branch cache
+    # If there are no branch cache results, check TARGET branch cache
+    # If there are TARGET branch cache results, cache them in the branch cache
+    - >
+      if [ -d "$AUTOTUNE_RESULT_DIR" ]; then 
+        mkdir -p $AUTOTUNE_RESULT_CACHE_BRANCH_DIR
+        cp -R -u ${AUTOTUNE_RESULT_DIR}/*.json ${AUTOTUNE_RESULT_CACHE_BRANCH_DIR}
+      elif [ -d "$AUTOTUNE_RESULT_CACHE_BRANCH_DIR" ]; then
+        mkdir -p $AUTOTUNE_RESULT_DIR
+        cp -R -u ${AUTOTUNE_RESULT_CACHE_BRANCH_DIR}/*.json ${AUTOTUNE_RESULT_DIR}
+      elif [ -d "$AUTOTUNE_RESULT_CACHE_TARGET_BRANCH_DIR" ]; then
+        mkdir -p $AUTOTUNE_RESULT_DIR
+        cp -R -u ${AUTOTUNE_RESULT_CACHE_TARGET_BRANCH_DIR}/*.json ${AUTOTUNE_RESULT_DIR}
+        mkdir -p $AUTOTUNE_RESULT_CACHE_BRANCH_DIR
+        cp -R -u ${AUTOTUNE_RESULT_DIR}/*.json ${AUTOTUNE_RESULT_CACHE_BRANCH_DIR}
+      else
+        echo 'ERROR: No autotune results found in previous artifacts, the branch cache or the target branch cache...'
+        exit 1
+      fi
+    # List the final .json files to use for config generation
+    - ls -al ${AUTOTUNE_RESULT_DIR}
+    - cd "${CI_PROJECT_DIR}"
+    - python3 -m pip install jinja2
+    - mkdir -p ${AUTOTUNE_CONFIG_DIR}${AUTOTUNE_CONFIG_REPO_PATH}
+    - python3
+      scripts/autotune/create_optimization.py
+      --benchmark_files ${AUTOTUNE_RESULT_DIR}/*.json
+      --out_basedir "${AUTOTUNE_CONFIG_DIR}${AUTOTUNE_CONFIG_REPO_PATH}"
+  artifacts:
+    paths:
+      - ${AUTOTUNE_CONFIG_DIR}
+
+scheduled-check-changes:
+  stage: autotune
+  extends: .rules:scheduled-check-changes
