@@ -8,6 +8,8 @@ Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwar
 - New block level `radix_rank_match` primitive.
 ### Changed
 - Improved the performance of `block_radix_sort` and `device_radix_sort`.
+- Improved the performance of `device_merge_sort`.
+- Updated `docs` directory structure to match the standard of [rocm-docs-core](https://github.com/RadeonOpenCompute/rocm-docs-core). Contributed by: [v01dXYZ](https://github.com/v01dXYZ).
 ### Known Issues
 - Disabled GPU error messages relating to incorrect warp operation usage with Navi GPUs on Windows, due to GPU printf performance issues on Windows. 
 ### Fixed
