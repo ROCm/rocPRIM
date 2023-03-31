@@ -26,6 +26,7 @@ include:
     file:
       - /defaults.yaml
       - /deps-cmake.yaml
+      - /deps-docs.yaml
       - /deps-rocm.yaml
       - /gpus-rocm.yaml
       - /rules.yaml
@@ -245,14 +246,9 @@ test:deb:
 
 test:doc:
   stage: test
-  extends: .rules:test
-  needs: []
-  before_script:
-    - apt-get update -qq
-    - apt-get install -y -qq doxygen
-  script:
-    - cd doc
-    - doxygen Doxyfile
+  extends:
+    - .rules:test
+    - .build:docs
 
 run_benchmark:
   stage: benchmark

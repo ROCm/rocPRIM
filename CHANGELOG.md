@@ -2,6 +2,40 @@
 
 Full documentation for rocPRIM is available at [https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/](https://codedocs.xyz/ROCmSoftwarePlatform/rocPRIM/)
 
+## [rocPRIM-2.13.0 for ROCm 5.5.0]
+### Added
+- New block level `radix_rank` primitive.
+- New block level `radix_rank_match` primitive.
+### Changed
+- Improved the performance of `block_radix_sort` and `device_radix_sort`.
+- Improved the performance of `device_merge_sort`.
+- Updated `docs` directory structure to match the standard of [rocm-docs-core](https://github.com/RadeonOpenCompute/rocm-docs-core). Contributed by: [v01dXYZ](https://github.com/v01dXYZ).
+### Known Issues
+- Disabled GPU error messages relating to incorrect warp operation usage with Navi GPUs on Windows, due to GPU printf performance issues on Windows. 
+### Fixed
+- Fixed benchmark build on Windows
+
+## [rocPRIM-2.12.0 for ROCm 5.4.0]
+### Changed
+- `device_partition`, `device_unique`, and `device_reduce_by_key` now support problem
+  sizes larger than 2^32 items.
+- Device algorithms now return `hipErrorInvalidValue` if the amount of passed temporary memory is insufficient.
+- Lists of sizes for tests are unified, restored scan/reduce tests for `half` and `bfloat16` values.
+### Removed
+- `block_sort::sort()` overload for keys and values with a dynamic size. This overload was documented but the
+  implementation is missing. To avoid further confusion the documentation is removed until a decision is made on
+  implementing the function.
+### Fixed
+- Fixed the compilation failure in `device_merge` if the two key iterators don't match.
+
+## [rocPRIM-2.11.1 for ROCm 5.3.3]
+### Fixed
+- Fixed the compilation failure in device_merge if the two key iterators don't match.
+
+## [rocPRIM-2.11.0 for ROCm 5.3.2]
+### Known Issue
+- device_merge no longer correctly supports using different types for `keys_input1` and `keys_input2` (starting from the 5.3.0 release).
+
 ## [rocPRIM-2.11.0 for ROCm 5.3.0]
 ### Added
 - New functions `subtract_left` and `subtract_right` in `block_adjacent_difference` to apply functions
