@@ -311,7 +311,10 @@ test:
       -D CMAKE_PREFIX_PATH=/opt/rocm
       -P $CI_PROJECT_DIR/cmake/GenerateResourceSpec.cmake
     - cat ./resources.json
-    - ctest
+    # Parallel execution (with other AMDGPU processes) can oversubscribe the SDMA queue.
+    # This causes the hipMemcpy to fail, which is not reported as an error by HIP.
+    # As a temporary workaround, disable the SDMA for test stability.
+    - HSA_ENABLE_SDMA=0 ctest
       --output-on-failure
       --repeat-until-fail 2
       --tests-regex "hip|$GPU_TARGET"
