@@ -340,8 +340,6 @@ Each algorithm uses ninja templates to generate C++ configuration specification.
 The generated configuration file contains configs for four cases:
 - No architecture or instantiation of configuration selection types is provided 
   (general base case).
-- Only the architecture is specified, no instantiation of configuration selection 
-  types is provided (base case for arch).
 - The architecture and an instantiation of configuration selection types is 
   provided (specialized case for arch). 
 - The architecture and an instantiation of configuration selection types is 
