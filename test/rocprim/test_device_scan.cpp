@@ -113,18 +113,18 @@ struct size_limit_config
 {
     using type = std::conditional_t<
         ByKey,
-        rocprim::scan_by_key_config<256,
-                                    16,
-                                    rocprim::block_load_method::block_load_transpose,
-                                    rocprim::block_store_method::block_store_transpose,
-                                    rocprim::block_scan_algorithm::using_warp_scan,
-                                    SizeLimit>,
-        rocprim::scan_config<256,
-                             16,
-                             rocprim::block_load_method::block_load_transpose,
-                             rocprim::block_store_method::block_store_transpose,
-                             rocprim::block_scan_algorithm::using_warp_scan,
-                             SizeLimit>
+        rocprim::scan_by_key_config_v2<256,
+                                       16,
+                                       rocprim::block_load_method::block_load_transpose,
+                                       rocprim::block_store_method::block_store_transpose,
+                                       rocprim::block_scan_algorithm::using_warp_scan,
+                                       SizeLimit>,
+        rocprim::scan_config_v2<256,
+                                16,
+                                rocprim::block_load_method::block_load_transpose,
+                                rocprim::block_store_method::block_store_transpose,
+                                rocprim::block_scan_algorithm::using_warp_scan,
+                                SizeLimit>
 
         >;
 };

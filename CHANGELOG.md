@@ -9,6 +9,8 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - Removed switch to disable lookback-scan in `scan_config` and `scan_by_key_config`.
 - The benchmark metric indicating the bytes processed for `exclusive_scan_by_key` and `inclusive_scan_by_key` has been changed to incorporate the key type. Furthermore, the benchmark log has been changed such that these algorithms are reported as `scan_by_key` instead of `scan_exclusive` and `scan_inclusive`. The `exclusive_scan` and `inclusive_scan` are now both reported as `scan`.
 - `scan` now only accepts `scan_config` and `scan_by_key` now only accepts `scan_by_key_config`.
+- Deprecated configurations `scan_config` and `scan_by_key_config` for device-level scans, as they no longer match the algorithm's parameters. New configurations `scan_config_v2` and `scan_by_key_config_v2` are preferred instead.
+- The internals of the deprecated `scan_config` and `scan_by_key_config` have been changed to be compatible with the new `scan_config_v2` and `scan_by_key_config_v2`, so prior conforming custom configs are not useable any more. Thereby `scan` now only accepts `scan_config_v2` and `scan_by_key` now only accepts `scan_by_key_config_v2`, and their respective deprecated configs.
 ### Fixed
 - Fixed build issue caused by missing header in `thread/thread_search.hpp`.
 

@@ -305,7 +305,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
 /// * Ranges specified by \p keys_input, \p values_input, and \p values_output must have
 /// at least \p size elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive, should be \p scan_by_key_config.
+/// \tparam Config - [optional] configuration of the primitive, should be \p scan_by_key_config_v2.
 /// \tparam KeysInputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam ValuesInputIterator - random-access iterator type of the input range. It can be
@@ -428,7 +428,7 @@ inline hipError_t inclusive_scan_by_key(void* const                temporary_sto
 /// * Ranges specified by \p keys_input, \p values_input, and \p values_output must have
 /// at least \p size elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive, should be \p scan_by_key_config.
+/// \tparam Config - [optional] configuration of the primitive, should be \p scan_by_key_config_v2.
 /// \tparam KeysInputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam ValuesInputIterator - random-access iterator type of the input range. It can be
