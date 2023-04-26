@@ -24,6 +24,7 @@ Optional:
   * It will be automatically downloaded and built by cmake script.
 
 ## Build and Install
+
 ### Linux
 ```shell
 git clone https://github.com/ROCmSoftwarePlatform/rocPRIM.git
