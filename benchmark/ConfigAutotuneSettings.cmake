@@ -33,6 +33,10 @@ function(read_config_autotune_settings file list_across_names list_across output
     set(list_across "${TUNING_TYPES};\
 true false;true false;64 128;1 2 4 8 16" PARENT_SCOPE)
     set(output_pattern_suffix "@DataType@_@Left@_@InPlace@_@BlockSize@_@ItemsPerThread@" PARENT_SCOPE)
+  elseif(file STREQUAL "benchmark_device_histogram")
+    set(list_across_names "DataType;BlockSize" PARENT_SCOPE)
+    set(list_across "${TUNING_TYPES};64 128 256" PARENT_SCOPE)
+    set(output_pattern_suffix "@DataType@_@BlockSize@" PARENT_SCOPE)
   elseif(file STREQUAL "benchmark_device_merge_sort_block_merge")
     set(list_across_names "KeyType;ValueType;BlockSize;UseMergePath" PARENT_SCOPE)
     set(list_across "\

@@ -453,6 +453,65 @@ struct default_scan_by_key_config_base : default_scan_by_key_config_base_helper<
 
 } // namespace detail
 
+namespace detail
+{
+
+/// \brief Provides the kernel parameters for histogram_even, multi_histogram_even,
+///        histogram_range, and multi_histogram_range based on autotuned configurations or
+///        user-provided configurations.
+struct histogram_config_params
+{
+    kernel_config_params histogram_config = {0, 0};
+
+    unsigned int max_grid_size          = 0;
+    unsigned int shared_impl_max_bins   = 0;
+    unsigned int shared_impl_histograms = 0;
+};
+
+} // namespace detail
+
+/// \brief Configuration of device-level histogram operation.
+///
+/// \tparam HistogramConfig - configuration of histogram kernel. Must be \p kernel_config.
+/// \tparam MaxGridSize - maximum number of blocks to launch.
+/// \tparam SharedImplMaxBins - maximum total number of bins for all active channels
+/// for the shared memory histogram implementation (samples -> shared memory bins -> global memory bins),
+/// when exceeded the global memory implementation is used (samples -> global memory bins).
+/// \tparam SharedImplHistograms - number of histograms in the shared memory to reduce bank conflicts
+/// for atomic operations with narrow sample distributions. Sweetspot for 9xx and 10xx is 3.
+template<class HistogramConfig,
+         unsigned int MaxGridSize          = 1024,
+         unsigned int SharedImplMaxBins    = 2048,
+         unsigned int SharedImplHistograms = 3>
+struct histogram_config : detail::histogram_config_params
+{
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    constexpr histogram_config()
+        : detail::histogram_config_params{
+            HistogramConfig{}, MaxGridSize, SharedImplMaxBins, SharedImplHistograms} {};
+#endif
+};
+
+namespace detail
+{
+
+template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
+struct default_histogram_config_base_helper
+{
+    static constexpr unsigned int item_scale
+        = ::rocprim::detail::ceiling_div(sizeof(Sample), sizeof(int));
+
+    using type
+        = histogram_config<kernel_config<256, ::rocprim::max(8u / Channels / item_scale, 1u)>>;
+};
+
+template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
+struct default_histogram_config_base
+    : default_histogram_config_base_helper<Sample, Channels, ActiveChannels>::type
+{};
+
+} // namespace detail
+
 END_ROCPRIM_NAMESPACE
 
 #endif //ROCPRIM_DEVICE_DETAIL_CONFIG_HELPER_HPP_

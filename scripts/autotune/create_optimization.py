@@ -41,7 +41,7 @@ from collections import defaultdict
 from typing import Dict, List, Callable
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-TARGET_ARCHITECTURES = ['gfx803', 'gfx900', 'gfx906', 'gfx908', 'gfx90a', 'gfx1030']
+TARGET_ARCHITECTURES = ['gfx803', 'gfx900', 'gfx906', 'gfx908', 'gfx90a', 'gfx1030', 'gfx1102']
 # C++ typename used for optional types
 EMPTY_TYPENAME = "empty_type"
 
@@ -72,8 +72,14 @@ class SelectionType:
     # True if rocprim::empty_type is a valid type in the algorithm's configuration.
     is_optional: bool
 
+@dataclass
+class SelectionConst:
+    """
+    Data class describing a constant (integral, enum) used to select a configuration.
+    """
+    name: str
 
-def translate_settings_to_cpp_metaprogramming(fallback_configuration, config_selection_types) -> str:
+def translate_settings_to_cpp_metaprogramming(fallback_configuration, const_configuration, config_selection_params) -> str:
     """
     Translates a list of named fallback configuration entries to C++ metaprogramming idioms.
     """
@@ -81,7 +87,7 @@ def translate_settings_to_cpp_metaprogramming(fallback_configuration, config_sel
     setting_list: List[str] = []
     for typename, entry in fallback_configuration.items():
         # The selection type associated with this fallback
-        cfg = list(filter(lambda x: (x.name == typename), config_selection_types))[0]
+        cfg = list(filter(lambda x: (x.name == typename), config_selection_params))[0]
 
         if entry["based_on"]["datatype"] == EMPTY_TYPENAME:
             # If the entry is based on the empty type
@@ -90,7 +96,7 @@ def translate_settings_to_cpp_metaprogramming(fallback_configuration, config_sel
         else:
             # Only add a floating-point check on the first selection type. For the remaining selection types, a limited
             # number of fallbacks are generated, which are based on the integral types.
-            if "floating_point" in entry.keys() and config_selection_types.index(cfg) == 0:
+            if "floating_point" in entry.keys() and config_selection_params.index(cfg) == 0:
                 negation: str = "" if entry['floating_point'] else "!"
                 output: str = negation + f"bool(rocprim::is_floating_point<{typename}>::value)"
                 setting_list.append(output)
@@ -107,6 +113,8 @@ def translate_settings_to_cpp_metaprogramming(fallback_configuration, config_sel
             # we need an additional check since the empty type also has a sizeof of one
             if entry["based_on"]["datatype"] == "int8_t" and cfg.is_optional:
                 setting_list.append(f"(!std::is_same<{typename}, rocprim::{EMPTY_TYPENAME}>::value)")
+    for name, value in const_configuration.items():
+        setting_list.append(f"({name} == {value})")
     return "std::enable_if_t<(" + " && ".join(setting_list) + ")>"
 
 class BenchmarksOfArchitecture:
@@ -114,8 +122,8 @@ class BenchmarksOfArchitecture:
     Stores the benchmark results for a specific architecture and algorithm.
     """
 
-    def __init__(self, arch_name: str, config_selection_types, fallback_entries, config_get_best, algorithm_name):
-        self.config_selection_types = config_selection_types
+    def __init__(self, arch_name: str, config_selection_params, fallback_entries, config_get_best, algorithm_name):
+        self.config_selection_params = config_selection_params
         self.fallback_entries = fallback_entries
         self.arch_name: str = arch_name
         self.config_get_best: Callable[[Dict], Dict[str, str]] = config_get_best
@@ -138,7 +146,7 @@ class BenchmarksOfArchitecture:
         The created key can be used to access the specific benchmark results for a given combination of instantiated 
         selection types in the benchmarks member variable   
         """
-        Instance = collections.namedtuple(typename='Instance', field_names=[cfg_type.name for cfg_type in self.config_selection_types])
+        Instance = collections.namedtuple(typename='Instance', field_names=[cfg_param.name for cfg_param in self.config_selection_params])
         return Instance(**{field : instanced_types[field] if field in instanced_types.keys() else EMPTY_TYPENAME for field in Instance._fields})
 
     def add_measurement(self, benchmark_data: Dict[str, str]):
@@ -174,32 +182,30 @@ class BenchmarksOfArchitecture:
             output[instance] = self.__get_best_benchmark(instance)
         return output
 
-    def __non_optional_selection_types(self):
-        """
-        Get a list of the non-optional selection types
-        """
-        non_optional_selection_types: List[str] = \
-                [cfg_type.name for cfg_type in self.config_selection_types if not cfg_type.is_optional]
-        return non_optional_selection_types
-
-    def __add_fallback_to_output(self, output, fallback_configuration):
+    def __add_fallback_to_output(self, output, fallback_configuration, const_configurations):
         """
         searches for specific fallback configuration in benchmark results and adds it to the output
         :param output: list of strings to append to
         :param fallback_configuration: the configuration to look for
+        :param const_configurations: list of constant selection parameters
         :return:
         """
         search_key = {k : v['based_on']['datatype'] for k, v in fallback_configuration.items()}
-        best_benchmark_result: Dict[str, str] = self.__get_best_benchmark(self.__get_instance_key(search_key))
-        print_config: str = ', '.join([k + ' = ' + v for k, v in search_key.items()])
-        if best_benchmark_result is None:
-            print(
-                f'WARNING {self.name}: No {self.algorithm_name} measurement found for creating fallback configuration '
-                f'entry for \"{print_config}\"')
-        else:
-            output.append((print_config, translate_settings_to_cpp_metaprogramming(fallback_configuration,
-                                                                                   self.config_selection_types),
-                           best_benchmark_result))
+        for const_configuration in (const_configurations or [{}]):
+            for k, v in const_configuration.items():
+                search_key[k] = v
+            best_benchmark_result: Dict[str, str] = self.__get_best_benchmark(self.__get_instance_key(search_key))
+            print_config: str = ', '.join([f'{k} = {v}' for k, v in search_key.items()])
+            if best_benchmark_result is None:
+                print(
+                    f'WARNING {self.name}: No {self.algorithm_name} measurement found for creating fallback configuration '
+                    f'entry for \"{print_config}\"')
+            else:
+                output.append((print_config,
+                               translate_settings_to_cpp_metaprogramming(fallback_configuration,
+                                                                         const_configuration,
+                                                                         self.config_selection_params),
+                               best_benchmark_result))
 
     @property
     def fallback_types(self):
@@ -212,35 +218,45 @@ class BenchmarksOfArchitecture:
 
         output = []
 
+        # Collect all combination of constant selection parameters from avaliable benchmark results
+        const_configurations = []
+        config_selection_const_names = [cfg_param.name for cfg_param in self.config_selection_params if isinstance(cfg_param, SelectionConst)]
+        if config_selection_const_names:
+            Consts = collections.namedtuple(typename='Consts', field_names=config_selection_const_names)
+            all_consts = [Consts(**{k : v for k, v in instance_key._asdict().items() if k in config_selection_const_names}) for instance_key in self.benchmarks.keys()]
+            const_configurations = [c._asdict() for c in sorted(set(all_consts))]
+
+        config_selection_types = [cfg_param for cfg_param in self.config_selection_params if isinstance(cfg_param, SelectionType)]
+
         # If there are more than two selection types, do not generate fallback cases
         # Otherwise, too many benchmarks would be needed support for the full product of fallback entries
-        if len(self.config_selection_types) > 2:
+        if len(config_selection_types) > 2:
             print(f"INFO: not generating fallbacks for {self.algorithm_name} as it has too many types.")
             return output
 
         # If there is exactly one type, generate full fallbacks. Note that this type will never be optional
-        if len(self.config_selection_types) == 1:
-            if self.config_selection_types[0].is_optional:
+        if len(config_selection_types) == 1:
+            if config_selection_types[0].is_optional:
                 raise (ValueError(f'Algorithm "{self.algorithm_name}" has a single type that is optional'))
             for entry in self.fallback_entries:
                 # Let the single selection type be based on the current fallback entry
-                fallback_configuration = {self.config_selection_types[0].name: entry}
+                fallback_configuration = {config_selection_types[0].name: entry}
 
                 # Find the closest measurement and create the config line
-                self.__add_fallback_to_output(output, fallback_configuration)
+                self.__add_fallback_to_output(output, fallback_configuration, const_configurations)
 
         # If there are two types, generate full fallbacks for the first type but limited fallbacks for the second type
         # Assume that the first type is not optional
-        if len(self.config_selection_types) == 2:
-            if self.config_selection_types[0].is_optional:
+        if len(config_selection_types) == 2:
+            if config_selection_types[0].is_optional:
                 raise (ValueError(f'Algorithm "{self.algorithm_name}" two type but the first is optional'))
 
             print(
                 f"INFO: ({self.arch_name}) generating limited fallbacks for "
-                f"{self.algorithm_name}'s \"{self.config_selection_types[1].name}\" type")
+                f"{self.algorithm_name}'s \"{config_selection_types[1].name}\" type")
 
             for fallback_0 in self.fallback_entries:
-                fallback_configuration = {self.config_selection_types[0].name: fallback_0}
+                fallback_configuration = {config_selection_types[0].name: fallback_0}
                 for fallback_1 in self.fallback_entries:
 
                     # Only generate integral-based fallback cases for the second type to limit the number of
@@ -250,13 +266,13 @@ class BenchmarksOfArchitecture:
                     if fallback_1['floating_point']:
                         continue
 
-                    fallback_configuration[self.config_selection_types[1].name] = fallback_1
-                    self.__add_fallback_to_output(output, fallback_configuration)
+                    fallback_configuration[config_selection_types[1].name] = fallback_1
+                    self.__add_fallback_to_output(output, fallback_configuration, const_configurations)
                 # If the second type is optional, also generate the fallbacks where the second type is empty.
-                if self.config_selection_types[1].is_optional:
-                    fallback_configuration[self.config_selection_types[1].name] = {
+                if config_selection_types[1].is_optional:
+                    fallback_configuration[config_selection_types[1].name] = {
                         'based_on': {'datatype': EMPTY_TYPENAME}}
-                    self.__add_fallback_to_output(output, fallback_configuration)
+                    self.__add_fallback_to_output(output, fallback_configuration, const_configurations)
 
         return output
 
@@ -295,7 +311,7 @@ class Algorithm:
         Adds a single benchmark execution for a given architecture
         """
         if architecture not in self.architectures:
-            self.architectures[architecture] = BenchmarksOfArchitecture(architecture, self.config_selection_types,
+            self.architectures[architecture] = BenchmarksOfArchitecture(architecture, self.config_selection_params,
                                                                         self.fallback_entries, self.config_get_best,
                                                                         self.algorithm_name)
         self.architectures[architecture].add_measurement(single_benchmark_data)
@@ -332,13 +348,14 @@ The generated configuration file contains configs for four cases:
   provided, but there is no benchmark with the same instantiation of types.
   The configuration is based on a fallback (fallback case). 
 
-config_selection_types is a list of types that are used to select a configuration. The fallback file will be used to 
-generate the fallback cases. Generating fallbacks only happens when there are two or fewer selection types. 
+config_selection_params is a list of parameters (types, constants) that are used to select a configuration.
+The fallback file will be used to generate the fallback cases. Generating fallbacks only happens when there are
+two or fewer selection types.
 For the first type, full fallbacks are generated. For the second type, a limited number of fallbacks are generated based 
 on the benchmarks for the integral types.
 
 If the type is optional, additional fallback configurations will be generated that match the case when the optional 
-selection type passed by the user is rocprim::empty_type. The config_selection_types should specify at least 
+selection type passed by the user is rocprim::empty_type. The config_selection_params should specify at least 
 one non-optional type. The optional type should not be the first type.
 
 The 'name' fields should correspond to a named capturing group in the regex field of the benchmark,
@@ -347,10 +364,20 @@ the benchmark should also be valid C++ typenames. This is required as these name
 generated C++ code.
 """
 
+class AlgorithmDeviceHistogram(Algorithm):
+    algorithm_name = 'device_histogram'
+    cpp_configuration_template_name = 'histogram_config_template'
+    config_selection_params = [
+        SelectionType(name='value_type', is_optional=False),
+        SelectionConst(name='channels'),
+        SelectionConst(name='active_channels')]
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
 class AlgorithmDeviceMergeSortBlockSort(Algorithm):
     algorithm_name = 'device_merge_sort_block_sort'
     cpp_configuration_template_name = 'mergesort_block_sort_config_template'
-    config_selection_types = [
+    config_selection_params = [
         SelectionType(name='key_type', is_optional=False),
         SelectionType(name='value_type', is_optional=True)]
     def __init__(self, fallback_entries):
@@ -359,7 +386,7 @@ class AlgorithmDeviceMergeSortBlockSort(Algorithm):
 class AlgorithmDeviceMergeSortBlockMerge(Algorithm):
     algorithm_name = 'device_merge_sort_block_merge'
     cpp_configuration_template_name = 'mergesort_block_merge_config_template'
-    config_selection_types = [
+    config_selection_params = [
         SelectionType(name='key_type', is_optional=False),
         SelectionType(name='value_type', is_optional=True)]
     def __init__(self, fallback_entries):
@@ -368,7 +395,7 @@ class AlgorithmDeviceMergeSortBlockMerge(Algorithm):
 class AlgorithmDeviceRadixSortBlockSort(Algorithm):
     algorithm_name = 'device_radix_sort_block_sort'
     cpp_configuration_template_name = 'radixsort_block_sort_config_template'
-    config_selection_types = [
+    config_selection_params = [
         SelectionType(name='key_type', is_optional=False),
         SelectionType(name='value_type', is_optional=True)]
     def __init__(self, fallback_entries):
@@ -378,7 +405,7 @@ class AlgorithmDeviceRadixSortBlockSort(Algorithm):
 class AlgorithmDeviceRadixSortOnesweep(Algorithm):
     algorithm_name = 'device_radix_sort_onesweep'
     cpp_configuration_template_name = 'radixsort_onesweep_config_template'
-    config_selection_types = [
+    config_selection_params = [
         SelectionType(name='key_type', is_optional=False),
         SelectionType(name='value_type', is_optional=True)]
     def __init__(self, fallback_entries):
@@ -386,7 +413,7 @@ class AlgorithmDeviceRadixSortOnesweep(Algorithm):
 
 class AlgorithmDeviceReduce(Algorithm):
     algorithm_name = 'device_reduce'
-    config_selection_types = [SelectionType(name='key_type', is_optional=False)]
+    config_selection_params = [SelectionType(name='key_type', is_optional=False)]
     cpp_configuration_template_name = "reduce_config_template"
     def __init__(self, fallback_entries):
         Algorithm.__init__(self, fallback_entries)
@@ -394,14 +421,14 @@ class AlgorithmDeviceReduce(Algorithm):
 class AlgorithmDeviceScan(Algorithm):
     algorithm_name = 'device_scan'
     cpp_configuration_template_name = "scan_config_template"
-    config_selection_types = [SelectionType(name='value_type', is_optional=False)]
+    config_selection_params = [SelectionType(name='value_type', is_optional=False)]
     def __init__(self, fallback_entries):
         Algorithm.__init__(self, fallback_entries)
 
 class AlgorithmDeviceScanByKey(Algorithm):
     algorithm_name = 'device_scan_by_key'
     cpp_configuration_template_name = 'scanbykey_config_template'
-    config_selection_types = [
+    config_selection_params = [
             SelectionType(name='key_type', is_optional=False),
             SelectionType(name='value_type', is_optional=False)]
     def __init__(self, fallback_entries):
@@ -414,7 +441,9 @@ def filt_algo_regex(e, algorithm_name):
 
 def create_algorithm(algorithm_name: str, fallback_entries):
     fallback_entries = list(filter(lambda e: filt_algo_regex(e, algorithm_name), fallback_entries))
-    if algorithm_name == 'device_merge_sort_block_sort':
+    if algorithm_name == 'device_histogram':
+        return AlgorithmDeviceHistogram(fallback_entries)
+    elif algorithm_name == 'device_merge_sort_block_sort':
         return AlgorithmDeviceMergeSortBlockSort(fallback_entries)
     elif algorithm_name == 'device_merge_sort_block_merge':
         return AlgorithmDeviceMergeSortBlockMerge(fallback_entries)
