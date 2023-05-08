@@ -432,6 +432,33 @@ class AlgorithmDeviceScanByKey(Algorithm):
     def __init__(self, fallback_entries):
         Algorithm.__init__(self, fallback_entries)
 
+class AlgorithmDeviceBinarySearch(Algorithm):
+    algorithm_name = 'device_binary_search'
+    cpp_configuration_template_name = 'binary_search_config_template'
+    config_selection_params = [
+            SelectionType(name='value_type', is_optional=False),
+            SelectionType(name='output_type', is_optional=False)]
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDeviceUpperBound(Algorithm):
+    algorithm_name = 'device_upper_bound'
+    cpp_configuration_template_name = 'upper_bound_config_template'
+    config_selection_params = [
+            SelectionType(name='value_type', is_optional=False),
+            SelectionType(name='output_type', is_optional=False)]
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDeviceLowerBound(Algorithm):
+    algorithm_name = 'device_lower_bound'
+    cpp_configuration_template_name = 'lower_bound_config_template'
+    config_selection_params = [
+            SelectionType(name='value_type', is_optional=False),
+            SelectionType(name='output_type', is_optional=False)]
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
 def filt_algo_regex(e, algorithm_name):
     if 'algo_regex' in e:
         return re.match(e['algo_regex'], algorithm_name) is not None
@@ -455,6 +482,12 @@ def create_algorithm(algorithm_name: str, fallback_entries):
         return AlgorithmDeviceScan(fallback_entries)
     elif algorithm_name == 'device_scan_by_key':
         return AlgorithmDeviceScanByKey(fallback_entries)
+    elif algorithm_name == 'device_binary_search':
+        return AlgorithmDeviceBinarySearch(fallback_entries)
+    elif algorithm_name == 'device_upper_bound':
+        return AlgorithmDeviceUpperBound(fallback_entries)
+    elif algorithm_name == 'device_lower_bound':
+        return AlgorithmDeviceLowerBound(fallback_entries)
     else:
         raise(NotSupportedError(f'Algorithm "{algorithm_name}" is not supported (yet)'))
 
@@ -504,7 +537,8 @@ class BenchmarkDataManager:
         This information contains the different settings the benchmark has been executed with which will be used to create the customized 
         configuration case.
         """
-        tokenized_name = re.sub(r"/manual_time", "", single_benchmark['name'])
+        # google benchmark may postfix the JSON name: extract the '{...}' substring
+        tokenized_name = re.match(r"{.*}", single_benchmark['name']).group(0)
         tokenized_name = json.loads(tokenized_name)
         if not tokenized_name:
             raise RuntimeError(f"ERROR: cannot parse JSON from: \"{single_benchmark['name']}\"")

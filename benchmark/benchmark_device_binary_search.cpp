@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,8 @@
 
 // rocPRIM
 #include <rocprim/rocprim.hpp>
+
+#include "benchmark_device_binary_search.parallel.hpp"
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 32;
@@ -186,6 +188,17 @@ int main(int argc, char *argv[])
                                      "name_format",
                                      "human",
                                      "either: json,human,txt");
+#ifdef BENCHMARK_CONFIG_TUNING
+    // optionally run an evenly split subset of benchmarks, when making multiple program invocations
+    parser.set_optional<int>("parallel_instance",
+                             "parallel_instance",
+                             0,
+                             "parallel instance index");
+    parser.set_optional<int>("parallel_instances",
+                             "parallel_instances",
+                             1,
+                             "total parallel instances");
+#endif
     parser.run_and_exit_if_error();
 
     // Parse argv
@@ -205,16 +218,24 @@ int main(int argc, char *argv[])
     using custom_double2 = custom_type<double, double>;
 
     // Add benchmarks
-    std::vector<benchmark::internal::Benchmark*> benchmarks =
-    {
-        BENCHMARK_TYPE(float),
-        BENCHMARK_TYPE(double),
-        BENCHMARK_TYPE(int8_t),
-        BENCHMARK_TYPE(uint8_t),
-        BENCHMARK_TYPE(rocprim::half),
-        BENCHMARK_TYPE(custom_float2),
-        BENCHMARK_TYPE(custom_double2)
-    };
+    std::vector<benchmark::internal::Benchmark*> benchmarks;
+#ifdef BENCHMARK_CONFIG_TUNING
+    const int parallel_instance  = parser.get<int>("parallel_instance");
+    const int parallel_instances = parser.get<int>("parallel_instances");
+    config_autotune_register::register_benchmark_subset(benchmarks,
+                                                        parallel_instance,
+                                                        parallel_instances,
+                                                        size,
+                                                        stream);
+#else // BENCHMARK_CONFIG_TUNING
+    benchmarks = {BENCHMARK_TYPE(float),
+                  BENCHMARK_TYPE(double),
+                  BENCHMARK_TYPE(int8_t),
+                  BENCHMARK_TYPE(uint8_t),
+                  BENCHMARK_TYPE(rocprim::half),
+                  BENCHMARK_TYPE(custom_float2),
+                  BENCHMARK_TYPE(custom_double2)};
+#endif // BENCHMARK_CONFIG_TUNING
 
     // Use manual timing
     for(auto& b : benchmarks)
