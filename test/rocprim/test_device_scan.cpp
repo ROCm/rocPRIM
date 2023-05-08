@@ -37,23 +37,66 @@
 #include <iterator>
 #include <numeric>
 
+struct default_config_helper
+{
+    template<bool /* ByKey */>
+    using type = ::rocprim::default_config;
+};
+
+struct user_config_helper
+{
+    // provides the same members as rocprim::scan_config and rocprim::scan_by_key_config
+    template<bool /* ByKey */>
+    struct type
+    {
+        static constexpr unsigned int                 block_size       = 256;
+        static constexpr unsigned int                 items_per_thread = 4;
+        static constexpr bool                         use_lookback     = false;
+        static constexpr ::rocprim::block_load_method block_load_method
+            = ::rocprim::block_load_method::default_method;
+        static constexpr ::rocprim::block_store_method block_store_method
+            = ::rocprim::block_store_method::default_method;
+        static constexpr ::rocprim::block_scan_algorithm block_scan_method
+            = ::rocprim::block_scan_algorithm::default_algorithm;
+        static constexpr unsigned int size_limit = ROCPRIM_GRID_SIZE_LIMIT;
+    };
+};
+
+template<unsigned int SizeLimit>
+struct size_limit_config_helper
+{
+    template<bool ByKey>
+    using type = std::conditional_t<
+        ByKey,
+        rocprim::scan_by_key_config_v2<256,
+                                       16,
+                                       rocprim::block_load_method::block_load_transpose,
+                                       rocprim::block_store_method::block_store_transpose,
+                                       rocprim::block_scan_algorithm::using_warp_scan,
+                                       SizeLimit>,
+        rocprim::scan_config_v2<256,
+                                16,
+                                rocprim::block_load_method::block_load_transpose,
+                                rocprim::block_store_method::block_store_transpose,
+                                rocprim::block_scan_algorithm::using_warp_scan,
+                                SizeLimit>>;
+};
+
 // Params for tests
-template<
-    class InputType,
-    class OutputType = InputType,
-    class ScanOp = ::rocprim::plus<InputType>,
-    // Tests output iterator with void value_type (OutputIterator concept)
-    // scan-by-key primitives don't support output iterator with void value_type
-    bool UseIdentityIteratorIfSupported = false,
-    size_t SizeLimit = ROCPRIM_GRID_SIZE_LIMIT
->
+template<class InputType,
+         class OutputType = InputType,
+         class ScanOp     = ::rocprim::plus<InputType>,
+         // Tests output iterator with void value_type (OutputIterator concept)
+         // scan-by-key primitives don't support output iterator with void value_type
+         bool UseIdentityIteratorIfSupported = false,
+         typename ConfigHelper               = default_config_helper>
 struct DeviceScanParams
 {
-    using input_type = InputType;
-    using output_type = OutputType;
-    using scan_op_type = ScanOp;
+    using input_type                            = InputType;
+    using output_type                           = OutputType;
+    using scan_op_type                          = ScanOp;
     static constexpr bool use_identity_iterator = UseIdentityIteratorIfSupported;
-    static constexpr size_t size_limit = SizeLimit;
+    using config_helper                         = ConfigHelper;
 };
 
 // ---------------------------------------------------------
@@ -64,12 +107,12 @@ template<class Params>
 class RocprimDeviceScanTests : public ::testing::Test
 {
 public:
-    using input_type = typename Params::input_type;
-    using output_type = typename Params::output_type;
-    using scan_op_type = typename Params::scan_op_type;
-    const bool debug_synchronous = false;
+    using input_type                            = typename Params::input_type;
+    using output_type                           = typename Params::output_type;
+    using scan_op_type                          = typename Params::scan_op_type;
+    const bool            debug_synchronous     = false;
     static constexpr bool use_identity_iterator = Params::use_identity_iterator;
-    static constexpr size_t size_limit = Params::size_limit;
+    using config_helper                         = typename Params::config_helper;
 };
 
 typedef ::testing::Types<
@@ -78,20 +121,20 @@ typedef ::testing::Types<
     DeviceScanParams<unsigned short>,
     DeviceScanParams<short, int>,
     DeviceScanParams<int>,
-    DeviceScanParams<int, int, rocprim::plus<int>, false, 512>,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, size_limit_config_helper<512>>,
     DeviceScanParams<float, float, rocprim::maximum<float>>,
-    DeviceScanParams<float, float, rocprim::plus<float>, false, 1024>,
-    DeviceScanParams<int, int, rocprim::plus<int>, false, 524288>,
-    DeviceScanParams<int, int, rocprim::plus<int>, false, 1048576>,
+    DeviceScanParams<float, float, rocprim::plus<float>, false, size_limit_config_helper<1024>>,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, size_limit_config_helper<524288>>,
+    DeviceScanParams<int, int, rocprim::plus<int>, false, size_limit_config_helper<1048576>>,
     DeviceScanParams<int8_t, int8_t, rocprim::maximum<int8_t>>,
-    DeviceScanParams<uint8_t, uint8_t, rocprim::maximum<uint8_t>>,
+    DeviceScanParams<uint8_t, uint8_t, rocprim::maximum<uint8_t>, false, user_config_helper>,
     DeviceScanParams<rocprim::half, rocprim::half, rocprim::maximum<rocprim::half>>,
     DeviceScanParams<rocprim::half, float, rocprim::plus<float>>,
     DeviceScanParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::maximum<rocprim::bfloat16>>,
     DeviceScanParams<rocprim::bfloat16, float, rocprim::plus<float>>,
     // Large
     DeviceScanParams<int, double, rocprim::plus<int>>,
-    DeviceScanParams<int, double, rocprim::plus<double>>,
+    DeviceScanParams<int, double, rocprim::plus<double>, false, user_config_helper>,
     DeviceScanParams<int, long long, rocprim::plus<long long>>,
     DeviceScanParams<unsigned int, unsigned long long, rocprim::plus<unsigned long long>>,
     DeviceScanParams<long long, long long, rocprim::maximum<long long>>,
@@ -107,36 +150,6 @@ typedef ::testing::Types<
     DeviceScanParams<test_utils::custom_test_array_type<long long, 5>>,
     DeviceScanParams<test_utils::custom_test_array_type<int, 10>>>
     RocprimDeviceScanTestsParams;
-
-template<unsigned int SizeLimit, bool ByKey>
-struct size_limit_config
-{
-    using type = std::conditional_t<
-        ByKey,
-        rocprim::scan_by_key_config_v2<256,
-                                       16,
-                                       rocprim::block_load_method::block_load_transpose,
-                                       rocprim::block_store_method::block_store_transpose,
-                                       rocprim::block_scan_algorithm::using_warp_scan,
-                                       SizeLimit>,
-        rocprim::scan_config_v2<256,
-                                16,
-                                rocprim::block_load_method::block_load_transpose,
-                                rocprim::block_store_method::block_store_transpose,
-                                rocprim::block_scan_algorithm::using_warp_scan,
-                                SizeLimit>
-
-        >;
-};
-
-template<bool ByKey>
-struct size_limit_config<ROCPRIM_GRID_SIZE_LIMIT, ByKey>
-{
-    using type = rocprim::default_config;
-};
-
-template<unsigned int SizeLimit, bool ByKey>
-using size_limit_config_t = typename size_limit_config<SizeLimit, ByKey>::type;
 
 // use float for accumulation of bfloat16 and half inputs if operator is plus
 template <typename input_type, typename input_op_type> struct accum_type {
@@ -234,9 +247,9 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
     // therefore the only source of error is precision of operation itself
     constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
 
-    const bool debug_synchronous = TestFixture::debug_synchronous;
+    const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    using Config = size_limit_config_t<TestFixture::size_limit, false>;
+    using Config = typename TestFixture::config_helper::template type<false>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -364,9 +377,9 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
     acc_type        initial_value;
     constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
 
-    const bool debug_synchronous = TestFixture::debug_synchronous;
+    const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    using Config = size_limit_config_t<TestFixture::size_limit, false>;
+    using Config = typename TestFixture::config_helper::template type<false>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -491,7 +504,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
     constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
 
     const bool debug_synchronous = TestFixture::debug_synchronous;
-    using Config                 = size_limit_config_t<TestFixture::size_limit, true>;
+    using Config                 = typename TestFixture::config_helper::template type<true>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -638,7 +651,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
     constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
 
     const bool debug_synchronous = TestFixture::debug_synchronous;
-    using Config                 = size_limit_config_t<TestFixture::size_limit, true>;
+    using Config                 = typename TestFixture::config_helper::template type<true>;
 
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -1304,7 +1317,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 
     const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    using Config = size_limit_config_t<TestFixture::size_limit, false>;
+    using Config = typename TestFixture::config_helper::template type<false>;
 
     const int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);

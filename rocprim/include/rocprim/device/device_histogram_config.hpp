@@ -32,13 +32,26 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+template<typename HistogramConfig>
+constexpr histogram_config_params wrap_histogram_config()
+{
+    return histogram_config_params{
+        {HistogramConfig::histogram::block_size,
+         HistogramConfig::histogram::items_per_thread,
+         HistogramConfig::histogram::size_limit},
+        HistogramConfig::max_grid_size,
+        HistogramConfig::shared_impl_max_bins,
+        HistogramConfig::shared_impl_histograms
+    };
+}
+
 template<typename HistogramConfig, typename, unsigned int, unsigned int>
 struct wrapped_histogram_config
 {
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr histogram_config_params params = HistogramConfig();
+        static constexpr histogram_config_params params = wrap_histogram_config<HistogramConfig>();
     };
 };
 
@@ -49,10 +62,10 @@ struct wrapped_histogram_config<default_config, Sample, Channels, ActiveChannels
     struct architecture_config
     {
         static constexpr histogram_config_params params
-            = default_histogram_config<static_cast<unsigned int>(Arch),
-                                       Sample,
-                                       Channels,
-                                       ActiveChannels>();
+            = wrap_histogram_config<default_histogram_config<static_cast<unsigned int>(Arch),
+                                                             Sample,
+                                                             Channels,
+                                                             ActiveChannels>>();
     };
 };
 

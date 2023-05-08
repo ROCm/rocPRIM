@@ -298,6 +298,19 @@ struct scan_config_v2 : ::rocprim::detail::scan_config_params
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
                   "Block size should at most be ROCPRIM_DEFAULT_MAX_BLOCK_SIZE.");
 
+    /// \brief Number of threads in a block.
+    static constexpr unsigned int block_size = BlockSize;
+    /// \brief Number of items processed by each thread.
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+    /// \brief Method for loading input values.
+    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
+    /// \brief Method for storing values.
+    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
+    /// \brief Algorithm for block scan.
+    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
+    /// \brief Limit on the number of items for a single scan kernel launch.
+    static constexpr unsigned int size_limit = SizeLimit;
+
     constexpr scan_config_v2()
         : ::rocprim::detail::scan_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -328,6 +341,23 @@ struct [[deprecated("The UseLookback switch has been removed, as scan now only s
                     "lookback-scan implementation. Use scan_config_v2 instead.")]] scan_config
     : ::rocprim::detail::scan_config_params
 {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    /// \brief Number of threads in a block.
+    static constexpr unsigned int block_size = BlockSize;
+    /// \brief Number of items processed by each thread.
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
+    static constexpr bool use_lookback = UseLookback;
+    /// \brief Method for loading input values.
+    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
+    /// \brief Method for storing values.
+    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
+    /// \brief Algorithm for block scan.
+    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
+    /// \brief Limit on the number of items for a single scan kernel launch.
+    static constexpr unsigned int size_limit = SizeLimit;
+#endif
+
     constexpr scan_config()
         : ::rocprim::detail::scan_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -390,6 +420,19 @@ struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
                   "Block size should at most be ROCPRIM_DEFAULT_MAX_BLOCK_SIZE.");
 
+    /// \brief Number of threads in a block.
+    static constexpr unsigned int block_size = BlockSize;
+    /// \brief Number of items processed by each thread.
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+    /// \brief Method for loading input values.
+    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
+    /// \brief Method for storing values.
+    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
+    /// \brief Algorithm for block scan.
+    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
+    /// \brief Limit on the number of items for a single scan kernel launch.
+    static constexpr unsigned int size_limit = SizeLimit;
+
     constexpr scan_by_key_config_v2()
         : ::rocprim::detail::scan_by_key_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -421,6 +464,23 @@ struct [[deprecated(
     "implementation. Use scan_by_key_config_v2 instead.")]] scan_by_key_config
     : ::rocprim::detail::scan_by_key_config_params
 {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    /// \brief Number of threads in a block.
+    static constexpr unsigned int block_size = BlockSize;
+    /// \brief Number of items processed by each thread.
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
+    static constexpr bool use_lookback = UseLookback;
+    /// \brief Method for loading input values.
+    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
+    /// \brief Method for storing values.
+    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
+    /// \brief Algorithm for block scan.
+    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
+    /// \brief Limit on the number of items for a single scan kernel launch.
+    static constexpr unsigned int size_limit = SizeLimit;
+#endif
+
     constexpr scan_by_key_config()
         : ::rocprim::detail::scan_by_key_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -486,6 +546,12 @@ template<class HistogramConfig,
 struct histogram_config : detail::histogram_config_params
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
+    using histogram = HistogramConfig;
+
+    static constexpr unsigned int max_grid_size          = MaxGridSize;
+    static constexpr unsigned int shared_impl_max_bins   = SharedImplMaxBins;
+    static constexpr unsigned int shared_impl_histograms = SharedImplHistograms;
+
     constexpr histogram_config()
         : detail::histogram_config_params{
             HistogramConfig{}, MaxGridSize, SharedImplMaxBins, SharedImplHistograms} {};
