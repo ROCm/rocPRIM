@@ -56,7 +56,25 @@ struct upper_bound_subalgorithm
     }
 };
 
-template<typename SubAlgorithm, typename T, typename OutputType, typename Config>
+template<class Config = rocprim::default_config, class... Args>
+hipError_t dispatch_binary_search(binary_search_subalgorithm, Args&&... args)
+{
+    return rocprim::binary_search<Config>(std::forward<Args>(args)...);
+}
+
+template<class Config = rocprim::default_config, class... Args>
+hipError_t dispatch_binary_search(upper_bound_subalgorithm, Args&&... args)
+{
+    return rocprim::upper_bound<Config>(std::forward<Args>(args)...);
+}
+
+template<class Config = rocprim::default_config, class... Args>
+hipError_t dispatch_binary_search(lower_bound_subalgorithm, Args&&... args)
+{
+    return rocprim::lower_bound<Config>(std::forward<Args>(args)...);
+}
+
+template<class SubAlgorithm, class T, class OutputType, class Config>
 struct device_binary_search_benchmark : public config_autotune_interface
 {
     std::string name() const override
@@ -101,30 +119,30 @@ struct device_binary_search_benchmark : public config_autotune_interface
 
         void*  d_temporary_storage = nullptr;
         size_t temporary_storage_bytes;
-        HIP_CHECK(dispatch_binary_search(SubAlgorithm{},
-                                         d_temporary_storage,
-                                         temporary_storage_bytes,
-                                         d_haystack,
-                                         d_needles,
-                                         d_output,
-                                         haystack_size,
-                                         needles_size,
-                                         compare_op,
-                                         stream));
+        HIP_CHECK(dispatch_binary_search<Config>(SubAlgorithm{},
+                                                 d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_haystack,
+                                                 d_needles,
+                                                 d_output,
+                                                 haystack_size,
+                                                 needles_size,
+                                                 compare_op,
+                                                 stream));
 
         HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
 
         // Warm-up
-        HIP_CHECK(dispatch_binary_search(SubAlgorithm{},
-                                         d_temporary_storage,
-                                         temporary_storage_bytes,
-                                         d_haystack,
-                                         d_needles,
-                                         d_output,
-                                         haystack_size,
-                                         needles_size,
-                                         compare_op,
-                                         stream));
+        HIP_CHECK(dispatch_binary_search<Config>(SubAlgorithm{},
+                                                 d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_haystack,
+                                                 d_needles,
+                                                 d_output,
+                                                 haystack_size,
+                                                 needles_size,
+                                                 compare_op,
+                                                 stream));
         HIP_CHECK(hipDeviceSynchronize());
 
         // HIP events creation
@@ -137,16 +155,16 @@ struct device_binary_search_benchmark : public config_autotune_interface
             // Record start event
             HIP_CHECK(hipEventRecord(start, stream));
 
-            HIP_CHECK(dispatch_binary_search(SubAlgorithm{},
-                                             d_temporary_storage,
-                                             temporary_storage_bytes,
-                                             d_haystack,
-                                             d_needles,
-                                             d_output,
-                                             haystack_size,
-                                             needles_size,
-                                             compare_op,
-                                             stream));
+            HIP_CHECK(dispatch_binary_search<Config>(SubAlgorithm{},
+                                                     d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_haystack,
+                                                     d_needles,
+                                                     d_output,
+                                                     haystack_size,
+                                                     needles_size,
+                                                     compare_op,
+                                                     stream));
 
             // Record stop event and wait until it completes
             HIP_CHECK(hipEventRecord(stop, stream));
@@ -168,25 +186,6 @@ struct device_binary_search_benchmark : public config_autotune_interface
         HIP_CHECK(hipFree(d_haystack));
         HIP_CHECK(hipFree(d_needles));
         HIP_CHECK(hipFree(d_output));
-    }
-
-private:
-    template<typename... Args>
-    hipError_t dispatch_binary_search(binary_search_subalgorithm, Args&&... args) const
-    {
-        return rocprim::binary_search<Config>(std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    hipError_t dispatch_binary_search(upper_bound_subalgorithm, Args&&... args) const
-    {
-        return rocprim::upper_bound<Config>(std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    hipError_t dispatch_binary_search(lower_bound_subalgorithm, Args&&... args) const
-    {
-        return rocprim::lower_bound<Config>(std::forward<Args>(args)...);
     }
 };
 

@@ -48,10 +48,12 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
 const unsigned int batch_size = 10;
 const unsigned int warmup_size = 5;
 
-template<class T>
-void run_lower_bound_benchmark(benchmark::State& state, hipStream_t stream,
-                               size_t haystack_size, size_t needles_size,
-                               bool sorted_needles)
+template<class T, class AlgorithmSelectorTag>
+void run_benchmark(benchmark::State& state,
+                   hipStream_t       stream,
+                   size_t            haystack_size,
+                   size_t            needles_size,
+                   bool              sorted_needles)
 {
     using haystack_type = T;
     using needle_type = T;
@@ -94,30 +96,32 @@ void run_lower_bound_benchmark(benchmark::State& state, hipStream_t stream,
 
     void * d_temporary_storage = nullptr;
     size_t temporary_storage_bytes;
-    HIP_CHECK(
-        rocprim::lower_bound(
-            d_temporary_storage, temporary_storage_bytes,
-            d_haystack, d_needles, d_output,
-            haystack_size, needles_size,
-            compare_op,
-            stream
-        )
-    );
+    HIP_CHECK(dispatch_binary_search(AlgorithmSelectorTag{},
+                                     d_temporary_storage,
+                                     temporary_storage_bytes,
+                                     d_haystack,
+                                     d_needles,
+                                     d_output,
+                                     haystack_size,
+                                     needles_size,
+                                     compare_op,
+                                     stream));
 
     HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
 
     // Warm-up
     for(size_t i = 0; i < warmup_size; i++)
     {
-        HIP_CHECK(
-            rocprim::lower_bound(
-                d_temporary_storage, temporary_storage_bytes,
-                d_haystack, d_needles, d_output,
-                haystack_size, needles_size,
-                compare_op,
-                stream
-            )
-        );
+        HIP_CHECK(dispatch_binary_search(AlgorithmSelectorTag{},
+                                         d_temporary_storage,
+                                         temporary_storage_bytes,
+                                         d_haystack,
+                                         d_needles,
+                                         d_output,
+                                         haystack_size,
+                                         needles_size,
+                                         compare_op,
+                                         stream));
     }
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -133,15 +137,16 @@ void run_lower_bound_benchmark(benchmark::State& state, hipStream_t stream,
 
         for(size_t i = 0; i < batch_size; i++)
         {
-            HIP_CHECK(
-                rocprim::lower_bound(
-                    d_temporary_storage, temporary_storage_bytes,
-                    d_haystack, d_needles, d_output,
-                    haystack_size, needles_size,
-                    compare_op,
-                    stream
-                )
-            );
+            HIP_CHECK(dispatch_binary_search(AlgorithmSelectorTag{},
+                                             d_temporary_storage,
+                                             temporary_storage_bytes,
+                                             d_haystack,
+                                             d_needles,
+                                             d_output,
+                                             haystack_size,
+                                             needles_size,
+                                             compare_op,
+                                             stream));
         }
 
         // Record stop event and wait until it completes
@@ -166,18 +171,22 @@ void run_lower_bound_benchmark(benchmark::State& state, hipStream_t stream,
     HIP_CHECK(hipFree(d_output));
 }
 
-#define CREATE_LOWER_BOUND_BENCHMARK(T, K, SORTED)                                        \
-    benchmark::RegisterBenchmark(                                                         \
-        bench_naming::format_name(                                                        \
-            "{lvl:device,algo:binary_search,key_type:" #T ",subalgo:" #K "_percent_"      \
-            + std::string(SORTED ? "sorted" : "random") + "_needles,cfg:default_config}") \
-            .c_str(),                                                                     \
-        [=](benchmark::State& state)                                                      \
-        { run_lower_bound_benchmark<T>(state, stream, size, size * K / 100, SORTED); })
+#define CREATE_BENCHMARK(T, K, SORTED, ALGO_TAG)                                                 \
+    benchmark::RegisterBenchmark(                                                                \
+        bench_naming::format_name(                                                               \
+            "{lvl:device,algo:" + ALGO_TAG{}.name() + ",key_type:" #T ",subalgo:" #K "_percent_" \
+            + std::string(SORTED ? "sorted" : "random") + "_needles,cfg:default_config}")        \
+            .c_str(),                                                                            \
+        [=](benchmark::State& state)                                                             \
+        { run_benchmark<T, ALGO_TAG>(state, stream, size, size * K / 100, SORTED); })
+
+#define BENCHMARK_ALGORITHMS(T, K, SORTED)                        \
+    CREATE_BENCHMARK(T, K, SORTED, binary_search_subalgorithm),   \
+        CREATE_BENCHMARK(T, K, SORTED, lower_bound_subalgorithm), \
+        CREATE_BENCHMARK(T, K, SORTED, upper_bound_subalgorithm)
 
 #define BENCHMARK_TYPE(type) \
-    CREATE_LOWER_BOUND_BENCHMARK(type, 10, false), \
-    CREATE_LOWER_BOUND_BENCHMARK(type, 10, true)
+    BENCHMARK_ALGORITHMS(type, 10, true), BENCHMARK_ALGORITHMS(type, 10, false)
 
 int main(int argc, char *argv[])
 {
