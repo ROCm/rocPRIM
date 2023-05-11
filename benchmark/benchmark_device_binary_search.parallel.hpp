@@ -103,11 +103,9 @@ struct device_binary_search_benchmark : public config_autotune_interface
         T*             d_haystack;
         T*             d_needles;
         OutputType*    d_output;
-        HIP_CHECK(
-            hipMalloc(reinterpret_cast<void**>(&d_haystack), haystack_size * sizeof(*d_haystack)));
-        HIP_CHECK(
-            hipMalloc(reinterpret_cast<void**>(&d_needles), needles_size * sizeof(*d_needles)));
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_output), needles_size * sizeof(*d_output)));
+        HIP_CHECK(hipMalloc(&d_haystack, haystack_size * sizeof(*d_haystack)));
+        HIP_CHECK(hipMalloc(&d_needles, needles_size * sizeof(*d_needles)));
+        HIP_CHECK(hipMalloc(&d_output, needles_size * sizeof(*d_output)));
         HIP_CHECK(hipMemcpy(d_haystack,
                             haystack.data(),
                             haystack_size * sizeof(*d_haystack),
