@@ -70,8 +70,8 @@ struct wrapped_transform_config<default_config, Value>
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr transform_config_params params
-            = default_transform_config<static_cast<unsigned int>(Arch), Value>();
+        static constexpr transform_config_params params = wrap_transform_config<
+            default_transform_config<static_cast<unsigned int>(Arch), Value>>();
     };
 };
 

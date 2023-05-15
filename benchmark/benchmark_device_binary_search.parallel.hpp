@@ -79,12 +79,11 @@ struct device_binary_search_benchmark : public config_autotune_interface
 {
     std::string name() const override
     {
-        const auto config_params = typename Config::transform_config{}.kernel_config;
         return bench_naming::format_name("{lvl:device,algo:" + SubAlgorithm{}.name()
                                          + ",value_type:" + std::string(Traits<T>::name())
                                          + ",output_type:" + std::string(Traits<OutputType>::name())
-                                         + ",cfg:{bs:" + std::to_string(config_params.block_size)
-                                         + ",ipt:" + std::to_string(config_params.items_per_thread)
+                                         + ",cfg:{bs:" + std::to_string(Config::block_size)
+                                         + ",ipt:" + std::to_string(Config::items_per_thread)
                                          + "}}");
     }
 

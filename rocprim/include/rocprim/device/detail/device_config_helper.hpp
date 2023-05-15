@@ -525,7 +525,7 @@ struct transform_config_params
 template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct transform_config : ::rocprim::detail::transform_config_params
+struct transform_config
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
@@ -539,12 +539,6 @@ struct transform_config : ::rocprim::detail::transform_config_params
     static constexpr unsigned int size_limit = SizeLimit;
 
 #endif
-
-    constexpr transform_config()
-        : ::rocprim::detail::transform_config_params{
-            {BlockSize, ItemsPerThread, SizeLimit}
-    }
-    {}
 };
 
 namespace detail
