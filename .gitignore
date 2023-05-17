@@ -53,3 +53,6 @@ CMakeUserPresets.json
 
 # VS Code #
 .vscode
+
+# Python
+__pycache__

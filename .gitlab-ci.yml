@@ -462,21 +462,31 @@ autotune:execute-tuning:
   variables:
     AUTOTUNE_FILENAME_REGEX: ^benchmark
     AUTOTUNE_ALGORITHM_REGEX: ""
+    AUTOTUNE_SIZE: ""
+    AUTOTUNE_TRIALS: ""
   timeout: 8h
   artifacts:
     paths:
       - ${AUTOTUNE_RESULT_DIR}/*.json
   script:
-    - 'printf "CI Variables used in benchmarks:\nAUTOTUNE_RESULT_DIR: %s\nAUTOTUNE_FILENAME_REGEX: %s\nAUTOTUNE_ALGORITHM_REGEX: %s \n" "$AUTOTUNE_RESULT_DIR" "$AUTOTUNE_FILENAME_REGEX" "$AUTOTUNE_ALGORITHM_REGEX"'
+    # Exclude benchmark that is known to fail on gfx906
+    # On ROCm 5.7 or later, check if this can be removed - the presumption is that the failure is caused by a compiler issue.
+    - >
+      if [[ "${GPU_TARGET}" == "gfx906" ]] && [[ "${AUTOTUNE_ALGORITHM_REGEX}" == "" ]]; then
+        export AUTOTUNE_ALGORITHM_REGEX="-\{\"lvl\":\"device\",\"algo\":\"radix_sort_onesweep\",\"key_type\":\"short\",\"value_type\":\"short\",\"cfg\":\{\"histogram\":\{\"bs\":1024,\"ipt\":22},\"sort\":\{\"bs\":1024,\"ipt\":22},\"bits_per_place\":5,\"algorithm\":\"block_radix_rank_algorithm::match\"}}"
+      fi
+    - 'printf "CI Variables used in benchmarks:\nAUTOTUNE_RESULT_DIR: %s\nAUTOTUNE_FILENAME_REGEX: %s\nAUTOTUNE_ALGORITHM_REGEX: %s \nAUTOTUNE_SIZE: %s \nAUTOTUNE_TRIALS: %s\n" "$AUTOTUNE_RESULT_DIR" "$AUTOTUNE_FILENAME_REGEX" "$AUTOTUNE_ALGORITHM_REGEX" "$AUTOTUNE_SIZE" "$AUTOTUNE_TRIALS"'
     - cd "${CI_PROJECT_DIR}"
     - mkdir -p "${AUTOTUNE_RESULT_DIR}"
     - python3
       .gitlab/run_benchmarks.py
-      --benchmark_dir "${BUILD_DIR}/benchmark"
-      --benchmark_gpu_architecture "${GPU_TARGET}"
-      --benchmark_output_dir "${AUTOTUNE_RESULT_DIR}"
-      --benchmark_filename_regex "${AUTOTUNE_FILENAME_REGEX}"
-      --benchmark_filter_regex "${AUTOTUNE_ALGORITHM_REGEX}"
+      --benchmark_dir="${BUILD_DIR}/benchmark"
+      --benchmark_gpu_architecture="${GPU_TARGET}"
+      --benchmark_output_dir="${AUTOTUNE_RESULT_DIR}"
+      --benchmark_filename_regex="${AUTOTUNE_FILENAME_REGEX}"
+      --benchmark_filter_regex="${AUTOTUNE_ALGORITHM_REGEX}"
+      --size="${AUTOTUNE_SIZE}"
+      --trials="${AUTOTUNE_TRIALS}"
 
 autotune:generate-config:
   image: python:3.10.5-buster
