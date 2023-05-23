@@ -6,6 +6,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 ### Added
 - `block_sort::sort()` overload for keys and values with a dynamic size, for all block sort algorithms. Additionally, all `block_sort::sort()` overloads with a dynamic size are now supported for `block_sort_algorithm::merge_sort` and `block_sort_algorithm::bitonic_sort`.
 - New two-way partition primitive `partition_two_way` which can write to two separate iterators.
+- Added config tuning and dynamic dispatch to `device_adjacent_difference` algorithm
 ### Changed
 - Deprecated configuration `radix_sort_config` for device-level radix sort as it no longer matches the algorithm's parameters. New configuration `radix_sort_config_v2` is preferred instead.
 - Removed erroneous implementation of device-level `inclusive_scan` and `exclusive_scan`. The prior default implementation using lookback-scan now is the only available implementation.
@@ -16,6 +17,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 ### Fixed
 - Fixed build issue caused by missing header in `thread/thread_search.hpp`.
 - Fixed `rocprim::MatchAny` for devices with 64-bit warp size. The function `rocprim::MatchAny` is deprecated and `rocprim::match_any` is preferred instead.
+- Fixed `device_adjacent_difference` using more shared memory than required.
 
 ## [rocPRIM-2.13.0 for ROCm 5.5.0]
 ### Added

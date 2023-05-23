@@ -660,6 +660,58 @@ struct default_histogram_config_base
     : default_histogram_config_base_helper<Sample, Channels, ActiveChannels>::type
 {};
 
+struct adjacent_difference_config_params
+{
+    kernel_config_params          adjacent_difference_kernel_config;
+    ::rocprim::block_load_method  block_load_method;
+    ::rocprim::block_store_method block_store_method;
+};
+} // namespace detail
+
+/// \brief Configuration of device-level adjacent difference primitives.
+///
+/// \tparam BlockSize - number of threads in a block.
+/// \tparam ItemsPerThread - number of items processed by each thread.
+/// \tparam BlockLoadMethod - method for loading input values.
+/// \tparam BlockStoreMethod - method for storing values.
+/// \tparam SizeLimit - limit on the number of items for a single adjacent difference kernel launch.
+template<unsigned int       BlockSize,
+         unsigned int       ItemsPerThread,
+         block_load_method  BlockLoadMethod  = block_load_method::block_load_transpose,
+         block_store_method BlockStoreMethod = block_store_method::block_store_transpose,
+         unsigned int       SizeLimit        = ROCPRIM_GRID_SIZE_LIMIT>
+struct adjacent_difference_config
+{
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    static constexpr ::rocprim::block_load_method  block_load_method  = BlockLoadMethod;
+    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
+    static constexpr unsigned int                  block_size         = BlockSize;
+    static constexpr unsigned int                  items_per_thread   = ItemsPerThread;
+    static constexpr unsigned int                  size_limit         = SizeLimit;
+#endif
+};
+
+namespace detail
+{
+
+template<class Value>
+struct default_adjacent_difference_config_base_helper
+{
+    static constexpr unsigned int item_scale
+        = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+
+    using type = adjacent_difference_config<
+        limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
+        ::rocprim::max(1u, 16u / item_scale),
+        ::rocprim::block_load_method::block_load_transpose,
+        ::rocprim::block_store_method::block_store_transpose>;
+};
+
+template<class Value>
+struct default_adjacent_difference_config_base
+    : default_adjacent_difference_config_base_helper<Value>::type
+{};
+
 } // namespace detail
 
 END_ROCPRIM_NAMESPACE
