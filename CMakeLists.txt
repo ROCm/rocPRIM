@@ -104,6 +104,7 @@ if(BUILD_CODE_COVERAGE)
   add_link_options(--coverage)
 endif()
 
+add_compile_options(-save-temps)
 if(USE_HIP_CPU)
   # Get dependencies
   include(cmake/Dependencies.cmake)
