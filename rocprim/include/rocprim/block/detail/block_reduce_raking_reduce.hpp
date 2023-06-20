@@ -43,13 +43,14 @@ template<class T, int n, typename = void>
 class fast_array
 {
 public:
-    ROCPRIM_HOST_DEVICE T operator[](int index) const
+    ROCPRIM_HOST_DEVICE T get(int index) const
     {
         return data[index];
     }
-    ROCPRIM_HOST_DEVICE T& operator[](int index)
+
+    ROCPRIM_HOST_DEVICE void set(int index, T value)
     {
-        return data[index];
+        data[index] = value;
     }
 
 private:
@@ -63,39 +64,6 @@ template<class T, int n>
 class fast_array<T, n, std::enable_if_t<(sizeof(T) > sizeof(int32_t))>>
 {
 public:
-    class proxy
-    {
-    public:
-        friend class fast_array;
-
-        ROCPRIM_HOST_DEVICE operator T() const
-        {
-            return m_array.get(m_index);
-        }
-
-        ROCPRIM_HOST_DEVICE proxy& operator=(T value)
-        {
-            m_array.set(m_index, value);
-            return *this;
-        }
-
-    private:
-        ROCPRIM_HOST_DEVICE proxy(fast_array& array, int index) : m_array(array), m_index(index) {}
-
-        fast_array& m_array;
-        int         m_index;
-    };
-
-    ROCPRIM_HOST_DEVICE T operator[](int index) const
-    {
-        return get(index);
-    }
-
-    ROCPRIM_HOST_DEVICE proxy operator[](int index)
-    {
-        return proxy(*this, index);
-    }
-
     ROCPRIM_HOST_DEVICE T get(int index) const
     {
         T result;
@@ -277,7 +245,7 @@ private:
         storage_type_& storage_ = storage.get();
         if(flat_tid >= warp_size_)
         {
-            storage_.threads[flat_tid] = input;
+            storage_.threads.set(flat_tid, input);
         }
         ::rocprim::syncthreads();
 
@@ -291,7 +259,8 @@ private:
                 thread_index += warp_size_;
                 if(block_multiple_warp_ || (thread_index < BlockSize))
                 {
-                    thread_reduction = reduce_op(thread_reduction, storage_.threads[thread_index]);
+                    thread_reduction
+                        = reduce_op(thread_reduction, storage_.threads.get(thread_index));
                 }
             }
             warp_reduce<block_smaller_than_warp_, warp_reduce_prefix_type>(thread_reduction,
@@ -309,8 +278,8 @@ private:
                                                    BinaryFunction     reduce_op) ->
         typename std::enable_if<(!FunctionCommutativeOnly), void>::type
     {
-        storage_type_& storage_    = storage.get();
-        storage_.threads[flat_tid] = input;
+        storage_type_& storage_ = storage.get();
+        storage_.threads.set(flat_tid, input);
         ::rocprim::syncthreads();
 
         constexpr unsigned int active_lanes = ceiling_div(BlockSize, segment_len);
@@ -318,14 +287,15 @@ private:
         if(flat_tid < active_lanes)
         {
             unsigned int thread_index     = segment_len * flat_tid;
-            T            thread_reduction = storage_.threads[thread_index];
+            T            thread_reduction = storage_.threads.get(thread_index);
             ROCPRIM_UNROLL
             for(unsigned int i = 1; i < segment_len; i++)
             {
                 ++thread_index;
                 if(block_multiple_warp_ || (thread_index < BlockSize))
                 {
-                    thread_reduction = reduce_op(thread_reduction, storage_.threads[thread_index]);
+                    thread_reduction
+                        = reduce_op(thread_reduction, storage_.threads.get(thread_index));
                 }
             }
             warp_reduce<!block_multiple_warp_, warp_reduce_prefix_type>(thread_reduction,
@@ -364,7 +334,7 @@ private:
         storage_type_& storage_ = storage.get();
         if((flat_tid >= warp_size_) && (flat_tid < valid_items))
         {
-            storage_.threads[flat_tid] = input;
+            storage_.threads.set(flat_tid, input);
         }
         ::rocprim::syncthreads();
 
@@ -373,7 +343,7 @@ private:
             T thread_reduction = input;
             for(unsigned int i = warp_size_ + flat_tid; i < valid_items; i += warp_size_)
             {
-                thread_reduction = reduce_op(thread_reduction, storage_.threads[i]);
+                thread_reduction = reduce_op(thread_reduction, storage_.threads.get(i));
             }
             warp_reduce_prefix_type().reduce(thread_reduction, output, valid_items, reduce_op);
         }
@@ -391,21 +361,22 @@ private:
         storage_type_& storage_ = storage.get();
         if(flat_tid < valid_items)
         {
-            storage_.threads[flat_tid] = input;
+            storage_.threads.set(flat_tid, input);
         }
         ::rocprim::syncthreads();
 
         unsigned int thread_index = segment_len * flat_tid;
         if(thread_index < valid_items)
         {
-            T thread_reduction = storage_.threads[thread_index];
+            T thread_reduction = storage_.threads.get(thread_index);
             ROCPRIM_UNROLL
             for(unsigned int i = 1; i < segment_len; i++)
             {
                 ++thread_index;
                 if(thread_index < valid_items)
                 {
-                    thread_reduction = reduce_op(thread_reduction, storage_.threads[thread_index]);
+                    thread_reduction
+                        = reduce_op(thread_reduction, storage_.threads.get(thread_index));
                 }
             }
             // not ceiling_div here as not constexpr and this is faster
