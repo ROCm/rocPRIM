@@ -195,7 +195,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void adjacent_difference_kernel_impl(
 
     using adjacent_helper = adjacent_diff_helper<input_type, block_size>;
 
-    ROCPRIM_SHARED_MEMORY struct
+    ROCPRIM_SHARED_MEMORY union
     {
         typename block_load_type::storage_type  load;
         typename adjacent_helper::storage_type  adjacent_diff;
