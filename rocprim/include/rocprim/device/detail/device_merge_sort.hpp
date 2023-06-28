@@ -318,8 +318,8 @@ struct block_permute_values_impl<Value,
 
 template<typename Key,
          typename Value,
-         unsigned int         BlockSize,
-         unsigned int         ItemsPerThread,
+         unsigned int BlockSize,
+         unsigned int ItemsPerThread,
          typename Enable = void>
 struct block_sort_impl
 {
@@ -328,8 +328,11 @@ struct block_sort_impl
     using keys_load_type
         = block_load<Key, BlockSize, ItemsPerThread, block_load_method::block_load_transpose>;
 
-    using sort_type
-        = block_sort<stable_key_type, BlockSize, ItemsPerThread, rocprim::empty_type, block_sort_algorithm::stable_merge_sort>;
+    using sort_type = block_sort<stable_key_type,
+                                 BlockSize,
+                                 ItemsPerThread,
+                                 rocprim::empty_type,
+                                 block_sort_algorithm::stable_merge_sort>;
 
     using keys_store_type
         = block_store<Key, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>;
@@ -349,23 +352,19 @@ struct block_sort_impl
              typename ValuesInputIterator,
              typename ValuesOutputIterator,
              typename BinaryFunction>
-    ROCPRIM_DEVICE  ROCPRIM_FORCE_INLINE
-    void sort(const unsigned int   valid_in_last_block,
-              const bool           is_incomplete_block,
-              KeysInputIterator    keys_input,
-              KeysOutputIterator   keys_output,
-              ValuesInputIterator  values_input,
-              ValuesOutputIterator values_output,
-              BinaryFunction       compare_function,
-              storage_type&        storage)
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort(const unsigned int /*valid_in_last_block*/,
+                                                  const bool /*is_incomplete_block*/,
+                                                  KeysInputIterator /*keys_input*/,
+                                                  KeysOutputIterator /*keys_output*/,
+                                                  ValuesInputIterator /*values_input*/,
+                                                  ValuesOutputIterator /*values_output*/,
+                                                  BinaryFunction /*compare_function*/,
+                                                  storage_type& /*storage*/)
     {}
 };
 
 template<typename Key, unsigned int BlockSize, unsigned int ItemsPerThread>
-struct block_sort_impl<Key,
-                       rocprim::empty_type,
-                       BlockSize,
-                       ItemsPerThread>
+struct block_sort_impl<Key, rocprim::empty_type, BlockSize, ItemsPerThread>
 {
     using keys_load_type
         = block_load<Key, BlockSize, ItemsPerThread, block_load_method::block_load_transpose>;
@@ -584,8 +583,8 @@ struct block_sort_impl<Key,
 };
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-template<unsigned int         BlockSize,
-         unsigned int         ItemsPerThread,
+template<unsigned int BlockSize,
+         unsigned int ItemsPerThread,
          class KeysInputIterator,
          class KeysOutputIterator,
          class ValuesInputIterator,
