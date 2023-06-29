@@ -6,6 +6,9 @@
 
 from rocm_docs import ROCmDocs
 
+
+external_projects_current_project = "rocprim"
+
 docs_core = ROCmDocs("rocPRIM Documentation")
 docs_core.run_doxygen()
 docs_core.setup()
