@@ -321,47 +321,7 @@ template<typename Key,
          unsigned int BlockSize,
          unsigned int ItemsPerThread,
          typename Enable = void>
-struct block_sort_impl
-{
-    using stable_key_type = rocprim::tuple<Key, unsigned int>;
-
-    using keys_load_type
-        = block_load<Key, BlockSize, ItemsPerThread, block_load_method::block_load_transpose>;
-
-    using sort_type = block_sort<stable_key_type,
-                                 BlockSize,
-                                 ItemsPerThread,
-                                 rocprim::empty_type,
-                                 block_sort_algorithm::stable_merge_sort>;
-
-    using keys_store_type
-        = block_store<Key, BlockSize, ItemsPerThread, block_store_method::block_store_transpose>;
-
-    using values_permute_type = block_permute_values_impl<Value, BlockSize, ItemsPerThread>;
-
-    union storage_type
-    {
-        typename keys_load_type::storage_type      load_keys;
-        typename sort_type::storage_type           sort;
-        typename keys_store_type::storage_type     store_keys;
-        typename values_permute_type::storage_type permute_values;
-    };
-
-    template<typename KeysInputIterator,
-             typename KeysOutputIterator,
-             typename ValuesInputIterator,
-             typename ValuesOutputIterator,
-             typename BinaryFunction>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort(const unsigned int /*valid_in_last_block*/,
-                                                  const bool /*is_incomplete_block*/,
-                                                  KeysInputIterator /*keys_input*/,
-                                                  KeysOutputIterator /*keys_output*/,
-                                                  ValuesInputIterator /*values_input*/,
-                                                  ValuesOutputIterator /*values_output*/,
-                                                  BinaryFunction /*compare_function*/,
-                                                  storage_type& /*storage*/)
-    {}
-};
+struct block_sort_impl;
 
 template<typename Key, unsigned int BlockSize, unsigned int ItemsPerThread>
 struct block_sort_impl<Key, rocprim::empty_type, BlockSize, ItemsPerThread>
