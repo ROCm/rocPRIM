@@ -208,8 +208,30 @@ T bit_extract(const T value, const unsigned int bits)
 
 std::vector<max_lane_mask_type> active_lanes_tests(int device_id)
 {
-    std::vector<max_lane_mask_type> tests
-        = {all_lanes_active, 0x0123'4567'89AB'CDEF, 0xAAAA'AAAA'AAAA'AAAA};
+    std::vector<max_lane_mask_type> tests = {all_lanes_active,
+                                             all_lanes_active,
+                                             0x0123'4567'89AB'CDEF,
+                                             0x0123'4567'89AB'CDEF,
+                                             0xAAAA'AAAA'AAAA'AAAA,
+                                             0xAAAA'AAAA'AAAA'AAAA};
+
+    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    for(auto& test : tests)
+    {
+        test = bit_extract(test, hardware_warp_size);
+    }
+
+    return tests;
+}
+
+std::vector<max_lane_mask_type> lane_predicates_tests()
+{
+    std::vector<max_lane_mask_type> tests = {all_lanes_active,
+                                             0x0123'4567'89AB'CDEF,
+                                             0xAAAA'AAAA'AAAA'AAAA,
+                                             all_lanes_active,
+                                             0x0123'4567'89AB'CDEF,
+                                             0xAAAA'AAAA'AAAA'AAAA};
 
     unsigned int hardware_warp_size;
     HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
@@ -953,14 +975,16 @@ TYPED_TEST(RocprimIntrinsicsTests, WarpPermute)
 template<unsigned int LabelBits>
 __global__ void match_any_kernel(max_lane_mask_type* output,
                                  unsigned int*       input,
-                                 max_lane_mask_type  active_lanes)
+                                 max_lane_mask_type  active_lanes,
+                                 max_lane_mask_type  lane_predicates)
 {
     const unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
 
     const auto         value  = input[index];
     max_lane_mask_type result = test_type_helper<max_lane_mask_type>::uninitialized();
     if(is_lane_active(active_lanes, rocprim::lane_id()))
-        result = rocprim::match_any<LabelBits>(value);
+        result = rocprim::match_any<LabelBits>(value,
+                                               is_lane_active(lane_predicates, rocprim::lane_id()));
     output[index] = result;
 }
 
@@ -1000,8 +1024,14 @@ TEST(RocprimIntrinsicsTests, MatchAny)
                                                                      1u << (label_bits + 3),
                                                                      seed_value);
 
-        for(const auto active_lanes : active_lanes_tests(device_id))
+        const auto active_lanes_for_testing    = active_lanes_tests();
+        const auto lane_predicates_for_testing = lane_predicates_tests();
+        for(size_t i = 0; i < active_lanes_for_testing.size(); ++i)
         {
+            const auto active_lanes    = active_lanes_for_testing.at(i);
+            const auto lane_predicates = lane_predicates_for_testing.at(i);
+            SCOPED_TRACE(testing::Message()
+                         << "with lane_predicates = " << std::bitset<64>(lane_predicates));
             SCOPED_TRACE(testing::Message()
                          << "with active_lanes = " << std::bitset<64>(active_lanes));
 
@@ -1014,7 +1044,8 @@ TEST(RocprimIntrinsicsTests, MatchAny)
 
                     for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                     {
-                        if(is_lane_active(active_lanes, lane))
+                        if(is_lane_active(active_lanes, lane)
+                           && is_lane_active(lane_predicates, lane))
                         {
                             const auto value = bit_extract(input[base + lane], label_bits);
                             histogram[value] |= max_lane_mask_type{1} << lane;
@@ -1048,7 +1079,8 @@ TEST(RocprimIntrinsicsTests, MatchAny)
                                hipStreamDefault,
                                d_output,
                                d_input,
-                               active_lanes);
+                               active_lanes,
+                               lane_predicates);
             HIP_CHECK(hipGetLastError());
 
             HIP_CHECK(hipMemcpy(output.data(),
