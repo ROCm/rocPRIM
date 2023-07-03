@@ -47,7 +47,6 @@ namespace detail
 struct merge_sort_block_sort_config_params
 {
     kernel_config_params block_sort_config = {0, 0};
-    block_sort_algorithm block_sort_method = block_sort_algorithm::stable_merge_sort;
 };
 
 // Necessary to construct a parameterized type of `merge_sort_block_sort_config_params`.
@@ -57,7 +56,7 @@ struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_con
 {
     using sort_config = kernel_config<BlockSize, ItemsPerThread>;
     constexpr merge_sort_block_sort_config()
-        : rocprim::detail::merge_sort_block_sort_config_params{sort_config(), Algo} {};
+        : rocprim::detail::merge_sort_block_sort_config_params{sort_config()} {};
 };
 
 constexpr unsigned int merge_sort_items_per_thread(const unsigned int item_scale)

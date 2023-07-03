@@ -12,6 +12,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - The benchmark metric indicating the bytes processed for `exclusive_scan_by_key` and `inclusive_scan_by_key` has been changed to incorporate the key type. Furthermore, the benchmark log has been changed such that these algorithms are reported as `scan` and `scan_by_key` instead of `scan_exclusive` and `scan_inclusive`.
 - Deprecated configurations `scan_config` and `scan_by_key_config` for device-level scans, as they no longer match the algorithm's parameters. New configurations `scan_config_v2` and `scan_by_key_config_v2` are preferred instead.
 - Improved the performance of `partition`.
+- `merge_sort_block_sort` will always use stable merge sort as it is faster than the fallback implementation.
 ### Fixed
 - Fixed build issue caused by missing header in `thread/thread_search.hpp`.
 - Fixed `rocprim::MatchAny` for devices with 64-bit warp size. The function `rocprim::MatchAny` is deprecated and `rocprim::match_any` is preferred instead.
