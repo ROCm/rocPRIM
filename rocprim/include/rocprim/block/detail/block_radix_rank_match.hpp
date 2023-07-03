@@ -123,8 +123,9 @@ private:
             // than the current thread's.
             const unsigned int peer_digit_prefix = rocprim::masked_bit_count(peer_mask);
 
-            // The first thread with a particular digit gets to update the shared counter.
-            if(peer_digit_prefix == 0)
+            // Choosing a lane to do the increment.
+            const bool elected = ::rocprim::elect(peer_mask);
+            if(elected)
             {
                 *digit_counters[i] = warp_digit_prefix + digit_count;
             }

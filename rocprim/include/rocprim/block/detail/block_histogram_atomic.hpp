@@ -75,12 +75,9 @@ public:
             // The total number of threads in the warp which also have this digit.
             const unsigned int bin_count = bit_count(peer_mask);
 
-            // The number of threads in the warp that have the same digit AND whose lane id is lower
-            // than the current thread's.
-            const unsigned int peer_digit_prefix = masked_bit_count(peer_mask);
-
-            // Set counter value.
-            if(peer_digit_prefix == 0)
+            // Choosing a lane to do the increment.
+            const bool elected = ::rocprim::elect(peer_mask);
+            if(elected)
             {
                 detail::atomic_add(&hist[bin], Counter(bin_count));
             }

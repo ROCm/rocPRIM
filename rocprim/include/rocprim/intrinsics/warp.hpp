@@ -146,6 +146,17 @@ ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool 
     return peer_mask;
 }
 
+/**
+ * This function elects a single lane for the <tt>mask</tt>. It returns true for one
+ * lane in the <tt>mask</tt>, false for everyone else. It returns false for everyone
+ * if the mask is 0.
+*/
+ROCPRIM_DEVICE ROCPRIM_INLINE bool elect(lane_mask_type mask)
+{
+    const unsigned int prev_same_count = ::rocprim::masked_bit_count(mask);
+    return prev_same_count == 0 && (mask & 1 << ::rocprim::lane_id());
+}
+
 END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_INTRINSICS_WARP_HPP_

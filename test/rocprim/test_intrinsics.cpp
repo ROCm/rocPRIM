@@ -1193,3 +1193,109 @@ TEST(RocprimIntrinsicsTests, Ballot)
     hipFree(d_input);
     hipFree(d_output);
 }
+
+__global__ void
+    elect_kernel(max_lane_mask_type* output, max_lane_mask_type* input, size_t warps_per_block)
+{
+    const unsigned int index = blockIdx.x * 4 + threadIdx.x / ::rocprim::device_warp_size();
+
+    output[index]     = 0;
+    const auto value  = input[index];
+    bool       result = rocprim::elect(value);
+    if(result)
+    {
+        output[index] |= 1u << ::rocprim::lane_id();
+    }
+}
+
+TEST(RocprimIntrinsicsTests, Elect)
+{
+    int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    const size_t warps_per_block    = 4;
+    const size_t block_size         = warps_per_block * hardware_warp_size;
+    const size_t blocks             = 2;
+    const size_t number_of_warps    = blocks * warps_per_block;
+    const size_t size               = blocks * block_size;
+    SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
+
+    max_lane_mask_type* d_input;
+    HIP_CHECK(
+        test_common_utils::hipMallocHelper(&d_input, number_of_warps * sizeof(max_lane_mask_type)));
+
+    max_lane_mask_type* d_output;
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_output,
+                                                 number_of_warps * sizeof(max_lane_mask_type)));
+
+    std::vector<max_lane_mask_type> expected;
+    std::vector<max_lane_mask_type> output;
+    expected.reserve(number_of_warps);
+    output.reserve(number_of_warps);
+
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    {
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
+
+        const auto input = test_utils::get_random_data<max_lane_mask_type>(
+            number_of_warps,
+            0,
+            std::numeric_limits<max_lane_mask_type>::max(),
+            seed_value);
+
+        expected.clear();
+        output.clear();
+        expected.resize(number_of_warps, 0);
+        output.resize(number_of_warps, 0);
+
+        for(size_t block = 0; block < blocks; ++block)
+        {
+            for(size_t warp = 0; warp < warps_per_block; ++warp)
+            {
+                const auto input_index = block * warps_per_block + warp;
+                const auto base        = input_index * hardware_warp_size;
+
+                auto lane_mask = input.at(input_index);
+
+                for(size_t lane = 0; lane < hardware_warp_size; ++lane)
+                {
+                    const auto bit_set = lane_mask & (1u << lane);
+                    if(bit_set)
+                    {
+                        expected[input_index] |= bit_set;
+                        break;
+                    }
+                }
+            }
+        }
+
+        HIP_CHECK(hipMemcpy(d_input,
+                            input.data(),
+                            number_of_warps * sizeof(max_lane_mask_type),
+                            hipMemcpyHostToDevice));
+
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(elect_kernel),
+                           dim3(blocks),
+                           dim3(block_size),
+                           0,
+                           hipStreamDefault,
+                           d_output,
+                           d_input,
+                           warps_per_block);
+        HIP_CHECK(hipGetLastError());
+
+        HIP_CHECK(hipMemcpy(output.data(),
+                            d_output,
+                            number_of_warps * sizeof(max_lane_mask_type),
+                            hipMemcpyDeviceToHost));
+
+        test_utils::assert_eq(output, expected);
+    }
+
+    hipFree(d_input);
+    hipFree(d_output);
+}
