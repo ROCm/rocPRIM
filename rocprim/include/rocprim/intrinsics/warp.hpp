@@ -154,7 +154,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool 
 ROCPRIM_DEVICE ROCPRIM_INLINE bool elect(lane_mask_type mask)
 {
     const unsigned int prev_same_count = ::rocprim::masked_bit_count(mask);
-    return prev_same_count == 0 && (mask & 1 << ::rocprim::lane_id());
+    return prev_same_count == 0 && (mask & (lane_mask_type{1} << ::rocprim::lane_id())) != 0;
 }
 
 END_ROCPRIM_NAMESPACE
