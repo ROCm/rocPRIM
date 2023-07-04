@@ -130,7 +130,7 @@ template<unsigned int LabelBits>
 ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool predicate = true)
 {
     // Obtain a mask with the threads which are currently active.
-    lane_mask_type peer_mask = ballot(predicate);
+    lane_mask_type peer_mask = -lane_mask_type(predicate) & ballot(predicate);
 
     // Compute the final value iteratively by testing each bit separately.
     ROCPRIM_UNROLL

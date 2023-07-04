@@ -1054,10 +1054,16 @@ TEST(RocprimIntrinsicsTests, MatchAny)
 
                     for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                     {
-                        if(is_lane_active(active_lanes, lane))
+                        if(is_lane_active(active_lanes, lane)
+                           && is_lane_active(lane_predicates, lane))
                         {
                             const auto value      = bit_extract(input[base + lane], label_bits);
                             expected[base + lane] = histogram[value];
+                        }
+                        else if(is_lane_active(active_lanes, lane)
+                                && !is_lane_active(lane_predicates, lane))
+                        {
+                            expected[base + lane] = 0;
                         }
                         else
                         {
