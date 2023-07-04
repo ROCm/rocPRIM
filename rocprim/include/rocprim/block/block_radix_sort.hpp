@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -883,6 +883,16 @@ private:
         (void) values;
     }
 };
+
+template<class Key,
+         unsigned int BlockSizeX,
+         unsigned int ItemsPerThread,
+         class Value,
+         unsigned int BlockSizeY,
+         unsigned int BlockSizeZ>
+constexpr unsigned int
+    block_radix_sort<Key, BlockSizeX, ItemsPerThread, Value, BlockSizeY, BlockSizeZ>::
+        radix_bits_per_pass;
 
 END_ROCPRIM_NAMESPACE
 

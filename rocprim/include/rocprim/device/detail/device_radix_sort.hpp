@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -1194,17 +1194,18 @@ template<unsigned int               BlockSize,
          class ValuesInputIterator,
          class ValuesOutputIterator,
          class Offset>
-ROCPRIM_DEVICE void onesweep_iteration(KeysInputIterator        keys_input,
-                                       KeysOutputIterator       keys_output,
-                                       ValuesInputIterator      values_input,
-                                       ValuesOutputIterator     values_output,
-                                       const unsigned int       size,
-                                       Offset*                  global_digit_offsets_in,
-                                       Offset*                  global_digit_offsets_out,
-                                       onesweep_lookback_state* lookback_states,
-                                       const unsigned int       bit,
-                                       const unsigned int       current_radix_bits,
-                                       const unsigned int       full_blocks)
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+    onesweep_iteration(KeysInputIterator        keys_input,
+                       KeysOutputIterator       keys_output,
+                       ValuesInputIterator      values_input,
+                       ValuesOutputIterator     values_output,
+                       const unsigned int       size,
+                       Offset*                  global_digit_offsets_in,
+                       Offset*                  global_digit_offsets_out,
+                       onesweep_lookback_state* lookback_states,
+                       const unsigned int       bit,
+                       const unsigned int       current_radix_bits,
+                       const unsigned int       full_blocks)
 {
     using key_type   = typename std::iterator_traits<KeysInputIterator>::value_type;
     using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
