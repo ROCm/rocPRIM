@@ -1226,7 +1226,6 @@ TEST(RocprimIntrinsicsTests, Elect)
     const size_t block_size         = warps_per_block * hardware_warp_size;
     const size_t blocks             = 2;
     const size_t number_of_warps    = blocks * warps_per_block;
-    const size_t size               = blocks * block_size;
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
     max_lane_mask_type* d_input;
@@ -1264,7 +1263,6 @@ TEST(RocprimIntrinsicsTests, Elect)
             for(size_t warp = 0; warp < warps_per_block; ++warp)
             {
                 const auto input_index = block * warps_per_block + warp;
-                const auto base        = input_index * hardware_warp_size;
 
                 auto lane_mask = input.at(input_index);
 
