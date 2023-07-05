@@ -1203,7 +1203,8 @@ TEST(RocprimIntrinsicsTests, Ballot)
 __global__ void
     elect_kernel(max_lane_mask_type* output, max_lane_mask_type* input, size_t warps_per_block)
 {
-    const unsigned int index = blockIdx.x * 4 + threadIdx.x / ::rocprim::device_warp_size();
+    const unsigned int index
+        = blockIdx.x * warps_per_block + threadIdx.x / ::rocprim::device_warp_size();
 
     output[index]     = 0;
     const auto value  = input[index];
