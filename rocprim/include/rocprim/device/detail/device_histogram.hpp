@@ -504,7 +504,6 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void
                 }
                 const unsigned int same_bin_count = ::rocprim::bit_count(same_bin_lanes_mask);
 
-                // Choosing a lane to do the increment.
                 if(::rocprim::group_elect(same_bin_lanes_mask))
                 {
                     // Write the number of lanes having this bin,

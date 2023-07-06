@@ -75,7 +75,6 @@ public:
             // The total number of threads in the warp which also have this digit.
             const unsigned int bin_count = bit_count(peer_mask);
 
-            // Choosing a lane to do the increment.
             if(::rocprim::group_elect(peer_mask))
             {
                 detail::atomic_add(&hist[bin], Counter(bin_count));

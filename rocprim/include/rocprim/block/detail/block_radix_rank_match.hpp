@@ -123,7 +123,6 @@ private:
             // than the current thread's.
             const unsigned int peer_digit_prefix = rocprim::masked_bit_count(peer_mask);
 
-            // Choosing a lane to do the increment.
             if(::rocprim::group_elect(peer_mask))
             {
                 *digit_counters[i] = warp_digit_prefix + digit_count;
