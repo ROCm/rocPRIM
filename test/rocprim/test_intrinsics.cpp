@@ -1183,17 +1183,19 @@ TEST(RocprimIntrinsicsTests, Ballot)
 
 __global__ void group_elect_kernel(max_lane_mask_type* output,
                                    max_lane_mask_type* input,
+                                   size_t              groups_per_block,
                                    size_t              warps_per_block)
 {
-    const unsigned int index
+    const unsigned int input_index = blockIdx.x * groups_per_block + threadIdx.x / 8;
+
+    const unsigned int output_index
         = blockIdx.x * warps_per_block + threadIdx.x / ::rocprim::device_warp_size();
 
-    output[index]     = 0;
-    const auto value  = input[index];
+    const auto value  = input[input_index];
     bool       result = rocprim::group_elect(value);
     if(result)
     {
-        atomicOr(&output[index], max_lane_mask_type{1} << ::rocprim::lane_id());
+        atomicOr(&output[output_index], max_lane_mask_type{1} << ::rocprim::lane_id());
     }
 }
 
@@ -1204,23 +1206,25 @@ TEST(RocprimIntrinsicsTests, GroupElect)
     HIP_CHECK(hipSetDevice(device_id));
 
     const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    const size_t groups_per_warp    = hardware_warp_size / 8;
     const size_t warps_per_block    = 4;
     const size_t block_size         = warps_per_block * hardware_warp_size;
     const size_t blocks             = 2;
     const size_t number_of_warps    = blocks * warps_per_block;
+    const size_t number_of_groups   = number_of_warps * groups_per_warp;
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
     max_lane_mask_type* d_input;
-    HIP_CHECK(
-        test_common_utils::hipMallocHelper(&d_input, number_of_warps * sizeof(max_lane_mask_type)));
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_input,
+                                                 number_of_groups * sizeof(max_lane_mask_type)));
 
     max_lane_mask_type* d_output;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_output,
                                                  number_of_warps * sizeof(max_lane_mask_type)));
 
-    std::vector<max_lane_mask_type> expected;
+    std::vector<bool>               expected;
     std::vector<max_lane_mask_type> output;
-    expected.reserve(number_of_warps);
+    expected.reserve(number_of_groups);
     output.reserve(number_of_warps);
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
@@ -1229,40 +1233,50 @@ TEST(RocprimIntrinsicsTests, GroupElect)
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
-        const auto input = test_utils::get_random_data<max_lane_mask_type>(
-            number_of_warps,
+        auto input = test_utils::get_random_data<max_lane_mask_type>(
+            number_of_groups,
             0,
             std::numeric_limits<max_lane_mask_type>::max(),
             seed_value);
 
+        max_lane_mask_type group_mask = 0xFF;
+        for(size_t i = 0; i < 8; ++i)
+        {
+            for(size_t j = 0; j < number_of_groups; j += groups_per_warp)
+            {
+                input[i + j] &= group_mask;
+            }
+            group_mask <<= 8;
+        }
+
         expected.clear();
         output.clear();
-        expected.resize(number_of_warps, 0);
+        expected.resize(number_of_groups, false);
         output.resize(number_of_warps, 0);
 
         for(size_t block = 0; block < blocks; ++block)
         {
             for(size_t warp = 0; warp < warps_per_block; ++warp)
             {
-                const auto input_index = block * warps_per_block + warp;
+                const auto input_index = (block * warps_per_block + warp) * groups_per_warp;
 
                 auto lane_mask = input.at(input_index);
+                max_lane_mask_type group_mask = 0xFF;
 
-                for(size_t lane = 0; lane < hardware_warp_size; ++lane)
+                for(size_t group = 0; group < groups_per_warp; ++group)
                 {
-                    const auto bit_set = lane_mask & (max_lane_mask_type{1} << lane);
-                    if(bit_set)
+                    if((lane_mask & group_mask) != 0)
                     {
-                        expected[input_index] |= bit_set;
-                        break;
+                        expected[input_index + group] = true;
                     }
+                    group_mask <<= 8;
                 }
             }
         }
 
         HIP_CHECK(hipMemcpy(d_input,
                             input.data(),
-                            number_of_warps * sizeof(max_lane_mask_type),
+                            number_of_groups * sizeof(max_lane_mask_type),
                             hipMemcpyHostToDevice));
 
         HIP_CHECK(hipMemset(d_output, 0, number_of_warps * sizeof(max_lane_mask_type)));
@@ -1274,6 +1288,7 @@ TEST(RocprimIntrinsicsTests, GroupElect)
                            hipStreamDefault,
                            d_output,
                            d_input,
+                           warps_per_block * groups_per_warp,
                            warps_per_block);
         HIP_CHECK(hipGetLastError());
 
@@ -1282,7 +1297,23 @@ TEST(RocprimIntrinsicsTests, GroupElect)
                             number_of_warps * sizeof(max_lane_mask_type),
                             hipMemcpyDeviceToHost));
 
-        test_utils::assert_eq(output, expected);
+        //test_utils::assert_eq(output, expected);
+        group_mask = 0;
+        for(size_t i = 0; i < number_of_groups; ++i)
+        {
+            size_t             warp_idx    = i / groups_per_warp;
+            max_lane_mask_type group_elect = input[i] & output[warp_idx];
+
+            unsigned int num_of_bits = 0;
+            while(group_elect)
+            {
+                num_of_bits += n & 1;
+                group_elect >>= 1;
+            }
+
+            ASSERT_EQ(num_of_bits == 1, input[i] > 0);
+            ASSERT_EQ(num_of_bits == 0, input[i] == 0);
+        }
     }
 
     hipFree(d_input);
