@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -79,25 +79,6 @@ struct reduce_by_key_config_v2
 
     /// Maximum possible number of values. Defaults to ROCPRIM_GRID_SIZE_LIMIT.
     static constexpr unsigned int         size_limit         = SizeLimit;
-};
-
-/// \brief Legacy configuration of device-level reduce-by-key operation.
-///
-/// \deprecated Due to a new implementation the configuration options no longer match the algorithm
-/// parameters. Use `reduce_by_key_config_v2` for the new parameters of the algorithm. Only a best
-/// effort mapping is provided for these options, parameters not applicable to the new algorithm
-/// are ignored.
-///
-/// \tparam ScanConfig - configuration of carry-outs scan kernel. Must be \p kernel_config.
-/// \tparam ReduceConfig - configuration of the main reduce-by-key kernel. Must be \p kernel_config.
-template<class ScanConfig, class ReduceConfig>
-struct [[deprecated("use reduce_by_key_config_v2")]] reduce_by_key_config
-    : reduce_by_key_config_v2<ReduceConfig::BlockSize, ReduceConfig::ItemsPerThread>
-{
-    /// \brief Configuration of carry-outs scan kernel.
-    using scan = ScanConfig;
-    /// \brief Configuration of the main reduce-by-key kernel.
-    using reduce = ReduceConfig;
 };
 
 namespace detail

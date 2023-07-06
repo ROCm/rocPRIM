@@ -320,53 +320,6 @@ struct scan_config_v2 : ::rocprim::detail::scan_config_params
 #endif
 };
 
-/// \brief Deprecated: Configuration of device-level scan primitives.
-///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam UseLookback - deprecated, scan always uses lookback scan.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
-template<unsigned int                    BlockSize,
-         unsigned int                    ItemsPerThread,
-         bool                            UseLookback,
-         ::rocprim::block_load_method    BlockLoadMethod,
-         ::rocprim::block_store_method   BlockStoreMethod,
-         ::rocprim::block_scan_algorithm BlockScanMethod,
-         unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // Doxygen seems to have trouble with the syntax used in this definition
-[[deprecated("The UseLookback switch has been removed, as scan now only supports the "
-                    "lookback-scan implementation. Use scan_config_v2 instead.")]] 
-#endif
-scan_config : ::rocprim::detail::scan_config_params
-{
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
-    static constexpr bool use_lookback = UseLookback;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
-
-    constexpr scan_config()
-        : ::rocprim::detail::scan_config_params{
-            {BlockSize, ItemsPerThread, SizeLimit},
-            BlockLoadMethod,
-            BlockStoreMethod,
-            BlockScanMethod
-    } {};
-};
-
 namespace detail
 {
 
@@ -443,54 +396,6 @@ struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
 #endif
 };
 
-/// \brief Deprecated: Configuration of device-level scan-by-key operation.
-///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam UseLookback - deprecated, scan always uses lookback scan.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
-template<unsigned int                    BlockSize,
-         unsigned int                    ItemsPerThread,
-         bool                            UseLookback,
-         ::rocprim::block_load_method    BlockLoadMethod,
-         ::rocprim::block_store_method   BlockStoreMethod,
-         ::rocprim::block_scan_algorithm BlockScanMethod,
-         unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // Doxygen seems to have trouble with the syntax used in this definition
-[[deprecated(
-    "The UseLookback switch has been removed, as scan now only supports the lookback-scan "
-    "implementation. Use scan_by_key_config_v2 instead.")]]
-#endif
-scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
-{
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
-    static constexpr bool use_lookback = UseLookback;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
-
-    constexpr scan_by_key_config()
-        : ::rocprim::detail::scan_by_key_config_params{
-            {BlockSize, ItemsPerThread, SizeLimit},
-            BlockLoadMethod,
-            BlockStoreMethod,
-            BlockScanMethod
-    } {};
-};
-
 namespace detail
 {
 
@@ -500,7 +405,7 @@ struct default_scan_by_key_config_base_helper
     static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
         sizeof(Key) + sizeof(Value), 2 * sizeof(int));
 
-    using type = scan_by_key_config_v2<
+    using type = scan_by_key_config<
         limit_block_size<256U, sizeof(Key) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
         ::rocprim::max(1u, 16u / item_scale),
         ::rocprim::block_load_method::block_load_transpose,
