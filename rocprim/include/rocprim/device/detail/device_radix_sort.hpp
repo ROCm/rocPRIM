@@ -170,8 +170,7 @@ struct radix_digit_count_helper
                 const unsigned int same_digit_count = ::rocprim::bit_count(same_digit_lanes_mask);
 
                 // Choosing a lane to do the increment.
-                const bool elected = ::rocprim::elect(same_digit_lanes_mask);
-                if(elected)
+                if(::rocprim::group_elect(same_digit_lanes_mask))
                 {
                     // Write the number of lanes having this digit,
                     // if the current lane is the first (and maybe only) lane with this digit.

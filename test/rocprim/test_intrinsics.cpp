@@ -208,30 +208,8 @@ T bit_extract(const T value, const unsigned int bits)
 
 std::vector<max_lane_mask_type> active_lanes_tests(int device_id)
 {
-    std::vector<max_lane_mask_type> tests = {all_lanes_active,
-                                             all_lanes_active,
-                                             0x0123'4567'89AB'CDEF,
-                                             0x0123'4567'89AB'CDEF,
-                                             0xAAAA'AAAA'AAAA'AAAA,
-                                             0xAAAA'AAAA'AAAA'AAAA};
-
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
-    for(auto& test : tests)
-    {
-        test = bit_extract(test, hardware_warp_size);
-    }
-
-    return tests;
-}
-
-std::vector<max_lane_mask_type> lane_predicates_tests()
-{
-    std::vector<max_lane_mask_type> tests = {all_lanes_active,
-                                             0x0123'4567'89AB'CDEF,
-                                             0xAAAA'AAAA'AAAA'AAAA,
-                                             all_lanes_active,
-                                             0x0123'4567'89AB'CDEF,
-                                             0xAAAA'AAAA'AAAA'AAAA};
+    std::vector<max_lane_mask_type> tests
+        = {all_lanes_active, 0x0123'4567'89AB'CDEF, 0xAAAA'AAAA'AAAA'AAAA};
 
     unsigned int hardware_warp_size;
     HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
@@ -1024,77 +1002,80 @@ TEST(RocprimIntrinsicsTests, MatchAny)
                                                                      1u << (label_bits + 3),
                                                                      seed_value);
 
-        const auto active_lanes_for_testing    = active_lanes_tests();
-        const auto lane_predicates_for_testing = lane_predicates_tests();
+        const auto active_lanes_for_testing = active_lanes_tests();
         for(size_t i = 0; i < active_lanes_for_testing.size(); ++i)
         {
-            const auto active_lanes    = active_lanes_for_testing.at(i);
-            const auto lane_predicates = lane_predicates_for_testing.at(i);
-            SCOPED_TRACE(testing::Message()
-                         << "with lane_predicates = " << std::bitset<64>(lane_predicates));
-            SCOPED_TRACE(testing::Message()
-                         << "with active_lanes = " << std::bitset<64>(active_lanes));
-
-            for(size_t block = 0; block < blocks; ++block)
+            for(size_t j = 0; j < active_lanes_for_testing.size(); ++j)
             {
-                for(size_t warp = 0; warp < warps_per_block; ++warp)
+                const auto active_lanes    = active_lanes_for_testing.at(i);
+                const auto lane_predicates = active_lanes_for_testing.at(j);
+                SCOPED_TRACE(testing::Message()
+                             << "with lane_predicates = " << std::bitset<64>(lane_predicates));
+                SCOPED_TRACE(testing::Message()
+                             << "with active_lanes = " << std::bitset<64>(active_lanes));
+
+                for(size_t block = 0; block < blocks; ++block)
                 {
-                    const auto base = (block * warps_per_block + warp) * hardware_warp_size;
-                    std::vector<max_lane_mask_type> histogram(1u << label_bits, 0);
-
-                    for(size_t lane = 0; lane < hardware_warp_size; ++lane)
+                    for(size_t warp = 0; warp < warps_per_block; ++warp)
                     {
-                        if(is_lane_active(active_lanes, lane)
-                           && is_lane_active(lane_predicates, lane))
-                        {
-                            const auto value = bit_extract(input[base + lane], label_bits);
-                            histogram[value] |= max_lane_mask_type{1} << lane;
-                        }
-                    }
+                        const auto base = (block * warps_per_block + warp) * hardware_warp_size;
+                        std::vector<max_lane_mask_type> histogram(1u << label_bits, 0);
 
-                    for(size_t lane = 0; lane < hardware_warp_size; ++lane)
-                    {
-                        if(is_lane_active(active_lanes, lane)
-                           && is_lane_active(lane_predicates, lane))
+                        for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                         {
-                            const auto value      = bit_extract(input[base + lane], label_bits);
-                            expected[base + lane] = histogram[value];
+                            if(is_lane_active(active_lanes, lane)
+                               && is_lane_active(lane_predicates, lane))
+                            {
+                                const auto value = bit_extract(input[base + lane], label_bits);
+                                histogram[value] |= max_lane_mask_type{1} << lane;
+                            }
                         }
-                        else if(is_lane_active(active_lanes, lane)
-                                && !is_lane_active(lane_predicates, lane))
+
+                        for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                         {
-                            expected[base + lane] = 0;
-                        }
-                        else
-                        {
-                            expected[base + lane] = test_type_helper<unsigned int>::uninitialized();
+                            if(is_lane_active(active_lanes, lane)
+                               && is_lane_active(lane_predicates, lane))
+                            {
+                                const auto value      = bit_extract(input[base + lane], label_bits);
+                                expected[base + lane] = histogram[value];
+                            }
+                            else if(is_lane_active(active_lanes, lane)
+                                    && !is_lane_active(lane_predicates, lane))
+                            {
+                                expected[base + lane] = 0;
+                            }
+                            else
+                            {
+                                expected[base + lane]
+                                    = test_type_helper<unsigned int>::uninitialized();
+                            }
                         }
                     }
                 }
+
+                HIP_CHECK(hipMemcpy(d_input,
+                                    input.data(),
+                                    size * sizeof(unsigned int),
+                                    hipMemcpyHostToDevice));
+
+                hipLaunchKernelGGL(HIP_KERNEL_NAME(match_any_kernel<label_bits>),
+                                   dim3(blocks),
+                                   dim3(block_size),
+                                   0,
+                                   hipStreamDefault,
+                                   d_output,
+                                   d_input,
+                                   active_lanes,
+                                   lane_predicates);
+                HIP_CHECK(hipGetLastError());
+
+                HIP_CHECK(hipMemcpy(output.data(),
+                                    d_output,
+                                    size * sizeof(max_lane_mask_type),
+                                    hipMemcpyDeviceToHost));
+
+                test_utils::assert_eq(output, expected);
             }
-
-            HIP_CHECK(hipMemcpy(d_input,
-                                input.data(),
-                                size * sizeof(unsigned int),
-                                hipMemcpyHostToDevice));
-
-            hipLaunchKernelGGL(HIP_KERNEL_NAME(match_any_kernel<label_bits>),
-                               dim3(blocks),
-                               dim3(block_size),
-                               0,
-                               hipStreamDefault,
-                               d_output,
-                               d_input,
-                               active_lanes,
-                               lane_predicates);
-            HIP_CHECK(hipGetLastError());
-
-            HIP_CHECK(hipMemcpy(output.data(),
-                                d_output,
-                                size * sizeof(max_lane_mask_type),
-                                hipMemcpyDeviceToHost));
-
-            test_utils::assert_eq(output, expected);
         }
     }
 
@@ -1200,22 +1181,23 @@ TEST(RocprimIntrinsicsTests, Ballot)
     hipFree(d_output);
 }
 
-__global__ void
-    elect_kernel(max_lane_mask_type* output, max_lane_mask_type* input, size_t warps_per_block)
+__global__ void group_elect_kernel(max_lane_mask_type* output,
+                                   max_lane_mask_type* input,
+                                   size_t              warps_per_block)
 {
     const unsigned int index
         = blockIdx.x * warps_per_block + threadIdx.x / ::rocprim::device_warp_size();
 
     output[index]     = 0;
     const auto value  = input[index];
-    bool       result = rocprim::elect(value);
+    bool       result = rocprim::group_elect(value);
     if(result)
     {
-        output[index] |= 1u << ::rocprim::lane_id();
+        atomicOr(&output[index], max_lane_mask_type{1} << ::rocprim::lane_id());
     }
 }
 
-TEST(RocprimIntrinsicsTests, Elect)
+TEST(RocprimIntrinsicsTests, GroupElect)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -1268,7 +1250,7 @@ TEST(RocprimIntrinsicsTests, Elect)
 
                 for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                 {
-                    const auto bit_set = lane_mask & (1u << lane);
+                    const auto bit_set = lane_mask & (max_lane_mask_type{1} << lane);
                     if(bit_set)
                     {
                         expected[input_index] |= bit_set;
@@ -1283,7 +1265,9 @@ TEST(RocprimIntrinsicsTests, Elect)
                             number_of_warps * sizeof(max_lane_mask_type),
                             hipMemcpyHostToDevice));
 
-        hipLaunchKernelGGL(HIP_KERNEL_NAME(elect_kernel),
+        HIP_CHECK(hipMemset(d_output, 0, number_of_warps * sizeof(max_lane_mask_type)));
+
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(group_elect_kernel),
                            dim3(blocks),
                            dim3(block_size),
                            0,
