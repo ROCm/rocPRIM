@@ -366,7 +366,7 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
+struct scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
@@ -386,7 +386,7 @@ struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
     /// \brief Limit on the number of items for a single scan kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
-    constexpr scan_by_key_config_v2()
+    constexpr scan_by_key_config()
         : ::rocprim::detail::scan_by_key_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
             BlockLoadMethod,

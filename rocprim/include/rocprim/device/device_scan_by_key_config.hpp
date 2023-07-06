@@ -32,27 +32,15 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<typename ScanByKeyConfig>
-constexpr scan_by_key_config_params wrap_scan_by_key_config()
-{
-    return scan_by_key_config_params{
-        {ScanByKeyConfig::block_size,
-         ScanByKeyConfig::items_per_thread,
-         ScanByKeyConfig::size_limit},
-        ScanByKeyConfig::block_load_method,
-        ScanByKeyConfig::block_store_method,
-        ScanByKeyConfig::block_scan_method
-    };
-}
-
 template<typename ScanByKeyConfig, typename, typename>
 struct wrapped_scan_by_key_config
 {
+    static_assert(std::is_base_of<scan_by_key_config_params, ScanByKeyConfig>::value,
+                  "The config parameter has to be type rocprim::scan_by_key_config.");
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr scan_by_key_config_params params
-            = wrap_scan_by_key_config<ScanByKeyConfig>();
+        static constexpr scan_by_key_config_params params = ScanByKeyConfig{};
     };
 };
 
@@ -62,8 +50,8 @@ struct wrapped_scan_by_key_config<default_config, Key, Value>
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr scan_by_key_config_params params = wrap_scan_by_key_config<
-            default_scan_by_key_config<static_cast<unsigned int>(Arch), Key, Value>>();
+        static constexpr scan_by_key_config_params params
+            = default_scan_by_key_config<static_cast<unsigned int>(Arch), Key, Value>{};
     };
 };
 
