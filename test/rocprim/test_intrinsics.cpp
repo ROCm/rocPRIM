@@ -1222,9 +1222,7 @@ TEST(RocprimIntrinsicsTests, GroupElect)
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_output,
                                                  number_of_warps * sizeof(max_lane_mask_type)));
 
-    std::vector<bool>               expected;
     std::vector<max_lane_mask_type> output;
-    expected.reserve(number_of_groups);
     output.reserve(number_of_warps);
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
@@ -1249,30 +1247,8 @@ TEST(RocprimIntrinsicsTests, GroupElect)
             group_mask <<= 8;
         }
 
-        expected.clear();
         output.clear();
-        expected.resize(number_of_groups, false);
         output.resize(number_of_warps, 0);
-
-        for(size_t block = 0; block < blocks; ++block)
-        {
-            for(size_t warp = 0; warp < warps_per_block; ++warp)
-            {
-                const auto input_index = (block * warps_per_block + warp) * groups_per_warp;
-
-                auto lane_mask = input.at(input_index);
-                max_lane_mask_type group_mask = 0xFF;
-
-                for(size_t group = 0; group < groups_per_warp; ++group)
-                {
-                    if((lane_mask & group_mask) != 0)
-                    {
-                        expected[input_index + group] = true;
-                    }
-                    group_mask <<= 8;
-                }
-            }
-        }
 
         HIP_CHECK(hipMemcpy(d_input,
                             input.data(),
@@ -1307,7 +1283,7 @@ TEST(RocprimIntrinsicsTests, GroupElect)
             unsigned int num_of_bits = 0;
             while(group_elect)
             {
-                num_of_bits += n & 1;
+                num_of_bits += group_elect & 1;
                 group_elect >>= 1;
             }
 
