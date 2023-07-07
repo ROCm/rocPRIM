@@ -268,6 +268,9 @@ template<class Value>
 struct default_reduce_config_base : default_reduce_config_base_helper<Value>::type
 {};
 
+struct scan_config_tag
+{};
+
 /// \brief Provides the kernel parameters for exclusive_scan and inclusive_scan based
 ///        on autotuned configurations or user-provided configurations.
 struct scan_config_params
@@ -294,8 +297,9 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_config_v2 : ::rocprim::detail::scan_config_params
+struct scan_config : ::rocprim::detail::scan_config_params
 {
+    using tag = detail::scan_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
@@ -314,7 +318,7 @@ struct scan_config_v2 : ::rocprim::detail::scan_config_params
     /// \brief Limit on the number of items for a single scan kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
-    constexpr scan_config_v2()
+    constexpr scan_config()
         : ::rocprim::detail::scan_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
             BlockLoadMethod,
@@ -336,11 +340,11 @@ struct default_scan_config_base_helper
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = scan_config_v2<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-                                ::rocprim::max(1u, 16u / item_scale),
-                                ::rocprim::block_load_method::block_load_transpose,
-                                ::rocprim::block_store_method::block_store_transpose,
-                                ::rocprim::block_scan_algorithm::using_warp_scan>;
+    using type = scan_config<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
+                             ::rocprim::max(1u, 16u / item_scale),
+                             ::rocprim::block_load_method::block_load_transpose,
+                             ::rocprim::block_store_method::block_store_transpose,
+                             ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
 
 template<class Value>
