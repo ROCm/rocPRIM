@@ -48,7 +48,7 @@ template<class SingleSortConfig = default_config,
          class MergeSortConfig  = default_config,
          class OnesweepConfig   = default_config,
          size_t MergeSortLimit  = 1024 * 1024>
-struct radix_sort_config_v2
+struct radix_sort_config
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     /// \brief Configuration of radix sort single kernel.
