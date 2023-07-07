@@ -1240,7 +1240,7 @@ TEST(RocprimIntrinsicsTests, GroupElect)
         max_lane_mask_type group_mask = 0xFF;
         for(size_t i = 0; i < 8; ++i)
         {
-            for(size_t j = 0; j < number_of_groups; j += groups_per_warp)
+            for(size_t j = 0; i + j < number_of_groups; j += groups_per_warp)
             {
                 input[i + j] &= group_mask;
             }
