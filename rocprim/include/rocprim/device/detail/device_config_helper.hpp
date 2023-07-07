@@ -205,6 +205,9 @@ struct radix_sort_onesweep_config : detail::radix_sort_onesweep_config_params
 namespace detail
 {
 
+struct reduce_config_tag
+{};
+
 // Calculate kernel configurations, such that it will not exceed shared memory maximum
 template<class Key, class Value>
 struct radix_sort_onesweep_config_base
@@ -239,6 +242,7 @@ template<unsigned int                      BlockSize      = 256,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct reduce_config : rocprim::detail::reduce_config_params
 {
+    using tag = detail::reduce_config_tag;
     constexpr reduce_config()
         : rocprim::detail::reduce_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
