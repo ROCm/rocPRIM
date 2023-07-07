@@ -35,8 +35,8 @@ namespace detail
 template<typename HistogramConfig, typename, unsigned int, unsigned int>
 struct wrapped_histogram_config
 {
-    static_assert(std::is_base_of<histogram_config_params, ScanByKeyConfig>::value,
-                  "The config parameter has to be type rocprim::histogram_config_params.");
+    static_assert(std::is_same<typename HistogramConfig::tag, histogram_config_tag>::value,
+                  "Config must be a specialization of struct template histogram_config");
 
     template<target_arch Arch>
     struct architecture_config

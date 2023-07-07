@@ -323,6 +323,9 @@ struct scan_config_v2 : ::rocprim::detail::scan_config_params
 namespace detail
 {
 
+struct scan_by_key_config_tag
+{};
+
 template<class Value>
 struct default_scan_config_base_helper
 {
@@ -368,6 +371,7 @@ template<unsigned int                    BlockSize,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
 {
+    using tag = detail::scan_by_key_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
@@ -498,6 +502,9 @@ struct lower_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimi
 namespace detail
 {
 
+struct histogram_config_tag
+{};
+
 template<class Value, class Output>
 struct default_binary_search_config_base
     : binary_search_config<
@@ -534,6 +541,7 @@ template<class HistogramConfig,
          unsigned int SharedImplHistograms = 3>
 struct histogram_config : detail::histogram_config_params
 {
+    using tag = detail::histogram_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     using histogram = HistogramConfig;
 

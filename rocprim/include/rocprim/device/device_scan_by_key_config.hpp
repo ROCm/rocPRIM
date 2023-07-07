@@ -35,8 +35,9 @@ namespace detail
 template<typename ScanByKeyConfig, typename, typename>
 struct wrapped_scan_by_key_config
 {
-    static_assert(std::is_base_of<scan_by_key_config_params, ScanByKeyConfig>::value,
-                  "The config parameter has to be type rocprim::scan_by_key_config.");
+    static_assert(std::is_same<typename ScanByKeyConfig::tag, scan_by_key_config_tag>::value,
+                  "Config must be a specialization of struct template scan_by_key_config");
+
     template<target_arch Arch>
     struct architecture_config
     {
