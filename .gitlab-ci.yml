@@ -230,9 +230,7 @@ build:package:
 
 build:benchmark:
   stage: build
-  needs:
-    - job: "autotune:generate-config"
-      optional: true
+  needs: []
   tags:
     - rocm-build
   extends:
