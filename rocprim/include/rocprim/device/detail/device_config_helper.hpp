@@ -429,6 +429,9 @@ template<class Key, class Value>
 struct default_scan_by_key_config_base : default_scan_by_key_config_base_helper<Key, Value>::type
 {};
 
+struct transform_config_tag
+{};
+
 struct transform_config_params
 {
     kernel_config_params kernel_config{};
@@ -443,8 +446,9 @@ struct transform_config_params
 template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct transform_config
+struct transform_config : public detail::transform_config_params
 {
+    using tag = detail::transform_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
     /// \brief Number of threads in a block.
