@@ -1003,9 +1003,9 @@ TEST(RocprimIntrinsicsTests, MatchAny)
                                                                      seed_value);
 
         const auto active_lanes_for_testing = active_lanes_tests();
-        for(const auto& active_lanes: active_lanes_for_testing)
+        for(const auto& active_lanes : active_lanes_for_testing)
         {
-            for(const auto& lane_predicates: active_lanes_for_testing)
+            for(const auto& lane_predicates : active_lanes_for_testing)
             {
                 SCOPED_TRACE(testing::Message()
                              << "with lane_predicates = " << std::bitset<64>(lane_predicates));
@@ -1226,7 +1226,7 @@ TEST(RocprimIntrinsicsTests, GroupElect)
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
-        std::vector<max_lane_mask_type> input(blocks * block_size, 0);
+        std::vector<max_lane_mask_type>              input(blocks * block_size, 0);
         std::vector<std::vector<max_lane_mask_type>> warp_histograms(blocks * warps_per_block);
 
         auto input_it = input.begin();
@@ -1234,29 +1234,29 @@ TEST(RocprimIntrinsicsTests, GroupElect)
         {
             for(size_t warp = 0; warp < warps_per_block; ++warp)
             {
-                const std::vector<unsigned int> group_labels =
-                    test_utils::get_random_data<unsigned int>(
-                        hardware_warp_size,
-                        0,
-                        hardware_warp_size,
-                        seed_value + warp);
+                const std::vector<unsigned int> group_labels
+                    = test_utils::get_random_data<unsigned int>(hardware_warp_size,
+                                                                0,
+                                                                hardware_warp_size,
+                                                                seed_value + warp);
 
                 auto& histogram = warp_histograms[block * warps_per_block + warp];
                 histogram.assign(hardware_warp_size + 1, 0);
                 for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                 {
-                    const unsigned label = group_labels[lane]; 
+                    const unsigned label = group_labels[lane];
                     histogram[label] |= max_lane_mask_type{1} << lane;
                 }
 
-                input_it = std::transform(
-                group_labels.begin(),
-                group_labels.end(),
-                input_it,
-                [&](unsigned int label) {
-                    // Mark some lanes as invalid (not part of any group)
-                    return label < hardware_warp_size ? histogram[label] : 0;
-                });
+                input_it
+                    = std::transform(group_labels.begin(),
+                                     group_labels.end(),
+                                     input_it,
+                                     [&](unsigned int label)
+                                     {
+                                         // Mark some lanes as invalid (not part of any group)
+                                         return label < hardware_warp_size ? histogram[label] : 0;
+                                     });
             }
         }
 
@@ -1286,9 +1286,9 @@ TEST(RocprimIntrinsicsTests, GroupElect)
 
         for(size_t i = 0; i < blocks * block_size; ++i)
         {
-            auto group_mask = input[i];
+            auto group_mask  = input[i];
             auto warp_output = output[i / hardware_warp_size];
-            if (group_mask > 0)
+            if(group_mask > 0)
             {
                 max_lane_mask_type group_elect = group_mask & warp_output;
                 ASSERT_TRUE(rocprim::detail::is_power_of_two(group_elect));
