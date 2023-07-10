@@ -163,7 +163,7 @@ struct test_type_helper<custom_16aligned>
         for(size_t i = 0; i < result.size(); ++i)
         {
             result[i].i = static_cast<short>(random_data[i * 3]);
-            result[i].u = static_cast<unsigned int>(random_data[i * 4 + 1]);
+            result[i].u = static_cast<unsigned int>(random_data[i * 3 + 1]);
             result[i].f = random_data[i * 3 + 2];
         }
 
