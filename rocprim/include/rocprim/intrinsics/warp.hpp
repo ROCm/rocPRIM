@@ -132,7 +132,6 @@ int warp_all(int predicate)
 /// lane <tt>i</tt>'s result includes bit <tt>j</tt> in the lane mask if lane <tt>j</tt> is part
 /// of the same group as lane <tt>i</tt>, i.e. lane <tt>i</tt> and <tt>j</tt> called with the
 /// same value for label.
-
 template<unsigned int LabelBits>
 ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool valid = true)
 {
@@ -153,13 +152,17 @@ ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool 
     return peer_mask;
 }
 
-/**
- * This function computes a lane mask of active lanes in the warp which which have
- * the same value for <tt>label</tt> as the lane which calls the function. The bit at
- * index \p i in the lane mask is set if the thread of lane \i calls this function
- * with the same value <tt>label</tt>. Only the least-significant \p LabelBits bits
- * are taken into account when labels are considered to be equal.
- */
+/// \brief Elect a single lane for each group in \p mask
+///
+/// \param [in] mask bit mask of the lanes in the same group as the calling lane.
+/// The <tt>i</tt>-th bit should be set if lane <tt>i</tt> is in the same group
+/// as the calling lane.
+///
+/// \returns <tt>true</tt> for one unspecified lane in the <tt>mask</tt>, false for everyone else.
+/// Returns <tt>false</tt> for all lanes not in any group, that is lanes passing 0 as \p mask.
+///
+/// \pre The relation specified by \p mask must be symmetric and transitive, in other words: the groups
+/// should be consistent between threads.
 ROCPRIM_DEVICE ROCPRIM_INLINE bool group_elect(lane_mask_type mask)
 {
     const unsigned int prev_same_count = ::rocprim::masked_bit_count(mask);
