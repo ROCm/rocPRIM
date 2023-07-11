@@ -460,6 +460,11 @@ struct transform_config : public detail::transform_config_params
     /// \brief Limit on the number of items for a single kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
+    constexpr transform_config()
+        : detail::transform_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit}
+    }
+    {}
 #endif
 };
 
@@ -611,21 +616,18 @@ template<unsigned int       BlockSize,
 struct adjacent_difference_config : public detail::adjacent_difference_config_params
 {
     using tag = detail::adjacent_difference_config_tag;
-    constexpr adjacent_difference_config()
-    {
-        adjacent_difference_kernel_config.block_size                  = BlockSize;
-        adjacent_difference_kernel_config.items_per_thread            = ItemsPerThread;
-        adjacent_difference_kernel_config.size_limit                  = SizeLimit;
-        detail::adjacent_difference_config_params::block_load_method  = BlockLoadMethod;
-        detail::adjacent_difference_config_params::block_store_method = BlockStoreMethod;
-    }
-
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     static constexpr ::rocprim::block_load_method  block_load_method  = BlockLoadMethod;
     static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
     static constexpr unsigned int                  block_size         = BlockSize;
     static constexpr unsigned int                  items_per_thread   = ItemsPerThread;
     static constexpr unsigned int                  size_limit         = SizeLimit;
+
+    constexpr adjacent_difference_config()
+        : detail::adjacent_difference_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit},
+            BlockLoadMethod, BlockStoreMethod
+    } {};
 #endif
 };
 
