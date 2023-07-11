@@ -109,11 +109,12 @@
     #define ROCPRIM_TARGET_ARCH 0
 #endif
 
-#if(__gfx1010__ || __gfx1011__ || __gfx1012__ || __gfx1030__ || __gfx1031__ || __gfx1032__ \
-    || __gfx1035__ || __gfx1100__ || __gfx1101__ || __gfx1102__)
-    #define ROCPRIM_NAVI 1
-#else
-    #define ROCPRIM_NAVI 0
+#ifndef ROCPRIM_NAVI
+    #if defined(__HIP_DEVICE_COMPILE__) && (defined(__GFX10__) || defined(__GFX11__))
+        #define ROCPRIM_NAVI 1
+    #else
+        #define ROCPRIM_NAVI 0
+    #endif
 #endif
 #define ROCPRIM_ARCH_90a 910
 
