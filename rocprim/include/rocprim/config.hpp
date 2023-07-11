@@ -72,8 +72,22 @@
     #define ROCPRIM_FORCE_INLINE __attribute__((always_inline))
 #endif
 
-#ifndef ROCPRIM_DISABLE_DPP
-    #define ROCPRIM_DETAIL_USE_DPP true
+// DPP is supported only after Volcanic Islands (GFX8+)
+// Only defined when support is present, in contrast to ROCPRIM_DETAIL_USE_DPP, which should be
+// always defined
+#if defined(__HIP_DEVICE_COMPILE__) && defined(__AMDGCN__) \
+    && (!defined(__GFX6__) && !defined(__GFX7__))
+    #define ROCPRIM_DETAIL_HAS_DPP 1
+#endif
+
+#if !defined(ROCPRIM_DISABLE_DPP) && defined(ROCPRIM_DETAIL_HAS_DPP)
+    #define ROCPRIM_DETAIL_USE_DPP 1
+#else
+    #define ROCPRIM_DETAIL_USE_DPP 0
+#endif
+
+#if defined(ROCPRIM_DETAIL_HAS_DPP) && (defined(__GFX8__) || defined(__GFX9__))
+    #define ROCPRIM_DETAIL_HAS_DPP_BROADCAST 1
 #endif
 
 #ifndef ROCPRIM_THREAD_LOAD_USE_CACHE_MODIFIERS
