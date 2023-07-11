@@ -16,7 +16,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - `block_sort::sort()` overload for keys and values with a dynamic size, for all block sort algorithms. Additionally, all `block_sort::sort()` overloads with a dynamic size are now supported for `block_sort_algorithm::merge_sort` and `block_sort_algorithm::bitonic_sort`.
 - New two-way partition primitive `partition_two_way` which can write to two separate iterators.
 - Added config tuning and dynamic dispatch to `device_adjacent_difference` algorithm
-- New `rocprim::elect` warp intrinsic, which chooses one lane from the lanes enabled by the mask.
+- New `rocprim::elect` warp intrinsic, which chooses one lane from the lanes enabled by a mask.
 ### Changed
 - Deprecated configuration `radix_sort_config` for device-level radix sort as it no longer matches the algorithm's parameters. New configuration `radix_sort_config_v2` is preferred instead.
 - Removed erroneous implementation of device-level `inclusive_scan` and `exclusive_scan`. The prior default implementation using lookback-scan now is the only available implementation.
@@ -24,7 +24,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - Deprecated configurations `scan_config` and `scan_by_key_config` for device-level scans, as they no longer match the algorithm's parameters. New configurations `scan_config_v2` and `scan_by_key_config_v2` are preferred instead.
 - Improved the performance of `partition`.
 - `merge_sort_block_sort` will always use stable merge sort as it is faster than the fallback implementation.
-- The `rocprim::match_any` interface has a new parameter, `predicate` to enalble/disable lanes. The default value is true, so it doesn't change the previous behaviour. 
+- The `rocprim::match_any` interface has a new parameter, `valid` to enalble/disable lanes. The default value is true, so it doesn't change the previous behaviour. 
 ### Fixed
 - Fixed build issue caused by missing header in `thread/thread_search.hpp`.
 - Fixed `rocprim::MatchAny` for devices with 64-bit warp size. The function `rocprim::MatchAny` is deprecated and `rocprim::match_any` is preferred instead.

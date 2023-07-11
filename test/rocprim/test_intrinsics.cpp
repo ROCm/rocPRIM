@@ -958,10 +958,9 @@ __global__ void match_any_kernel(max_lane_mask_type* output,
 {
     const unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
 
-    const auto         value  = input[index];
     max_lane_mask_type result = test_type_helper<max_lane_mask_type>::uninitialized();
     if(is_lane_active(active_lanes, rocprim::lane_id()))
-        result = rocprim::match_any<LabelBits>(value,
+        result = rocprim::match_any<LabelBits>(input[index],
                                                is_lane_active(lane_predicates, rocprim::lane_id()));
     output[index] = result;
 }
@@ -1031,22 +1030,16 @@ TEST(RocprimIntrinsicsTests, MatchAny)
 
                         for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                         {
-                            if(is_lane_active(active_lanes, lane)
-                               && is_lane_active(lane_predicates, lane))
-                            {
-                                const auto value      = bit_extract(input[base + lane], label_bits);
-                                expected[base + lane] = histogram[value];
-                            }
-                            else if(is_lane_active(active_lanes, lane)
-                                    && !is_lane_active(lane_predicates, lane))
-                            {
-                                expected[base + lane] = 0;
-                            }
-                            else
+                            if(!is_lane_active(active_lanes, lane))
                             {
                                 expected[base + lane]
                                     = test_type_helper<unsigned int>::uninitialized();
+                                continue;
                             }
+
+                            const auto value = bit_extract(input[base + lane], label_bits);
+                            expected[base + lane]
+                                = is_lane_active(lane_predicates, lane) ? histogram[value] : 0;
                         }
                     }
                 }
@@ -1188,9 +1181,7 @@ __global__ void group_elect_kernel(max_lane_mask_type* output,
     const unsigned int output_index
         = blockIdx.x * warps_per_block + threadIdx.x / ::rocprim::device_warp_size();
 
-    const auto value  = input[input_index];
-    bool       result = rocprim::group_elect(value);
-    if(result)
+    if(rocprim::group_elect(input[input_index]))
     {
         atomicOr(&output[output_index], max_lane_mask_type{1} << ::rocprim::lane_id());
     }
@@ -1198,7 +1189,7 @@ __global__ void group_elect_kernel(max_lane_mask_type* output,
 
 TEST(RocprimIntrinsicsTests, GroupElect)
 {
-    int device_id = test_common_utils::obtain_device_from_ctest();
+    const int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
@@ -1210,12 +1201,10 @@ TEST(RocprimIntrinsicsTests, GroupElect)
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
     max_lane_mask_type* d_input;
-    HIP_CHECK(test_common_utils::hipMallocHelper(&d_input,
-                                                 blocks * block_size * sizeof(max_lane_mask_type)));
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, blocks * block_size * sizeof(*d_input)));
 
     max_lane_mask_type* d_output;
-    HIP_CHECK(test_common_utils::hipMallocHelper(&d_output,
-                                                 number_of_warps * sizeof(max_lane_mask_type)));
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, number_of_warps * sizeof(*d_output)));
 
     std::vector<max_lane_mask_type> output;
     output.reserve(number_of_warps);
@@ -1264,10 +1253,10 @@ TEST(RocprimIntrinsicsTests, GroupElect)
 
         HIP_CHECK(hipMemcpy(d_input,
                             input.data(),
-                            blocks * block_size * sizeof(max_lane_mask_type),
+                            blocks * block_size * sizeof(*d_input),
                             hipMemcpyHostToDevice));
 
-        HIP_CHECK(hipMemset(d_output, 0, number_of_warps * sizeof(max_lane_mask_type)));
+        HIP_CHECK(hipMemset(d_output, 0, number_of_warps * sizeof(*d_output)));
 
         hipLaunchKernelGGL(HIP_KERNEL_NAME(group_elect_kernel),
                            dim3(blocks),
@@ -1281,16 +1270,16 @@ TEST(RocprimIntrinsicsTests, GroupElect)
 
         HIP_CHECK(hipMemcpy(output.data(),
                             d_output,
-                            number_of_warps * sizeof(max_lane_mask_type),
+                            number_of_warps * sizeof(output[0]),
                             hipMemcpyDeviceToHost));
 
         for(size_t i = 0; i < blocks * block_size; ++i)
         {
-            auto group_mask  = input[i];
-            auto warp_output = output[i / hardware_warp_size];
+            const auto group_mask  = input[i];
+            const auto warp_output = output[i / hardware_warp_size];
             if(group_mask > 0)
             {
-                max_lane_mask_type group_elect = group_mask & warp_output;
+                const max_lane_mask_type group_elect = group_mask & warp_output;
                 ASSERT_TRUE(rocprim::detail::is_power_of_two(group_elect));
             }
             else

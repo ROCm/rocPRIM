@@ -167,13 +167,12 @@ struct radix_digit_count_helper
                 lane_mask_type same_digit_lanes_mask
                     = ::rocprim::match_any<RadixBits>(digit, IsFull || (pos < valid_count));
 
-                const unsigned int same_digit_count = ::rocprim::bit_count(same_digit_lanes_mask);
-
                 if(::rocprim::group_elect(same_digit_lanes_mask))
                 {
                     // Write the number of lanes having this digit,
                     // if the current lane is the first (and maybe only) lane with this digit.
-                    storage.digit_counts[warp_id][digit] += same_digit_count;
+                    storage.digit_counts[warp_id][digit]
+                        += ::rocprim::bit_count(same_digit_lanes_mask);
                 }
             }
         }
