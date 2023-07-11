@@ -18,6 +18,9 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - Fixed build issue caused by missing header in `thread/thread_search.hpp`.
 - Fixed `rocprim::MatchAny` for devices with 64-bit warp size. The function `rocprim::MatchAny` is deprecated and `rocprim::match_any` is preferred instead.
 - Fixed `device_adjacent_difference` using more shared memory than required.
+- Fixed a compilation error when `ROCPRIM_DISABLE_DPP` is defined.
+- rocPRIM should be more robust for detecting GPU architecture features. Explicitly listing each architecture is no longer required by developers, fixing compilation failures when
+  targeting devices not known by rocPRIM.
 
 ## [rocPRIM-2.13.0 for ROCm 5.5.0]
 ### Added
