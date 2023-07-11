@@ -585,11 +585,14 @@ struct default_histogram_config_base
     : default_histogram_config_base_helper<Sample, Channels, ActiveChannels>::type
 {};
 
+struct adjacent_difference_config_tag
+{};
+
 struct adjacent_difference_config_params
 {
-    kernel_config_params          adjacent_difference_kernel_config;
-    ::rocprim::block_load_method  block_load_method;
-    ::rocprim::block_store_method block_store_method;
+    kernel_config_params          adjacent_difference_kernel_config = {0, 0};
+    ::rocprim::block_load_method  block_load_method  = block_load_method::default_method;
+    ::rocprim::block_store_method block_store_method = block_store_method::default_method;
 };
 } // namespace detail
 
@@ -605,8 +608,18 @@ template<unsigned int       BlockSize,
          block_load_method  BlockLoadMethod  = block_load_method::block_load_transpose,
          block_store_method BlockStoreMethod = block_store_method::block_store_transpose,
          unsigned int       SizeLimit        = ROCPRIM_GRID_SIZE_LIMIT>
-struct adjacent_difference_config
+struct adjacent_difference_config : public detail::adjacent_difference_config_params
 {
+    using tag = detail::adjacent_difference_config_tag;
+    constexpr adjacent_difference_config()
+    {
+        adjacent_difference_kernel_config.block_size                  = BlockSize;
+        adjacent_difference_kernel_config.items_per_thread            = ItemsPerThread;
+        adjacent_difference_kernel_config.size_limit                  = SizeLimit;
+        detail::adjacent_difference_config_params::block_load_method  = BlockLoadMethod;
+        detail::adjacent_difference_config_params::block_store_method = BlockStoreMethod;
+    }
+
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     static constexpr ::rocprim::block_load_method  block_load_method  = BlockLoadMethod;
     static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
