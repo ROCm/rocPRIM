@@ -136,7 +136,7 @@ template<unsigned int LabelBits>
 ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool valid = true)
 {
     // Obtain a mask with the threads which are currently active.
-    lane_mask_type peer_mask = -lane_mask_type{valid} & ballot(valid);
+    lane_mask_type peer_mask = ballot(valid);
 
     // Compute the final value iteratively by testing each bit separately.
     ROCPRIM_UNROLL
@@ -149,7 +149,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool 
         peer_mask &= (bit_set ? same_mask : ~same_mask);
     }
 
-    return peer_mask;
+    return -lane_mask_type{valid} & peer_mask;
 }
 
 /// \brief Elect a single lane for each group in \p mask
@@ -166,7 +166,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool 
 ROCPRIM_DEVICE ROCPRIM_INLINE bool group_elect(lane_mask_type mask)
 {
     const unsigned int prev_same_count = ::rocprim::masked_bit_count(mask);
-    return prev_same_count == 0 && (mask & (lane_mask_type{1} << ::rocprim::lane_id())) != 0;
+    return prev_same_count == 0 && mask != 0;
 }
 
 END_ROCPRIM_NAMESPACE
