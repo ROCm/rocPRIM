@@ -45,7 +45,7 @@ struct default_transform_config : default_transform_config_base<value_type>
 template<typename TransformConfig, typename>
 struct wrapped_transform_config
 {
-    static_assert(std::is_same<typename TransformConfig::tag, transform_config_tag>::value,
+    static_assert(std::is_base_of<transform_config_tag, typename TransformConfig::tag>::value,
                   "Config must be a specialization of struct template transform_config");
 
     template<target_arch Arch>

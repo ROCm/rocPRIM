@@ -484,6 +484,13 @@ template<class Value>
 struct default_transform_config_base : default_transform_config_base_helper<Value>::type
 {};
 
+struct binary_search_config_tag : public transform_config_tag
+{};
+struct upper_bound_config_tag : public transform_config_tag
+{};
+struct lower_bound_config_tag : public transform_config_tag
+{};
+
 } // namespace detail
 
 /// \brief Configuration for the device-level binary search operation.
@@ -494,7 +501,9 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct binary_search_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    using tag = detail::binary_search_config_tag;
+};
 
 /// \brief Configuration for the device-level upper bound operation.
 /// \tparam BlockSize Number of threads in a block.
@@ -504,7 +513,9 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct upper_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    using tag = detail::upper_bound_config_tag;
+};
 
 /// \brief Configuration for the device-level lower bound operation.
 /// \tparam BlockSize Number of threads in a block.
@@ -514,7 +525,9 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct lower_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    using tag = detail::lower_bound_config_tag;
+};
 
 namespace detail
 {
