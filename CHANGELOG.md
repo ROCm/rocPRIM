@@ -2,6 +2,15 @@
 
 Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/en/latest/](https://rocprim.readthedocs.io/en/latest/)
 
+## [Unreleased rocPRIM-3.0.0 for ROCm 6.0.0]
+### Added
+### Changed
+ - Removed deprecated functionality: `reduce_by_key_config`, `MatchAny`, `scan_config`, `scan_by_key_config` and `radix_sort_config`.
+ - Renamed `scan_config_v2` to `scan_config`, `scan_by_key_config_v2` to `scan_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`, `reduce_by_key_config_v2` to `reduce_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`.
+ - Removed support for custom config types for device algorithms.
+### Fixed
+
+
 ## [Unreleased rocPRIM-2.13.1 for ROCm 5.7.0]
 ### Added
 - `block_sort::sort()` overload for keys and values with a dynamic size, for all block sort algorithms. Additionally, all `block_sort::sort()` overloads with a dynamic size are now supported for `block_sort_algorithm::merge_sort` and `block_sort_algorithm::bitonic_sort`.
