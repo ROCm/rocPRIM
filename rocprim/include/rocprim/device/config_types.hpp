@@ -29,7 +29,6 @@
 #include <cassert>
 
 #include "../config.hpp"
-#include "../intrinsics/thread.hpp"
 #include "../detail/various.hpp"
 
 /// \addtogroup primitivesmodule_deviceconfigs
@@ -227,7 +226,7 @@ constexpr target_arch get_target_arch_from_name(const char* const arch_name, con
 /**
  * \brief Get the current architecture in device compilation.
  * 
- * This function will always return `unkown` when called from the host, host could should instead
+ * This function will always return `unknown` when called from the host, host could should instead
  * call host_target_arch to query the current device from the HIP API.
  * 
  * \return target_arch the architecture currently being compiled for on the device.

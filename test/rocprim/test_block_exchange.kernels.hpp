@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -172,15 +172,12 @@ void scatter_to_striped_kernel(Type* device_input, OutputType* device_output, un
 }
 
 // Test for exchange
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 0>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 0>::type
 {
     using type = T;
     using output_type = U;
@@ -256,15 +253,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 1>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 1>::type
 {
     using type = T;
     using output_type = U;
@@ -340,15 +334,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 2>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 2>::type
 {
     using type = T;
     using output_type = U;
@@ -367,7 +358,7 @@ auto test_block_exchange()
     std::vector<output_type> expected(size);
     std::vector<output_type> output(size, output_type(0));
 
-    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size()));
+    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size(device_id)));
     const size_t warps_no = (block_size + warp_size - 1) / warp_size;
     const size_t items_per_warp = warp_size * items_per_thread;
 
@@ -436,15 +427,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 3>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 3>::type
 {
     using type = T;
     using output_type = U;
@@ -463,7 +451,7 @@ auto test_block_exchange()
     std::vector<output_type> expected(size);
     std::vector<output_type> output(size, output_type(0));
 
-    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size()));
+    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size(device_id)));
     const size_t warps_no = (block_size + warp_size - 1) / warp_size;
     const size_t items_per_warp = warp_size * items_per_thread;
 
@@ -530,15 +518,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 4>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 4>::type
 {
     using type = T;
     using output_type = U;
@@ -632,15 +617,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_ranks));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 5>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 5>::type
 {
     using type = T;
     using output_type = U;
@@ -753,7 +735,7 @@ struct static_for
         SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
         HIP_CHECK(hipSetDevice(device_id));
 
-        test_block_exchange<T, U, Method, BlockSize, items[First]>();
+        test_block_exchange<T, U, Method, BlockSize, items[First]>(device_id);
         static_for<First + 1, Last, T, U, Method, BlockSize>::run();
     }
 };

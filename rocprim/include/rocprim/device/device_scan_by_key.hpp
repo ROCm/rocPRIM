@@ -162,7 +162,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
             // This is valid even with offset_scan_state_with_sleep_type
             detail::temp_storage::make_partition(
                 &scan_state_storage,
-                scan_state_type::get_temp_storage_layout(number_of_blocks)),
+                scan_state_type::get_temp_storage_layout(number_of_blocks, stream)),
             detail::temp_storage::ptr_aligned_array(&previous_last_value,
                                                     use_limited_size ? 1 : 0)));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
@@ -185,9 +185,9 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
     // the value of use_sleep_scan_state
     auto with_scan_state
         = [use_sleep,
-           scan_state = scan_state_type::create(scan_state_storage, number_of_blocks),
+           scan_state = scan_state_type::create(scan_state_storage, number_of_blocks, stream),
            scan_state_with_sleep
-           = scan_state_with_sleep_type::create(scan_state_storage, number_of_blocks)](
+           = scan_state_with_sleep_type::create(scan_state_storage, number_of_blocks, stream)](
               auto&& func) mutable -> decltype(auto)
     {
         if(use_sleep)

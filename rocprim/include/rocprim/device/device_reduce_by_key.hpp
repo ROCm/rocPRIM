@@ -222,7 +222,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
             // This is valid even with scan_state_with_sleep_type
             detail::temp_storage::make_partition(
                 &scan_state_storage,
-                scan_state_type::get_temp_storage_layout(number_of_tiles)),
+                scan_state_type::get_temp_storage_layout(number_of_tiles, stream)),
             detail::temp_storage::make_partition(&ordered_bid_storage,
                                                  ordered_tile_id_type::get_temp_storage_layout()),
             detail::temp_storage::ptr_aligned_array(&d_global_head_count, use_limited_size ? 1 : 0),
@@ -241,9 +241,9 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     }
     auto with_scan_state
         = [use_sleep,
-           scan_state = scan_state_type::create(scan_state_storage, number_of_tiles),
+           scan_state = scan_state_type::create(scan_state_storage, number_of_tiles, stream),
            scan_state_with_sleep
-           = scan_state_with_sleep_type::create(scan_state_storage, number_of_tiles)](
+           = scan_state_with_sleep_type::create(scan_state_storage, number_of_tiles, stream)](
               auto&& func) mutable -> decltype(auto)
     {
         if(use_sleep)

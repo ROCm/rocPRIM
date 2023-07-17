@@ -185,7 +185,7 @@ hipError_t partition_impl(void * temporary_storage,
             // This is valid even with offset_scan_state_with_sleep_type
             detail::temp_storage::make_partition(
                 &offset_scan_state_storage,
-                offset_scan_state_type::get_temp_storage_layout(number_of_blocks)),
+                offset_scan_state_type::get_temp_storage_layout(number_of_blocks, stream)),
             // Note: the following two are to be allocated continuously, so that they can be initialized
             // simultaneously.
             // They have the same base type, so there is no padding between the types.
@@ -201,9 +201,11 @@ hipError_t partition_impl(void * temporary_storage,
 
     // Create and initialize lookback_scan_state obj
     auto offset_scan_state
-        = offset_scan_state_type::create(offset_scan_state_storage, number_of_blocks);
+        = offset_scan_state_type::create(offset_scan_state_storage, number_of_blocks, stream);
     auto offset_scan_state_with_sleep
-        = offset_scan_state_with_sleep_type::create(offset_scan_state_storage, number_of_blocks);
+        = offset_scan_state_with_sleep_type::create(offset_scan_state_storage,
+                                                    number_of_blocks,
+                                                    stream);
 
     hipError_t error;
 

@@ -12,7 +12,8 @@ Warp size
 ---------
 
 .. doxygenfunction:: rocprim::warp_size()
-.. doxygenfunction:: rocprim::host_warp_size()
+.. doxygenfunction:: rocprim::host_warp_size(const int device_id)
+.. doxygenfunction:: rocprim::host_warp_size(const hipStream_t stream)
 .. doxygenfunction:: rocprim::device_warp_size()
 
 Lane and Warp ID

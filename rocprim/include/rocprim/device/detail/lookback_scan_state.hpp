@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -98,8 +98,9 @@ public:
     using value_type = T;
 
     // temp_storage must point to allocation of get_storage_size(number_of_blocks) bytes
-    ROCPRIM_HOST static inline
-    lookback_scan_state create(void* temp_storage, const unsigned int number_of_blocks)
+    ROCPRIM_HOST static inline lookback_scan_state create(void*              temp_storage,
+                                                          const unsigned int number_of_blocks,
+                                                          const hipStream_t /*stream*/)
     {
         (void) number_of_blocks;
         lookback_scan_state state;
@@ -107,16 +108,17 @@ public:
         return state;
     }
 
-    ROCPRIM_HOST static inline
-    size_t get_storage_size(const unsigned int number_of_blocks)
+    ROCPRIM_HOST static inline size_t get_storage_size(const unsigned int number_of_blocks,
+                                                       const hipStream_t  stream)
     {
-        return sizeof(prefix_underlying_type) * (::rocprim::host_warp_size() + number_of_blocks);
+        return sizeof(prefix_underlying_type)
+               * (::rocprim::host_warp_size(stream) + number_of_blocks);
     }
 
     ROCPRIM_HOST static inline detail::temp_storage::layout
-        get_temp_storage_layout(const unsigned int number_of_blocks)
+        get_temp_storage_layout(const unsigned int number_of_blocks, const hipStream_t stream)
     {
-        return detail::temp_storage::layout{get_storage_size(number_of_blocks),
+        return detail::temp_storage::layout{get_storage_size(number_of_blocks, stream),
                                             alignof(prefix_underlying_type)};
     }
 
@@ -238,10 +240,10 @@ public:
     using value_type = T;
 
     // temp_storage must point to allocation of get_storage_size(number_of_blocks) bytes
-    ROCPRIM_HOST static inline
-    lookback_scan_state create(void* temp_storage, const unsigned int number_of_blocks)
+    ROCPRIM_HOST static inline lookback_scan_state
+        create(void* temp_storage, const unsigned int number_of_blocks, const hipStream_t stream)
     {
-        const auto n = ::rocprim::host_warp_size() + number_of_blocks;
+        const auto          n = ::rocprim::host_warp_size(stream) + number_of_blocks;
         lookback_scan_state state;
 
         auto ptr = static_cast<char*>(temp_storage);
@@ -256,20 +258,20 @@ public:
         return state;
     }
 
-    ROCPRIM_HOST static inline
-    size_t get_storage_size(const unsigned int number_of_blocks)
+    ROCPRIM_HOST static inline size_t get_storage_size(const unsigned int number_of_blocks,
+                                                       const hipStream_t  stream)
     {
-        const auto n = ::rocprim::host_warp_size() + number_of_blocks;
+        const auto n    = ::rocprim::host_warp_size(stream) + number_of_blocks;
         size_t size = ::rocprim::detail::align_size(n * sizeof(flag_type));
         size += 2 * ::rocprim::detail::align_size(n * sizeof(T));
         return size;
     }
 
     ROCPRIM_HOST static inline detail::temp_storage::layout
-        get_temp_storage_layout(const unsigned int number_of_blocks)
+        get_temp_storage_layout(const unsigned int number_of_blocks, const hipStream_t stream)
     {
         size_t alignment = std::max(alignof(flag_type), alignof(T));
-        return detail::temp_storage::layout{get_storage_size(number_of_blocks), alignment};
+        return detail::temp_storage::layout{get_storage_size(number_of_blocks, stream), alignment};
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -56,7 +56,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSum)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    const unsigned int current_device_warp_size = rocprim::host_warp_size();
+    const unsigned int current_device_warp_size = rocprim::host_warp_size(device_id);
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -175,7 +175,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSum)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    const unsigned int current_device_warp_size = rocprim::host_warp_size();
+    const unsigned int current_device_warp_size = rocprim::host_warp_size(device_id);
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -298,7 +298,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSumValid)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    const unsigned int current_device_warp_size = rocprim::host_warp_size();
+    const unsigned int current_device_warp_size = rocprim::host_warp_size(device_id);
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -419,7 +419,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSumValid)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    const unsigned int current_device_warp_size = rocprim::host_warp_size();
+    const unsigned int current_device_warp_size = rocprim::host_warp_size(device_id);
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -542,7 +542,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceCustomStruct)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    const unsigned int current_device_warp_size = rocprim::host_warp_size();
+    const unsigned int current_device_warp_size = rocprim::host_warp_size(device_id);
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -674,7 +674,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, HeadSegmentedReduceSum)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    const unsigned int current_device_warp_size = rocprim::host_warp_size();
+    const unsigned int current_device_warp_size = rocprim::host_warp_size(device_id);
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -829,7 +829,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, TailSegmentedReduceSum)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    const unsigned int current_device_warp_size = rocprim::host_warp_size();
+    const unsigned int current_device_warp_size = rocprim::host_warp_size(device_id);
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
