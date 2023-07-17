@@ -54,7 +54,7 @@ template<unsigned int         BlockSize,
          block_scan_algorithm ScanAlgorithm    = block_scan_algorithm::using_warp_scan,
          unsigned int         TilesPerBlock    = 1,
          unsigned int         SizeLimit        = ROCPRIM_GRID_SIZE_LIMIT>
-struct reduce_by_key_config_v2
+struct reduce_by_key_config
 {
     /// Number of threads in a block.
     static constexpr unsigned int         block_size         = BlockSize;
@@ -98,25 +98,25 @@ struct fallback_config
     static constexpr unsigned int items_per_thread = std::max(1u, 15u / item_scale);
 
     using type
-        = reduce_by_key_config_v2<detail::limit_block_size<256U,
-                                                           items_per_thread * size_memory_per_item,
-                                                           ROCPRIM_WARP_SIZE_64>::value,
-                                  items_per_thread,
-                                  block_load_method::block_load_transpose,
-                                  block_load_method::block_load_transpose,
-                                  block_scan_algorithm::using_warp_scan,
-                                  2>;
+        = reduce_by_key_config<detail::limit_block_size<256U,
+                                                        items_per_thread * size_memory_per_item,
+                                                        ROCPRIM_WARP_SIZE_64>::value,
+                               items_per_thread,
+                               block_load_method::block_load_transpose,
+                               block_load_method::block_load_transpose,
+                               block_scan_algorithm::using_warp_scan,
+                               2>;
 };
 
 template<unsigned int TargetArch, class Key, class Value>
 struct default_config
     : std::conditional_t<std::max(sizeof(Key), sizeof(Value)) <= 16,
-                         rocprim::reduce_by_key_config_v2<256,
-                                                          15,
-                                                          block_load_method::block_load_transpose,
-                                                          block_load_method::block_load_transpose,
-                                                          block_scan_algorithm::using_warp_scan,
-                                                          sizeof(Value) < 16 ? 1 : 2>,
+                         rocprim::reduce_by_key_config<256,
+                                                       15,
+                                                       block_load_method::block_load_transpose,
+                                                       block_load_method::block_load_transpose,
+                                                       block_scan_algorithm::using_warp_scan,
+                                                       sizeof(Value) < 16 ? 1 : 2>,
                          typename reduce_by_key::fallback_config<Key, Value>::type>
 {};
 
