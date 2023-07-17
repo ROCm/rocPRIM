@@ -717,8 +717,6 @@ inline void sort_keys_over_4g()
     key_type* d_keys_input_output{};
     size_t key_type_storage_bytes = size * sizeof(key_type);
 
-    // Try to insert here ...
-
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input_output, key_type_storage_bytes));
     HIP_CHECK(hipMemcpy(d_keys_input_output,
                         keys_input.data(),
