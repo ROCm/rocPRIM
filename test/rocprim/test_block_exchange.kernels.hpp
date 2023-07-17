@@ -177,7 +177,7 @@ template<class T,
          int          Method,
          unsigned int BlockSize      = 256U,
          unsigned int ItemsPerThread = 1U>
-auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 0>::type
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 0>::type
 {
     using type = T;
     using output_type = U;
@@ -258,7 +258,7 @@ template<class T,
          int          Method,
          unsigned int BlockSize      = 256U,
          unsigned int ItemsPerThread = 1U>
-auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 1>::type
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 1>::type
 {
     using type = T;
     using output_type = U;
@@ -523,7 +523,7 @@ template<class T,
          int          Method,
          unsigned int BlockSize      = 256U,
          unsigned int ItemsPerThread = 1U>
-auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 4>::type
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 4>::type
 {
     using type = T;
     using output_type = U;
@@ -622,7 +622,7 @@ template<class T,
          int          Method,
          unsigned int BlockSize      = 256U,
          unsigned int ItemsPerThread = 1U>
-auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 5>::type
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 5>::type
 {
     using type = T;
     using output_type = U;
