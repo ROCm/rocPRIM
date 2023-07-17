@@ -244,8 +244,8 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
 /// }
 /// \endcode
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be
-/// `adjacent_difference_config` or a class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be
+/// `adjacent_difference_config`.
 /// \tparam InputIt - [inferred] random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam OutputIt - [inferred] random-access iterator type of the output range. Must meet the
@@ -340,8 +340,8 @@ hipError_t adjacent_difference(void* const          temporary_storage,
 /// }
 /// \endcode
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be
-/// `adjacent_difference_config` or a class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be
+/// `adjacent_difference_config`.
 /// \tparam InputIt - [inferred] random-access iterator type of the value range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam BinaryFunction - [inferred] binary operation function object that will be applied to
@@ -393,8 +393,8 @@ hipError_t adjacent_difference_inplace(void* const          temporary_storage,
 /// }
 /// \endcode
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be
-/// `adjacent_difference_config` or a class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be
+/// `adjacent_difference_config`.
 /// \tparam InputIt - [inferred] random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam OutputIt - [inferred] random-access iterator type of the output range. Must meet the
@@ -489,8 +489,8 @@ hipError_t adjacent_difference_right(void* const          temporary_storage,
 /// }
 /// \endcode
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be
-/// `adjacent_difference_config` or a class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be
+/// `adjacent_difference_config`.
 /// \tparam InputIt - [inferred] random-access iterator type of the value range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam BinaryFunction - [inferred] binary operation function object that will be applied to

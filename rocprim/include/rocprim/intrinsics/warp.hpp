@@ -144,20 +144,6 @@ ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label)
     return peer_mask;
 }
 
-/**
- * This function computes a lane mask of active lanes in the warp which which have
- * the same value for <tt>label</tt> as the lane which calls the function. The bit at
- * index \p i in the lane mask is set if the thread of lane \p i calls this function
- * with the same value <tt>label</tt>. Only the least-significant \p LabelBits bits
- * are taken into account when labels are considered to be equal.
- */
-template<int LabelBits>
-[[deprecated("use rocprim::match_any instead")]] ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type
-    MatchAny(unsigned int label)
-{
-    return match_any<LabelBits>(label);
-}
-
 END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_INTRINSICS_WARP_HPP_

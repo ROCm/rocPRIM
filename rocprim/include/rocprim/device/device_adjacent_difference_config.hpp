@@ -43,27 +43,18 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<typename AdjacentDifferenceConfig>
-constexpr adjacent_difference_config_params wrap_adjacent_difference_config()
-{
-    return adjacent_difference_config_params{
-        {AdjacentDifferenceConfig::block_size,
-         AdjacentDifferenceConfig::items_per_thread,
-         AdjacentDifferenceConfig::size_limit},
-        AdjacentDifferenceConfig::block_load_method,
-        AdjacentDifferenceConfig::block_store_method
-    };
-}
-
 // Specialization for user provided configuration
 template<typename AdjacentDifferenceConfig, bool InPlace, typename>
 struct wrapped_adjacent_difference_config
 {
+    static_assert(
+        std::is_same<typename AdjacentDifferenceConfig::tag, adjacent_difference_config_tag>::value,
+        "Config must be a specialization of struct template adjacent_difference_config");
+
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr adjacent_difference_config_params params
-            = wrap_adjacent_difference_config<AdjacentDifferenceConfig>();
+        static constexpr adjacent_difference_config_params params = AdjacentDifferenceConfig{};
     };
 };
 
@@ -74,8 +65,8 @@ struct wrapped_adjacent_difference_config<default_config, true, Value>
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr adjacent_difference_config_params params = wrap_adjacent_difference_config<
-            default_adjacent_difference_inplace_config<static_cast<unsigned int>(Arch), Value>>();
+        static constexpr adjacent_difference_config_params params
+            = default_adjacent_difference_inplace_config<static_cast<unsigned int>(Arch), Value>{};
     };
 };
 
@@ -86,8 +77,8 @@ struct wrapped_adjacent_difference_config<default_config, false, Value>
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr adjacent_difference_config_params params = wrap_adjacent_difference_config<
-            default_adjacent_difference_config<static_cast<unsigned int>(Arch), Value>>();
+        static constexpr adjacent_difference_config_params params
+            = default_adjacent_difference_config<static_cast<unsigned int>(Arch), Value>{};
     };
 };
 

@@ -49,7 +49,7 @@ struct default_config
     // merge_sort_config
     using block_sort_config  = default_config;
     using block_merge_config = default_config;
-    // radix_sort_config_v2
+    // radix_sort_config
     using single_sort_config = default_config;
     using merge_sort_config  = default_config;
     using onesweep_config    = default_config;

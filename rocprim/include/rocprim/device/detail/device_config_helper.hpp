@@ -205,6 +205,9 @@ struct radix_sort_onesweep_config : detail::radix_sort_onesweep_config_params
 namespace detail
 {
 
+struct reduce_config_tag
+{};
+
 // Calculate kernel configurations, such that it will not exceed shared memory maximum
 template<class Key, class Value>
 struct radix_sort_onesweep_config_base
@@ -239,6 +242,7 @@ template<unsigned int                      BlockSize      = 256,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct reduce_config : rocprim::detail::reduce_config_params
 {
+    using tag = detail::reduce_config_tag;
     constexpr reduce_config()
         : rocprim::detail::reduce_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -262,6 +266,9 @@ struct default_reduce_config_base_helper
 
 template<class Value>
 struct default_reduce_config_base : default_reduce_config_base_helper<Value>::type
+{};
+
+struct scan_config_tag
 {};
 
 /// \brief Provides the kernel parameters for exclusive_scan and inclusive_scan based
@@ -290,8 +297,9 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_config_v2 : ::rocprim::detail::scan_config_params
+struct scan_config : ::rocprim::detail::scan_config_params
 {
+    using tag = detail::scan_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
@@ -310,54 +318,6 @@ struct scan_config_v2 : ::rocprim::detail::scan_config_params
     /// \brief Limit on the number of items for a single scan kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
-    constexpr scan_config_v2()
-        : ::rocprim::detail::scan_config_params{
-            {BlockSize, ItemsPerThread, SizeLimit},
-            BlockLoadMethod,
-            BlockStoreMethod,
-            BlockScanMethod
-    } {};
-#endif
-};
-
-/// \brief Deprecated: Configuration of device-level scan primitives.
-///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam UseLookback - deprecated, scan always uses lookback scan.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
-template<unsigned int                    BlockSize,
-         unsigned int                    ItemsPerThread,
-         bool                            UseLookback,
-         ::rocprim::block_load_method    BlockLoadMethod,
-         ::rocprim::block_store_method   BlockStoreMethod,
-         ::rocprim::block_scan_algorithm BlockScanMethod,
-         unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // Doxygen seems to have trouble with the syntax used in this definition
-[[deprecated("The UseLookback switch has been removed, as scan now only supports the "
-                    "lookback-scan implementation. Use scan_config_v2 instead.")]] 
-#endif
-scan_config : ::rocprim::detail::scan_config_params
-{
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
-    static constexpr bool use_lookback = UseLookback;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
-
     constexpr scan_config()
         : ::rocprim::detail::scan_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -365,10 +325,14 @@ scan_config : ::rocprim::detail::scan_config_params
             BlockStoreMethod,
             BlockScanMethod
     } {};
+#endif
 };
 
 namespace detail
 {
+
+struct scan_by_key_config_tag
+{};
 
 template<class Value>
 struct default_scan_config_base_helper
@@ -376,11 +340,11 @@ struct default_scan_config_base_helper
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = scan_config_v2<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-                                ::rocprim::max(1u, 16u / item_scale),
-                                ::rocprim::block_load_method::block_load_transpose,
-                                ::rocprim::block_store_method::block_store_transpose,
-                                ::rocprim::block_scan_algorithm::using_warp_scan>;
+    using type = scan_config<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
+                             ::rocprim::max(1u, 16u / item_scale),
+                             ::rocprim::block_load_method::block_load_transpose,
+                             ::rocprim::block_store_method::block_store_transpose,
+                             ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
 
 template<class Value>
@@ -413,8 +377,9 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
+struct scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
 {
+    using tag = detail::scan_by_key_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
@@ -433,55 +398,6 @@ struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
     /// \brief Limit on the number of items for a single scan kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
-    constexpr scan_by_key_config_v2()
-        : ::rocprim::detail::scan_by_key_config_params{
-            {BlockSize, ItemsPerThread, SizeLimit},
-            BlockLoadMethod,
-            BlockStoreMethod,
-            BlockScanMethod
-    } {};
-#endif
-};
-
-/// \brief Deprecated: Configuration of device-level scan-by-key operation.
-///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam UseLookback - deprecated, scan always uses lookback scan.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
-template<unsigned int                    BlockSize,
-         unsigned int                    ItemsPerThread,
-         bool                            UseLookback,
-         ::rocprim::block_load_method    BlockLoadMethod,
-         ::rocprim::block_store_method   BlockStoreMethod,
-         ::rocprim::block_scan_algorithm BlockScanMethod,
-         unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // Doxygen seems to have trouble with the syntax used in this definition
-[[deprecated(
-    "The UseLookback switch has been removed, as scan now only supports the lookback-scan "
-    "implementation. Use scan_by_key_config_v2 instead.")]]
-#endif
-scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
-{
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
-    static constexpr bool use_lookback = UseLookback;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
-
     constexpr scan_by_key_config()
         : ::rocprim::detail::scan_by_key_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -489,6 +405,7 @@ scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
             BlockStoreMethod,
             BlockScanMethod
     } {};
+#endif
 };
 
 namespace detail
@@ -500,7 +417,7 @@ struct default_scan_by_key_config_base_helper
     static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
         sizeof(Key) + sizeof(Value), 2 * sizeof(int));
 
-    using type = scan_by_key_config_v2<
+    using type = scan_by_key_config<
         limit_block_size<256U, sizeof(Key) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
         ::rocprim::max(1u, 16u / item_scale),
         ::rocprim::block_load_method::block_load_transpose,
@@ -510,6 +427,9 @@ struct default_scan_by_key_config_base_helper
 
 template<class Key, class Value>
 struct default_scan_by_key_config_base : default_scan_by_key_config_base_helper<Key, Value>::type
+{};
+
+struct transform_config_tag
 {};
 
 struct transform_config_params
@@ -526,8 +446,9 @@ struct transform_config_params
 template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct transform_config
+struct transform_config : public detail::transform_config_params
 {
+    using tag = detail::transform_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
     /// \brief Number of threads in a block.
@@ -539,6 +460,11 @@ struct transform_config
     /// \brief Limit on the number of items for a single kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
+    constexpr transform_config()
+        : detail::transform_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit}
+    }
+    {}
 #endif
 };
 
@@ -558,6 +484,13 @@ template<class Value>
 struct default_transform_config_base : default_transform_config_base_helper<Value>::type
 {};
 
+struct binary_search_config_tag : public transform_config_tag
+{};
+struct upper_bound_config_tag : public transform_config_tag
+{};
+struct lower_bound_config_tag : public transform_config_tag
+{};
+
 } // namespace detail
 
 /// \brief Configuration for the device-level binary search operation.
@@ -568,7 +501,9 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct binary_search_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    using tag = detail::binary_search_config_tag;
+};
 
 /// \brief Configuration for the device-level upper bound operation.
 /// \tparam BlockSize Number of threads in a block.
@@ -578,7 +513,9 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct upper_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    using tag = detail::upper_bound_config_tag;
+};
 
 /// \brief Configuration for the device-level lower bound operation.
 /// \tparam BlockSize Number of threads in a block.
@@ -588,10 +525,15 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct lower_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    using tag = detail::lower_bound_config_tag;
+};
 
 namespace detail
 {
+
+struct histogram_config_tag
+{};
 
 template<class Value, class Output>
 struct default_binary_search_config_base
@@ -629,6 +571,7 @@ template<class HistogramConfig,
          unsigned int SharedImplHistograms = 3>
 struct histogram_config : detail::histogram_config_params
 {
+    using tag = detail::histogram_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     using histogram = HistogramConfig;
 
@@ -660,6 +603,9 @@ struct default_histogram_config_base
     : default_histogram_config_base_helper<Sample, Channels, ActiveChannels>::type
 {};
 
+struct adjacent_difference_config_tag
+{};
+
 struct adjacent_difference_config_params
 {
     kernel_config_params          adjacent_difference_kernel_config;
@@ -680,14 +626,21 @@ template<unsigned int       BlockSize,
          block_load_method  BlockLoadMethod  = block_load_method::block_load_transpose,
          block_store_method BlockStoreMethod = block_store_method::block_store_transpose,
          unsigned int       SizeLimit        = ROCPRIM_GRID_SIZE_LIMIT>
-struct adjacent_difference_config
+struct adjacent_difference_config : public detail::adjacent_difference_config_params
 {
+    using tag = detail::adjacent_difference_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     static constexpr ::rocprim::block_load_method  block_load_method  = BlockLoadMethod;
     static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
     static constexpr unsigned int                  block_size         = BlockSize;
     static constexpr unsigned int                  items_per_thread   = ItemsPerThread;
     static constexpr unsigned int                  size_limit         = SizeLimit;
+
+    constexpr adjacent_difference_config()
+        : detail::adjacent_difference_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit},
+            BlockLoadMethod, BlockStoreMethod
+    } {};
 #endif
 };
 

@@ -158,16 +158,6 @@ using custom_double2     = test_utils::custom_test_type<double>;
 using custom_int64_array = test_utils::custom_test_array_type<std::int64_t, 8>;
 
 using custom_config_0 = rocprim::adjacent_difference_config<128, 4>;
-struct custom_config_1
-{
-    static constexpr unsigned int               block_size       = 256;
-    static constexpr unsigned int               items_per_thread = 1;
-    static constexpr unsigned int               size_limit       = ROCPRIM_GRID_SIZE_LIMIT;
-    static constexpr rocprim::block_load_method block_load_method
-        = rocprim::block_load_method::block_load_transpose;
-    static constexpr rocprim::block_store_method block_store_method
-        = rocprim::block_store_method::block_store_transpose;
-};
 
 template<int SizeLimit>
 using custom_size_limit_config
@@ -188,7 +178,7 @@ using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
     DeviceAdjacentDifferenceParams<custom_int64_array, custom_int64_array, false, true, true>,
     // Tests for supported config structs
     DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false, custom_config_0>,
-    DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false, custom_config_1>,
+    DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false>,
     // Tests for different size_limits
     DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<64>>,
     DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<8192>>,
