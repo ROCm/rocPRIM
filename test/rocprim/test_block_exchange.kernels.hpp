@@ -358,8 +358,11 @@ auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 2>:
     std::vector<output_type> expected(size);
     std::vector<output_type> output(size, output_type(0));
 
-    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size(device_id)));
-    const size_t warps_no = (block_size + warp_size - 1) / warp_size;
+    unsigned int current_device_warp_size;
+    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+
+    const size_t warp_size      = std::min(block_size, size_t(current_device_warp_size));
+    const size_t warps_no       = (block_size + warp_size - 1) / warp_size;
     const size_t items_per_warp = warp_size * items_per_thread;
 
     // Calculate input and expected results on host
@@ -451,8 +454,11 @@ auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 3>:
     std::vector<output_type> expected(size);
     std::vector<output_type> output(size, output_type(0));
 
-    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size(device_id)));
-    const size_t warps_no = (block_size + warp_size - 1) / warp_size;
+    unsigned int current_device_warp_size;
+    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+
+    const size_t warp_size      = std::min(block_size, size_t(current_device_warp_size));
+    const size_t warps_no       = (block_size + warp_size - 1) / warp_size;
     const size_t items_per_warp = warp_size * items_per_thread;
 
     // Calculate input and expected results on host

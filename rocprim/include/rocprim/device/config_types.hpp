@@ -364,6 +364,39 @@ inline hipError_t host_target_arch(const hipStream_t stream, target_arch& arch)
 
 } // end namespace detail
 
+/// \brief Returns a number of threads in a hardware warp for the actual device.
+/// At host side this constant is available at runtime only.
+/// \param device_id - the device that should be queried.
+///
+/// It is constant for a device.
+ROCPRIM_HOST inline hipError_t host_warp_size(const int device_id, unsigned int& warp_size)
+{
+    hipDeviceProp_t device_prop;
+    hipError_t      success = hipGetDeviceProperties(&device_prop, device_id);
+
+    if(success == hipSuccess)
+    {
+        warp_size = device_prop.warpSize;
+    }
+    return success;
+};
+
+/// \brief Returns the number of threads in a hardware warp for the device associated with the stream.
+/// At host side this constant is available at runtime only.
+/// \param stream - the stream, whose device should be queried.
+///
+/// It is constant for a device.
+ROCPRIM_HOST inline hipError_t host_warp_size(const hipStream_t stream, unsigned int& warp_size)
+{
+    int        hip_device;
+    hipError_t success = detail::get_device_from_stream(stream, hip_device);
+    if(success == hipSuccess)
+    {
+        return host_warp_size(hip_device, warp_size);
+    }
+    return success;
+};
+
 END_ROCPRIM_NAMESPACE
 
 /// @}

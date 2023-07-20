@@ -35,6 +35,8 @@
 #include "../../detail/temp_storage.hpp"
 #include "../../detail/various.hpp"
 
+#include "../config_types.hpp"
+
 extern "C"
 {
     void __builtin_amdgcn_s_sleep(int);
@@ -111,8 +113,10 @@ public:
     ROCPRIM_HOST static inline size_t get_storage_size(const unsigned int number_of_blocks,
                                                        const hipStream_t  stream)
     {
-        return sizeof(prefix_underlying_type)
-               * (::rocprim::host_warp_size(stream) + number_of_blocks);
+        unsigned int warp_size;
+        ::rocprim::host_warp_size(stream, warp_size);
+
+        return sizeof(prefix_underlying_type) * (warp_size + number_of_blocks);
     }
 
     ROCPRIM_HOST static inline detail::temp_storage::layout
@@ -243,7 +247,10 @@ public:
     ROCPRIM_HOST static inline lookback_scan_state
         create(void* temp_storage, const unsigned int number_of_blocks, const hipStream_t stream)
     {
-        const auto          n = ::rocprim::host_warp_size(stream) + number_of_blocks;
+        unsigned int warp_size;
+        ::rocprim::host_warp_size(stream, warp_size);
+
+        const auto          n = warp_size + number_of_blocks;
         lookback_scan_state state;
 
         auto ptr = static_cast<char*>(temp_storage);
@@ -261,7 +268,9 @@ public:
     ROCPRIM_HOST static inline size_t get_storage_size(const unsigned int number_of_blocks,
                                                        const hipStream_t  stream)
     {
-        const auto n    = ::rocprim::host_warp_size(stream) + number_of_blocks;
+        unsigned int warp_size;
+        ::rocprim::host_warp_size(stream, warp_size);
+        const auto n    = warp_size + number_of_blocks;
         size_t size = ::rocprim::detail::align_size(n * sizeof(flag_type));
         size += 2 * ::rocprim::detail::align_size(n * sizeof(T));
         return size;

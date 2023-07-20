@@ -25,7 +25,6 @@
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
-#include "../device/config_types.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -44,41 +43,6 @@ constexpr unsigned int warp_size()
 {
     return warpSize;
 }
-
-/// \brief Returns a number of threads in a hardware warp for the actual device.
-/// At host side this constant is available at runtime only.
-/// \param device_id - the device that should be queried.
-///
-/// It is constant for a device.
-ROCPRIM_HOST inline unsigned int host_warp_size(const int device_id)
-{
-    hipDeviceProp_t device_prop;
-    hipError_t      success = hipGetDeviceProperties(&device_prop, device_id);
-
-    if(success != hipSuccess)
-        return -1;
-    else
-        return device_prop.warpSize;
-};
-
-/// \brief Returns the number of threads in a hardware warp for the device associated with the stream.
-/// At host side this constant is available at runtime only.
-/// \param stream - the stream, whose device should be queried.
-///
-/// It is constant for a device.
-ROCPRIM_HOST inline unsigned int host_warp_size(const hipStream_t stream)
-{
-    int        hip_device;
-    hipError_t success = detail::get_device_from_stream(stream, hip_device);
-    if(success != hipSuccess)
-    {
-        return -1;
-    }
-    else
-    {
-        return host_warp_size(hip_device);
-    }
-};
 
 /// \brief Returns a number of threads in a hardware warp for the actual target.
 /// At device side this constant is available at compile time.

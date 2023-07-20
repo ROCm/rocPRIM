@@ -263,7 +263,9 @@ inline auto get_random_data(size_t size, T min, T max, size_t max_random_size = 
 
 inline bool is_warp_size_supported(const unsigned int required_warp_size, const int device_id)
 {
-    return ::rocprim::host_warp_size(device_id) >= required_warp_size;
+    unsigned int warp_size;
+    ::rocprim::host_warp_size(device_id, warp_size);
+    return warp_size >= required_warp_size;
 }
 
 template<unsigned int LogicalWarpSize>

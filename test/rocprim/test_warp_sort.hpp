@@ -41,7 +41,8 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
     static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
     static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
-    const unsigned int      current_device_warp_size = rocprim::host_warp_size(device_id);
+    unsigned int current_device_warp_size;
+    ::rocprim::host_warp_size(device_id, current_device_warp_size);
     static constexpr size_t block_size = std::max<size_t>(256U, logical_warp_size * 4);
 
     static constexpr unsigned int grid_size = 4;
@@ -139,7 +140,8 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
     static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
     static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
-    const unsigned int      current_device_warp_size = rocprim::host_warp_size(device_id);
+    unsigned int current_device_warp_size;
+    ::rocprim::host_warp_size(device_id, current_device_warp_size);
     static constexpr size_t block_size = std::max<size_t>(256U, logical_warp_size * 4);
 
     static constexpr unsigned int grid_size = 4;

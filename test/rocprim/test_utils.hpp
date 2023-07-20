@@ -21,11 +21,12 @@
 #ifndef TEST_TEST_UTILS_HPP_
 #define TEST_TEST_UTILS_HPP_
 
-#include <rocprim/types.hpp>
+#include <rocprim/detail/match_result_type.hpp>
+#include <rocprim/device/config_types.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/intrinsics.hpp>
 #include <rocprim/type_traits.hpp>
-#include <rocprim/detail/match_result_type.hpp>
+#include <rocprim/types.hpp>
 
 // Identity iterator
 #include "identity_iterator.hpp"
@@ -434,7 +435,8 @@ void iota(ForwardIt first, ForwardIt last, T value)
 
 #define SKIP_IF_UNSUPPORTED_WARP_SIZE(test_warp_size, device_id)                \
     {                                                                           \
-        const auto host_warp_size = ::rocprim::host_warp_size(device_id);       \
+        unsigned int host_warp_size;                                            \
+        ::rocprim::host_warp_size(device_id, host_warp_size);                   \
         if(host_warp_size < (test_warp_size))                                   \
         {                                                                       \
             GTEST_SKIP() << "Cannot run test of warp size " << (test_warp_size) \
