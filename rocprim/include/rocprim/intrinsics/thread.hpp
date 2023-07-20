@@ -46,8 +46,8 @@ constexpr unsigned int warp_size()
 }
 
 /// \brief Returns a number of threads in a hardware warp for the actual device.
-/// At host side this constant is available at runtime time only.
-/// \param device_id - the device that should be querried.
+/// At host side this constant is available at runtime only.
+/// \param device_id - the device that should be queried.
 ///
 /// It is constant for a device.
 ROCPRIM_HOST inline unsigned int host_warp_size(const int device_id)
@@ -61,9 +61,9 @@ ROCPRIM_HOST inline unsigned int host_warp_size(const int device_id)
         return device_prop.warpSize;
 };
 
-/// \brief Returns a number of threads in a hardware warp for the actual device.
-/// At host side this constant is available at runtime time only.
-/// \param stream - the stream, whose device that should be querried.
+/// \brief Returns the number of threads in a hardware warp for the device associated with the stream.
+/// At host side this constant is available at runtime only.
+/// \param stream - the stream, whose device should be queried.
 ///
 /// It is constant for a device.
 ROCPRIM_HOST inline unsigned int host_warp_size(const hipStream_t stream)
