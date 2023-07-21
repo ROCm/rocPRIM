@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
     };
 
     int        hip_device = 0;
-    hipError_t success    = ::rocprim::detail::get_device_from_stream(stream, hip_device);
+    HIP_CHECK(::rocprim::detail::get_device_from_stream(stream, hip_device));
     if(is_warp_size_supported(64, hip_device))
     {
         std::vector<benchmark::internal::Benchmark*> additional_benchmarks{

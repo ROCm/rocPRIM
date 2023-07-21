@@ -436,7 +436,7 @@ void iota(ForwardIt first, ForwardIt last, T value)
 #define SKIP_IF_UNSUPPORTED_WARP_SIZE(test_warp_size, device_id)                \
     {                                                                           \
         unsigned int host_warp_size;                                            \
-        ::rocprim::host_warp_size(device_id, host_warp_size);                   \
+        HIP_CHECK(::rocprim::host_warp_size(device_id, host_warp_size));        \
         if(host_warp_size < (test_warp_size))                                   \
         {                                                                       \
             GTEST_SKIP() << "Cannot run test of warp size " << (test_warp_size) \

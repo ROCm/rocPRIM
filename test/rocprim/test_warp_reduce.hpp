@@ -57,7 +57,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSum)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     unsigned int current_device_warp_size;
-    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -177,7 +177,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSum)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     unsigned int current_device_warp_size;
-    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -301,7 +301,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSumValid)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     unsigned int current_device_warp_size;
-    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -423,7 +423,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSumValid)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     unsigned int current_device_warp_size;
-    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -547,7 +547,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceCustomStruct)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     unsigned int current_device_warp_size;
-    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -680,7 +680,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, HeadSegmentedReduceSum)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     unsigned int current_device_warp_size;
-    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
@@ -836,7 +836,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, TailSegmentedReduceSum)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
     unsigned int current_device_warp_size;
-    ::rocprim::host_warp_size(device_id, current_device_warp_size);
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
     const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     static constexpr unsigned int grid_size = 4;
