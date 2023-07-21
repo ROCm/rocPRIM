@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
         CREATE_BENCHMARK(int, 256, 16, 32, ScatterToStripedOp)
     };
 
-    int        hip_device = 0;
+    int hip_device = 0;
     HIP_CHECK(::rocprim::detail::get_device_from_stream(stream, hip_device));
     if(is_warp_size_supported(64, hip_device))
     {
