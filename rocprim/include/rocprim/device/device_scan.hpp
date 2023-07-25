@@ -226,14 +226,20 @@ inline auto scan_impl(void*               temporary_storage,
     real_init_value_type* previous_last_element;
     real_init_value_type* new_last_element;
 
+    detail::temp_storage::layout layout{};
+    hipError_t                   layout_result
+        = scan_state_type::get_temp_storage_layout(number_of_blocks, stream, layout);
+    if(layout_result != hipSuccess)
+    {
+        return layout_result;
+    }
+
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
         detail::temp_storage::make_linear_partition(
             // This is valid even with offset_scan_state_with_sleep_type
-            detail::temp_storage::make_partition(
-                &scan_state_storage,
-                scan_state_type::get_temp_storage_layout(number_of_blocks, stream)),
+            detail::temp_storage::make_partition(&scan_state_storage, layout),
             detail::temp_storage::ptr_aligned_array(&previous_last_element,
                                                     use_limited_size ? 1 : 0),
             detail::temp_storage::ptr_aligned_array(&new_last_element, use_limited_size ? 1 : 0)));
@@ -251,9 +257,18 @@ inline auto scan_impl(void*               temporary_storage,
     if(number_of_blocks > 1 || use_limited_size)
     {
         // Create and initialize lookback_scan_state obj
-        auto scan_state = scan_state_type::create(scan_state_storage, number_of_blocks, stream);
-        auto scan_state_with_sleep
-            = scan_state_with_sleep_type::create(scan_state_storage, number_of_blocks, stream);
+        scan_state_type scan_state{};
+        hipError_t      result
+            = scan_state_type::create(scan_state, scan_state_storage, number_of_blocks, stream);
+        scan_state_with_sleep_type scan_state_with_sleep{};
+        result = scan_state_with_sleep_type::create(scan_state_with_sleep,
+                                                    scan_state_storage,
+                                                    number_of_blocks,
+                                                    stream);
+        if(result != hipSuccess)
+        {
+            return result;
+        }
 
         hipDeviceProp_t prop;
         int deviceId;

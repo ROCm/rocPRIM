@@ -215,14 +215,16 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     // The running accumulation across the launch boundary.
     accumulator_type* d_previous_accumulated = nullptr;
 
+    detail::temp_storage::layout layout{};
+    const hipError_t             layout_result
+        = scan_state_type::get_temp_storage_layout(number_of_tiles, stream, layout);
+
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
         detail::temp_storage::make_linear_partition(
             // This is valid even with scan_state_with_sleep_type
-            detail::temp_storage::make_partition(
-                &scan_state_storage,
-                scan_state_type::get_temp_storage_layout(number_of_tiles, stream)),
+            detail::temp_storage::make_partition(&scan_state_storage, layout),
             detail::temp_storage::make_partition(&ordered_bid_storage,
                                                  ordered_tile_id_type::get_temp_storage_layout()),
             detail::temp_storage::ptr_aligned_array(&d_global_head_count, use_limited_size ? 1 : 0),
@@ -239,12 +241,23 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     {
         return result;
     }
+
+    scan_state_type scan_state{};
+    hipError_t      scan_state_result
+        = scan_state_type::create(scan_state, scan_state_storage, number_of_tiles, stream);
+    scan_state_with_sleep_type scan_state_with_sleep{};
+    scan_state_result = scan_state_with_sleep_type::create(scan_state_with_sleep,
+                                                           scan_state_storage,
+                                                           number_of_tiles,
+                                                           stream);
+
+    if(scan_state_result != hipSuccess)
+    {
+        return scan_state_result;
+    }
+
     auto with_scan_state
-        = [use_sleep,
-           scan_state = scan_state_type::create(scan_state_storage, number_of_tiles, stream),
-           scan_state_with_sleep
-           = scan_state_with_sleep_type::create(scan_state_storage, number_of_tiles, stream)](
-              auto&& func) mutable -> decltype(auto)
+        = [use_sleep, scan_state, scan_state_with_sleep](auto&& func) mutable -> decltype(auto)
     {
         if(use_sleep)
         {

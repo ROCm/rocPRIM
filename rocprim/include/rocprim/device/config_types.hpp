@@ -373,6 +373,7 @@ inline hipError_t host_target_arch(const hipStream_t stream, target_arch& arch)
 /// It is constant for a device.
 ROCPRIM_HOST inline hipError_t host_warp_size(const int device_id, unsigned int& warp_size)
 {
+    warp_size = -1;
     hipDeviceProp_t device_prop;
     hipError_t      success = hipGetDeviceProperties(&device_prop, device_id);
 

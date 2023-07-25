@@ -178,14 +178,20 @@ hipError_t partition_impl(void * temporary_storage,
     size_t*                         selected_count;
     size_t*                         prev_selected_count;
 
+    detail::temp_storage::layout layout{};
+    const hipError_t             layout_result
+        = offset_scan_state_type::get_temp_storage_layout(number_of_blocks, stream, layout);
+    if(layout_result != hipSuccess)
+    {
+        return layout_result;
+    }
+
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
         detail::temp_storage::make_linear_partition(
             // This is valid even with offset_scan_state_with_sleep_type
-            detail::temp_storage::make_partition(
-                &offset_scan_state_storage,
-                offset_scan_state_type::get_temp_storage_layout(number_of_blocks, stream)),
+            detail::temp_storage::make_partition(&offset_scan_state_storage, layout),
             // Note: the following two are to be allocated continuously, so that they can be initialized
             // simultaneously.
             // They have the same base type, so there is no padding between the types.
@@ -200,12 +206,21 @@ hipError_t partition_impl(void * temporary_storage,
     std::chrono::high_resolution_clock::time_point start;
 
     // Create and initialize lookback_scan_state obj
-    auto offset_scan_state
-        = offset_scan_state_type::create(offset_scan_state_storage, number_of_blocks, stream);
-    auto offset_scan_state_with_sleep
-        = offset_scan_state_with_sleep_type::create(offset_scan_state_storage,
-                                                    number_of_blocks,
-                                                    stream);
+    offset_scan_state_type            offset_scan_state{};
+    hipError_t                        result = offset_scan_state_type::create(offset_scan_state,
+                                                       offset_scan_state_storage,
+                                                       number_of_blocks,
+                                                       stream);
+    offset_scan_state_with_sleep_type offset_scan_state_with_sleep{};
+    result = offset_scan_state_with_sleep_type::create(offset_scan_state_with_sleep,
+                                                       offset_scan_state_storage,
+                                                       number_of_blocks,
+                                                       stream);
+
+    if(result != hipSuccess)
+    {
+        return result;
+    }
 
     hipError_t error;
 

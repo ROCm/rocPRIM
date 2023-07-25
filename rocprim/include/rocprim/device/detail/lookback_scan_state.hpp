@@ -100,30 +100,37 @@ public:
     using value_type = T;
 
     // temp_storage must point to allocation of get_storage_size(number_of_blocks) bytes
-    ROCPRIM_HOST static inline lookback_scan_state create(void*              temp_storage,
-                                                          const unsigned int number_of_blocks,
-                                                          const hipStream_t /*stream*/)
+    ROCPRIM_HOST static inline hipError_t create(lookback_scan_state& state,
+                                                 void*                temp_storage,
+                                                 const unsigned int   number_of_blocks,
+                                                 const hipStream_t /*stream*/)
     {
-        (void) number_of_blocks;
-        lookback_scan_state state;
+        (void)number_of_blocks;
         state.prefixes = reinterpret_cast<prefix_underlying_type*>(temp_storage);
-        return state;
+        return hipSuccess;
     }
 
-    ROCPRIM_HOST static inline size_t get_storage_size(const unsigned int number_of_blocks,
-                                                       const hipStream_t  stream)
+    ROCPRIM_HOST static inline hipError_t get_storage_size(const unsigned int number_of_blocks,
+                                                           const hipStream_t  stream,
+                                                           size_t&            storage_size)
     {
         unsigned int warp_size;
-        ::rocprim::host_warp_size(stream, warp_size);
+        hipError_t   error = ::rocprim::host_warp_size(stream, warp_size);
 
-        return sizeof(prefix_underlying_type) * (warp_size + number_of_blocks);
+        storage_size = sizeof(prefix_underlying_type) * (warp_size + number_of_blocks);
+
+        return error;
     }
 
-    ROCPRIM_HOST static inline detail::temp_storage::layout
-        get_temp_storage_layout(const unsigned int number_of_blocks, const hipStream_t stream)
+    ROCPRIM_HOST static inline hipError_t
+        get_temp_storage_layout(const unsigned int            number_of_blocks,
+                                const hipStream_t             stream,
+                                detail::temp_storage::layout& layout)
     {
-        return detail::temp_storage::layout{get_storage_size(number_of_blocks, stream),
-                                            alignof(prefix_underlying_type)};
+        size_t     storage_size = 0;
+        hipError_t error        = get_storage_size(number_of_blocks, stream, storage_size);
+        layout = detail::temp_storage::layout{storage_size, alignof(prefix_underlying_type)};
+        return error;
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -244,14 +251,15 @@ public:
     using value_type = T;
 
     // temp_storage must point to allocation of get_storage_size(number_of_blocks) bytes
-    ROCPRIM_HOST static inline lookback_scan_state
-        create(void* temp_storage, const unsigned int number_of_blocks, const hipStream_t stream)
+    ROCPRIM_HOST static inline hipError_t create(lookback_scan_state& state,
+                                                 void*                temp_storage,
+                                                 const unsigned int   number_of_blocks,
+                                                 const hipStream_t    stream)
     {
         unsigned int warp_size;
-        ::rocprim::host_warp_size(stream, warp_size);
+        hipError_t   error = ::rocprim::host_warp_size(stream, warp_size);
 
-        const auto          n = warp_size + number_of_blocks;
-        lookback_scan_state state;
+        const auto n = warp_size + number_of_blocks;
 
         auto ptr = static_cast<char*>(temp_storage);
 
@@ -262,25 +270,31 @@ public:
         ptr += ::rocprim::detail::align_size(n * sizeof(T));
 
         state.prefixes_complete_values = reinterpret_cast<T*>(ptr);
-        return state;
+        return error;
     }
 
-    ROCPRIM_HOST static inline size_t get_storage_size(const unsigned int number_of_blocks,
-                                                       const hipStream_t  stream)
+    ROCPRIM_HOST static inline hipError_t get_storage_size(const unsigned int number_of_blocks,
+                                                           const hipStream_t  stream,
+                                                           size_t&            storage_size)
     {
         unsigned int warp_size;
-        ::rocprim::host_warp_size(stream, warp_size);
-        const auto n    = warp_size + number_of_blocks;
-        size_t size = ::rocprim::detail::align_size(n * sizeof(flag_type));
-        size += 2 * ::rocprim::detail::align_size(n * sizeof(T));
-        return size;
+        hipError_t   error = ::rocprim::host_warp_size(stream, warp_size);
+        const auto   n     = warp_size + number_of_blocks;
+        storage_size       = ::rocprim::detail::align_size(n * sizeof(flag_type));
+        storage_size += 2 * ::rocprim::detail::align_size(n * sizeof(T));
+        return error;
     }
 
-    ROCPRIM_HOST static inline detail::temp_storage::layout
-        get_temp_storage_layout(const unsigned int number_of_blocks, const hipStream_t stream)
+    ROCPRIM_HOST static inline hipError_t
+        get_temp_storage_layout(const unsigned int            number_of_blocks,
+                                const hipStream_t             stream,
+                                detail::temp_storage::layout& layout)
     {
+        size_t     storage_size = 0;
         size_t alignment = std::max(alignof(flag_type), alignof(T));
-        return detail::temp_storage::layout{get_storage_size(number_of_blocks, stream), alignment};
+        hipError_t error        = get_storage_size(number_of_blocks, stream, storage_size);
+        layout                  = detail::temp_storage::layout{storage_size, alignment};
+        return error;
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
