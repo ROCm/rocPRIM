@@ -16,7 +16,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - `block_sort::sort()` overload for keys and values with a dynamic size, for all block sort algorithms. Additionally, all `block_sort::sort()` overloads with a dynamic size are now supported for `block_sort_algorithm::merge_sort` and `block_sort_algorithm::bitonic_sort`.
 - New two-way partition primitive `partition_two_way` which can write to two separate iterators.
 - Added config tuning and dynamic dispatch to `device_adjacent_difference` algorithm
-- New `rocprim::elect` warp intrinsic, which chooses one lane from the lanes enabled by a mask.
+- New `rocprim::group_elect` warp intrinsic, which chooses one lane from the lanes enabled by a mask.
 ### Changed
 - Deprecated configuration `radix_sort_config` for device-level radix sort as it no longer matches the algorithm's parameters. New configuration `radix_sort_config_v2` is preferred instead.
 - Removed erroneous implementation of device-level `inclusive_scan` and `exclusive_scan`. The prior default implementation using lookback-scan now is the only available implementation.
