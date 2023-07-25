@@ -218,6 +218,10 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     detail::temp_storage::layout layout{};
     const hipError_t             layout_result
         = scan_state_type::get_temp_storage_layout(number_of_tiles, stream, layout);
+    if(layout_result != hipSuccess)
+    {
+        return layout_result;
+    }
 
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
