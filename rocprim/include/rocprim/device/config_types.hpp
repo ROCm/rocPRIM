@@ -367,6 +367,8 @@ inline hipError_t host_target_arch(const hipStream_t stream, target_arch& arch)
 /// \brief Returns a number of threads in a hardware warp for the actual device.
 /// At host side this constant is available at runtime only.
 /// \param device_id - the device that should be queried.
+/// \param warp_size - out parameter for the warp size.
+/// \return hipError_t any error that might occur.
 ///
 /// It is constant for a device.
 ROCPRIM_HOST inline hipError_t host_warp_size(const int device_id, unsigned int& warp_size)
@@ -384,6 +386,8 @@ ROCPRIM_HOST inline hipError_t host_warp_size(const int device_id, unsigned int&
 /// \brief Returns the number of threads in a hardware warp for the device associated with the stream.
 /// At host side this constant is available at runtime only.
 /// \param stream - the stream, whose device should be queried.
+/// \param warp_size - out parameter for the warp size.
+/// \return hipError_t any error that might occur.
 ///
 /// It is constant for a device.
 ROCPRIM_HOST inline hipError_t host_warp_size(const hipStream_t stream, unsigned int& warp_size)
