@@ -206,12 +206,13 @@ T bit_extract(const T value, const unsigned int bits)
     return bits == bit_size ? value : value & ((T{1} << bits) - T{1});
 }
 
-std::vector<max_lane_mask_type> active_lanes_tests()
+std::vector<max_lane_mask_type> active_lanes_tests(int device_id)
 {
     std::vector<max_lane_mask_type> tests
         = {all_lanes_active, 0x0123'4567'89AB'CDEF, 0xAAAA'AAAA'AAAA'AAAA};
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
     for(auto& test : tests)
     {
         test = bit_extract(test, hardware_warp_size);
@@ -262,7 +263,8 @@ void test_shuffle()
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
     const size_t size = hardware_warp_size;
 
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
@@ -313,7 +315,7 @@ void test_shuffle()
         auto           input = test_type_helper<T>::get_random_data(size, seed_value);
         std::vector<T> output(input.size());
 
-        for(const auto active_lanes : active_lanes_tests())
+        for(const auto active_lanes : active_lanes_tests(device_id))
         {
             SCOPED_TRACE(testing::Message()
                          << "with active_lanes = " << std::bitset<64>(active_lanes));
@@ -405,7 +407,8 @@ TYPED_TEST(RocprimIntrinsicsTests, ShuffleIndex)
     HIP_CHECK(hipSetDevice(device_id));
 
     using T = typename TestFixture::type;
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
     const size_t size = hardware_warp_size;
 
     for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
@@ -512,7 +515,9 @@ TEST(RocprimIntrinsicsTests, LaneId)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+
     const size_t warps_per_block    = 4;
     const size_t block_size         = warps_per_block * hardware_warp_size;
     const size_t blocks             = 2;
@@ -571,7 +576,9 @@ TEST(RocprimIntrinsicsTests, MaskedBitCount)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+
     const size_t warps_per_block    = 4;
     const size_t block_size         = warps_per_block * hardware_warp_size;
     const size_t blocks             = 2;
@@ -616,7 +623,7 @@ TEST(RocprimIntrinsicsTests, MaskedBitCount)
         {
             SCOPED_TRACE(testing::Message() << "with add = " << add);
 
-            for(const auto active_lanes : active_lanes_tests())
+            for(const auto active_lanes : active_lanes_tests(device_id))
             {
                 SCOPED_TRACE(testing::Message()
                              << "with active_lanes = " << std::bitset<64>(active_lanes));
@@ -696,7 +703,9 @@ void warp_any_all_test()
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+
     const size_t warps_per_block    = 4;
     const size_t block_size         = warps_per_block * hardware_warp_size;
     const size_t blocks             = 2;
@@ -729,7 +738,7 @@ void warp_any_all_test()
                                                                      all_lanes_active - 1,
                                                                      seed_value);
 
-        for(const auto active_lanes : active_lanes_tests())
+        for(const auto active_lanes : active_lanes_tests(device_id))
         {
             SCOPED_TRACE(testing::Message()
                          << "with active_lanes = " << std::bitset<64>(active_lanes));
@@ -822,7 +831,9 @@ TYPED_TEST(RocprimIntrinsicsTests, WarpPermute)
 
     using T = typename TestFixture::type;
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+
     const size_t warps_per_block    = 4;
     const size_t block_size         = warps_per_block * hardware_warp_size;
     const size_t blocks             = 2;
@@ -880,7 +891,7 @@ TYPED_TEST(RocprimIntrinsicsTests, WarpPermute)
 
         const auto wrap = test_utils::get_random_data<unsigned int>(size, 0, 4, seed_value);
 
-        for(const auto active_lanes : active_lanes_tests())
+        for(const auto active_lanes : active_lanes_tests(device_id))
         {
             SCOPED_TRACE(testing::Message()
                          << "with active_lanes = " << std::bitset<64>(active_lanes));
@@ -959,7 +970,9 @@ TEST(RocprimIntrinsicsTests, MatchAny)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    const size_t           hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+
     const size_t           warps_per_block    = 4;
     const size_t           block_size         = warps_per_block * hardware_warp_size;
     const size_t           blocks             = 2;
@@ -987,7 +1000,7 @@ TEST(RocprimIntrinsicsTests, MatchAny)
                                                                      1u << (label_bits + 3),
                                                                      seed_value);
 
-        for(const auto active_lanes : active_lanes_tests())
+        for(const auto active_lanes : active_lanes_tests(device_id))
         {
             SCOPED_TRACE(testing::Message()
                          << "with active_lanes = " << std::bitset<64>(active_lanes));
@@ -1069,7 +1082,9 @@ TEST(RocprimIntrinsicsTests, Ballot)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+
     const size_t warps_per_block    = 4;
     const size_t block_size         = warps_per_block * hardware_warp_size;
     const size_t blocks             = 2;
@@ -1093,7 +1108,7 @@ TEST(RocprimIntrinsicsTests, Ballot)
 
         const auto input = test_utils::get_random_data01<unsigned int>(size, 0.5f, seed_value);
 
-        for(const auto active_lanes : active_lanes_tests())
+        for(const auto active_lanes : active_lanes_tests(device_id))
         {
             SCOPED_TRACE(testing::Message()
                          << "with active_lanes = " << std::bitset<64>(active_lanes));

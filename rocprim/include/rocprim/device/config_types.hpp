@@ -29,7 +29,6 @@
 #include <cassert>
 
 #include "../config.hpp"
-#include "../intrinsics/thread.hpp"
 #include "../detail/various.hpp"
 
 /// \addtogroup primitivesmodule_deviceconfigs
@@ -227,7 +226,7 @@ constexpr target_arch get_target_arch_from_name(const char* const arch_name, con
 /**
  * \brief Get the current architecture in device compilation.
  * 
- * This function will always return `unkown` when called from the host, host could should instead
+ * This function will always return `unknown` when called from the host, host could should instead
  * call host_target_arch to query the current device from the HIP API.
  * 
  * \return target_arch the architecture currently being compiled for on the device.
@@ -364,6 +363,44 @@ inline hipError_t host_target_arch(const hipStream_t stream, target_arch& arch)
 }
 
 } // end namespace detail
+
+/// \brief Returns a number of threads in a hardware warp for the actual device.
+/// At host side this constant is available at runtime only.
+/// \param device_id - the device that should be queried.
+/// \param warp_size - out parameter for the warp size.
+/// \return hipError_t any error that might occur.
+///
+/// It is constant for a device.
+ROCPRIM_HOST inline hipError_t host_warp_size(const int device_id, unsigned int& warp_size)
+{
+    warp_size = -1;
+    hipDeviceProp_t device_prop;
+    hipError_t      success = hipGetDeviceProperties(&device_prop, device_id);
+
+    if(success == hipSuccess)
+    {
+        warp_size = device_prop.warpSize;
+    }
+    return success;
+};
+
+/// \brief Returns the number of threads in a hardware warp for the device associated with the stream.
+/// At host side this constant is available at runtime only.
+/// \param stream - the stream, whose device should be queried.
+/// \param warp_size - out parameter for the warp size.
+/// \return hipError_t any error that might occur.
+///
+/// It is constant for a device.
+ROCPRIM_HOST inline hipError_t host_warp_size(const hipStream_t stream, unsigned int& warp_size)
+{
+    int        hip_device;
+    hipError_t success = detail::get_device_from_stream(stream, hip_device);
+    if(success == hipSuccess)
+    {
+        return host_warp_size(hip_device, warp_size);
+    }
+    return success;
+};
 
 END_ROCPRIM_NAMESPACE
 
