@@ -1001,7 +1001,7 @@ TEST(RocprimIntrinsicsTests, MatchAny)
                                                                      1u << (label_bits + 3),
                                                                      seed_value);
 
-        const auto active_lanes_for_testing = active_lanes_tests();
+        const auto active_lanes_for_testing = active_lanes_tests(device_id);
         for(const auto& active_lanes : active_lanes_for_testing)
         {
             for(const auto& lane_predicates : active_lanes_for_testing)
@@ -1193,11 +1193,12 @@ TEST(RocprimIntrinsicsTests, GroupElect)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    const size_t hardware_warp_size = ::rocprim::host_warp_size();
-    const size_t warps_per_block    = 4;
-    const size_t block_size         = warps_per_block * hardware_warp_size;
-    const size_t blocks             = 48;
-    const size_t number_of_warps    = blocks * warps_per_block;
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+    const size_t warps_per_block = 4;
+    const size_t block_size      = warps_per_block * hardware_warp_size;
+    const size_t blocks          = 48;
+    const size_t number_of_warps = blocks * warps_per_block;
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
     max_lane_mask_type* d_input;
