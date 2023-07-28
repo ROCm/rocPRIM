@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -384,7 +384,9 @@ public:
             = segment_heads_in_block - (is_global_first_tile ? 1 : 0)
               + (is_global_last_tile && valid_in_global_last_tile != items_per_tile ? 1 : 0);
 
-        if(is_global_first_tile && flat_thread_id == 0)
+        // Reset head-flag on the very first item to make sure we don't start a new run for data where
+        // (key[0] == key[0]) is false (e.g., when key[0] is NaN).
+        if(is_first_tile && flat_thread_id == 0)
         {
             head_flags[0] = 0;
         }
