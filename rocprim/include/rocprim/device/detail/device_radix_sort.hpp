@@ -163,20 +163,16 @@ struct radix_digit_count_helper
                 const bit_key_type bit_key = key_codec::encode(keys[i]);
                 const unsigned int digit = key_codec::extract_digit(bit_key, bit, current_radix_bits);
                 const unsigned int pos = i * BlockSize + flat_id;
-                lane_mask_type same_digit_lanes_mask = ::rocprim::ballot(IsFull || (pos < valid_count));
-                for(unsigned int b = 0; b < RadixBits; b++)
-                {
-                    const unsigned int bit_set = digit & (1u << b);
-                    const lane_mask_type bit_set_mask = ::rocprim::ballot(bit_set);
-                    same_digit_lanes_mask &= (bit_set ? bit_set_mask : ~bit_set_mask);
-                }
-                const unsigned int same_digit_count = ::rocprim::bit_count(same_digit_lanes_mask);
-                const unsigned int prev_same_digit_count = ::rocprim::masked_bit_count(same_digit_lanes_mask);
-                if(prev_same_digit_count == 0)
+
+                lane_mask_type same_digit_lanes_mask
+                    = ::rocprim::match_any<RadixBits>(digit, IsFull || (pos < valid_count));
+
+                if(::rocprim::group_elect(same_digit_lanes_mask))
                 {
                     // Write the number of lanes having this digit,
                     // if the current lane is the first (and maybe only) lane with this digit.
-                    storage.digit_counts[warp_id][digit] += same_digit_count;
+                    storage.digit_counts[warp_id][digit]
+                        += ::rocprim::bit_count(same_digit_lanes_mask);
                 }
             }
         }

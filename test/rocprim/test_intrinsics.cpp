@@ -953,14 +953,15 @@ TYPED_TEST(RocprimIntrinsicsTests, WarpPermute)
 template<unsigned int LabelBits>
 __global__ void match_any_kernel(max_lane_mask_type* output,
                                  unsigned int*       input,
-                                 max_lane_mask_type  active_lanes)
+                                 max_lane_mask_type  active_lanes,
+                                 max_lane_mask_type  lane_predicates)
 {
     const unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
 
-    const auto         value  = input[index];
     max_lane_mask_type result = test_type_helper<max_lane_mask_type>::uninitialized();
     if(is_lane_active(active_lanes, rocprim::lane_id()))
-        result = rocprim::match_any<LabelBits>(value);
+        result = rocprim::match_any<LabelBits>(input[index],
+                                               is_lane_active(lane_predicates, rocprim::lane_id()));
     output[index] = result;
 }
 
@@ -1000,63 +1001,72 @@ TEST(RocprimIntrinsicsTests, MatchAny)
                                                                      1u << (label_bits + 3),
                                                                      seed_value);
 
-        for(const auto active_lanes : active_lanes_tests(device_id))
+        const auto active_lanes_for_testing = active_lanes_tests(device_id);
+        for(const auto& active_lanes : active_lanes_for_testing)
         {
-            SCOPED_TRACE(testing::Message()
-                         << "with active_lanes = " << std::bitset<64>(active_lanes));
-
-            for(size_t block = 0; block < blocks; ++block)
+            for(const auto& lane_predicates : active_lanes_for_testing)
             {
-                for(size_t warp = 0; warp < warps_per_block; ++warp)
+                SCOPED_TRACE(testing::Message()
+                             << "with lane_predicates = " << std::bitset<64>(lane_predicates));
+                SCOPED_TRACE(testing::Message()
+                             << "with active_lanes = " << std::bitset<64>(active_lanes));
+
+                for(size_t block = 0; block < blocks; ++block)
                 {
-                    const auto base = (block * warps_per_block + warp) * hardware_warp_size;
-                    std::vector<max_lane_mask_type> histogram(1u << label_bits, 0);
-
-                    for(size_t lane = 0; lane < hardware_warp_size; ++lane)
+                    for(size_t warp = 0; warp < warps_per_block; ++warp)
                     {
-                        if(is_lane_active(active_lanes, lane))
+                        const auto base = (block * warps_per_block + warp) * hardware_warp_size;
+                        std::vector<max_lane_mask_type> histogram(1u << label_bits, 0);
+
+                        for(size_t lane = 0; lane < hardware_warp_size; ++lane)
                         {
+                            if(is_lane_active(active_lanes, lane)
+                               && is_lane_active(lane_predicates, lane))
+                            {
+                                const auto value = bit_extract(input[base + lane], label_bits);
+                                histogram[value] |= max_lane_mask_type{1} << lane;
+                            }
+                        }
+
+                        for(size_t lane = 0; lane < hardware_warp_size; ++lane)
+                        {
+                            if(!is_lane_active(active_lanes, lane))
+                            {
+                                expected[base + lane]
+                                    = test_type_helper<unsigned int>::uninitialized();
+                                continue;
+                            }
+
                             const auto value = bit_extract(input[base + lane], label_bits);
-                            histogram[value] |= max_lane_mask_type{1} << lane;
-                        }
-                    }
-
-                    for(size_t lane = 0; lane < hardware_warp_size; ++lane)
-                    {
-                        if(is_lane_active(active_lanes, lane))
-                        {
-                            const auto value      = bit_extract(input[base + lane], label_bits);
-                            expected[base + lane] = histogram[value];
-                        }
-                        else
-                        {
-                            expected[base + lane] = test_type_helper<unsigned int>::uninitialized();
+                            expected[base + lane]
+                                = is_lane_active(lane_predicates, lane) ? histogram[value] : 0;
                         }
                     }
                 }
+
+                HIP_CHECK(hipMemcpy(d_input,
+                                    input.data(),
+                                    size * sizeof(unsigned int),
+                                    hipMemcpyHostToDevice));
+
+                hipLaunchKernelGGL(HIP_KERNEL_NAME(match_any_kernel<label_bits>),
+                                   dim3(blocks),
+                                   dim3(block_size),
+                                   0,
+                                   hipStreamDefault,
+                                   d_output,
+                                   d_input,
+                                   active_lanes,
+                                   lane_predicates);
+                HIP_CHECK(hipGetLastError());
+
+                HIP_CHECK(hipMemcpy(output.data(),
+                                    d_output,
+                                    size * sizeof(max_lane_mask_type),
+                                    hipMemcpyDeviceToHost));
+
+                test_utils::assert_eq(output, expected);
             }
-
-            HIP_CHECK(hipMemcpy(d_input,
-                                input.data(),
-                                size * sizeof(unsigned int),
-                                hipMemcpyHostToDevice));
-
-            hipLaunchKernelGGL(HIP_KERNEL_NAME(match_any_kernel<label_bits>),
-                               dim3(blocks),
-                               dim3(block_size),
-                               0,
-                               hipStreamDefault,
-                               d_output,
-                               d_input,
-                               active_lanes);
-            HIP_CHECK(hipGetLastError());
-
-            HIP_CHECK(hipMemcpy(output.data(),
-                                d_output,
-                                size * sizeof(max_lane_mask_type),
-                                hipMemcpyDeviceToHost));
-
-            test_utils::assert_eq(output, expected);
         }
     }
 
@@ -1155,6 +1165,128 @@ TEST(RocprimIntrinsicsTests, Ballot)
                                 hipMemcpyDeviceToHost));
 
             test_utils::assert_eq(output, expected);
+        }
+    }
+
+    hipFree(d_input);
+    hipFree(d_output);
+}
+
+__global__ void group_elect_kernel(max_lane_mask_type* output,
+                                   max_lane_mask_type* input,
+                                   size_t              warps_per_block)
+{
+    const unsigned int input_index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    const unsigned int output_index
+        = blockIdx.x * warps_per_block + threadIdx.x / ::rocprim::device_warp_size();
+
+    if(rocprim::group_elect(input[input_index]))
+    {
+        atomicOr(&output[output_index], max_lane_mask_type{1} << ::rocprim::lane_id());
+    }
+}
+
+TEST(RocprimIntrinsicsTests, GroupElect)
+{
+    const int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    unsigned int hardware_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, hardware_warp_size));
+    const size_t warps_per_block = 4;
+    const size_t block_size      = warps_per_block * hardware_warp_size;
+    const size_t blocks          = 48;
+    const size_t number_of_warps = blocks * warps_per_block;
+    SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
+
+    max_lane_mask_type* d_input;
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, blocks * block_size * sizeof(*d_input)));
+
+    max_lane_mask_type* d_output;
+    HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, number_of_warps * sizeof(*d_output)));
+
+    std::vector<max_lane_mask_type> output;
+    output.reserve(number_of_warps);
+
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    {
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
+
+        std::vector<max_lane_mask_type>              input(blocks * block_size, 0);
+        std::vector<std::vector<max_lane_mask_type>> warp_histograms(blocks * warps_per_block);
+
+        auto input_it = input.begin();
+        for(size_t block = 0; block < blocks; ++block)
+        {
+            for(size_t warp = 0; warp < warps_per_block; ++warp)
+            {
+                const std::vector<unsigned int> group_labels
+                    = test_utils::get_random_data<unsigned int>(hardware_warp_size,
+                                                                0,
+                                                                hardware_warp_size,
+                                                                seed_value + warp);
+
+                auto& histogram = warp_histograms[block * warps_per_block + warp];
+                histogram.assign(hardware_warp_size + 1, 0);
+                for(size_t lane = 0; lane < hardware_warp_size; ++lane)
+                {
+                    const unsigned label = group_labels[lane];
+                    histogram[label] |= max_lane_mask_type{1} << lane;
+                }
+
+                input_it
+                    = std::transform(group_labels.begin(),
+                                     group_labels.end(),
+                                     input_it,
+                                     [&](unsigned int label)
+                                     {
+                                         // Mark some lanes as invalid (not part of any group)
+                                         return label < hardware_warp_size ? histogram[label] : 0;
+                                     });
+            }
+        }
+
+        output.assign(number_of_warps, 0);
+
+        HIP_CHECK(hipMemcpy(d_input,
+                            input.data(),
+                            blocks * block_size * sizeof(*d_input),
+                            hipMemcpyHostToDevice));
+
+        HIP_CHECK(hipMemset(d_output, 0, number_of_warps * sizeof(*d_output)));
+
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(group_elect_kernel),
+                           dim3(blocks),
+                           dim3(block_size),
+                           0,
+                           hipStreamDefault,
+                           d_output,
+                           d_input,
+                           warps_per_block);
+        HIP_CHECK(hipGetLastError());
+
+        HIP_CHECK(hipMemcpy(output.data(),
+                            d_output,
+                            number_of_warps * sizeof(output[0]),
+                            hipMemcpyDeviceToHost));
+
+        for(size_t i = 0; i < blocks * block_size; ++i)
+        {
+            const auto group_mask  = input[i];
+            const auto warp_output = output[i / hardware_warp_size];
+            if(group_mask > 0)
+            {
+                const max_lane_mask_type group_elect = group_mask & warp_output;
+                ASSERT_TRUE(rocprim::detail::is_power_of_two(group_elect));
+            }
+            else
+            {
+                ASSERT_EQ(warp_output & (max_lane_mask_type{1} << (i % hardware_warp_size)), 0);
+            }
         }
     }
 
