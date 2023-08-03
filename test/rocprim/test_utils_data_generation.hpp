@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -157,6 +157,90 @@ void add_special_values(std::vector<T>& source, seed_type seed_value)
         unsigned int start = gen() % (source.size() - special_values.size());
         std::copy(special_values.begin(), special_values.end(), source.begin() + start);
     }
+}
+
+template<class T, class U, class V>
+inline auto get_random_data(size_t size, U min, V max, seed_type seed_value) ->
+    typename std::enable_if<std::is_same<T, __int128_t>::value, std::vector<T>>::type
+{
+    engine_type gen{seed_value};
+    using dis_type = typename std::conditional<
+        is_valid_for_int_distribution<T>::value,
+        T,
+        typename std::conditional<std::is_signed<T>::value, int, unsigned int>::type>::type;
+    std::uniform_int_distribution<dis_type> distribution(static_cast<dis_type>(min),
+                                                         static_cast<dis_type>(max));
+    std::vector<T>                          data(size);
+    size_t                                  segment_size = size / random_data_generation_segments;
+    if(segment_size != 0)
+    {
+        for(uint32_t segment_index = 0; segment_index < random_data_generation_segments;
+            segment_index++)
+        {
+            if(segment_index % random_data_generation_repeat_strides == 0)
+            {
+                T repeated_value = static_cast<T>(distribution(gen));
+                std::fill(data.begin() + segment_size * segment_index,
+                          data.begin() + segment_size * (segment_index + 1),
+                          repeated_value);
+            }
+            else
+            {
+                std::generate(data.begin() + segment_size * segment_index,
+                              data.begin() + segment_size * (segment_index + 1),
+                              [&]() { return static_cast<T>(distribution(gen)); });
+            }
+        }
+    }
+    else
+    {
+        std::generate(data.begin(),
+                      data.end(),
+                      [&]() { return static_cast<T>(distribution(gen)); });
+    }
+    return data;
+}
+
+template<class T, class U, class V>
+inline auto get_random_data(size_t size, U min, V max, seed_type seed_value) ->
+    typename std::enable_if<std::is_same<T, __uint128_t>::value, std::vector<T>>::type
+{
+    engine_type gen{seed_value};
+    using dis_type = typename std::conditional<
+        is_valid_for_int_distribution<T>::value,
+        T,
+        typename std::conditional<std::is_signed<T>::value, int, unsigned int>::type>::type;
+    std::uniform_int_distribution<dis_type> distribution(static_cast<dis_type>(min),
+                                                         static_cast<dis_type>(max));
+    std::vector<T>                          data(size);
+    size_t                                  segment_size = size / random_data_generation_segments;
+    if(segment_size != 0)
+    {
+        for(uint32_t segment_index = 0; segment_index < random_data_generation_segments;
+            segment_index++)
+        {
+            if(segment_index % random_data_generation_repeat_strides == 0)
+            {
+                T repeated_value = static_cast<T>(distribution(gen));
+                std::fill(data.begin() + segment_size * segment_index,
+                          data.begin() + segment_size * (segment_index + 1),
+                          repeated_value);
+            }
+            else
+            {
+                std::generate(data.begin() + segment_size * segment_index,
+                              data.begin() + segment_size * (segment_index + 1),
+                              [&]() { return static_cast<T>(distribution(gen)); });
+            }
+        }
+    }
+    else
+    {
+        std::generate(data.begin(),
+                      data.end(),
+                      [&]() { return static_cast<T>(distribution(gen)); });
+    }
+    return data;
 }
 
 template<class T, class U, class V>
