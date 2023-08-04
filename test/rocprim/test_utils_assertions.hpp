@@ -240,6 +240,7 @@ void assert_bit_eq(const std::vector<T>& result, const std::vector<T>& expected)
     }
 }
 
+#if defined(__GNUC__) || defined(__clang__)
 inline void assert_bit_eq(const std::vector<__int128_t>& result,
                           const std::vector<__int128_t>& expected)
 {
@@ -313,6 +314,7 @@ inline void assert_bit_eq(const std::vector<__uint128_t>& result,
         }
     }
 }
+#endif
 }
 
 #endif //ROCPRIM_TEST_UTILS_ASSERTIONS_HPP
