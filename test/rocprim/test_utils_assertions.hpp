@@ -251,8 +251,8 @@ inline void assert_bit_eq(const std::vector<__int128_t>& result,
         static const char* charmap = "0123456789";
 
         std::string result;
-        result.reserve(40); // max. 40 digits possible ( uint64_t has 20)
-        __uint128_t helper = value;
+        result.reserve(41); // max. 40 digits possible ( uint64_t has 20) plus sign
+        __uint128_t helper = (value < 0) ? -value : value;
 
         do
         {
@@ -291,7 +291,7 @@ inline void assert_bit_eq(const std::vector<__uint128_t>& result,
 
         std::string result;
         result.reserve(40); // max. 40 digits possible ( uint64_t has 20)
-        __uint128_t helper = (value < 0) ? -value : value;
+        __uint128_t helper = value;
 
         do
         {
