@@ -112,7 +112,7 @@ struct match_texture_type
 
 /// \class texture_cache_iterator
 /// \brief A random-access input (read-only) iterator adaptor for dereferencing array values
-/// through texture cache.
+/// through texture cache.  This iterator is not functional on gfx94x architectures.
 ///
 /// \par Overview
 /// * A texture_cache_iterator wraps a device pointer of type T, where values are obtained
@@ -121,6 +121,8 @@ struct match_texture_type
 /// * Can only be constructed within host functions, and can only be dereferenced within
 /// device functions.
 /// * Accepts any data type from memory, and loads through texture cache.
+/// * This iterator is not functional on gfx94x architectures, as native texture fetch functions 
+/// are not supported in gfx94x.
 ///
 /// \tparam T - type of value that can be obtained by dereferencing the iterator.
 /// \tparam Difference - a type used for identify distance between iterators.
