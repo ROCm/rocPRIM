@@ -21,6 +21,7 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_LOOKBACK_SCAN_STATE_HPP_
 #define ROCPRIM_DEVICE_DETAIL_LOOKBACK_SCAN_STATE_HPP_
 
+#include <string.h>
 #include <type_traits>
 
 #include "../../functional.hpp"
@@ -468,7 +469,8 @@ inline hipError_t is_sleep_scan_state_used(bool& use_sleep)
 #else
     const int asicRevision = 0;
 #endif
-    use_sleep = prop.gcnArch == 908 && asicRevision < 2;
+    
+    use_sleep = strcmp(prop.gcnArchName, "908") == 0 && asicRevision < 2;
     return hipSuccess;
 }
 

@@ -23,6 +23,7 @@
 
 #include <iostream>
 #include <iterator>
+#include <string.h>
 #include <type_traits>
 
 #include "../config.hpp"
@@ -287,7 +288,7 @@ inline auto scan_impl(void*               temporary_storage,
                 std::cout << "items_per_block " << items_per_block << '\n';
             }
 
-            if (prop.gcnArch == 908 && asicRevision < 2)
+            if (strcmp(prop.gcnArchName, "908") == 0 && asicRevision < 2)
             {
                 hipLaunchKernelGGL(
                     HIP_KERNEL_NAME(init_lookback_scan_state_kernel<scan_state_with_sleep_type>),
@@ -312,7 +313,7 @@ inline auto scan_impl(void*               temporary_storage,
 
             if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
             grid_size = number_of_blocks;
-            if (prop.gcnArch == 908 && asicRevision < 2)
+            if (strcmp(prop.gcnArchName, "908") == 0 && asicRevision < 2)
             {
                 hipLaunchKernelGGL(
                     HIP_KERNEL_NAME(
