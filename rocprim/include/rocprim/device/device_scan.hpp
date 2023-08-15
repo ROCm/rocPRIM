@@ -23,7 +23,6 @@
 
 #include <iostream>
 #include <iterator>
-#include <string.h>
 #include <type_traits>
 
 #include "../config.hpp"

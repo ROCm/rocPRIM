@@ -21,7 +21,6 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_LOOKBACK_SCAN_STATE_HPP_
 #define ROCPRIM_DEVICE_DETAIL_LOOKBACK_SCAN_STATE_HPP_
 
-#include <string.h>
 #include <type_traits>
 
 #include "../../functional.hpp"
