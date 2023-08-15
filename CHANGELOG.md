@@ -5,10 +5,11 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 ## [Unreleased rocPRIM-3.0.0 for ROCm 6.0.0]
 ### Added
 ### Changed
- - Removed deprecated functionality: `reduce_by_key_config`, `MatchAny`, `scan_config`, `scan_by_key_config` and `radix_sort_config`.
- - Renamed `scan_config_v2` to `scan_config`, `scan_by_key_config_v2` to `scan_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`, `reduce_by_key_config_v2` to `reduce_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`.
- - Removed support for custom config types for device algorithms.
+- Removed deprecated functionality: `reduce_by_key_config`, `MatchAny`, `scan_config`, `scan_by_key_config` and `radix_sort_config`.
+- Renamed `scan_config_v2` to `scan_config`, `scan_by_key_config_v2` to `scan_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`, `reduce_by_key_config_v2` to `reduce_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`.
+- Removed support for custom config types for device algorithms.
 - `host_warp_size()` was moved into `rocprim/device/config_types.hpp`, and now uses either a `device_id` or a `stream` parameter to query the proper device and a `device_id` out parameter. The return type is `hipError_t`.
+- Added support for __int128_t in `device_radix_sort` and `block_radix_sort`.
 ### Fixed
 
 ## [Unreleased rocPRIM-2.13.1 for ROCm 5.7.0]
