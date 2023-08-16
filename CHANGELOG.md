@@ -4,6 +4,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 
 ## [Unreleased rocPRIM-3.0.0 for ROCm 6.0.0]
 ### Added
+ - Added new primitive: `block_run_length_decode`.
 ### Changed
 - Removed deprecated functionality: `reduce_by_key_config`, `MatchAny`, `scan_config`, `scan_by_key_config` and `radix_sort_config`.
 - Renamed `scan_config_v2` to `scan_config`, `scan_by_key_config_v2` to `scan_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`, `reduce_by_key_config_v2` to `reduce_by_key_config`, `radix_sort_config_v2` to `radix_sort_config`.
