@@ -23,10 +23,16 @@
 
 // Std::memcpy and std::memcmp
 #include <cstring>
+#include <vector>
 
-#include "test_utils_half.hpp"
+#include <rocprim/test_seed.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/types.hpp>
+
+#include "common_test_header.hpp"
 #include "test_utils_bfloat16.hpp"
 #include "test_utils_custom_test_types.hpp"
+#include "test_utils_half.hpp"
 
 namespace test_utils {
 
@@ -112,6 +118,23 @@ public:
     };
 };
 // End of extended numeric_limits
+
+// Converts possible device side types to their relevant host side native types
+inline rocprim::native_half convert_to_native(const rocprim::half& value)
+{
+    return rocprim::native_half(value);
+}
+
+inline rocprim::native_bfloat16 convert_to_native(const rocprim::bfloat16& value)
+{
+    return rocprim::native_bfloat16(value);
+}
+
+template<class T>
+inline auto convert_to_native(const T& value)
+{
+    return value;
+}
 
 // Helper class to generate a vector of special values for any type
 template<class T>
