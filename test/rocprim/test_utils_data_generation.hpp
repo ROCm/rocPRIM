@@ -538,6 +538,33 @@ std::vector<size_t> get_large_sizes(T seed_value)
     std::sort(sizes.begin(), sizes.end());
     return sizes;
 }
+
+/// \brief Computes the closest multiple of \p divisor to a certain \p ref.
+/// \param ref Number to be rounded up.
+/// \param divisor Number which closest multiple to \p ref we are looking for.
+inline size_t closest_greater_multiple(const size_t ref, const size_t divisor)
+{
+    if(!divisor)
+    {
+        return ref;
+    }
+    const size_t remainder = ref % divisor;
+    size_t       distance  = remainder ? divisor - remainder : 0;
+    return ref + distance;
+}
+
+template<class T>
+std::vector<size_t> get_block_size_multiples(T seed_value, const unsigned int block_size)
+{
+    std::vector<size_t> sizes = get_sizes(seed_value);
+    std::transform(sizes.begin(),
+                   sizes.end(),
+                   sizes.begin(),
+                   [block_size](size_t size)
+                   { return test_utils::closest_greater_multiple(size, block_size); });
+    std::set<size_t> unique_sizes(sizes.begin(), sizes.end());
+    return std::vector<size_t>(unique_sizes.begin(), unique_sizes.end());
+}
 }
 
 #endif //ROCPRIM_TEST_UTILS_DATA_GENERATION_HPP
