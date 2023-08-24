@@ -96,7 +96,7 @@ struct is_scalar
     > {};
 
 /// \brief Behaves like std::is_compound, but also supports half-precision
-/// floating point type (\ref rocprim::half). `value` for \ref rocprim::half is `false`.
+/// floating point type (\ref rocprim::half). `value` for rocprim::half is `false`.
 template<class T>
 struct is_compound
     : std::integral_constant<
@@ -129,7 +129,6 @@ struct get_unsigned_bits_type<T,4>
 {
   typedef uint32_t unsigned_type;
 };
-
 
 template<typename T>
 struct get_unsigned_bits_type<T,8>

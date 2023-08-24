@@ -254,9 +254,9 @@ make_transform_iterator(InputIterator iterator, UnaryFunction transform)
     return transform_iterator<InputIterator, UnaryFunction>(iterator, transform);
 }
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group iteratormodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_ITERATOR_TRANSFORM_ITERATOR_HPP_

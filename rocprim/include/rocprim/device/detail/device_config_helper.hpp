@@ -663,4 +663,7 @@ struct default_histogram_config_base
 
 END_ROCPRIM_NAMESPACE
 
+/// @}
+// end of group primitivesmodule_deviceconfigs
+
 #endif //ROCPRIM_DEVICE_DETAIL_CONFIG_HELPER_HPP_

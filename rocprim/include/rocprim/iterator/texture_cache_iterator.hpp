@@ -347,9 +347,9 @@ operator+(typename texture_cache_iterator<T, Difference>::difference_type distan
     return iterator + distance;
 }
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group iteratormodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_ITERATOR_TEXTURE_CACHE_ITERATOR_HPP_

@@ -110,6 +110,7 @@ unsigned int flat_block_thread_id()
         + threadIdx.x;
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional block (tile). Use template parameters to optimize 1D or 2D kernels.
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -135,6 +136,7 @@ auto flat_block_thread_id()
     return threadIdx.x + (threadIdx.y * blockDim.x) +
            (threadIdx.z * blockDim.y * blockDim.x);
 }
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Returns flat (linear, 1D) thread identifier in a multidimensional tile (block).
 ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -157,6 +159,7 @@ unsigned int warp_id(unsigned int flat_id)
     return flat_id/device_warp_size();
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 /// \brief Returns warp id in a block (tile). Use template parameters to optimize 1D or 2D kernels.
 /// \ingroup intrinsicsmodule_warp_id
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
@@ -165,6 +168,7 @@ unsigned int warp_id()
 {
     return flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>()/device_warp_size();
 }
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Returns flat (linear, 1D) block identifier in a multidimensional grid.
 /// \ingroup intrinsicsmodule_flat_id
@@ -176,6 +180,7 @@ unsigned int flat_block_id()
         + blockIdx.x;
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSizeZ>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 auto flat_block_id()
@@ -200,6 +205,7 @@ auto flat_block_id()
     return blockIdx.x + (blockIdx.y * gridDim.x) +
            (blockIdx.z * gridDim.y * gridDim.x);
 }
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 // Sync
 

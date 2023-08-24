@@ -317,9 +317,9 @@ make_zip_iterator(IteratorTuple iterator_tuple)
     return zip_iterator<IteratorTuple>(iterator_tuple);
 }
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group iteratormodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_ITERATOR_ZIP_ITERATOR_HPP_

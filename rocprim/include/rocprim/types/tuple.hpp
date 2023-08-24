@@ -589,7 +589,7 @@ public:
     }
 
     /// \brief Converting constructor. Initializes each element of the tuple
-    /// with the corresponding value in \p ::rocprim::detail::custom_forward<UTypes>(values).
+    /// with the corresponding value in \p rocprim::detail::custom_forward<UTypes>(values).
     ///
     /// This overload only participates in overload resolution if:
     /// * <tt>sizeof...(Types) == sizeof...(UTypes)</tt>,
@@ -704,7 +704,7 @@ public:
     /// \param other tuple to replace the contents of this tuple
     template<class... UTypes>
     tuple& operator=(const tuple<UTypes...>& other) noexcept;
-    /// \brief For all \p i, assigns \p ::rocprim::detail::custom_forward<Ui>(get<i>(other)) to \p rocprim::get<i>(*this).
+    /// \brief For all \p i, assigns \p rocprim::detail::custom_forward<Ui>(get<i>(other)) to \p rocprim::get<i>(*this).
     /// \param other tuple to replace the contents of this tuple
     template<class... UTypes>
     tuple& operator=(tuple<UTypes...>&& other) noexcept;

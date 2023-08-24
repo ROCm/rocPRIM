@@ -230,9 +230,9 @@ make_discard_iterator(size_t index = 0)
     return discard_iterator(index);
 }
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group iteratormodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_ITERATOR_DISCARD_ITERATOR_HPP_

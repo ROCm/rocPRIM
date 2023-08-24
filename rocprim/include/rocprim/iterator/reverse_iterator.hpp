@@ -203,9 +203,9 @@ ROCPRIM_HOST_DEVICE reverse_iterator<SourceIterator>
     return reverse_iterator<SourceIterator>(source_iterator);
 }
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group iteratormodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_ITERATOR_REVERSE_ITERATOR_HPP_
