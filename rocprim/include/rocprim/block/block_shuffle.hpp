@@ -156,6 +156,7 @@ public:
         );
     }
 
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
     void offset(const size_t& flat_id,
                 T input,
@@ -184,6 +185,7 @@ public:
             output = storage_.prev[static_cast<size_t>(offset_tid)];
         }
     }
+    #endif // DOXYGEN_SHOULD_SKIP_THIS
 
     /// \brief Shuffles data across threads in a block, offseted by the distance value.
     ///
@@ -222,6 +224,7 @@ public:
         );
     }
 
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
     void rotate(const size_t& flat_id,
                 T input,
@@ -250,6 +253,7 @@ public:
 
         output = storage_.prev[offset];
     }
+    #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 
     /// \brief The thread block rotates a blocked arrange of input items,
@@ -286,6 +290,7 @@ public:
         );
     }
 
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
     template <unsigned int ItemsPerThread>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
     void up(const size_t& flat_id,
@@ -320,7 +325,7 @@ public:
             prev[0] = storage_.prev[flat_id - 1];
         }
     }
-
+    #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 
     /// \brief The thread block rotates a blocked arrange of input items,
@@ -343,6 +348,7 @@ public:
         );
     }
 
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
     template <unsigned int ItemsPerThread>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
     void up(const size_t& flat_id,
@@ -367,6 +373,7 @@ public:
         // Update block prefix
         block_suffix = storage->prev[BlockSize - 1];
     }
+    #endif // DOXYGEN_SHOULD_SKIP_THIS
 
     /// \brief The thread block rotates a blocked arrange of input items,
     /// shifting it down by one item
@@ -402,6 +409,7 @@ public:
         );
     }
 
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
     template <unsigned int ItemsPerThread>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
     void down(const size_t& flat_id,
@@ -435,6 +443,7 @@ public:
           next[ItemsPerThread -1] = storage_.next[flat_id + 1];
         }
     }
+    #endif // DOXYGEN_SHOULD_SKIP_THIS
 
     /// \brief The thread block rotates a blocked arrange of input items,
     /// shifting it down by one item
@@ -455,6 +464,7 @@ public:
         );
     }
 
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
     template <unsigned int ItemsPerThread>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
     void down(const size_t& flat_id,
@@ -479,6 +489,7 @@ public:
         // Update block prefixstorage_->
         block_prefix = storage->next[0];
     }
+    #endif // DOXYGEN_SHOULD_SKIP_THIS
 };
 
 

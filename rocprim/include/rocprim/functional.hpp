@@ -31,6 +31,8 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \addtogroup utilsmodule_functional
 /// @{
 
+/// \brief Prints the supplied error message only once (using only one of the active threads).
+/// \note Currently, this is not defined for Navi devices.
 #if ROCPRIM_NAVI
 ROCPRIM_PRAGMA_MESSAGE("GPU printf warnings for invalid rocPRIM warp operations on Navi GPUs "
                        "temporarily disabled, due to performance issues with printf.")
@@ -47,6 +49,7 @@ ROCPRIM_PRAGMA_MESSAGE("GPU printf warnings for invalid rocPRIM warp operations 
         }
 #endif
 
+/// \brief Returns the maximum of its arguments.
 template<class T>
 ROCPRIM_HOST_DEVICE inline
 constexpr T max(const T& a, const T& b)
@@ -54,6 +57,7 @@ constexpr T max(const T& a, const T& b)
     return a < b ? b : a;
 }
 
+/// \brief Returns the minimum of its arguments.
 template<class T>
 ROCPRIM_HOST_DEVICE inline
 constexpr T min(const T& a, const T& b)
@@ -61,6 +65,7 @@ constexpr T min(const T& a, const T& b)
     return a < b ? a : b;
 }
 
+/// \brief Swaps two values.
 template<class T>
 ROCPRIM_HOST_DEVICE inline
 void swap(T& a, T& b)
@@ -70,9 +75,11 @@ void swap(T& a, T& b)
     b = c;
 }
 
+/// \brief Returns true if a < b. Otherwise returns false.
 template<class T = void>
 struct less
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
     {
@@ -80,6 +87,7 @@ struct less
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct less<void>
 {
@@ -90,10 +98,13 @@ struct less<void>
         return a < b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns true if a <= b. Otherwise returns false.
 template<class T = void>
 struct less_equal
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
     {
@@ -101,6 +112,7 @@ struct less_equal
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct less_equal<void>
 {
@@ -111,10 +123,13 @@ struct less_equal<void>
         return a <= b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns true if a > b. Otherwise returns false.
 template<class T = void>
 struct greater
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
     {
@@ -122,6 +137,7 @@ struct greater
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct greater<void>
 {
@@ -132,10 +148,13 @@ struct greater<void>
         return a > b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns true if a >= b. Otherwise returns false.
 template<class T = void>
 struct greater_equal
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
     {
@@ -143,6 +162,7 @@ struct greater_equal
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct greater_equal<void>
 {
@@ -153,10 +173,13 @@ struct greater_equal<void>
         return a >= b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns true if a == b. Otherwise returns false.
 template<class T = void>
 struct equal_to
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
     {
@@ -164,6 +187,7 @@ struct equal_to
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct equal_to<void>
 {
@@ -174,10 +198,13 @@ struct equal_to<void>
         return a == b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns true if a != b. Otherwise returns false.
 template<class T = void>
 struct not_equal_to
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
     {
@@ -185,6 +212,7 @@ struct not_equal_to
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct not_equal_to<void>
 {
@@ -195,10 +223,13 @@ struct not_equal_to<void>
         return a != b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns a + b.
 template<class T = void>
 struct plus
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
     {
@@ -206,6 +237,7 @@ struct plus
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct plus<void>
 {
@@ -216,10 +248,13 @@ struct plus<void>
         return a + b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns a - b.
 template<class T = void>
 struct minus
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
     {
@@ -227,6 +262,7 @@ struct minus
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct minus<void>
 {
@@ -237,10 +273,13 @@ struct minus<void>
         return a - b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns a * b.
 template<class T = void>
 struct multiplies
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
     {
@@ -248,6 +287,7 @@ struct multiplies
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct multiplies<void>
 {
@@ -258,10 +298,13 @@ struct multiplies<void>
         return a * b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns the maximum of its arguments.
 template<class T = void>
 struct maximum
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
     {
@@ -269,6 +312,7 @@ struct maximum
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct maximum<void>
 {
@@ -279,10 +323,13 @@ struct maximum<void>
         return a < b ? b : a;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns the minimum of its arguments.
 template<class T = void>
 struct minimum
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
     {
@@ -290,6 +337,7 @@ struct minimum
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct minimum<void>
 {
@@ -300,10 +348,13 @@ struct minimum<void>
         return a < b ? a : b;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Functor that returns its argument.
 template<class T = void>
 struct identity
 {
+    /// \brief Invocation operator
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a) const
     {
@@ -311,6 +362,7 @@ struct identity
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
 template<>
 struct identity<void>
 {
@@ -321,6 +373,7 @@ struct identity<void>
         return a;
     }
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /**
  * \brief Statically determine log2(N), rounded up.
@@ -375,13 +428,13 @@ struct Equals <A, A>
     };
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-
 template <int A>
 struct Int2Type
 {
    enum {VALUE = A};
 };
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// @}
 // end of group utilsmodule_functional

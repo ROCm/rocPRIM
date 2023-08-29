@@ -153,6 +153,8 @@ unsigned int warp_id()
     return flat_block_thread_id()/device_warp_size();
 }
 
+/// \brief Returns warp id in a block (tile), given the flat (linear, 1D) thread identifier in a multidimensional tile (block).
+/// \param flat_id - the flat id that should be used to compute the warp id.
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id(unsigned int flat_id)
 {

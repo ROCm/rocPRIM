@@ -153,6 +153,9 @@ struct tuple_element<I, const volatile T>
     using type = typename std::add_cv<typename tuple_element<I, T>::type>::type;
 };
 
+/// @brief \brief This is an alias used for convenience. It represents tuple_element<I, T>::type.
+/// @tparam T - type of the elements contained in the tuple
+/// @tparam I - size of the tuple (number of elements)
 template <size_t I, class T>
 using tuple_element_t = typename tuple_element<I, T>::type;
 

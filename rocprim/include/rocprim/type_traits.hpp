@@ -104,12 +104,16 @@ struct is_compound
         !is_fundamental<T>::value
     > {};
 
+/// \brief Used to retrieve a type that can be treated as unsigned version of the template parameter.
+/// \tparam T - The signed type to find an unsigned equivalent for.
+/// \tparam size - the desired size (in bytes) of the unsigned type
 template<typename T, int size = 0>
 struct get_unsigned_bits_type
 {
-  typedef typename get_unsigned_bits_type<T,sizeof(T)>::unsigned_type unsigned_type;
+  typedef typename get_unsigned_bits_type<T,sizeof(T)>::unsigned_type unsigned_type; ///< Typedefed to the unsigned type.
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized versions
 template<typename T>
 struct get_unsigned_bits_type<T,1>
 {
@@ -135,7 +139,9 @@ struct get_unsigned_bits_type<T,8>
 {
   typedef uint64_t unsigned_type;
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<typename T, typename UnsignedBits>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 auto TwiddleIn(UnsignedBits key)
@@ -189,6 +195,7 @@ auto TwiddleOut(UnsignedBits key)
     static const UnsignedBits   HIGH_BIT    = UnsignedBits(1) << ((sizeof(UnsignedBits) * 8) - 1);
     return key ^ HIGH_BIT;
 };
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 
 END_ROCPRIM_NAMESPACE
