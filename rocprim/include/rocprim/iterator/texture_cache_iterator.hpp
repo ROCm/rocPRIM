@@ -360,8 +360,6 @@ operator+(typename texture_cache_iterator<T, Difference>::difference_type distan
 
 END_ROCPRIM_NAMESPACE
 
-END_ROCPRIM_NAMESPACE
-
 /// @}
 // end of group iteratormodule
 
