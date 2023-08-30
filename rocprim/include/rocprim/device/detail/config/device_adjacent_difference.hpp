@@ -41,7 +41,6 @@ namespace detail
 template<unsigned int arch, class value_type, class enable = void>
 struct default_adjacent_difference_config : default_adjacent_difference_config_base<value_type>
 {};
-
 // Based on value_type = double
 template<class value_type>
 struct default_adjacent_difference_config<
@@ -68,7 +67,7 @@ struct default_adjacent_difference_config<
     static_cast<unsigned int>(target_arch::gfx1030),
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<256, 4>
+                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<128, 4>
 {};
 
 // Based on value_type = int64_t
@@ -117,7 +116,7 @@ struct default_adjacent_difference_config<
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
                       && (sizeof(value_type) <= 8) && (sizeof(value_type) > 4))>>
-    : adjacent_difference_config<512, 2>
+    : adjacent_difference_config<128, 8>
 {};
 
 // Based on value_type = float
@@ -136,7 +135,7 @@ struct default_adjacent_difference_config<
     static_cast<unsigned int>(target_arch::gfx1102),
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<512, 8>
+                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<32, 4>
 {};
 
 // Based on value_type = int64_t

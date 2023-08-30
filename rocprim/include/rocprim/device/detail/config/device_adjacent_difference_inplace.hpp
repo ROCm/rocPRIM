@@ -46,79 +46,11 @@ struct default_adjacent_difference_inplace_config
 // Based on value_type = double
 template<class value_type>
 struct default_adjacent_difference_inplace_config<
-    static_cast<unsigned int>(target_arch::gfx1030),
-    value_type,
-    std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 8) && (sizeof(value_type) > 4))>>
-    : adjacent_difference_config<512, 8>
-{};
-
-// Based on value_type = float
-template<class value_type>
-struct default_adjacent_difference_inplace_config<
-    static_cast<unsigned int>(target_arch::gfx1030),
-    value_type,
-    std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2))>>
-    : adjacent_difference_config<1024, 8>
-{};
-
-// Based on value_type = rocprim::half
-template<class value_type>
-struct default_adjacent_difference_inplace_config<
-    static_cast<unsigned int>(target_arch::gfx1030),
-    value_type,
-    std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<512, 32>
-{};
-
-// Based on value_type = int64_t
-template<class value_type>
-struct default_adjacent_difference_inplace_config<
-    static_cast<unsigned int>(target_arch::gfx1030),
-    value_type,
-    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 8) && (sizeof(value_type) > 4))>>
-    : adjacent_difference_config<512, 8>
-{};
-
-// Based on value_type = int
-template<class value_type>
-struct default_adjacent_difference_inplace_config<
-    static_cast<unsigned int>(target_arch::gfx1030),
-    value_type,
-    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2))>>
-    : adjacent_difference_config<1024, 8>
-{};
-
-// Based on value_type = short
-template<class value_type>
-struct default_adjacent_difference_inplace_config<
-    static_cast<unsigned int>(target_arch::gfx1030),
-    value_type,
-    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 2) && (sizeof(value_type) > 1))>>
-    : adjacent_difference_config<256, 64>
-{};
-
-// Based on value_type = int8_t
-template<class value_type>
-struct default_adjacent_difference_inplace_config<
-    static_cast<unsigned int>(target_arch::gfx1030),
-    value_type,
-    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 1))>> : adjacent_difference_config<32, 64>
-{};
-
-// Based on value_type = double
-template<class value_type>
-struct default_adjacent_difference_inplace_config<
     static_cast<unsigned int>(target_arch::gfx1102),
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
                       && (sizeof(value_type) <= 8) && (sizeof(value_type) > 4))>>
-    : adjacent_difference_config<128, 32>
+    : adjacent_difference_config<128, 16>
 {};
 
 // Based on value_type = float
@@ -128,7 +60,7 @@ struct default_adjacent_difference_inplace_config<
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
                       && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2))>>
-    : adjacent_difference_config<256, 32>
+    : adjacent_difference_config<256, 16>
 {};
 
 // Based on value_type = rocprim::half
@@ -137,7 +69,7 @@ struct default_adjacent_difference_inplace_config<
     static_cast<unsigned int>(target_arch::gfx1102),
     value_type,
     std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
-                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<256, 64>
+                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<512, 16>
 {};
 
 // Based on value_type = int64_t
@@ -147,7 +79,7 @@ struct default_adjacent_difference_inplace_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
                       && (sizeof(value_type) <= 8) && (sizeof(value_type) > 4))>>
-    : adjacent_difference_config<128, 32>
+    : adjacent_difference_config<128, 16>
 {};
 
 // Based on value_type = int
@@ -157,7 +89,7 @@ struct default_adjacent_difference_inplace_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
                       && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2))>>
-    : adjacent_difference_config<256, 32>
+    : adjacent_difference_config<256, 16>
 {};
 
 // Based on value_type = short
@@ -167,7 +99,7 @@ struct default_adjacent_difference_inplace_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
                       && (sizeof(value_type) <= 2) && (sizeof(value_type) > 1))>>
-    : adjacent_difference_config<256, 64>
+    : adjacent_difference_config<256, 32>
 {};
 
 // Based on value_type = int8_t
@@ -177,6 +109,74 @@ struct default_adjacent_difference_inplace_config<
     value_type,
     std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
                       && (sizeof(value_type) <= 1))>> : adjacent_difference_config<512, 32>
+{};
+
+// Based on value_type = double
+template<class value_type>
+struct default_adjacent_difference_inplace_config<
+    static_cast<unsigned int>(target_arch::gfx1030),
+    value_type,
+    std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
+                      && (sizeof(value_type) <= 8) && (sizeof(value_type) > 4))>>
+    : adjacent_difference_config<512, 4>
+{};
+
+// Based on value_type = float
+template<class value_type>
+struct default_adjacent_difference_inplace_config<
+    static_cast<unsigned int>(target_arch::gfx1030),
+    value_type,
+    std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
+                      && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2))>>
+    : adjacent_difference_config<1024, 4>
+{};
+
+// Based on value_type = rocprim::half
+template<class value_type>
+struct default_adjacent_difference_inplace_config<
+    static_cast<unsigned int>(target_arch::gfx1030),
+    value_type,
+    std::enable_if_t<(bool(rocprim::is_floating_point<value_type>::value)
+                      && (sizeof(value_type) <= 2))>> : adjacent_difference_config<1024, 8>
+{};
+
+// Based on value_type = int64_t
+template<class value_type>
+struct default_adjacent_difference_inplace_config<
+    static_cast<unsigned int>(target_arch::gfx1030),
+    value_type,
+    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
+                      && (sizeof(value_type) <= 8) && (sizeof(value_type) > 4))>>
+    : adjacent_difference_config<512, 4>
+{};
+
+// Based on value_type = int
+template<class value_type>
+struct default_adjacent_difference_inplace_config<
+    static_cast<unsigned int>(target_arch::gfx1030),
+    value_type,
+    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
+                      && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2))>>
+    : adjacent_difference_config<1024, 4>
+{};
+
+// Based on value_type = short
+template<class value_type>
+struct default_adjacent_difference_inplace_config<
+    static_cast<unsigned int>(target_arch::gfx1030),
+    value_type,
+    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
+                      && (sizeof(value_type) <= 2) && (sizeof(value_type) > 1))>>
+    : adjacent_difference_config<1024, 8>
+{};
+
+// Based on value_type = int8_t
+template<class value_type>
+struct default_adjacent_difference_inplace_config<
+    static_cast<unsigned int>(target_arch::gfx1030),
+    value_type,
+    std::enable_if_t<(!bool(rocprim::is_floating_point<value_type>::value)
+                      && (sizeof(value_type) <= 1))>> : adjacent_difference_config<32, 64>
 {};
 
 // Based on value_type = double
