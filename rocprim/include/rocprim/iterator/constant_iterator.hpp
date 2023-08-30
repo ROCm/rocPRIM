@@ -82,7 +82,7 @@ public:
     ROCPRIM_HOST_DEVICE inline
     ~constant_iterator() = default;
 
-    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS
     ROCPRIM_HOST_DEVICE inline
     value_type operator*() const
     {
@@ -167,7 +167,7 @@ public:
         return value_;
     }
 
-    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS
     ROCPRIM_HOST_DEVICE inline
     bool operator==(constant_iterator other) const
     {

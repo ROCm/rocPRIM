@@ -87,7 +87,7 @@ public:
     {
     }
 
-    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS
     ROCPRIM_HOST_DEVICE inline
     counting_iterator& operator++()
     {

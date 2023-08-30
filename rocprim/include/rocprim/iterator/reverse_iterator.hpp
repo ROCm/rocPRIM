@@ -66,7 +66,7 @@ public:
     ROCPRIM_HOST_DEVICE
     reverse_iterator(SourceIterator source_iterator) : source_iterator_(source_iterator) {}
 
-    #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip overloaded implementation
+    #ifndef DOXYGEN_SHOULD_SKIP_THIS
     ROCPRIM_HOST_DEVICE
     reverse_iterator& operator++()
     {

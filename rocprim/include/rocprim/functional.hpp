@@ -87,10 +87,12 @@ struct less
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Returns true if a < b. Otherwise returns false.
+/// This version is a specialization for type void.
 template<>
 struct less<void>
 {
+    /// \brief Invocation operator
     template<class T, class U>
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const U& b) const
@@ -98,7 +100,6 @@ struct less<void>
         return a < b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns true if a <= b. Otherwise returns false.
 template<class T = void>
@@ -112,10 +113,12 @@ struct less_equal
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns true if a <= b. Otherwise returns false.
+/// This version is a specialization for type void.
 template<>
 struct less_equal<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
@@ -123,7 +126,6 @@ struct less_equal<void>
         return a <= b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns true if a > b. Otherwise returns false.
 template<class T = void>
@@ -137,10 +139,12 @@ struct greater
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns true if a > b. Otherwise returns false.
+/// This version is a specialization for type void.
 template<>
 struct greater<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
@@ -148,7 +152,6 @@ struct greater<void>
         return a > b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns true if a >= b. Otherwise returns false.
 template<class T = void>
@@ -162,10 +165,12 @@ struct greater_equal
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns true if a >= b. Otherwise returns false.
+/// This version is a specialization for type void.
 template<>
 struct greater_equal<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
@@ -173,7 +178,6 @@ struct greater_equal<void>
         return a >= b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns true if a == b. Otherwise returns false.
 template<class T = void>
@@ -187,10 +191,12 @@ struct equal_to
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns true if a == b. Otherwise returns false.
+/// This version is a specialization for type void.
 template<>
 struct equal_to<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
@@ -198,7 +204,6 @@ struct equal_to<void>
         return a == b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns true if a != b. Otherwise returns false.
 template<class T = void>
@@ -212,10 +217,12 @@ struct not_equal_to
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns true if a != b. Otherwise returns false.
+/// This version is a specialization for type void.
 template<>
 struct not_equal_to<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr bool operator()(const T& a, const T& b) const
@@ -223,7 +230,6 @@ struct not_equal_to<void>
         return a != b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns a + b.
 template<class T = void>
@@ -237,10 +243,12 @@ struct plus
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns a + b.
+/// This version is a specialization for type void.
 template<>
 struct plus<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
@@ -248,7 +256,6 @@ struct plus<void>
         return a + b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns a - b.
 template<class T = void>
@@ -262,10 +269,12 @@ struct minus
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns a - b.
+/// This version is a specialization for type void.
 template<>
 struct minus<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
@@ -273,7 +282,6 @@ struct minus<void>
         return a - b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns a * b.
 template<class T = void>
@@ -287,10 +295,12 @@ struct multiplies
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns a * b.
+/// This version is a specialization for type void.
 template<>
 struct multiplies<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
@@ -298,7 +308,6 @@ struct multiplies<void>
         return a * b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns the maximum of its arguments.
 template<class T = void>
@@ -312,10 +321,12 @@ struct maximum
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns the maximum of its arguments.
+/// This version is a specialization for type void.
 template<>
 struct maximum<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
@@ -323,7 +334,6 @@ struct maximum<void>
         return a < b ? b : a;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns the minimum of its arguments.
 template<class T = void>
@@ -337,10 +347,12 @@ struct minimum
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns the minimum of its arguments.
+/// This version is a specialization for type void.
 template<>
 struct minimum<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a, const T& b) const
@@ -348,7 +360,6 @@ struct minimum<void>
         return a < b ? a : b;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Functor that returns its argument.
 template<class T = void>
@@ -362,10 +373,12 @@ struct identity
     }
 };
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized version
+/// \brief Functor that returns its argument.
+/// This version is a specialization for type void.
 template<>
 struct identity<void>
 {
+    /// \brief Invocation operator
     template <typename T>
     ROCPRIM_HOST_DEVICE inline
     constexpr T operator()(const T& a) const
@@ -373,7 +386,6 @@ struct identity<void>
         return a;
     }
 };
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /**
  * \brief Statically determine log2(N), rounded up.
