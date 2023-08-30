@@ -252,8 +252,10 @@ struct device_adjacent_difference_benchmark_generator
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
         static constexpr unsigned int min_items_per_thread = 1;
+        static constexpr unsigned int max_items_per_thread_arg
+            = TUNING_SHARED_MEMORY_MAX / (BlockSize * sizeof(T) * 2 + sizeof(T));
         static constexpr unsigned int max_items_per_thread
-            = rocprim::Log2<TUNING_SHARED_MEMORY_MAX / (BlockSize * sizeof(T))>::VALUE - 1;
+            = rocprim::Log2<max_items_per_thread_arg>::VALUE - 1;
         static_for_each<make_index_range<unsigned int, min_items_per_thread, max_items_per_thread>,
                         create_ipt>(storage);
     }

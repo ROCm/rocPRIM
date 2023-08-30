@@ -161,8 +161,8 @@ using custom_config_0 = rocprim::adjacent_difference_config<128, 4>;
 
 template<int SizeLimit>
 using custom_size_limit_config
-    = rocprim::adjacent_difference_config<512,
-                                          16,
+    = rocprim::adjacent_difference_config<1024,
+                                          2,
                                           rocprim::block_load_method::block_load_transpose,
                                           rocprim::block_store_method::block_store_transpose,
                                           SizeLimit>;
