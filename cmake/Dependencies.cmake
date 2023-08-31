@@ -158,12 +158,19 @@ if(BUILD_BENCHMARK)
     message(STATUS "Google Benchmark not found. Fetching...")
     option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." OFF)
     option(BENCHMARK_ENABLE_INSTALL "Enable installation of benchmark." OFF)
+    if(WIN32)
+      set(OLD_RUN_HAVE_STD_REGEX "${RUN_HAVE_STD_REGEX}")
+      set(RUN_HAVE_STD_REGEX 0 CACHE BOOL "" FORCE)
+    endif()
     FetchContent_Declare(
       googlebench
       GIT_REPOSITORY https://github.com/google/benchmark.git
       GIT_TAG        v1.6.1
     )
     FetchContent_MakeAvailable(googlebench)
+    if(WIN32)
+      set(RUN_HAVE_STD_REGEX "${OLD_RUN_HAVE_STD_REGEX}" CACHE BOOL "" FORCE)
+    endif()
     if(NOT TARGET benchmark::benchmark)
       add_library(benchmark::benchmark ALIAS benchmark)
     endif()
