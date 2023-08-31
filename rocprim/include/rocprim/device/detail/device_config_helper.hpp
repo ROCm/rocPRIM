@@ -356,7 +356,6 @@ struct [[deprecated("The UseLookback switch has been removed, as scan now only s
     static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
     /// \brief Limit on the number of items for a single scan kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
-#endif
 
     constexpr scan_config()
         : ::rocprim::detail::scan_config_params{
@@ -365,6 +364,7 @@ struct [[deprecated("The UseLookback switch has been removed, as scan now only s
             BlockStoreMethod,
             BlockScanMethod
     } {};
+#endif
 };
 
 namespace detail
