@@ -121,8 +121,7 @@ public:
 
     /// \brief Shuffles data across threads in a block, offseted by the distance value.
     ///
-    /// \par A thread with  threadId i receives data from a thread with threadIdx (i-distance), whre distance may be a negative value.
-    /// allocated by the method itself.
+    /// \par A thread with threadIdx i receives data from a thread with threadIdx (i - distance), where distance may be a negative value.
     /// \par Any shuffle operation with invalid input or output threadIds are not carried out, i.e. threadId < 0 || threadId >= BlockSize.
     ///
     /// \param [in] input - input data to be shuffled to another thread.
@@ -158,8 +157,7 @@ public:
 
     /// \brief Shuffles data across threads in a block, offseted by the distance value.
     ///
-    /// \par A thread with  threadId i receives data from a thread with threadIdx (i-distance), whre distance may be a negative value.
-    /// allocated by the method itself.
+    /// \par A thread with threadIdx i receives data from a thread with threadIdx (i - distance), where distance may be a negative value.
     /// \par Any shuffle operation with invalid input or output threadIds are not carried out, i.e. threadId < 0 || threadId >= BlockSize.
     ///
     /// \param [in] flat_id - flat thread ID obtained from rocprim::flat_block_thread_id
@@ -178,8 +176,7 @@ public:
 
     /// \brief Shuffles data across threads in a block, offseted by the distance value, using temporary storage.
     ///
-    /// \par A thread with  threadId i receives data from a thread with threadIdx (i-distance), whre distance may be a negative value.
-    /// allocated by the method itself.
+    /// \par A thread with threadIdx i receives data from a thread with threadIdx (i - distance), where distance may be a negative value.
     /// \par Any shuffle operation with invalid input or output threadIds are not carried out, i.e. threadId < 0 || threadId >= BlockSize.
     ///
     /// \param [in] flat_id - flat thread ID obtained from rocprim::flat_block_thread_id
@@ -208,8 +205,7 @@ public:
 
     /// \brief Shuffles data across threads in a block, offseted by the distance value.
     ///
-    /// \par A thread with  threadId i receives data from a thread with threadIdx (i-distance)%BlockSize, whre distance may be a negative value.
-    /// allocated by the method itself.
+    /// \par A thread with threadIdx i receives data from a thread with threadIdx (i - distance) % BlockSize, where distance may be a negative value.
     /// \par Data is rotated around the block, using (input_threadId + distance) modulous BlockSize to ensure valid threadIds.
     ///
     /// \param [in] input - input data to be shuffled to another thread.
@@ -245,8 +241,7 @@ public:
 
     /// \brief Shuffles data across threads in a block, offseted by the distance value.
     ///
-    /// \par A thread with  threadId i receives data from a thread with threadIdx (i-distance)%BlockSize, whre distance may be a negative value.
-    /// allocated by the method itself.
+    /// \par A thread with threadIdx i receives data from a thread with threadIdx (i - distance) % BlockSize, where distance may be a negative value.
     /// \par Data is rotated around the block, using (input_threadId + distance) modulous BlockSize to ensure valid threadIds.
     ///
     /// \param [in] flat_id - flat thread ID obtained from rocprim::flat_block_thread_id
@@ -265,8 +260,7 @@ public:
 
     /// \brief Shuffles data across threads in a block, offseted by the distance value, using temporary storage.
     ///
-    /// \par A thread with  threadId i receives data from a thread with threadIdx (i-distance)%BlockSize, whre distance may be a negative value.
-    /// allocated by the method itself.
+    /// \par A thread with threadIdx i receives data from a thread with threadIdx (i - distance) % BlockSize, where distance may be a negative value.
     /// \par Data is rotated around the block, using (input_threadId + distance) modulous BlockSize to ensure valid threadIds.
     ///
     /// \param [in] flat_id - flat thread ID obtained from rocprim::flat_block_thread_id

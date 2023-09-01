@@ -150,7 +150,7 @@ class block_radix_rank
         Algorithm>::template type<BlockSizeX, RadixBits, BlockSizeY, BlockSizeZ>;
 
 public:
-    /// \brief The number of digits each thead will process.
+    /// \brief The number of digits each thread will process.
     static constexpr unsigned int digits_per_thread = base_type::digits_per_thread;
 
     /// \brief Struct used to allocate a temporary memory that is required for thread

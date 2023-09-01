@@ -88,7 +88,7 @@ hipError_t binary_search(void * temporary_storage,
 /// \brief Performs a device-level lower bound check.
 ///
 /// \par Overview
-/// Runs multiple lower bound checks in parallel (one for each \p needle in \p needles ).
+/// Runs multiple lower bound checks in parallel (one for each \p needle in <tt>needles</tt>).
 /// A lower bound check returns the index of the first element in \p haystack that
 /// causes \p compare_op(element,needle) to return false. If no item in \p haystack satisfies
 /// this criteria, then \p haystack_size is returned.
@@ -164,7 +164,7 @@ hipError_t lower_bound(void * temporary_storage,
 /// \brief Performs a device-level upper bound check.
 ///
 /// \par Overview
-/// Runs multiple upper bound checks in parallel (one for each \p needle in \p needles ).
+/// Runs multiple upper bound checks in parallel (one for each \p needle in <tt>needles</tt>).
 /// An upper bound check returns the index of the first element in \p haystack that
 /// causes \p compare_op(needle,element) to return true. If no item in \p haystack satisfies
 /// this criteria, then \p haystack_size is returned.
