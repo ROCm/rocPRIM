@@ -93,10 +93,10 @@ ROCPRIM_DEVICE __forceinline__ void AsmThreadStore(void * ptr, T val)
 
 #ifndef __HIP_CPU_RT__
 #if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__)
-ROCPRIM_ASM_THREAD_STORE_GROUP(store_wb, "sc0 sc1", ""); // TODO: gfx942 validation
-ROCPRIM_ASM_THREAD_STORE_GROUP(store_cg, "sc0 sc1", "");
-ROCPRIM_ASM_THREAD_STORE_GROUP(store_wt, "sc0 sc1", "vmcnt");
-ROCPRIM_ASM_THREAD_STORE_GROUP(store_volatile, "sc0 sc1", "vmcnt");
+ROCPRIM_ASM_THREAD_STORE_GROUP(store_wb, "sc0", ""); // TODO: gfx942 validation
+ROCPRIM_ASM_THREAD_STORE_GROUP(store_cg, "sc0 nt", "");
+ROCPRIM_ASM_THREAD_STORE_GROUP(store_wt, "sc0", "vmcnt");
+ROCPRIM_ASM_THREAD_STORE_GROUP(store_volatile, "sc0", "vmcnt");
 #else
 ROCPRIM_ASM_THREAD_STORE_GROUP(store_wb, "glc", "");
 ROCPRIM_ASM_THREAD_STORE_GROUP(store_cg, "glc slc", "");
