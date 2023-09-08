@@ -337,7 +337,7 @@ inline auto get_random_data(size_t size, typename T::value_type min, typename T:
         data.begin(), data.end(),
         [&]()
         {
-            T result;
+            T result = 0;
             for(size_t i = 0; i < T::size; i++)
             {
                 result.values[i] = distribution(gen);

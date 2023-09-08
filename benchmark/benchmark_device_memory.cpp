@@ -65,7 +65,7 @@ template<class T, unsigned int ItemsPerThread, unsigned int BlockSize>
 struct operation<no_operation, T, ItemsPerThread, BlockSize>
 {
     ROCPRIM_HOST_DEVICE inline
-    void operator()(T (&)[ItemsPerThread], void* = nullptr, unsigned int = 0, T* = nullptr)
+    void operator()(T (&)[ItemsPerThread], void* = nullptr, unsigned int = 0, T* = nullptr) const
     {
         // No operation
     }
@@ -80,7 +80,7 @@ struct operation<custom_operation, T, ItemsPerThread, BlockSize>
     ROCPRIM_HOST_DEVICE inline
     void operator()(T (&input)[ItemsPerThread],
                     void* shared_storage = nullptr, unsigned int shared_storage_size = 0,
-                    T* global_mem_output = nullptr)
+                    T* global_mem_output = nullptr) const
     {
         (void) shared_storage;
         (void) shared_storage_size;
@@ -105,7 +105,7 @@ struct operation<block_scan, T, ItemsPerThread, BlockSize>
     ROCPRIM_HOST_DEVICE inline
     void operator()(T (&input)[ItemsPerThread],
                     void* shared_storage = nullptr, unsigned int shared_storage_size = 0,
-                    T* global_mem_output = nullptr)
+                    T* global_mem_output = nullptr) const
     {
         (void) global_mem_output;
         using block_scan_type = typename rocprim::block_scan<
@@ -436,6 +436,10 @@ void run_benchmark_memcpy(benchmark::State& state,
     T * d_output;
     HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input), size * sizeof(T)));
     HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_output), size * sizeof(T)));
+
+    // Copy input from host to device
+    HIP_CHECK(hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
+
     // Warm-up
     for(size_t i = 0; i < 10; i++)
     {
