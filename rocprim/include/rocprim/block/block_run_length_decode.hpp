@@ -331,7 +331,7 @@ public:
                 val = temp_storage.runs.run_values[current_run];
 
                 // The run bounds
-                current_run_begin = thread_decoded_offset;
+                current_run_begin = temp_storage.runs.run_offsets[current_run];
                 current_run_end   = temp_storage.runs.run_offsets[++current_run];
             }
 
