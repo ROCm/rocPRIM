@@ -27,6 +27,8 @@ include(GNUInstallDirs)
 rocm_add_sphinx_doc(
   "${CMAKE_CURRENT_SOURCE_DIR}"
   BUILDER html
+  OUTPUT_DIR html
+  USES_DOXYGEN
 )
 
 install(
