@@ -173,7 +173,7 @@ if(BUILD_BENCHMARK)
 endif(BUILD_BENCHMARK)
 
 if(NOT DEPENDENCIES_FORCE_DOWNLOAD)
-  find_package(ROCM 0.7.3 CONFIG QUIET PATHS "${ROCM_ROOT}")
+  find_package(ROCM 0.11.0 CONFIG QUIET PATHS "${ROCM_ROOT}") # First version with Sphinx doc gen improvement
 endif()
 if(NOT ROCM_FOUND)
   message(STATUS "ROCm CMake not found. Fetching...")
@@ -187,13 +187,14 @@ if(NOT ROCM_FOUND)
   set(rocm_cmake_tag "master" CACHE STRING "rocm-cmake tag to download")
   FetchContent_Declare(
     rocm-cmake
-    URL  https://github.com/RadeonOpenCompute/rocm-cmake/archive/${rocm_cmake_tag}.tar.gz
+    GIT_REPOSITORY https://github.com/RadeonOpenCompute/rocm-cmake.git
+    GIT_TAG        c044bb52ba85058d28afe2313be98d9fed02e293 # develop@2023.09.12. (move to 6.0 tag when released)
     ${SOURCE_SUBDIR_ARG}
   )
   FetchContent_MakeAvailable(rocm-cmake)
   find_package(ROCM CONFIG REQUIRED NO_DEFAULT_PATH PATHS "${rocm-cmake_SOURCE_DIR}")
 else()
-  find_package(ROCM 0.7.3 CONFIG REQUIRED PATHS "${ROCM_ROOT}")
+  find_package(ROCM 0.11.0 CONFIG REQUIRED PATHS "${ROCM_ROOT}")
 endif()
 
 # Restore user global state
