@@ -36,6 +36,7 @@ cd rocPRIM; mkdir build; cd build
 #   ONLY_INSTALL - OFF by default, If this flag is on, the build ignore the BUILD_* flags
 #   BUILD_TEST - OFF by default,
 #   BUILD_EXAMPLE - OFF by default,
+#   BUILD_DOCS  - OFF by default
 #   BUILD_BENCHMARK - OFF by default.
 #   BENCHMARK_CONFIG_TUNING - OFF by default. The purpose of this flag to find the best kernel config parameters.
 #     At ON the compilation time can be increased significantly.
@@ -235,9 +236,15 @@ included configurations user should define macro `ROCPRIM_TARGET_ARCH` to `803` 
 should be optimized for gfx803 GCN version, or to `900` for gfx900.
 
 ## Documentation
-The latest rocPRIM documentation and API description can be found [here](https://rocprim.readthedocs.io/en/latest/).
+The latest rocPRIM documentation and API description can be found
+[here](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/index.html).
 
 It can also be built using the following commands:
+
+<details>
+<summary>
+<b>Build documentation manually</b>
+</summary>
 
 ```shell
 # Go to rocPRIM docs directory
@@ -253,6 +260,26 @@ python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
 cd _build/html
 python3 -m http.server
 ```
+
+</details>
+<details>
+<summary>
+<b>Build documentation via CMake</b>
+</summary>
+
+```shell
+# Configure the project
+cmake -S ./rocPRIM -B ./rocPRIM/build -D BUILD_DOCS=ON
+
+# Build the documentation
+cmake --build ./rocPRIM/build --target doc
+
+# For e.g. serve the HTML docs locally
+cd ./rocPRIM/build/docs/html
+python3 -m http.server
+```
+
+</details>
 
 ## hipCUB
 
