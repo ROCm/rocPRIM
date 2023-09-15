@@ -420,9 +420,9 @@ void run_benchmark_memcpy(benchmark::State& state,
                            const hipStream_t stream)
 {
     // Allocate device buffers
-    // Note: since this benchmark only tests memcpy performance between device buffers,
-    // we don't really need to copy data into these from the host - whatever happens
-    // to be in memory will suffice.
+    // Note: since this benchmark only tests performance by memcpying between device buffers,
+    // we don't really need to transfer data into these from the host - whatever happens
+    // to be in device memory will do.
     T * d_input;
     T * d_output;
     HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input), size * sizeof(T)));
