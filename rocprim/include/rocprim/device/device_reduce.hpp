@@ -256,7 +256,7 @@ hipError_t reduce_impl(void * temporary_storage,
 /// * By default, the input type is used for accumulation. A custom type
 /// can be specified using <tt>rocprim::transform_iterator</tt>, see the example below.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p reduce_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p reduce_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. Must meet the
@@ -403,7 +403,7 @@ hipError_t reduce(void * temporary_storage,
 /// * By default, the input type is used for accumulation. A custom type
 /// can be specified using <tt>rocprim::transform_iterator</tt>, see the example below.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p reduce_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p reduce_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. Must meet the
