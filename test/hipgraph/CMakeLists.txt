@@ -51,12 +51,12 @@ function(add_hipgraph_test_internal TEST_NAME TEST_SOURCES TEST_TARGET)
   if(NOT USE_HIP_CPU)
     target_link_libraries(${TEST_TARGET}
       PRIVATE
-        hipgraph_hip
+        rocprim_hip
     )
   else()
     target_link_libraries(${TEST_TARGET}
       PRIVATE
-        hipgraph
+        rocprim
         Threads::Threads
         hip_cpu_rt::hip_cpu_rt
     )
@@ -220,3 +220,4 @@ endfunction()
 # ****************************************************************************
 
 add_hipgraph_test("hipgraph.test_hipgraph_basic" test_hipgraph_basic.cpp)
+add_hipgraph_test("hipgraph.test_hipgraph_device_reduce" test_hipgraph_device_reduce.cpp)

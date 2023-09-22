@@ -700,3 +700,122 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
         hipFree(d_temp_storage);
     }
 }
+
+// TODO: This code is really similar to ReduceMinimum and could be parameterized to work both with & without graphs.
+// However, I couldn't figure out a way to get GTest to allow me to call a common function from both tests.
+TYPED_TEST(RocprimDeviceReduceTests, ReduceWithGraph)
+{
+    int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    using T = typename TestFixture::input_type;
+    using U = typename TestFixture::output_type;
+
+    using binary_op_type = rocprim::minimum<U>;
+
+    const bool debug_synchronous = TestFixture::debug_synchronous;
+    static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
+    using Config = size_limit_config_t<TestFixture::size_limit>;
+
+    for (size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    {
+        unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
+
+        for(auto size : test_utils::get_sizes(seed_value))
+        {
+            // Default stream does not support hipGraph stream capture, so create one
+            hipStream_t stream;
+            HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+
+            SCOPED_TRACE(testing::Message() << "with size = " << size);
+
+            // Generate data
+            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
+            std::vector<U> output(1, U(0));
+
+            T * d_input;
+            U * d_output;
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(T)));
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, output.size() * sizeof(U)));
+            HIP_CHECK(
+                hipMemcpy(
+                    d_input, input.data(),
+                    input.size() * sizeof(T),
+                    hipMemcpyHostToDevice
+                )
+            );
+            HIP_CHECK(hipDeviceSynchronize());
+
+            // reduce function
+            binary_op_type min_op;
+
+            // Calculate expected results on host
+            U expected = U(test_utils::numeric_limits<U>::max());
+            for(unsigned int i = 0; i < input.size(); i++)
+            {
+                expected = min_op(expected, input[i]);
+            }
+
+            // temp storage            
+            size_t temp_storage_size_bytes;
+            void * d_temp_storage = nullptr;
+            // Get size of d_temp_storage
+            hipGraph_t graph = test_utils::createGraphHelper(stream);
+            HIP_CHECK(
+                rocprim::reduce<Config>(
+                    d_temp_storage, temp_storage_size_bytes,
+                    d_input,
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
+                    test_utils::numeric_limits<U>::max(), input.size(), rocprim::minimum<U>(), stream, debug_synchronous
+                )
+            );
+            hipGraphExec_t graph_instance = test_utils::execGraphHelper(graph, stream);
+
+            // temp_storage_size_bytes must be >0
+            ASSERT_GT(temp_storage_size_bytes, 0);
+
+            // allocate temporary storage
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+            HIP_CHECK(hipDeviceSynchronize());
+
+            // Run
+            test_utils::resetGraphHelper(graph, graph_instance, stream);
+            HIP_CHECK(
+                rocprim::reduce<Config>(
+                    d_temp_storage, temp_storage_size_bytes,
+                    d_input,
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
+                    test_utils::numeric_limits<U>::max(), input.size(), rocprim::minimum<U>(), stream, debug_synchronous
+                )
+            );
+
+            // Copy output to host
+            HIP_CHECK(
+                hipMemcpyAsync(
+                    output.data(), d_output,
+                    output.size() * sizeof(U),
+                    hipMemcpyDeviceToHost, stream
+                )
+            );
+            graph_instance = test_utils::execGraphHelper(graph, stream, true, false); // no need to sync since we do that immediately below
+            HIP_CHECK(hipDeviceSynchronize());
+
+            // Check if output values are as expected
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
+                output[0],
+                expected,
+                std::is_same<T, U>::value
+                    ? 0
+                    : std::max(test_utils::precision<T>, test_utils::precision<U>)));
+
+            hipFree(d_input);
+            hipFree(d_output);
+            hipFree(d_temp_storage);
+
+            test_utils::cleanupGraphHelper(graph, graph_instance);
+            HIP_CHECK(hipStreamDestroy(stream));
+        }
+    }
+}

@@ -25,11 +25,13 @@
 
 // required rocprim headers
 #include <rocprim/rocprim.hpp>
-
 #include "../rocprim/test_seed.hpp"
 #include "../rocprim/test_utils.hpp"
 
-#include <iostream>
+// Basic test functions that can be used to check if hip API functions
+// work with graphs.
+// API functions that do not currently work:
+// - hipMallocAsync
 
 // Simple test kernel that increments a value using a single thread.
 __global__ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void increment(int* data)
@@ -41,7 +43,6 @@ __global__ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void increment(int*
 
 void test_stream_capture()
 {
-
     // The default stream does not support HipGraph stream capture, so create our own.
     hipStream_t stream;
     HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));

@@ -452,6 +452,55 @@ struct DeviceSelectWarpSize
         : ::rocprim::device_warp_size();
 };
 
+// Helper functions for testing with hipGraph stream capture
+hipGraph_t createGraphHelper(hipStream_t& stream, bool beginCapture=true)
+{
+    // Create a new graph
+    hipGraph_t graph;
+    HIP_CHECK(hipGraphCreate(&graph, 0));
+
+    // Optionally begin stream capture
+    // Note: this will not work with the default stream
+    if (beginCapture)
+        HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+
+    return graph;
+}
+
+void cleanupGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance)
+{
+    HIP_CHECK(hipGraphDestroy(graph));
+    HIP_CHECK(hipGraphExecDestroy(instance));
+}
+
+void resetGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance, hipStream_t& stream, bool beginCapture=true)
+{
+    // Destroy the old graph and instance
+    cleanupGraphHelper(graph, instance);
+
+    // Create a new graph and optionally begin capture
+    graph = createGraphHelper(stream, beginCapture);
+}
+
+hipGraphExec_t execGraphHelper(hipGraph_t& graph, hipStream_t& stream, bool endCapture=true, bool sync_on_complete=true)
+{
+    // Optionally end stream capture (must be already capturing)
+    if (endCapture)
+        HIP_CHECK(hipStreamEndCapture(stream, &graph));
+
+    // Instantiate the graph
+    hipGraphExec_t instance;
+    HIP_CHECK(hipGraphInstantiate(&instance, graph, nullptr, nullptr, 0));
+    // Launch the graph
+    HIP_CHECK(hipGraphLaunch(instance, stream));
+
+    // Optionally synchronize the stream
+    if (sync_on_complete)
+        HIP_CHECK(hipStreamSynchronize(stream));
+
+    return instance;
+}
+
 } // end test_utils namespace
 
 #endif // TEST_TEST_UTILS_HPP_
