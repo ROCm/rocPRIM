@@ -397,7 +397,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 /// * Ranges specified by \p unique_output and \p aggregates_output must have at least
 /// <tt>*unique_count_output</tt> (i.e. the number of unique keys) elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be `reduce_by_key_config`.
+/// \tparam Config - [optional] configuration of the primitive. It has to be `reduce_by_key_config` or a class derived from it.
 /// \tparam KeysInputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam ValuesInputIterator - random-access iterator type of the input range. Must meet the

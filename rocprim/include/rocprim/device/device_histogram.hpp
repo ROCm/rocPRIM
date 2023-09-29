@@ -449,7 +449,7 @@ inline hipError_t histogram_range_impl(void*          temporary_storage,
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.
@@ -552,7 +552,7 @@ inline hipError_t histogram_even(void*          temporary_storage,
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.
@@ -663,7 +663,7 @@ inline hipError_t histogram_even(void*          temporary_storage,
 ///
 /// \tparam Channels - number of channels interleaved in the input samples.
 /// \tparam ActiveChannels - number of channels being used for computing histograms.
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.
@@ -775,7 +775,7 @@ inline hipError_t multi_histogram_even(void*          temporary_storage,
 ///
 /// \tparam Channels - number of channels interleaved in the input samples.
 /// \tparam ActiveChannels - number of channels being used for computing histograms.
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.
@@ -882,7 +882,7 @@ inline hipError_t multi_histogram_even(void*          temporary_storage,
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.
@@ -979,7 +979,7 @@ inline hipError_t histogram_range(void*          temporary_storage,
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.
@@ -1085,7 +1085,7 @@ inline hipError_t histogram_range(void*          temporary_storage,
 ///
 /// \tparam Channels - number of channels interleaved in the input samples.
 /// \tparam ActiveChannels - number of channels being used for computing histograms.
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.
@@ -1192,7 +1192,7 @@ inline hipError_t multi_histogram_range(void*          temporary_storage,
 ///
 /// \tparam Channels - number of channels interleaved in the input samples.
 /// \tparam ActiveChannels - number of channels being used for computing histograms.
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p histogram_config or a class derived from it.
 /// \tparam SampleIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam Counter - integer type for histogram bin counters.

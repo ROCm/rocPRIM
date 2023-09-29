@@ -114,8 +114,8 @@ struct is_default_or_has_tag<default_config, Tag>
 /// in the semi-open interval <tt>[lower_output[i], upper_output[i])</tt> of \p haystack, in case of
 /// being present at all.
 ///
-/// @tparam Config - [optional] Configuration of the primitive. It can be \p lower_bound_config or
-/// a class with the same members. Default is \p default_config.
+/// @tparam Config - [optional] Configuration of the primitive. It has to be \p lower_bound_config or
+/// a class derived from it. Default is \p default_config.
 /// @tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// @tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
@@ -251,7 +251,7 @@ hipError_t lower_bound(void * temporary_storage,
 /// being present at all.
 ///
 /// @tparam Config - [optional] Configuration of the primitive. It can be \p upper_bound_config or
-/// a class with the same members. Default is \p default_config.
+/// a class derived from it. Default is \p default_config.
 /// @tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// @tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
@@ -381,7 +381,7 @@ hipError_t upper_bound(void * temporary_storage,
 /// is written to \p storage_size and the function returns without performing the search operation.
 ///
 /// @tparam Config - [optional] Configuration of the primitive. It can be \p binary_search_config or
-/// a class with the same members. Default is \p default_config.
+/// a class derived from it. Default is \p default_config.
 /// @tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// @tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
