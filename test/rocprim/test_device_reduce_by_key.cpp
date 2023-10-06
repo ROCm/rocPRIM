@@ -533,7 +533,7 @@ void large_segment_count_reduce_by_key(bool use_graphs)
                                          stream,
                                          debug_synchronous));
         if (use_graphs)
-            graph_instance = test_utils::execGraphHelper(graph, stream, true, true);
+            graph_instance = test_utils::execGraphHelper(graph, stream);
         
         HIP_CHECK(hipFree(d_temporary_storage));
 

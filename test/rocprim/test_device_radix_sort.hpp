@@ -59,7 +59,7 @@ public:
 TYPED_TEST_SUITE_P(RocprimDeviceRadixSort);
 
 template<typename TestFixture>
-inline void sort_keys()
+inline void sort_keys(const bool use_graphs)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -72,6 +72,11 @@ inline void sort_keys()
     constexpr bool         check_large_sizes = TestFixture::params::check_large_sizes;
 
     hipStream_t stream = 0;
+    if (use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     const bool debug_synchronous = false;
 
@@ -153,12 +158,20 @@ inline void sort_keys()
                                                        start_bit,
                                                        end_bit));
 
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream);
+            
             ASSERT_GT(temporary_storage_bytes, 0);
 
             void* d_temporary_storage;
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             if(descending)
             {
                 HIP_CHECK(rocprim::radix_sort_keys_desc<config>(d_temporary_storage,
@@ -184,6 +197,9 @@ inline void sort_keys()
                                                            debug_synchronous));
             }
 
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream);
+            
             std::vector<key_type> keys_output(size);
             HIP_CHECK(hipMemcpy(keys_output.data(),
                                 d_keys_output,
@@ -197,9 +213,15 @@ inline void sort_keys()
                 HIP_CHECK(hipFree(d_keys_output));
             }
 
+            if (use_graphs)
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+            
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output, expected));
         }
     }
+
+    if (use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
 }
 
 template<typename TestFixture>

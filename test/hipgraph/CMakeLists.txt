@@ -220,4 +220,3 @@ endfunction()
 # ****************************************************************************
 
 add_hipgraph_test("hipgraph.test_hipgraph_basic" test_hipgraph_basic.cpp)
-add_hipgraph_test("hipgraph.test_hipgraph_device_reduce" test_hipgraph_device_reduce.cpp)

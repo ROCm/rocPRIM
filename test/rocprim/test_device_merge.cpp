@@ -239,7 +239,8 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
     }
 }
 
-TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
+template<typename TestFixture>
+void testMergeKeyValue(const bool debug_synchronous, const bool use_graphs)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -248,11 +249,15 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
     using key_type = typename TestFixture::key_type;
     using value_type = typename TestFixture::value_type;
     using compare_op_type = typename TestFixture::compare_op_type;
-    const bool debug_synchronous = TestFixture::debug_synchronous;
 
     using key_value = std::pair<key_type, value_type>;
 
     hipStream_t stream = 0; // default
+    if (use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     for(auto sizes : get_sizes())
     {
@@ -366,6 +371,11 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
                 size1 + size2
             );
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             // temp storage
             size_t temp_storage_size_bytes;
             void * d_temp_storage = nullptr;
@@ -382,12 +392,18 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
                 )
             );
 
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream);
+
             // temp_storage_size_bytes must be >0
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
+            if (use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             // Run
             HIP_CHECK(
                 rocprim::merge(
@@ -400,6 +416,10 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
                     compare_op, stream, debug_synchronous
                 )
             );
+
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream, true, false); // no need to sync since we do that immediately below
+            
             HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
@@ -438,9 +458,26 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
             hipFree(d_values_input2);
             hipFree(d_values_output);
             hipFree(d_temp_storage);
-        }
 
+            if (use_graphs)
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+        }
     }
+
+    if (use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
+}
+
+TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
+{
+    // Note: must pass debug_synchronous at runtime (it's static)
+    testMergeKeyValue<TestFixture>(TestFixture::debug_synchronous, false);
+}
+
+TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValueWithGraphs)
+{
+    // Note: must pass debug_synchronous at runtime (it's static)
+    testMergeKeyValue<TestFixture>(TestFixture::debug_synchronous, true);
 }
 
 TEST(RocprimDeviceMergeTests, MergeMismatchedIteratorTypes)

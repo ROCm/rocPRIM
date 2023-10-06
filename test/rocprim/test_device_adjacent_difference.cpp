@@ -186,7 +186,8 @@ using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceTests, RocprimDeviceAdjacentDifferenceTestsParams);
 
-TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
+template<typename TestFixture>
+void testAdjacentDifference(const bool debug_synchronous, const bool use_graphs)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -210,8 +211,13 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
-            static constexpr hipStream_t stream = 0; // default
-
+            hipStream_t stream = 0; // default
+            if (use_graphs)
+            {
+                // Default stream does not support hipGraph stream capture, so create one
+                HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+            }
+            
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -241,6 +247,11 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             const auto output_it
                 = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output);
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             // Allocate temporary storage
             std::size_t temp_storage_size;
             void*       d_temp_storage = nullptr;
@@ -255,10 +266,16 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            stream,
                                                            debug_synchronous));
 
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream);
+            
             ASSERT_GT(temp_storage_size, 0);
 
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
 
+            if (use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             // Run
             HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
                                                            in_place_tag,
@@ -270,6 +287,9 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            rocprim::minus<> {},
                                                            stream,
                                                            debug_synchronous));
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream);
+            
             HIP_CHECK(hipGetLastError());
 
             // Copy output to host
@@ -291,8 +311,24 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                 hipFree(d_output);
             }
             hipFree(d_temp_storage);
+
+            if (use_graphs)
+            {
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+                HIP_CHECK(hipStreamDestroy(stream));
+            }
         }
     }
+}
+
+TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
+{
+    testAdjacentDifference<TestFixture>(TestFixture::debug_synchronous, false);
+}
+
+TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifferenceWithGraphs)
+{
+    testAdjacentDifference<TestFixture>(TestFixture::debug_synchronous, true);
 }
 
 // Params for tests

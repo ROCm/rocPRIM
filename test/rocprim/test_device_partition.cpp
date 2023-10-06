@@ -276,7 +276,8 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
     hipFree(d_temp_storage);
 }
 
-TYPED_TEST(RocprimDevicePartitionTests, Predicate)
+template<typename TestFixture>
+void testPredicate(const bool debug_synchronous, const bool use_graphs)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -285,9 +286,13 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
     using T = typename TestFixture::input_type;
     using U = typename TestFixture::output_type;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    const bool debug_synchronous = TestFixture::debug_synchronous;
 
     hipStream_t stream = 0; // default stream
+    if (use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     auto select_op = [] __host__ __device__ (const T& value) -> bool
     {
@@ -334,6 +339,11 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             }
             std::reverse(expected_rejected.begin(), expected_rejected.end());
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             // temp storage
             size_t temp_storage_size_bytes;
             // Get size of d_temp_storage
@@ -348,6 +358,9 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
                 stream,
                 debug_synchronous));
 
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream);
+            
             // temp_storage_size_bytes must be >0
             ASSERT_GT(temp_storage_size_bytes, 0);
 
@@ -355,6 +368,9 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             void* d_temp_storage = nullptr;
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
+            if (use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             // Run
             HIP_CHECK(rocprim::partition(
                 d_temp_storage,
@@ -366,6 +382,10 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
                 select_op,
                 stream,
                 debug_synchronous));
+
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream, true, false);
+
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if number of selected value is as expected_selected
@@ -375,7 +395,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
                                 sizeof(unsigned int),
                                 hipMemcpyDeviceToHost));
             ASSERT_EQ(selected_count_output, expected_selected.size());
-
+            
             // Check if output values are as expected_selected
             std::vector<U> output(input.size());
             HIP_CHECK(hipMemcpy(output.data(),
@@ -396,8 +416,24 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             hipFree(d_output);
             hipFree(d_selected_count_output);
             hipFree(d_temp_storage);
+
+            if (use_graphs)
+                test_utils::cleanupGraphHelper(graph, graph_instance);
         }
     }
+
+    if (use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
+}
+
+TYPED_TEST(RocprimDevicePartitionTests, Predicate)
+{
+    testPredicate<TestFixture>(TestFixture::debug_synchronous, false);
+}
+
+TYPED_TEST(RocprimDevicePartitionTests, PredicateWithGraphs)
+{
+    testPredicate<TestFixture>(TestFixture::debug_synchronous, true);
 }
 
 TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)

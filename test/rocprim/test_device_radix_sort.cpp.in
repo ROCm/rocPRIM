@@ -31,8 +31,9 @@
 #cmakedefine ROCPRIM_TEST_SLICE       @ROCPRIM_TEST_SLICE@
 
 #if   ROCPRIM_TEST_SUITE_SLICE == 0
-    TYPED_TEST_P(SUITE, SortKeys                ) { sort_keys<TestFixture>(); } 
-    REGISTER_TYPED_TEST_SUITE_P(SUITE, SortKeys);
+    TYPED_TEST_P(SUITE, SortKeys                ) { sort_keys<TestFixture>(false); }
+    TYPED_TEST_P(SUITE, SortKeysWithGraphs      ) { sort_keys<TestFixture>(true); } 
+    REGISTER_TYPED_TEST_SUITE_P(SUITE, SortKeys, SortKeysWithGraphs);
 #elif ROCPRIM_TEST_SUITE_SLICE == 1
     TYPED_TEST_P(SUITE, SortPairs               ) { sort_pairs<TestFixture>(); } 
     REGISTER_TYPED_TEST_SUITE_P(SUITE, SortPairs);

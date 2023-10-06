@@ -127,7 +127,8 @@ typedef ::testing::Types<
 
 TYPED_TEST_SUITE(RocprimDeviceSegmentedReduce, Params);
 
-TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
+template<typename TestFixture>
+void testReduce(const bool use_graphs)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -165,6 +166,11 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             hipStream_t stream = 0; // default
+            if (use_graphs)
+            {
+                // Default stream does not support hipGraph stream capture, so create one
+                HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+            }
 
             // Generate data and calculate expected results
             std::vector<output_type> aggregates_expected;
@@ -232,6 +238,11 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_aggregates_output,
                                                          segments_count * sizeof(output_type)));
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             size_t temporary_storage_bytes;
 
             HIP_CHECK(rocprim::segmented_reduce<Config>(nullptr,
@@ -246,12 +257,18 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
                                                         stream,
                                                         debug_synchronous));
 
+            if (use_graphs)
+               graph_instance = test_utils::execGraphHelper(graph, stream);
+            
             ASSERT_GT(temporary_storage_bytes, 0);
 
             void* d_temporary_storage;
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
+            if (use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             HIP_CHECK(rocprim::segmented_reduce<Config>(
                 d_temporary_storage,
                 temporary_storage_bytes,
@@ -265,6 +282,9 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
                 stream,
                 debug_synchronous));
 
+            if (use_graphs)
+                graph_instance = test_utils::execGraphHelper(graph, stream, true, false);
+
             HIP_CHECK(hipFree(d_temporary_storage));
 
             std::vector<output_type> aggregates_output(segments_count);
@@ -277,8 +297,24 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             HIP_CHECK(hipFree(d_offsets));
             HIP_CHECK(hipFree(d_aggregates_output));
 
+            if (use_graphs)
+            {
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+                HIP_CHECK(hipStreamDestroy(stream));
+            }
+            
             ASSERT_NO_FATAL_FAILURE(
                 test_utils::assert_near(aggregates_output, aggregates_expected, precision));
         }
     }
+}
+
+TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
+{
+    testReduce<TestFixture>(false);
+}
+
+TYPED_TEST(RocprimDeviceSegmentedReduce, ReduceWithGraphs)
+{
+    testReduce<TestFixture>(true);
 }
