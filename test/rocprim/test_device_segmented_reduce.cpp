@@ -39,7 +39,8 @@ template<class Input,
          // Tests output iterator with void value_type (OutputIterator concept)
          bool UseIdentityIterator = false,
          bra  Algo                = bra::default_algorithm,
-         bool UseDefaultConfig    = false>
+         bool UseDefaultConfig    = false,
+         bool UseGraphs           = false>
 struct SegmentedReduceParams
 {
     using input_type                                    = Input;
@@ -51,6 +52,7 @@ struct SegmentedReduceParams
     static constexpr bool         use_identity_iterator = UseIdentityIterator;
     static constexpr bra          algo                  = Algo;
     static constexpr bool         use_default_config    = UseDefaultConfig;
+    static constexpr bool         use_graphs            = UseGraphs;
 };
 
 // clang-format off
@@ -118,7 +120,9 @@ typedef ::testing::Types<
     SegmentedReduceParamsList(unsigned char, unsigned int, plus<unsigned int>, 0, 0, 1000, false),
     SegmentedReduceParamsList(unsigned char, long long, plus<int>, 10, 3000, 4000, true),
     SegmentedReduceParamsList(half, float, plus<float>, 0, 10, 300, false),
-    SegmentedReduceParamsList(bfloat16, float, plus<double>, 0, 10, 300, false)>
+    SegmentedReduceParamsList(bfloat16, float, plus<double>, 0, 10, 300, false),
+    // Test with graphs
+    SegmentedReduceParams<int, int, plus<int>, 0, 0, 1000, false, bra::default_algorithm, false, true>>
     Params;
 
 #undef plus
@@ -127,8 +131,7 @@ typedef ::testing::Types<
 
 TYPED_TEST_SUITE(RocprimDeviceSegmentedReduce, Params);
 
-template<typename TestFixture>
-void testReduce(const bool use_graphs)
+TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
@@ -166,7 +169,7 @@ void testReduce(const bool use_graphs)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             hipStream_t stream = 0; // default
-            if (use_graphs)
+            if (TestFixture::params::use_graphs)
             {
                 // Default stream does not support hipGraph stream capture, so create one
                 HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
@@ -240,7 +243,7 @@ void testReduce(const bool use_graphs)
 
             hipGraph_t graph;
             hipGraphExec_t graph_instance;
-            if (use_graphs)
+            if (TestFixture::params::use_graphs)
                 graph = test_utils::createGraphHelper(stream);
             
             size_t temporary_storage_bytes;
@@ -257,8 +260,8 @@ void testReduce(const bool use_graphs)
                                                         stream,
                                                         debug_synchronous));
 
-            if (use_graphs)
-               graph_instance = test_utils::execGraphHelper(graph, stream);
+            if (TestFixture::params::use_graphs)
+               graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
             
             ASSERT_GT(temporary_storage_bytes, 0);
 
@@ -266,7 +269,7 @@ void testReduce(const bool use_graphs)
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
-            if (use_graphs)
+            if (TestFixture::params::use_graphs)
                 test_utils::resetGraphHelper(graph, graph_instance, stream);
             
             HIP_CHECK(rocprim::segmented_reduce<Config>(
@@ -282,8 +285,8 @@ void testReduce(const bool use_graphs)
                 stream,
                 debug_synchronous));
 
-            if (use_graphs)
-                graph_instance = test_utils::execGraphHelper(graph, stream, true, false);
+            if (TestFixture::params::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
 
             HIP_CHECK(hipFree(d_temporary_storage));
 
@@ -297,7 +300,7 @@ void testReduce(const bool use_graphs)
             HIP_CHECK(hipFree(d_offsets));
             HIP_CHECK(hipFree(d_aggregates_output));
 
-            if (use_graphs)
+            if (TestFixture::params::use_graphs)
             {
                 test_utils::cleanupGraphHelper(graph, graph_instance);
                 HIP_CHECK(hipStreamDestroy(stream));
@@ -307,14 +310,4 @@ void testReduce(const bool use_graphs)
                 test_utils::assert_near(aggregates_output, aggregates_expected, precision));
         }
     }
-}
-
-TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
-{
-    testReduce<TestFixture>(false);
-}
-
-TYPED_TEST(RocprimDeviceSegmentedReduce, ReduceWithGraphs)
-{
-    testReduce<TestFixture>(true);
 }

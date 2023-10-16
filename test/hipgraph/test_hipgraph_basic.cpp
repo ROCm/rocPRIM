@@ -28,9 +28,13 @@
 #include "../rocprim/test_seed.hpp"
 #include "../rocprim/test_utils.hpp"
 
-// Basic test functions that can be used to check if hip API functions
-// work with graphs.
-// API functions that do not currently work:
+// Basic test functions that can be used to check if HIP API functions
+// work inside graphs.
+// To test an API call, you can:
+// - call it inside the graph stream capture zone of testStreamCapture()
+// - add the corresponding type of graph node in the testManualConstruction() function
+//
+// HIP API functions that do not currently work:
 // - hipMallocAsync
 
 // Simple test kernel that increments a value using a single thread.
@@ -41,7 +45,7 @@ __global__ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void increment(int*
         data[gid]++;
 }
 
-void test_stream_capture()
+void testStreamCapture()
 {
     // The default stream does not support HipGraph stream capture, so create our own.
     hipStream_t stream;
@@ -56,7 +60,7 @@ void test_stream_capture()
     hipGraph_t graph;
     HIP_CHECK(hipGraphCreate(&graph, 0));
 
-    // Note: currently, we calls to hipMallocAsync do not work inside the stream capture section
+    // Note: currently, calls to hipMallocAsync do not work inside the stream capture section
     HIP_CHECK(hipMallocAsync(&d_data, sizeof(int), stream));
 
     // ** Begin stream capture **
@@ -96,7 +100,7 @@ void test_stream_capture()
     HIP_CHECK(hipStreamDestroy(stream));
 }
 
-void test_manual_construction()
+void testManualConstruction()
 {
     // The default stream does not support HipGraph stream capture, so create our own.
     hipStream_t stream;
@@ -158,10 +162,10 @@ void test_manual_construction()
 
 TEST(TestHipGraphBasic, CaptureFromStream)
 {
-    test_stream_capture();
+    testStreamCapture();
 }
 
 TEST(TestHipGraphBasic, ManualConstruction)
 {
-    test_manual_construction();
+    testManualConstruction();
 }

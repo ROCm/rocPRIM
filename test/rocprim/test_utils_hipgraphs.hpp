@@ -21,18 +21,18 @@
 #ifndef ROCPRIM_TEST_UTILS_HIPGRAPHS_HPP
 #define ROCPRIM_TEST_UTILS_HIPGRAPHS_HPP
 
+// Helper functions for testing with hipGraph stream capture.
+// Note: graphs will not work on the default stream.
 namespace test_utils
 {
-
-// Helper functions for testing with hipGraph stream capture
-inline hipGraph_t createGraphHelper(hipStream_t& stream, bool beginCapture=true)
+    
+inline hipGraph_t createGraphHelper(hipStream_t& stream, const bool beginCapture=true)
 {
     // Create a new graph
     hipGraph_t graph;
     HIP_CHECK(hipGraphCreate(&graph, 0));
 
     // Optionally begin stream capture
-    // Note: this will not work with the default stream
     if (beginCapture)
         HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
 
@@ -45,7 +45,7 @@ inline void cleanupGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance)
     HIP_CHECK(hipGraphExecDestroy(instance));
 }
 
-inline void resetGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance, hipStream_t& stream, bool beginCapture=true)
+inline void resetGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance, hipStream_t& stream, const bool beginCapture=true)
 {
     // Destroy the old graph and instance
     cleanupGraphHelper(graph, instance);
@@ -54,23 +54,33 @@ inline void resetGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance, hipStr
     graph = createGraphHelper(stream, beginCapture);
 }
 
-inline hipGraphExec_t execGraphHelper(hipGraph_t& graph, hipStream_t& stream, bool endCapture=true, bool sync_on_complete=true)
+inline hipGraphExec_t endCaptureGraphHelper(hipGraph_t& graph, hipStream_t& stream, const bool launchGraph=false, const bool sync=false)
 {
-    // Optionally end stream capture (must be already capturing)
-    if (endCapture)
-        HIP_CHECK(hipStreamEndCapture(stream, &graph));
+    // End the capture
+    HIP_CHECK(hipStreamEndCapture(stream, &graph));
 
     // Instantiate the graph
     hipGraphExec_t instance;
     HIP_CHECK(hipGraphInstantiate(&instance, graph, nullptr, nullptr, 0));
-    // Launch the graph
-    HIP_CHECK(hipGraphLaunch(instance, stream));
 
-    // Optionally synchronize the stream
-    if (sync_on_complete)
+    // Optionally launch the graph
+    if (launchGraph)
+        HIP_CHECK(hipGraphLaunch(instance, stream));
+
+    // Optionally synchronize the stream when we're done
+    if (sync)
         HIP_CHECK(hipStreamSynchronize(stream));
 
     return instance;
+}
+
+inline void launchGraphHelper(hipGraphExec_t& instance, hipStream_t& stream, const bool sync=false)
+{
+    HIP_CHECK(hipGraphLaunch(instance, stream));
+
+    // Optionally sync after the launch
+    if (sync)
+        HIP_CHECK(hipStreamSynchronize(stream));
 }
 
 } // end namespace test_utils
