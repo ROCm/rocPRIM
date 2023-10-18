@@ -189,7 +189,7 @@ public:
         const unsigned int SLEEP_MAX = 32;
         unsigned int times_through = 1;
 
-        prefix_underlying_type p = ::rocprim::detail::atomic_add(&prefixes[padding + block_id], 0);
+        prefix_underlying_type p = ::rocprim::detail::atomic_load(&prefixes[padding + block_id]);
 #ifndef __HIP_CPU_RT__
         __builtin_memcpy(&prefix, &p, sizeof(prefix_type));
 #else
@@ -208,8 +208,8 @@ public:
                 if (times_through < SLEEP_MAX)
                     times_through++;
             }
-            // atomic_add(..., 0) is used to load values atomically
-            prefix_underlying_type p = ::rocprim::detail::atomic_add(&prefixes[padding + block_id], 0);
+            prefix_underlying_type p
+                = ::rocprim::detail::atomic_load(&prefixes[padding + block_id]);
 #ifndef __HIP_CPU_RT__
             __builtin_memcpy(&prefix, &p, sizeof(prefix_type));
 #else
@@ -252,7 +252,7 @@ private:
 #else
         std::memcpy(&p, &prefix, sizeof(prefix_type));
 #endif
-        ::rocprim::detail::atomic_exch(&prefixes[padding + block_id], p);
+        ::rocprim::detail::atomic_store(&prefixes[padding + block_id], p);
     }
 
     prefix_underlying_type * prefixes;
@@ -337,7 +337,7 @@ public:
 
         prefixes_partial_values[padding + block_id] = value;
         ::rocprim::detail::memory_fence_device();
-        ::rocprim::detail::atomic_exch(&prefixes_flags[padding + block_id], PREFIX_PARTIAL);
+        ::rocprim::detail::atomic_store(&prefixes_flags[padding + block_id], PREFIX_PARTIAL);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -347,7 +347,7 @@ public:
 
         prefixes_complete_values[padding + block_id] = value;
         ::rocprim::detail::memory_fence_device();
-        ::rocprim::detail::atomic_exch(&prefixes_flags[padding + block_id], PREFIX_COMPLETE);
+        ::rocprim::detail::atomic_store(&prefixes_flags[padding + block_id], PREFIX_COMPLETE);
     }
 
     // block_id must be > 0
@@ -359,8 +359,7 @@ public:
         const unsigned int SLEEP_MAX = 32;
         unsigned int times_through = 1;
 
-        // atomic_add(..., 0) is used to load values atomically
-        flag = ::rocprim::detail::atomic_add(&prefixes_flags[padding + block_id], 0);
+        flag = ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]);
         while(flag == PREFIX_EMPTY)
         {
             if (UseSleep)
@@ -375,7 +374,7 @@ public:
                     times_through++;
             }
 
-            flag = ::rocprim::detail::atomic_add(&prefixes_flags[padding + block_id], 0);
+            flag = ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]);
         }
         ::rocprim::detail::memory_fence_device();
 

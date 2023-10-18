@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -73,6 +73,27 @@ namespace detail
     unsigned long long atomic_exch(unsigned long long * address, unsigned long long value)
     {
         return ::atomicExch(address, value);
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE unsigned int atomic_load(const unsigned int* address)
+    {
+        return __hip_atomic_load(address, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE unsigned long long atomic_load(const unsigned long long* address)
+    {
+        return __hip_atomic_load(address, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE void atomic_store(unsigned int* address, unsigned int value)
+    {
+        __hip_atomic_store(address, value, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE void atomic_store(unsigned long long* address,
+                                                    unsigned long long  value)
+    {
+        __hip_atomic_store(address, value, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
     }
 }
 
