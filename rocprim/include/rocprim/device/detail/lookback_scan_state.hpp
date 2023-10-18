@@ -361,7 +361,6 @@ public:
 
         // atomic_add(..., 0) is used to load values atomically
         flag = ::rocprim::detail::atomic_add(&prefixes_flags[padding + block_id], 0);
-        ::rocprim::detail::memory_fence_device();
         while(flag == PREFIX_EMPTY)
         {
             if (UseSleep)
@@ -377,8 +376,8 @@ public:
             }
 
             flag = ::rocprim::detail::atomic_add(&prefixes_flags[padding + block_id], 0);
-            ::rocprim::detail::memory_fence_device();
         }
+        ::rocprim::detail::memory_fence_device();
 
         if(flag == PREFIX_PARTIAL)
             value = prefixes_partial_values[padding + block_id];
