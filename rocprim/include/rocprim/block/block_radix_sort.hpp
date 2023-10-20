@@ -884,6 +884,7 @@ private:
     }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<class Key,
          unsigned int BlockSizeX,
          unsigned int ItemsPerThread,
@@ -893,6 +894,7 @@ template<class Key,
 constexpr unsigned int
     block_radix_sort<Key, BlockSizeX, ItemsPerThread, Value, BlockSizeY, BlockSizeZ>::
         radix_bits_per_pass;
+#endif
 
 END_ROCPRIM_NAMESPACE
 
