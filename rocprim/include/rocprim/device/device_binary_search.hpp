@@ -31,10 +31,10 @@
 #include "device_binary_search_config.hpp"
 #include "device_transform.hpp"
 
-BEGIN_ROCPRIM_NAMESPACE
-
 /// \addtogroup devicemodule
 /// @{
+
+BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
@@ -98,53 +98,53 @@ struct is_default_or_has_tag<default_config, Tag>
 
 } // end of detail namespace
 
-/// @brief Parallel primitive that uses binary search for computing a lower bound on a given ordered
+/// \brief Parallel primitive that uses binary search for computing a lower bound on a given ordered
 /// range for each element of a given input.
 ///
-/// The \p lower_bound function determines for each element \p e of a given input the greatest index
-/// \p i in a given ordered range \p haystack such that <tt>!compare_op(e, haystack[i])</tt> is
-/// \p true.
-/// It uses the search function \p detail::lower_bound_search_op, which in turn uses a binary
-/// operator \p compare_op for comparing the given value with the haystack ones.
+/// The `lower_bound` function determines for each element `e` of a given input the greatest index
+/// `i` in a given ordered range `haystack` such that `!compare_op(e, haystack[i])` is
+/// `true.`
+/// It uses the search function `detail::lower_bound_search_op,` which in turn uses a binary
+/// operator `compare_op` for comparing the given value with the haystack ones.
 ///
 /// \par Overview
-/// * When a null pointer is passed as \p temporary_storage, the required allocation size (in bytes)
-/// is written to \p storage_size and the function returns without performing the search operation.
-/// * If used along with \p rocprim::upper_bound, the ith element of the given input must be located
-/// in the semi-open interval <tt>[lower_output[i], upper_output[i])</tt> of \p haystack, in case of
+/// * When a null pointer is passed as `temporary_storage,` the required allocation size (in bytes)
+/// is written to `storage_size` and the function returns without performing the search operation.
+/// * If used along with `rocprim::upper_bound,` the ith element of the given input must be located
+/// in the semi-open interval `[lower_output[i], upper_output[i])` of `haystack,` in case of
 /// being present at all.
 ///
-/// @tparam Config - [optional] Configuration of the primitive. It has to be \p lower_bound_config or
-/// a class derived from it. Default is \p default_config.
-/// @tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
+///  \tparam Config - [optional] Configuration of the primitive. It has to be `lower_bound_config` or
+/// a class derived from it. Default is `default_config.`
+///  \tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type.
-/// @tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
+///  \tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type. Elements of
 /// the type pointed by it must be comparable to elements of the type pointed by HaystackIterator
-/// as either operand of \p compare_op.
-/// @tparam OutputIterator - [inferred] Random-access iterator type of the output range. Must meet
+/// as either operand of `compare_op.`
+///  \tparam OutputIterator - [inferred] Random-access iterator type of the output range. Must meet
 /// the requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// @tparam CompareFunction - [inferred] Type of binary function that accepts two arguments of the
-/// types pointed by \p HaystackIterator and \p NeedlesIterator, and returns a value convertible
-/// to bool. Default type is \p ::rocprim::less<>.
-/// @param [in] temporary_storage - Pointer to a device-accessible temporary storage.
-/// @param [in,out] storage_size - Reference to the size (in bytes) of \p temporary_storage.
-/// @param [in] haystack - Iterator to the first element in the search range. Elements of this
+///  \tparam CompareFunction - [inferred] Type of binary function that accepts two arguments of the
+/// types pointed by `HaystackIterator` and `NeedlesIterator,` and returns a value convertible
+/// to bool. Default type is `::rocprim::less<>.`
+/// \param [in] temporary_storage - Pointer to a device-accessible temporary storage.
+/// \param [in,out] storage_size - Reference to the size (in bytes) of `temporary_storage.`
+/// \param [in] haystack - Iterator to the first element in the search range. Elements of this
 /// range must be sorted.
-/// @param [in] needles - Iterator to the first element in the range of values to search for on
-/// \p haystack.
-/// @param [out] output - Iterator to the first element in the output range.
-/// @param [in] haystack_size - Number of elements in the search range \p haystack.
-/// @param [in] needles_size - Number of elements in the input range \p needles.
-/// @param [in] compare_op - Binary operation function object that is used to compare values. The
+/// \param [in] needles - Iterator to the first element in the range of values to search for on
+/// `haystack.`
+/// \param [out] output - Iterator to the first element in the output range.
+/// \param [in] haystack_size - Number of elements in the search range `haystack.`
+/// \param [in] needles_size - Number of elements in the input range `needles.`
+/// \param [in] compare_op - Binary operation function object that is used to compare values. The
 /// signature of the function should be equivalent to the following:
-/// <tt>bool f(const T &a, const U &b);</tt>. It does not need to have <tt>const &</tt>, but the
-/// function object must not modify the objects passed to it. Default is \p CompareFunction().
-/// @param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
-/// @param [in] debug_synchronous - [optional] If true, synchronization after every kernel launch is
+/// `bool f(const T &a, const U &b);`. It does not need to have `const &`, but the
+/// function object must not modify the objects passed to it. Default is `CompareFunction().`
+/// \param [in] stream - [optional] HIP stream object. Default is `0` (default stream).
+/// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel launch is
 /// forced in order to check for errors.
-/// @return \p hipSuccess (\p 0) after a successful search; otherwise a HIP runtime error of
-/// type \p hipError_t.
+/// \return `hipSuccess` (`0)` after a successful search; otherwise a HIP runtime error of
+/// type `hipError_t.`
 ///
 /// \par Example
 /// \parblock
@@ -160,7 +160,7 @@ struct is_default_or_has_tag<default_config, Tag>
 /// size_t          needles_size;     // e.g. 5
 /// int *           needles;          // e.g. {1, 2, 3, 4, 5}
 /// compare_op_type compare_op;       // e.g. compare_op_type = rocprim::less<>
-/// size_t *        output;           // empty array of \p needles_size elements
+/// size_t *        output;           // empty array of needles_size elements
 ///
 /// // Get required size of the temporary storage.
 /// void * temporary_storage = nullptr;
@@ -191,7 +191,9 @@ struct is_default_or_has_tag<default_config, Tag>
 ///                              stream,
 ///                              debug_synchronous);
 ///
-/// // \p output = {0, 1, 2, 2, 3}
+/// // output = {0, 1, 2, 2, 3}
+/// \endcode
+/// \endparblock
 template<
     class Config = default_config,
     class HaystackIterator,
@@ -234,53 +236,53 @@ hipError_t lower_bound(void * temporary_storage,
                                          debug_synchronous);
 }
 
-/// @brief Parallel primitive that uses binary search for computing an upper bound on a given ordered
+/// \brief Parallel primitive that uses binary search for computing an upper bound on a given ordered
 /// range for each element of a given input.
 ///
-/// The \p upper_bound function determines for each element \p e of a given input the lowest index
-/// \p i in a given ordered range \p haystack such that <tt>compare_op(e, haystack[i])</tt> is
-/// \p true.
-/// It uses the search function \p detail::upper_bound_search_op, which in turn uses a binary
-/// operator \p compare_op for comparing the input values with the haystack ones.
+/// The `upper_bound` function determines for each element `e` of a given input the lowest index
+/// `i` in a given ordered range `haystack` such that `compare_op(e, haystack[i])` is
+/// `true.`
+/// It uses the search function `detail::upper_bound_search_op,` which in turn uses a binary
+/// operator `compare_op` for comparing the input values with the haystack ones.
 ///
 /// \par Overview
-/// * When a null pointer is passed as \p temporary_storage, the required allocation size (in bytes)
-/// is written to \p storage_size and the function returns without performing the search operation.
-/// * If used along with \p rocprim::lower_bound, the ith element of the given input must be located
-/// in the semi-open interval <tt>[lower_output[i], upper_output[i])</tt> of \p haystack, in case of
+/// * When a null pointer is passed as `temporary_storage,` the required allocation size (in bytes)
+/// is written to `storage_size` and the function returns without performing the search operation.
+/// * If used along with `rocprim::lower_bound,` the ith element of the given input must be located
+/// in the semi-open interval `[lower_output[i], upper_output[i])` of `haystack,` in case of
 /// being present at all.
 ///
-/// @tparam Config - [optional] Configuration of the primitive. It can be \p upper_bound_config or
-/// a class derived from it. Default is \p default_config.
-/// @tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
+///  \tparam Config - [optional] Configuration of the primitive. It can be `upper_bound_config` or
+/// a class derived from it. Default is `default_config.`
+///  \tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type.
-/// @tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
+///  \tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type. Elements of
 /// the type pointed by it must be comparable to elements of the type pointed by HaystackIterator
-/// as either operand of \p compare_op.
-/// @tparam OutputIterator - [inferred] Random-access iterator type of the output range. Must meet
+/// as either operand of `compare_op.`
+///  \tparam OutputIterator - [inferred] Random-access iterator type of the output range. Must meet
 /// the requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// @tparam CompareFunction - [inferred] Type of binary function that accepts two arguments of the
-/// types pointed by \p HaystackIterator and \p NeedlesIterator, and returns a value convertible
-/// to bool. Default type is \p ::rocprim::less<>.
-/// @param [in] temporary_storage - Pointer to a device-accessible temporary storage.
-/// @param [in,out] storage_size - Reference to the size (in bytes) of \p temporary_storage.
-/// @param [in] haystack - Iterator to the first element in the search range. Elements of this
+///  \tparam CompareFunction - [inferred] Type of binary function that accepts two arguments of the
+/// types pointed by `HaystackIterator` and `NeedlesIterator,` and returns a value convertible
+/// to bool. Default type is `::rocprim::less<>.`
+/// \param [in] temporary_storage - Pointer to a device-accessible temporary storage.
+/// \param [in,out] storage_size - Reference to the size (in bytes) of `temporary_storage.`
+/// \param [in] haystack - Iterator to the first element in the search range. Elements of this
 /// range must be sorted.
-/// @param [in] needles - Iterator to the first element in the range of values to search for on
-/// \p haystack.
-/// @param [out] output - Iterator to the first element in the output range.
-/// @param [in] haystack_size - Number of elements in the search range \p haystack.
-/// @param [in] needles_size - Number of elements in the input range \p needles.
-/// @param [in] compare_op - Binary operation function object that is used to compare values. The
+/// \param [in] needles - Iterator to the first element in the range of values to search for on
+/// `haystack.`
+/// \param [out] output - Iterator to the first element in the output range.
+/// \param [in] haystack_size - Number of elements in the search range `haystack.`
+/// \param [in] needles_size - Number of elements in the input range `needles.`
+/// \param [in] compare_op - Binary operation function object that is used to compare values. The
 /// signature of the function should be equivalent to the following:
-/// <tt>bool f(const T &a, const U &b);</tt>. It does not need to have <tt>const &</tt>, but the
-/// function object must not modify the objects passed to it. Default is \p CompareFunction().
-/// @param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
-/// @param [in] debug_synchronous - [optional] If true, synchronization after every kernel launch is
+/// `bool f(const T &a, const U &b);`. It does not need to have `const &`, but the
+/// function object must not modify the objects passed to it. Default is `CompareFunction().`
+/// \param [in] stream - [optional] HIP stream object. Default is `0` (default stream).
+/// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel launch is
 /// forced in order to check for errors.
-/// @return \p hipSuccess (\p 0) after a successful search; otherwise a HIP runtime error of
-/// type \p hipError_t.
+/// \return `hipSuccess` (`0)` after a successful search; otherwise a HIP runtime error of
+/// type `hipError_t.`
 ///
 /// \par Example
 /// \parblock
@@ -296,7 +298,7 @@ hipError_t lower_bound(void * temporary_storage,
 /// size_t          needles_size;     // e.g. 5
 /// int *           needles;          // e.g. {1, 2, 3, 4, 5}
 /// compare_op_type compare_op;       // e.g. compare_op_type = rocprim::less<>
-/// size_t *        output;           // empty array of \p needles_size elements
+/// size_t *        output;           // empty array of needles_size elements
 ///
 /// // Get required size of the temporary storage.
 /// void * temporary_storage = nullptr;
@@ -327,7 +329,9 @@ hipError_t lower_bound(void * temporary_storage,
 ///                              stream,
 ///                              debug_synchronous);
 ///
-/// // \p output = {1, 2, 3, 3, 4}
+/// // output = {1, 2, 3, 3, 4}
+/// \endcode
+/// \endparblock
 template<
     class Config = default_config,
     class HaystackIterator,
@@ -369,48 +373,48 @@ hipError_t upper_bound(void * temporary_storage,
                                          debug_synchronous);
 }
 
-/// @brief Parallel primitive for performing a binary search (on a sorted range) of a given input.
+/// \brief Parallel primitive for performing a binary search (on a sorted range) of a given input.
 ///
-/// The \p binary_search function determines for each element of a given input if it's present
-/// in a given ordered range \p haystack. It uses the search function \p detail::binary_search_op
-/// which in turn uses a binary operator \p compare_op for comparing the input values with the
+/// The `binary_search` function determines for each element of a given input if it's present
+/// in a given ordered range `haystack`. It uses the search function `detail::binary_search_op`
+/// which in turn uses a binary operator `compare_op` for comparing the input values with the
 /// haystack ones.
 ///
 /// \par Overview
-/// * When a null pointer is passed as \p temporary_storage, the required allocation size (in bytes)
-/// is written to \p storage_size and the function returns without performing the search operation.
+/// * When a null pointer is passed as `temporary_storage`, the required allocation size (in bytes)
+/// is written to `storage_size` and the function returns without performing the search operation.
 ///
-/// @tparam Config - [optional] Configuration of the primitive. It can be \p binary_search_config or
-/// a class derived from it. Default is \p default_config.
-/// @tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
+///  \tparam Config - [optional] Configuration of the primitive. It can be `binary_search_config` or
+/// a class derived from it. Default is `default_config`.
+///  \tparam HaystackIterator - [inferred] Random-access iterator type of the search range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type.
-/// @tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
+///  \tparam NeedlesIterator - [inferred] Random-access iterator type of the input range. Must meet
 /// the requirements of a C++ InputIterator concept. It can be a simple pointer type. Elements of
-/// the type pointed by it must be comparable to elements of the type pointed by \p HaystackIterator
-/// as either operand of \p compare_op.
-/// @tparam OutputIterator - [inferred] Random-access iterator type of the output range. Must meet
+/// the type pointed by it must be comparable to elements of the type pointed by `HaystackIterator`
+/// as either operand of `compare_op`.
+///  \tparam OutputIterator - [inferred] Random-access iterator type of the output range. Must meet
 /// the requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// @tparam CompareFunction - [inferred] Type of binary function that accepts two arguments of the
-/// types pointed by \p HaystackIterator and \p NeedlesIterator, and returns a value convertible to
-/// bool. Default type is \p ::rocprim::less<>.
-/// @param [in] temporary_storage - Pointer to a device-accessible temporary storage.
-/// @param [in,out] storage_size - Reference to the size (in bytes) of \p temporary_storage.
-/// @param [in] haystack - Iterator to the first element in the search range. Elements of this
+///  \tparam CompareFunction - [inferred] Type of binary function that accepts two arguments of the
+/// types pointed by `HaystackIterator` and `NeedlesIterator`, and returns a value convertible to
+/// bool. Default type is `::rocprim::less<>`.
+/// \param [in] temporary_storage - Pointer to a device-accessible temporary storage.
+/// \param [in,out] storage_size - Reference to the size (in bytes) of `temporary_storage`.
+/// \param [in] haystack - Iterator to the first element in the search range. Elements of this
 /// range must be sorted.
-/// @param [in] needles - Iterator to the first element in the range of values to search for on
-/// \p haystack.
-/// @param [out] output - Iterator to the first element in the output range of boolean values.
-/// @param [in] haystack_size - Number of elements in the search range \p haystack.
-/// @param [in] needles_size - Number of elements in the input range \p needles.
-/// @param [in] compare_op - Binary operation function object that is used to compare values. The
+/// \param [in] needles - Iterator to the first element in the range of values to search for on
+/// `haystack`.
+/// \param [out] output - Iterator to the first element in the output range of boolean values.
+/// \param [in] haystack_size - Number of elements in the search range `haystack`.
+/// \param [in] needles_size - Number of elements in the input range `needles`.
+/// \param [in] compare_op - Binary operation function object that is used to compare values. The
 /// signature of the function should be equivalent to the following:
-/// <tt>bool f(const T &a, const U &b);</tt>. It does not need to have <tt>const &</tt>, but the
-/// function object must not modify the objects passed to it. Default is \p CompareFunction().
-/// @param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
-/// @param [in] debug_synchronous - [optional] If true, synchronization after every kernel launch is
+/// `bool f(const T &a, const U &b);`. It does not need to have `const &`, but the
+/// function object must not modify the objects passed to it. Default is `CompareFunction()`.
+/// \param [in] stream - [optional] HIP stream object. Default is `0` (default stream).
+/// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel launch is
 /// forced in order to check for errors.
-/// @return \p hipSuccess (\p 0) after a successful search; otherwise a HIP runtime error of
-/// type \p hipError_t.
+/// \return `hipSuccess` (`0`) after a successful search; otherwise a HIP runtime error of
+/// type `hipError_t`.
 ///
 /// \par Example
 /// \parblock
@@ -426,7 +430,7 @@ hipError_t upper_bound(void * temporary_storage,
 /// size_t          needles_size;     // e.g. 8
 /// int *           needles;          // e.g. {0, 2, 12, 4, 14, 6, 8, 10}
 /// compare_op_type compare_op;       // e.g. compare_op_type = rocprim::less<int>
-/// size_t *        output;           // empty array of \p needles_size elements
+/// size_t *        output;           // empty array of needles_size elements
 ///
 /// // Get required size of the temporary storage.
 /// void * temporary_storage = nullptr;
@@ -457,7 +461,9 @@ hipError_t upper_bound(void * temporary_storage,
 ///                                stream,
 ///                                debug_synchronous);
 ///
-/// // \p output = {1, 1, 0, 1, 0, 1, 1, 0}
+/// // output = {1, 1, 0, 1, 0, 1, 1, 0}
+/// \endcode
+/// \endparblock
 template<
     class Config = default_config,
     class HaystackIterator,
@@ -499,9 +505,9 @@ hipError_t binary_search(void * temporary_storage,
                                          debug_synchronous);
 }
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group devicemodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_DEVICE_DEVICE_BINARY_SEARCH_HPP_

@@ -242,6 +242,7 @@ template<unsigned int                      BlockSize      = 256,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct reduce_config : rocprim::detail::reduce_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::reduce_config_tag;
     constexpr reduce_config()
         : rocprim::detail::reduce_config_params{
@@ -299,6 +300,7 @@ template<unsigned int                    BlockSize,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct scan_config : ::rocprim::detail::scan_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::scan_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
@@ -379,6 +381,7 @@ template<unsigned int                    BlockSize,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::scan_by_key_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
@@ -448,6 +451,7 @@ template<unsigned int BlockSize,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct transform_config : public detail::transform_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::transform_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
@@ -502,6 +506,7 @@ template<unsigned int BlockSize,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct binary_search_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::binary_search_config_tag;
 };
 
@@ -514,6 +519,7 @@ template<unsigned int BlockSize,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct upper_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::upper_bound_config_tag;
 };
 
@@ -526,6 +532,7 @@ template<unsigned int BlockSize,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct lower_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::lower_bound_config_tag;
 };
 
@@ -571,6 +578,7 @@ template<class HistogramConfig,
          unsigned int SharedImplHistograms = 3>
 struct histogram_config : detail::histogram_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::histogram_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     using histogram = HistogramConfig;
@@ -628,6 +636,7 @@ template<unsigned int       BlockSize,
          unsigned int       SizeLimit        = ROCPRIM_GRID_SIZE_LIMIT>
 struct adjacent_difference_config : public detail::adjacent_difference_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::adjacent_difference_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     static constexpr ::rocprim::block_load_method  block_load_method  = BlockLoadMethod;

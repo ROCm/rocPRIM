@@ -167,6 +167,14 @@ private:
     uint32_t linear_tid;
 
 public:
+    /// \brief Struct used to allocate a temporary memory that is required for thread
+    /// communication during operations provided by related parallel primitive.
+    ///
+    /// Depending on the implemention the operations exposed by parallel primitive may
+    /// require a temporary storage for thread communication. The storage should be allocated
+    /// using keywords <tt>__shared__</tt>. It can be aliased to
+    /// an externally allocated memory, or be a part of a union type with other storage types
+    /// to increase shared memory reusability.
     using storage_type = detail::raw_storage<storage_type_>;
 
     /**
@@ -290,7 +298,6 @@ public:
      * \p item_offsets can be used to retrieve each run-length decoded item's relative index within its run. E.g., the
      * run-length encoded array of `3, 1, 4` with the respective run lengths of `2, 1, 3` would yield the run-length
      * decoded array of `3, 3, 1, 4, 4, 4` with the relative offsets of `0, 1, 0, 0, 1, 2`.
-     * \smemreuse
      *
      * \param[out] decoded_items The run-length decoded items to be returned in a blocked arrangement
      * \param[out] item_offsets The run-length decoded items' relative offset within the run they belong to

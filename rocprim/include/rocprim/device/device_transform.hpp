@@ -35,10 +35,10 @@
 #include "device_transform_config.hpp"
 #include "detail/device_transform.hpp"
 
-BEGIN_ROCPRIM_NAMESPACE
-
 /// \addtogroup devicemodule
 /// @{
+
+BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
@@ -283,9 +283,9 @@ hipError_t transform(InputIterator1 input1,
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group devicemodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_DEVICE_DEVICE_TRANSFORM_HPP_
