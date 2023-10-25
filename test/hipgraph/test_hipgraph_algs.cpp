@@ -92,10 +92,10 @@ TEST(TestHipGraphAlgs, SortAndSearch)
     SCOPED_TRACE(testing::Message() << "with search_needle_size = " << search_needle_size);
 
     // Allocate device buffers and copy data into them
-    key_type* d_sort_input;
-    key_type* d_sort_output; // also used as search_input
-    key_type* d_search_output;
-    key_type* d_search_needles;
+    key_type* d_sort_input = nullptr;
+    key_type* d_sort_output = nullptr; // also used as search_input
+    key_type* d_search_output = nullptr;
+    key_type* d_search_needles = nullptr;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_sort_input, sort_data_size * sizeof(key_type)));
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_sort_output, sort_data_size * sizeof(key_type)));
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_search_output, search_needle_size * sizeof(key_type)));
