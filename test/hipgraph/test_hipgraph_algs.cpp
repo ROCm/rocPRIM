@@ -109,7 +109,7 @@ TEST(TestHipGraphAlgs, SortAndSearch)
     hipGraph_t graph = test_utils::createGraphHelper(stream);
 
     // Get temporary storage size required for merge_sort.
-    // Note: doing this insize a graph doesn't gain us any benefit,
+    // Note: doing this inside a graph doesn't gain us any benefit,
     // since these calls run entirely on the host - however, it is
     // important to validate that they work inside a graph capture block.
     size_t sort_temp_storage_bytes = 0;
@@ -140,7 +140,6 @@ TEST(TestHipGraphAlgs, SortAndSearch)
     // End graph capture (since we can't malloc the temp storage inside the graph)
     // and execute the graph (to get the temp storage size)
     hipGraphExec_t graph_instance;
-    //graph_instance = test_utils::execGraphHelper(graph, stream);
     graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
 
     // Allocate the temp storage
@@ -221,6 +220,7 @@ TEST(TestHipGraphAlgs, SortAndSearch)
     HIP_CHECK(hipFree(d_sort_output));
     HIP_CHECK(hipFree(d_search_output));
     HIP_CHECK(hipFree(d_search_needles));
+    HIP_CHECK(hipFree(d_temp_storage));
 
     test_utils::cleanupGraphHelper(graph, graph_instance);
     HIP_CHECK(hipStreamDestroy(stream));

@@ -290,10 +290,10 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            rocprim::minus<> {},
                                                            stream,
                                                            TestFixture::debug_synchronous));
+            HIP_CHECK(hipGetLastError());
+
             if (TestFixture::use_graphs)
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
-            HIP_CHECK(hipGetLastError());
 
             // Copy output to host
             HIP_CHECK(
