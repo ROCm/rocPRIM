@@ -317,7 +317,6 @@ inline hipError_t get_device_arch(int device_id, target_arch& arch)
     return hipSuccess;
 }
 
-#ifndef _WIN32
 inline hipError_t get_device_from_stream(const hipStream_t stream, int& device_id)
 {
     static constexpr hipStream_t default_stream = 0;
@@ -342,15 +341,9 @@ inline hipError_t get_device_from_stream(const hipStream_t stream, int& device_i
 #endif
     return hipSuccess;
 }
-#endif
 
 inline hipError_t host_target_arch(const hipStream_t stream, target_arch& arch)
 {
-#ifdef _WIN32
-    (void)stream;
-    arch = target_arch::unknown;
-    return hipSuccess;
-#else
     int              device_id;
     const hipError_t result = get_device_from_stream(stream, device_id);
     if(result != hipSuccess)
@@ -359,7 +352,6 @@ inline hipError_t host_target_arch(const hipStream_t stream, target_arch& arch)
     }
 
     return get_device_arch(device_id, arch);
-#endif
 }
 
 } // end namespace detail
