@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/en/latest/](https://rocprim.readthedocs.io/en/latest/)
 
-## [Unreleased rocPRIM-3.0.0 for ROCm 6.0.0]
+## [Unreleased rocPRIM-3.0.0 for ROCm 6.1.0]
 ### Added
  - Added new primitive: `block_run_length_decode`.
 ### Changed
