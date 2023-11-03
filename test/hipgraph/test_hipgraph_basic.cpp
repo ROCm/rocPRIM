@@ -123,7 +123,7 @@ void testManualConstruction()
     // Launch the kernel
     hipGraphNode_t kernelNode;
     void* kernelArgs[1] = {(void*) &d_data};
-    hipKernelNodeParams kernelNodeParams = {0};
+    hipKernelNodeParams kernelNodeParams{};
     kernelNodeParams.func = (void*) increment;
     kernelNodeParams.gridDim = dim3(1);
     kernelNodeParams.blockDim = dim3(1);

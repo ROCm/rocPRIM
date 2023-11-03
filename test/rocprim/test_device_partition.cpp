@@ -592,11 +592,12 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
                 select_op,
                 stream,
                 debug_synchronous));
-            HIP_CHECK(hipDeviceSynchronize());
 
             if (TestFixture::use_graphs)
-                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+
+            HIP_CHECK(hipDeviceSynchronize());
+
             // Check if number of selected value is as expected
             unsigned int selected_count_output = 0;
             HIP_CHECK(hipMemcpy(&selected_count_output,
@@ -784,11 +785,12 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                     second_op,
                     stream,
                     debug_synchronous));
-                HIP_CHECK(hipDeviceSynchronize());
 
                 if (TestFixture::use_graphs)
                     graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-                
+
+                HIP_CHECK(hipDeviceSynchronize());
+
                 // Check if number of selected value is as expected_selected
                 HIP_CHECK(
                     hipMemcpy(

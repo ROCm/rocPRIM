@@ -48,7 +48,7 @@ void generate_needles(const std::vector<KeyType>& input, std::vector<KeyType>& o
     std::vector<KeyType> out_of_bounds_vals = test_utils::get_random_data<KeyType>(search_needle_size - search_needle_size / 2, max_val, max_val * 2, seed_value);
 
     // Append the out-of-bounds values
-    for (int i = 0; i < out_of_bounds_vals.size(); i++)
+    for (size_t i = 0; i < out_of_bounds_vals.size(); i++)
         output[indices.size() + i] = out_of_bounds_vals[i];
 
     // Mix up the in-bounds and out-of-bounds values to make the test a bit more robust
@@ -192,7 +192,7 @@ TEST(TestHipGraphAlgs, SortAndSearch)
     std::vector<key_type> device_output(search_needle_size);
 
     // We'll launch the graph multiple times with different data.
-    for (int i = 0; i < num_trials; i++)
+    for (size_t i = 0; i < num_trials; i++)
     {
         // Generate the test data
         sort_input = test_utils::get_random_data<key_type>(sort_data_size, std::get<0>(bounds), std::get<1>(bounds), seed_value);
