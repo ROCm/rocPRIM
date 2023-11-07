@@ -21,18 +21,19 @@
 #ifndef ROCPRIM_TEST_UTILS_DATA_GENERATION_HPP
 #define ROCPRIM_TEST_UTILS_DATA_GENERATION_HPP
 
-// Std::memcpy and std::memcmp
-#include <cstring>
-#include <vector>
+#include "common_test_header.hpp"
+#include "test_utils_bfloat16.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_half.hpp"
 
 #include <rocprim/test_seed.hpp>
 #include <rocprim/type_traits.hpp>
 #include <rocprim/types.hpp>
 
-#include "common_test_header.hpp"
-#include "test_utils_bfloat16.hpp"
-#include "test_utils_custom_test_types.hpp"
-#include "test_utils_half.hpp"
+// Std::memcpy and std::memcmp
+#include <cstring>
+#include <random>
+#include <vector>
 
 namespace test_utils {
 

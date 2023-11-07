@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,9 @@
 #include <type_traits>
 
 #include "../config.hpp"
-#include "../types.hpp"
+#include "../functional.hpp"
 #include "../type_traits.hpp"
+#include "../types.hpp"
 
 #include <hip/hip_runtime.h>
 
@@ -336,6 +337,38 @@ template<class... Types, class Function>
 ROCPRIM_HOST_DEVICE inline void for_each_in_tuple(::rocprim::tuple<Types...>& t, Function f)
 {
     for_each_in_tuple_impl(t, f, ::rocprim::index_sequence_for<Types...>());
+}
+
+/// \brief Increments the pointer to align with a type
+///
+/// \tparam T  Type to align to
+/// \param pointer The pointer to align
+/// \return Aligned pointer
+template<typename T = char>
+ROCPRIM_HOST_DEVICE ROCPRIM_INLINE auto align_up(void* pointer)
+    -> std::enable_if_t<is_power_of_two(sizeof(T)), T*>
+{
+    // https://github.com/KabukiStarship/KabukiToolkit/wiki/Fastest-Method-to-Align-Pointers
+    constexpr auto mask  = sizeof(T) - 1;
+    size_t         value = reinterpret_cast<size_t>(pointer);
+    value += (-value) & mask;
+    return reinterpret_cast<T*>(value);
+}
+
+/// \brief Decrements the pointer to align with a type
+///
+/// \tparam T  Type to align to
+/// \param pointer The pointer to align
+/// \return Aligned pointer
+template<typename T = char>
+ROCPRIM_HOST_DEVICE ROCPRIM_INLINE auto align_down(void* pointer)
+    -> std::enable_if_t<is_power_of_two(sizeof(T)), T*>
+{
+    // https://github.com/KabukiStarship/KabukiToolkit/wiki/Fastest-Method-to-Align-Pointers
+    constexpr auto mask  = ~(sizeof(T) - 1);
+    size_t         value = reinterpret_cast<size_t>(pointer);
+    value &= mask;
+    return reinterpret_cast<T*>(value);
 }
 
 } // end namespace detail
