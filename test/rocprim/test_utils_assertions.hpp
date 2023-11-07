@@ -37,7 +37,8 @@ namespace test_utils {
 
 // begin assert_eq
 template<class T>
-bool inline bit_equal(T a, T b){
+bool inline bit_equal(const T& a, const T& b)
+{
     return std::memcmp(&a,  &b, sizeof(T))==0;
 }
 
