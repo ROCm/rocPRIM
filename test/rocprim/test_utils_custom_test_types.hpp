@@ -131,7 +131,12 @@ struct custom_non_copyable_type
 {
     T x;
 
+    custom_non_copyable_type()                                           = default;
+    custom_non_copyable_type(const custom_non_copyable_type&)            = delete;
+    custom_non_copyable_type(custom_non_copyable_type&&)                 = default;
+    ~custom_non_copyable_type()                                          = default;
     custom_non_copyable_type& operator=(const custom_non_copyable_type&) = delete;
+    custom_non_copyable_type& operator=(custom_non_copyable_type&&)      = default;
 };
 
 template<class T>
@@ -139,7 +144,12 @@ struct custom_non_moveable_type
 {
     T x;
 
+    custom_non_moveable_type()                                           = default;
+    custom_non_moveable_type(const custom_non_moveable_type&)            = delete;
     custom_non_moveable_type(custom_non_moveable_type&&) = delete;
+    ~custom_non_moveable_type()                                          = delete;
+    custom_non_moveable_type& operator=(const custom_non_moveable_type&) = delete;
+    custom_non_moveable_type& operator=(custom_non_moveable_type&&)      = delete;
 };
 
 template<class T>
