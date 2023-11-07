@@ -140,8 +140,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static aligned_ranges<VectorType>
     uint8_t*       out_ptr = static_cast<uint8_t*>(out_begin);
     const uint8_t* in_ptr  = static_cast<const uint8_t*>(in_begin);
 
-    VectorType* out_aligned_begin = detail::align_up<VectorType>(out_ptr);
-    VectorType* out_aligned_end   = detail::align_down<VectorType>(out_ptr + num_bytes);
+    auto* out_aligned_begin = detail::cast_align_up<VectorType*>(out_ptr);
+    auto* out_aligned_end   = detail::cast_align_down<VectorType*>(out_ptr + num_bytes);
 
     auto           begin_offset     = reinterpret_cast<uint8_t*>(out_aligned_begin) - out_ptr;
     auto           end_offset       = reinterpret_cast<uint8_t*>(out_aligned_end) - out_ptr;
