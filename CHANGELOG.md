@@ -11,6 +11,7 @@ Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/e
 - Removed support for custom config types for device algorithms.
 - `host_warp_size()` was moved into `rocprim/device/config_types.hpp`, and now uses either a `device_id` or a `stream` parameter to query the proper device and a `device_id` out parameter. The return type is `hipError_t`.
 - Added support for __int128_t in `device_radix_sort` and `block_radix_sort`.
+- Improved the performance of `match_any` and `block_histogram` that uses it
 ### Fixed
 - Fixed build issues with `rmake.py` on Windows when using VS 2017 15.8 or later due to a breaking fix with extended aligned storage.
 
