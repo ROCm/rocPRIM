@@ -117,7 +117,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// //                2nd copy
 /// \endcode
 /// \endparblock
-template<class Config = batch_memcpy_config<>,
+template<class Config_ = default_config,
          class InputBufferItType,
          class OutputBufferItType,
          class BufferSizeItType>
@@ -130,6 +130,8 @@ ROCPRIM_INLINE static hipError_t batch_memcpy(void*              temporary_stora
                                               hipStream_t        stream = hipStreamDefault,
                                               bool               debug_synchronous = false)
 {
+    using Config = detail::default_or_custom_config<Config_, batch_memcpy_config<>>;
+
     static_assert(Config::wlev_size_threshold < Config::blev_size_threshold,
                   "wlev_size_threshold should be smaller than blev_size_threshold");
 
