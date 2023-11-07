@@ -184,7 +184,7 @@ inline std::vector<T> get_random_data01(size_t size, float p, size_t max_random_
 template<class T>
 inline T get_random_value(T min, T max)
 {
-    return get_random_data(1, min, max)[0];
+    return get_random_data<T>(1, min, max)[0];
 }
 
 template<class T, class U = T>
@@ -802,5 +802,11 @@ inline const char* get_block_scan_method_name(rocprim::block_scan_algorithm alg)
     }
     return "unknown_algorithm";
 }
+
+template<std::size_t Size, std::size_t Alignment>
+struct alignas(Alignment) custom_aligned_type
+{
+    unsigned char data[Size];
+};
 
 #endif // ROCPRIM_BENCHMARK_UTILS_HPP_
