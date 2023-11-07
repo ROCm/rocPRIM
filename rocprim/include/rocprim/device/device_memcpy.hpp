@@ -35,19 +35,21 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief Copy `sizes[i]` bytes from `sources[i]` to `destinations[i]` for all `i` in the range [0, `num_copies`].
 ///
 /// \tparam Config [optional] configuration of  the primitive. It has to be \p batch_memcpy_config .
-/// \tparam InputBufferItType type of pointer to source pointers.
-/// \tparam OutputBufferItType type of pointer to desetination pointers.
-/// \tparam BufferSizeItType type of pointer to sizes.
+/// \tparam InputBufferItType type of iterator to source pointers.
+/// \tparam OutputBufferItType type of iterator to desetination pointers.
+/// \tparam BufferSizeItType type of iterator to sizes.
 ///
-/// \param [in] temporary_storage pointer to device-accessible temporary storage. When a null pointer is passed, the required allocation size in bytes is written to \p storage_size and the function returns without performing the copy.
-/// \param [in, out] storage_size reference to the size in bytes of \p temporary_storage .
+/// \param [in] temporary_storage pointer to device-accessible temporary storage.
+/// When a null pointer is passed, the required allocation size in bytes is written to
+/// `storage_size` and the function returns without performing the copy.
+/// \param [in, out] storage_size reference to the size in bytes of `temporary_storage`.
 /// \param [in] sources iterator of source pointers.
 /// \param [in] destinations iterator of destination pointers.
 /// \param [in] sizes iterator of range sizes to copy.
 /// \param [in] num_copies number of ranges to copy
-/// \param [in] stream [optional] HIP stream object to enqueue the copy on. Default is \p 0 (default stream).
+/// \param [in] stream [optional] HIP stream object to enqueue the copy on. Default is `hipStreamDefault`.
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
-/// launch is forced in order to check for errors. The default value is \p false.
+/// launch is forced in order to check for errors. The default value is `false`.
 ///
 /// Performs multiple device to device memory copies as a single batched operation.
 /// Roughly equivalent to
@@ -61,10 +63,10 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \endcode
 /// except executed on the device in parallel.
 /// Note that sources and destinations do not have to be part of the same array. I.e. you can copy
-/// from both array A and B to array C and D.
-/// Source ranges can even overlap.
-/// However, destinations overlapping with either other destinations or sources,
-/// is undefined behaviour.
+/// from both array A and B to array C and D with a single call to this function.
+/// Source ranges are allowed to overlap,
+/// however, destinations overlapping with either other destinations or with sources is not allowed,
+/// and will result in undefined behaviour.
 ///
 /// \par Example
 /// \parblock
@@ -125,7 +127,7 @@ ROCPRIM_INLINE static hipError_t batch_memcpy(void*              temporary_stora
                                               OutputBufferItType destinations,
                                               BufferSizeItType   sizes,
                                               uint32_t           num_copies,
-                                              hipStream_t        stream            = 0,
+                                              hipStream_t        stream = hipStreamDefault,
                                               bool               debug_synchronous = false)
 {
     static_assert(Config::wlev_size_threshold < Config::blev_size_threshold,

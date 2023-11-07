@@ -66,13 +66,11 @@ namespace batch_memcpy
 {
 enum class size_class
 {
-    tlev             = 0,
-    wlev             = 1,
-    blev             = 2,
-    num_size_classes = 3,
+    tlev = 0,
+    wlev = 1,
+    blev = 2,
+    num_size_classes,
 };
-
-static constexpr uint32_t num_size_classes = static_cast<uint32_t>(size_class::num_size_classes);
 
 template<uint32_t MaxItemValue, typename BackingUnitType = uint32_t>
 struct counter
@@ -280,7 +278,6 @@ struct batch_memcpy_impl
 
     using input_type = typename std::iterator_traits<input_buffer_type>::value_type;
 
-public:
     // top level policy
     static constexpr uint32_t block_size            = Config::non_blev_block_size;
     static constexpr uint32_t buffers_per_thread    = Config::non_blev_buffers_per_thread;
@@ -304,6 +301,8 @@ public:
     using tile_offset_type = uint32_t;
 
     // The byte offset within a thread-level buffer. Must fit at least `wlev_size_threshold`.
+    static_assert(wlev_size_threshold < std::numeric_limits<uint16_t>::max(),
+                  "wlev_size_threshhold too large (should fit in 16 bits)");
     using tlev_byte_offset_type =
         typename std::conditional<(wlev_size_threshold < 256), uint8_t, uint16_t>::type;
 
@@ -375,7 +374,6 @@ private:
                                                           blev_block_scan_state_type,
                                                           rocprim::plus<tile_offset_type>>;
 
-private:
     struct non_blev_memcpy
     {
         struct storage
@@ -403,7 +401,7 @@ private:
 
                 struct copy_tlev_t
                 {
-                    typename block_run_length_decode_type::storage_type rld_state;
+                    typename block_run_length_decode_type::storage_type rld_storage;
                     typename block_exchange_tlev_type::storage_type     block_exchange_storage;
                 } copy_tlev;
             } shared;
@@ -570,7 +568,7 @@ private:
 
             static_assert(
                 tlev_buffers_per_thread >= buffers_per_thread,
-                "Unsupported confiugraiton: The number of 'thread-level buffers' must be at "
+                "Unsupported configuration: The number of 'thread-level buffers' must be at "
                 "least as large as the number of overall buffers being processed by each "
                 "thread.");
 
@@ -598,7 +596,7 @@ private:
             // Total number of bytes in this block.
             uint32_t num_total_tlev_bytes = 0;
 
-            block_run_length_decode_type block_run_length_decode{tlev_storage.rld_state,
+            block_run_length_decode_type block_run_length_decode{tlev_storage.rld_storage,
                                                                  tlev_buffer_ids,
                                                                  tlev_buffer_sizes,
                                                                  num_total_tlev_bytes};
