@@ -35,8 +35,9 @@
 #include <algorithm>
 #include <numeric>
 #include <random>
-#include <stdint.h>
 #include <type_traits>
+
+#include <stdint.h>
 
 template<class ValueType,
          class SizeType,
@@ -122,7 +123,7 @@ TYPED_TEST_SUITE(DeviceBatchMemcpyTests, DeviceBatchMemcpyTestsParams);
 template<class T, class S, class RandomGenerator>
 std::vector<T> shuffled_exclusive_scan(const std::vector<S>& input, RandomGenerator& rng)
 {
-    const auto n = input.size();
+    const size_t n = input.size();
     assert(n > 0);
 
     std::vector<T> result(n);
@@ -131,7 +132,8 @@ std::vector<T> shuffled_exclusive_scan(const std::vector<S>& input, RandomGenera
     std::iota(permute.begin(), permute.end(), 0);
     std::shuffle(permute.begin(), permute.end(), rng);
 
-    for(T i = 0, sum = 0; i < n; ++i)
+    T sum = 0;
+    for(size_t i = 0; i < n; ++i)
     {
         result[permute[i]] = sum;
         sum += input[permute[i]];
