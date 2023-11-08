@@ -367,7 +367,7 @@ ROCPRIM_HOST_DEVICE ROCPRIM_INLINE DstPtr cast_align_up(Src* pointer)
 #endif
 }
 
-/// \brief Reinterprets the pointer as another type and increments it to match the alignment of
+/// \brief Reinterprets the pointer as another type and decrements it to match the alignment of
 /// the new type.
 ///
 /// \tparam Ptr Destination Type to align to
