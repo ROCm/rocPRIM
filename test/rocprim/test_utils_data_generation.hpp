@@ -32,6 +32,7 @@
 
 // Std::memcpy and std::memcmp
 #include <cstring>
+#include <iterator>
 #include <random>
 #include <vector>
 
@@ -183,18 +184,21 @@ void add_special_values(std::vector<T>& source, seed_type seed_value)
     }
 }
 
-template<class T, class U, class V>
-inline auto get_random_data(size_t size, U min, V max, seed_type seed_value) ->
-    typename std::enable_if<std::is_same<T, __int128_t>::value, std::vector<T>>::type
+template<typename Iterator>
+using it_value_t = typename std::iterator_traits<Iterator>::value_type;
+
+template<class OutputIter, class U, class V, class Generator>
+inline auto generate_random_data_n(OutputIter it, size_t size, U min, V max, Generator& gen)
+    -> std::enable_if_t<std::is_same<it_value_t<OutputIter>, __int128_t>::value, OutputIter>
 {
-    engine_type gen{seed_value};
+    using T = it_value_t<OutputIter>;
+
     using dis_type = typename std::conditional<
         is_valid_for_int_distribution<T>::value,
         T,
         typename std::conditional<std::is_signed<T>::value, int, unsigned int>::type>::type;
     std::uniform_int_distribution<dis_type> distribution(static_cast<dis_type>(min),
                                                          static_cast<dis_type>(max));
-    std::vector<T>                          data(size);
     size_t                                  segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
@@ -204,39 +208,37 @@ inline auto get_random_data(size_t size, U min, V max, seed_type seed_value) ->
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
                 T repeated_value = static_cast<T>(distribution(gen));
-                std::fill(data.begin() + segment_size * segment_index,
-                          data.begin() + segment_size * (segment_index + 1),
+                std::fill(it + segment_size * segment_index,
+                          it + segment_size * (segment_index + 1),
                           repeated_value);
             }
             else
             {
-                std::generate(data.begin() + segment_size * segment_index,
-                              data.begin() + segment_size * (segment_index + 1),
+                std::generate(it + segment_size * segment_index,
+                              it + segment_size * (segment_index + 1),
                               [&]() { return static_cast<T>(distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(),
-                      data.end(),
-                      [&]() { return static_cast<T>(distribution(gen)); });
+        std::generate_n(it, size, [&]() { return static_cast<T>(distribution(gen)); });
     }
-    return data;
+    return it + size;
 }
 
-template<class T, class U, class V>
-inline auto get_random_data(size_t size, U min, V max, seed_type seed_value) ->
-    typename std::enable_if<std::is_same<T, __uint128_t>::value, std::vector<T>>::type
+template<class OutputIter, class U, class V, class Generator>
+inline auto generate_random_data_n(OutputIter it, size_t size, U min, V max, Generator& gen)
+    -> std::enable_if_t<std::is_same<it_value_t<OutputIter>, __uint128_t>::value, OutputIter>
 {
-    engine_type gen{seed_value};
+    using T = it_value_t<OutputIter>;
+
     using dis_type = typename std::conditional<
         is_valid_for_int_distribution<T>::value,
         T,
         typename std::conditional<std::is_signed<T>::value, int, unsigned int>::type>::type;
     std::uniform_int_distribution<dis_type> distribution(static_cast<dis_type>(min),
                                                          static_cast<dis_type>(max));
-    std::vector<T>                          data(size);
     size_t                                  segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
@@ -246,32 +248,29 @@ inline auto get_random_data(size_t size, U min, V max, seed_type seed_value) ->
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
                 T repeated_value = static_cast<T>(distribution(gen));
-                std::fill(data.begin() + segment_size * segment_index,
-                          data.begin() + segment_size * (segment_index + 1),
-                          repeated_value);
+                std::fill_n(it + segment_size * segment_index, segment_size, repeated_value);
             }
             else
             {
-                std::generate(data.begin() + segment_size * segment_index,
-                              data.begin() + segment_size * (segment_index + 1),
-                              [&]() { return static_cast<T>(distribution(gen)); });
+                std::generate_n(it + segment_size * segment_index,
+                                segment_size,
+                                [&]() { return static_cast<T>(distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(),
-                      data.end(),
-                      [&]() { return static_cast<T>(distribution(gen)); });
+        std::generate_n(it, size, [&]() { return static_cast<T>(distribution(gen)); });
     }
-    return data;
+    return it + size;
 }
 
-template<class T, class U, class V>
-inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
-    -> typename std::enable_if<rocprim::is_integral<T>::value, std::vector<T>>::type
+template<class OutputIter, class U, class V, class Generator>
+inline auto generate_random_data_n(OutputIter it, size_t size, U min, V max, Generator& gen)
+    -> std::enable_if_t<rocprim::is_integral<it_value_t<OutputIter>>::value, OutputIter>
 {
-    engine_type gen{seed_value};
+    using T = it_value_t<OutputIter>;
+
     using dis_type = typename std::conditional<
         is_valid_for_int_distribution<T>::value,
         T,
@@ -279,8 +278,8 @@ inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
                                   int,
                                   unsigned int>::type
         >::type;
-    std::uniform_int_distribution<dis_type> distribution(static_cast<dis_type>(min), static_cast<dis_type>(max));
-    std::vector<T> data(size);
+    std::uniform_int_distribution<dis_type> distribution(static_cast<dis_type>(min),
+                                                         static_cast<dis_type>(max));
     size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
@@ -289,33 +288,31 @@ inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
                 T repeated_value = static_cast<T>(distribution(gen));
-                std::fill(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    repeated_value);
-
+                std::fill_n(it + segment_size * segment_index, segment_size, repeated_value);
             }
             else
             {
-                std::generate(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    [&]() { return static_cast<T>(distribution(gen)); });
+                std::generate_n(it + segment_size * segment_index,
+                                segment_size,
+                                [&]() { return static_cast<T>(distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(), data.end(), [&]() { return static_cast<T>(distribution(gen)); });
+        std::generate_n(it, size, [&]() { return static_cast<T>(distribution(gen)); });
     }
-    return data;
+    return it + size;
 }
 
-template<class T, class U, class V>
-inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
-    -> typename std::enable_if<rocprim::is_floating_point<T>::value, std::vector<T>>::type
+template<class OutputIter, class U, class V, class Generator>
+inline auto generate_random_data_n(OutputIter it, size_t size, U min, V max, Generator& gen)
+    -> std::enable_if_t<rocprim::is_floating_point<it_value_t<OutputIter>>::value
+                            && !is_custom_test_type<it_value_t<OutputIter>>::value,
+                        OutputIter>
 {
-    engine_type gen{seed_value};
+    using T = it_value_t<OutputIter>;
+
     // Generate floats when T is half or bfloat16
     using dis_type = typename std::conditional<std::is_same<rocprim::half, T>::value || std::is_same<rocprim::bfloat16, T>::value, float, T>::type;
     std::uniform_real_distribution<dis_type> distribution(static_cast<dis_type>(min), static_cast<dis_type>(max));
@@ -328,39 +325,36 @@ inline auto get_random_data(size_t size, U min, V max, seed_type seed_value)
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
                 T repeated_value = static_cast<T>(distribution(gen));
-                std::fill(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    repeated_value);
-
+                std::fill_n(it + segment_size * segment_index, segment_size, repeated_value);
             }
             else
             {
-                std::generate(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    [&]() { return static_cast<T>(distribution(gen)); });
+                std::generate_n(it + segment_size * segment_index,
+                                segment_size,
+                                [&]() { return static_cast<T>(distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(), data.end(), [&]() { return static_cast<T>(distribution(gen)); });
-
+        std::generate_n(it, size, [&]() { return static_cast<T>(distribution(gen)); });
     }
-    return data;
+    return it + size;
 }
 
-template<class T>
-inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
-    -> typename std::enable_if<
-        is_custom_test_type<T>::value && std::is_integral<typename T::value_type>::value,
-        std::vector<T>
-        >::type
+template<class OutputIter, class Generator>
+inline auto generate_random_data_n(OutputIter             it,
+                                   size_t                 size,
+                                   it_value_t<OutputIter> min,
+                                   it_value_t<OutputIter> max,
+                                   Generator&             gen)
+    -> std::enable_if_t<is_custom_test_type<it_value_t<OutputIter>>::value
+                            && std::is_integral<typename it_value_t<OutputIter>::value_type>::value,
+                        OutputIter>
 {
-    engine_type gen(seed_value);
+    using T = it_value_t<OutputIter>;
+
     std::uniform_int_distribution<typename T::value_type> distribution(min.x, max.x);
-    std::vector<T> data(size);
     size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
@@ -369,38 +363,37 @@ inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
                 T repeated_value = T(distribution(gen), distribution(gen));
-                std::fill(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    repeated_value);
-
+                std::fill_n(it + segment_size * segment_index, segment_size, repeated_value);
             }
             else
             {
-                std::generate(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    [&]() { return T(distribution(gen), distribution(gen)); });
+                std::generate_n(it + segment_size * segment_index,
+                                segment_size,
+                                [&]() { return T(distribution(gen), distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(), data.end(), [&]() { return T(distribution(gen), distribution(gen)); });
+        std::generate_n(it, size, [&]() { return T(distribution(gen), distribution(gen)); });
     }
-    return data;
+    return it + size;
 }
 
-template<class T>
-inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
-    -> typename std::enable_if<
-        is_custom_test_type<T>::value && std::is_floating_point<typename T::value_type>::value,
-        std::vector<T>
-        >::type
+template<class OutputIter, class Generator>
+inline auto generate_random_data_n(OutputIter             it,
+                                   size_t                 size,
+                                   it_value_t<OutputIter> min,
+                                   it_value_t<OutputIter> max,
+                                   Generator&             gen)
+    -> std::enable_if_t<
+        is_custom_test_type<it_value_t<OutputIter>>::value
+            && std::is_floating_point<typename it_value_t<OutputIter>::value_type>::value,
+        OutputIter>
 {
-    engine_type gen(seed_value);
+    using T = typename std::iterator_traits<OutputIter>::value_type;
+
     std::uniform_real_distribution<typename T::value_type> distribution(min.x, max.x);
-    std::vector<T> data(size);
     size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
@@ -409,65 +402,77 @@ inline auto get_random_data(size_t size, T min, T max, seed_type seed_value)
             if(segment_index % random_data_generation_repeat_strides == 0)
             {
                 T repeated_value = T(distribution(gen), distribution(gen));
-                std::fill(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    repeated_value);
-
+                std::fill_n(it + segment_size * segment_index, segment_size, repeated_value);
             }
             else
             {
-                std::generate(
-                    data.begin() + segment_size * segment_index,
-                    data.begin() + segment_size * (segment_index + 1),
-                    [&]() { return T(distribution(gen), distribution(gen)); });
+                std::generate_n(it + segment_size * segment_index,
+                                segment_size,
+                                [&]() { return T(distribution(gen), distribution(gen)); });
             }
         }
     }
     else
     {
-        std::generate(data.begin(), data.end(), [&]() { return T(distribution(gen), distribution(gen)); });
+        std::generate_n(it, size, [&]() { return T(distribution(gen), distribution(gen)); });
     }
-    return data;
+    return it + size;
 }
 
-template<class T>
-inline auto get_random_data(size_t size, typename T::value_type min, typename T::value_type max, seed_type seed_value)
-    -> typename std::enable_if<
-        is_custom_test_array_type<T>::value && std::is_integral<typename T::value_type>::value,
-        std::vector<T>
-        >::type
+template<class OutputIter, class Generator>
+inline auto generate_random_data_n(OutputIter                                  it,
+                                   size_t                                      size,
+                                   typename it_value_t<OutputIter>::value_type min,
+                                   typename it_value_t<OutputIter>::value_type max,
+                                   Generator&                                  gen)
+    -> std::enable_if_t<is_custom_test_array_type<it_value_t<OutputIter>>::value
+                            && std::is_integral<typename it_value_t<OutputIter>::value_type>::value,
+                        OutputIter>
 {
-    engine_type gen(seed_value);
+    using T = typename std::iterator_traits<OutputIter>::value_type;
+
     std::uniform_int_distribution<typename T::value_type> distribution(min, max);
+    return std::generate_n(it,
+                           size,
+                           [&]()
+                           {
+                               T result;
+                               for(size_t i = 0; i < T::size; i++)
+                               {
+                                   result.values[i] = distribution(gen);
+                               }
+                               return result;
+                           });
+}
+
+template<class T, class U, class V>
+inline std::vector<T> get_random_data(size_t size, U min, V max, seed_type seed_value)
+{
     std::vector<T> data(size);
-    std::generate(
-        data.begin(), data.end(),
-        [&]()
-        {
-            T result;
-            for(size_t i = 0; i < T::size; i++)
-            {
-                result.values[i] = distribution(gen);
-            }
-            return result;
-        }
-    );
+    engine_type    gen(seed_value);
+    generate_random_data_n(data.begin(), size, min, max, gen);
     return data;
 }
 
 template<class T, class U, class V>
 inline auto get_random_value(U min, V max, seed_type seed_value)
-    -> typename std::enable_if<rocprim::is_arithmetic<T>::value, T>::type
+    -> std::enable_if_t<rocprim::is_arithmetic<T>::value, T>
 {
-    return get_random_data<T>(random_data_generation_segments, min, max, seed_value)[0];
+    T           result;
+    engine_type gen(seed_value);
+    generate_random_data_n(&result, 1, min, max, gen);
+    return result;
 }
 
 template<class T>
-inline auto get_random_value(typename T::value_type min, typename T::value_type max, seed_type seed_value)
-    -> typename std::enable_if<is_custom_test_type<T>::value || is_custom_test_array_type<T>::value, T>::type
+inline auto
+    get_random_value(typename T::value_type min, typename T::value_type max, seed_type seed_value)
+        -> std::enable_if_t<is_custom_test_type<T>::value || is_custom_test_array_type<T>::value, T>
 {
-    return get_random_data<typename T::value_type>(random_data_generation_segments, min, max, seed_value)[0];
+    typename T::value_type result;
+    engine_type            gen(seed_value);
+    generate_random_data_n(&result, 1, min, max, gen);
+    return T{result};
 }
 
 template<class T>
