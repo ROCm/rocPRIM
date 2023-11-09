@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <random>
