@@ -315,8 +315,8 @@ inline auto generate_random_data_n(OutputIter it, size_t size, U min, V max, Gen
 
     // Generate floats when T is half or bfloat16
     using dis_type = typename std::conditional<std::is_same<rocprim::half, T>::value || std::is_same<rocprim::bfloat16, T>::value, float, T>::type;
-    std::uniform_real_distribution<dis_type> distribution(static_cast<dis_type>(min), static_cast<dis_type>(max));
-    std::vector<T> data(size);
+    std::uniform_real_distribution<dis_type> distribution(static_cast<dis_type>(min),
+                                                          static_cast<dis_type>(max));
     size_t segment_size = size / random_data_generation_segments;
     if(segment_size != 0)
     {
