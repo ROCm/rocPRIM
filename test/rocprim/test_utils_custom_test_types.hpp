@@ -146,8 +146,8 @@ struct custom_non_moveable_type
 
     custom_non_moveable_type()                                           = default;
     custom_non_moveable_type(const custom_non_moveable_type&)            = delete;
-    custom_non_moveable_type(custom_non_moveable_type&&) = delete;
-    ~custom_non_moveable_type()                                          = delete;
+    custom_non_moveable_type(custom_non_moveable_type&&)                 = delete;
+    ~custom_non_moveable_type()                                          = default;
     custom_non_moveable_type& operator=(const custom_non_moveable_type&) = delete;
     custom_non_moveable_type& operator=(custom_non_moveable_type&&)      = delete;
 };
