@@ -289,6 +289,13 @@ autotune:build:
       -D GPU_TARGETS=$GPU_TARGETS
     - cmake --build . --target $BENCHMARK_TARGETS
     - 'rm -rf $BUILD_DIR/benchmark/benchmark*.parallel'
+    - 'myfilesize=0'
+    - 'for filename in benchmark/benchmar*; do'
+    - '    myfilesize=$((myfilesize+$(wc -c $filename | awk "{print $1}")))'
+    - done
+    - 'if (( myfilesize > 3221225472 )); then'
+    - '    rm -rf benchmark/benchmark*'
+    - fi
   artifacts:
     paths:
       - $BUILD_DIR/benchmark/benchmark*
