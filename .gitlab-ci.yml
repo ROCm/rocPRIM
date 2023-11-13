@@ -291,7 +291,7 @@ autotune:build:
     - 'rm -rf $BUILD_DIR/benchmark/benchmark*.parallel'
     - 'myfilesize=0'
     - 'for filename in benchmark/benchmar*; do'
-    - '    myfilesize=$((myfilesize+$(wc -c <"$FILENAME")))'
+    - '    myfilesize=$((myfilesize+$(wc -c <"$filename")))'
     - done
     - 'if (( myfilesize > 3221225472 )); then'
     - '    rm -rf benchmark/benchmark*'
