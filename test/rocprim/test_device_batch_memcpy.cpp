@@ -26,6 +26,7 @@
 #include "test_utils_data_generation.hpp"
 #include "test_utils_types.hpp"
 
+#include "rocprim/detail/various.hpp"
 #include "rocprim/device/device_memcpy.hpp"
 #include "rocprim/intrinsics/thread.hpp"
 
@@ -36,6 +37,8 @@
 #include <numeric>
 #include <random>
 #include <type_traits>
+
+#include <cstring>
 
 #include <stdint.h>
 
@@ -144,64 +147,53 @@ std::vector<T> shuffled_exclusive_scan(const std::vector<S>& input, RandomGenera
 
 TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
 {
-    constexpr int32_t wlev_min_size = rocprim::batch_memcpy_config<>::wlev_size_threshold;
-    constexpr int32_t blev_min_size = rocprim::batch_memcpy_config<>::blev_size_threshold;
-
-    constexpr int32_t num_buffers = TestFixture::num_buffers;
-    constexpr int32_t max_size    = TestFixture::max_size;
-    constexpr bool    shuffled    = TestFixture::shuffled;
-
-    constexpr int32_t num_tlev_buffers = num_buffers / 3;
-    constexpr int32_t num_wlev_buffers = num_buffers / 3;
-
     using value_type         = typename TestFixture::value_type;
     using buffer_size_type   = typename TestFixture::size_type;
     using buffer_offset_type = uint32_t;
     using byte_offset_type   = size_t;
 
-    using value_alias =
-        typename std::conditional<test_utils::is_custom_test_type<value_type>::value,
-                                  typename test_utils::inner_type<value_type>::type,
-                                  value_type>::type;
+    constexpr int32_t num_buffers = TestFixture::num_buffers;
+    constexpr int32_t max_size    = TestFixture::max_size;
+    constexpr bool    shuffled    = TestFixture::shuffled;
+
+    constexpr int32_t wlev_min_size = rocprim::batch_memcpy_config<>::wlev_size_threshold;
+    constexpr int32_t blev_min_size = rocprim::batch_memcpy_config<>::blev_size_threshold;
+
+    constexpr int32_t wlev_min_elems
+        = rocprim::detail::ceiling_div(wlev_min_size, sizeof(value_type));
+    constexpr int32_t blev_min_elems
+        = rocprim::detail::ceiling_div(blev_min_size, sizeof(value_type));
+    constexpr int32_t max_elems = max_size / sizeof(value_type);
+
+    constexpr int32_t enabled_size_categories
+        = (blev_min_elems <= max_elems) + (wlev_min_elems <= max_elems) + 1;
+
+    constexpr int32_t num_blev
+        = blev_min_elems <= max_elems ? num_buffers / enabled_size_categories : 0;
+    constexpr int32_t num_wlev
+        = wlev_min_elems <= max_elems ? num_buffers / enabled_size_categories : 0;
+    constexpr int32_t num_tlev = num_buffers - num_blev - num_wlev;
 
     // Get random buffer sizes
-
-    // Number of elements in each buffer.
-    std::vector<buffer_size_type> h_buffer_num_elements(num_buffers);
-
-    // Total number of bytes.
-    byte_offset_type total_num_bytes    = 0;
-    byte_offset_type total_num_elements = 0;
-
     uint32_t seed = 0;
     SCOPED_TRACE(testing::Message() << "with seed= " << seed);
-    std::default_random_engine rng{seed};
+    std::mt19937_64 rng{seed};
 
-    for(buffer_offset_type i = 0; i < num_buffers; ++i)
-    {
-        buffer_size_type size;
-        if(i < num_tlev_buffers)
-        {
-            size = test_utils::get_random_value<buffer_size_type>(1, wlev_min_size - 1, rng());
-        }
-        else if(i < num_tlev_buffers + num_wlev_buffers)
-        {
-            size = test_utils::get_random_value<buffer_size_type>(wlev_min_size,
-                                                                  blev_min_size - 1,
-                                                                  rng());
-        }
-        else
-        {
-            size = test_utils::get_random_value<buffer_size_type>(blev_min_size, max_size, rng());
-        }
+    std::vector<buffer_size_type> h_buffer_num_elements(num_buffers);
 
-        // convert from number of bytes to number of elements
-        size = max(1, size / sizeof(value_type));
-        size = min(size, max_size);
+    auto iter = h_buffer_num_elements.begin();
 
-        h_buffer_num_elements[i] = size;
-        total_num_elements += size;
-    }
+    iter = test_utils::generate_random_data_n(iter, num_tlev, 1, wlev_min_elems - 1, rng);
+    iter = test_utils::generate_random_data_n(iter,
+                                              num_wlev,
+                                              wlev_min_elems,
+                                              blev_min_elems - 1,
+                                              rng);
+    iter = test_utils::generate_random_data_n(iter, num_blev, blev_min_elems, max_elems, rng);
+
+    const byte_offset_type total_num_elements = std::accumulate(h_buffer_num_elements.begin(),
+                                                                h_buffer_num_elements.end(),
+                                                                byte_offset_type{0});
 
     // Shuffle the sizes so that size classes aren't clustered
     std::shuffle(h_buffer_num_elements.begin(), h_buffer_num_elements.end(), rng);
@@ -214,14 +206,14 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
     }
 
     // And the total byte size
-    total_num_bytes = total_num_elements * sizeof(value_type);
+    const byte_offset_type total_num_bytes = total_num_elements * sizeof(value_type);
 
     // Device pointers
-    value_type*       d_input{};
-    value_type*       d_output{};
-    value_type**      d_buffer_srcs{};
-    value_type**      d_buffer_dsts{};
-    buffer_size_type* d_buffer_sizes{};
+    value_type*       d_input        = nullptr;
+    value_type*       d_output       = nullptr;
+    value_type**      d_buffer_srcs  = nullptr;
+    value_type**      d_buffer_dsts  = nullptr;
+    buffer_size_type* d_buffer_sizes = nullptr;
 
     // Calculate temporary storage
 
@@ -234,7 +226,7 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
                                     d_buffer_sizes,
                                     num_buffers));
 
-    void* d_temp_storage{};
+    void* d_temp_storage = nullptr;
 
     // Allocate memory.
     HIP_CHECK(hipMalloc(&d_input, total_num_bytes));
@@ -247,11 +239,16 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
     HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_bytes));
 
     // Generate data.
-    std::vector<value_alias> h_input
-        = test_utils::get_random_data<value_alias>(total_num_elements,
-                                                   test_utils::numeric_limits<value_alias>::min(),
-                                                   test_utils::numeric_limits<value_alias>::max(),
-                                                   rng());
+    std::independent_bits_engine<std::mt19937_64, 64, uint64_t> bits_engine{rng};
+
+    const size_t num_ints = rocprim::detail::ceiling_div(total_num_bytes, sizeof(uint64_t));
+    auto         h_input  = std::make_unique<unsigned char[]>(num_ints * sizeof(uint64_t));
+
+    // generate_n for uninitialized memory, pragmatically use placement-new, since there are no
+    // uint64_t objects alive yet in the storage.
+    std::for_each(reinterpret_cast<uint64_t*>(h_input.get()),
+                  reinterpret_cast<uint64_t*>(h_input.get() + num_ints * sizeof(uint64_t)),
+                  [&bits_engine](uint64_t& elem) { ::new(&elem) uint64_t{bits_engine()}; });
 
     // Generate the source and shuffled destination offsets.
     std::vector<buffer_offset_type> src_offsets;
@@ -288,7 +285,7 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
     }
 
     // Prepare the batch memcpy.
-    HIP_CHECK(hipMemcpy(d_input, h_input.data(), total_num_bytes, hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(d_input, h_input.get(), total_num_bytes, hipMemcpyHostToDevice));
     HIP_CHECK(hipMemcpy(d_buffer_srcs,
                         h_buffer_srcs.data(),
                         h_buffer_srcs.size() * sizeof(*d_buffer_srcs),
@@ -311,17 +308,22 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
                                     num_buffers,
                                     hipStreamDefault));
     // Verify results.
-    std::vector<value_alias> h_output(total_num_elements);
-    HIP_CHECK(hipMemcpy(h_output.data(), d_output, total_num_bytes, hipMemcpyDeviceToHost));
+    auto h_output = std::make_unique<unsigned char[]>(total_num_bytes);
+    HIP_CHECK(hipMemcpy(h_output.get(), d_output, total_num_bytes, hipMemcpyDeviceToHost));
 
     for(int32_t i = 0; i < num_buffers; ++i)
     {
-        for(buffer_size_type j = 0; j < h_buffer_num_elements[i]; ++j)
-        {
-            auto input_index  = src_offsets[i] + j;
-            auto output_index = dst_offsets[i] + j;
-
-            ASSERT_TRUE(test_utils::bit_equal(h_input[input_index], h_output[output_index]));
-        }
+        ASSERT_EQ(std::memcmp(h_input.get() + src_offsets[i] * sizeof(value_type),
+                              h_output.get() + dst_offsets[i] * sizeof(value_type),
+                              h_buffer_num_bytes[i]),
+                  0)
+            << "with index = " << i;
     }
+
+    HIP_CHECK(hipFree(d_temp_storage));
+    HIP_CHECK(hipFree(d_buffer_sizes));
+    HIP_CHECK(hipFree(d_buffer_dsts));
+    HIP_CHECK(hipFree(d_buffer_srcs));
+    HIP_CHECK(hipFree(d_output));
+    HIP_CHECK(hipFree(d_input));
 }
