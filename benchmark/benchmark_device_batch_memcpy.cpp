@@ -24,12 +24,15 @@
 #include "benchmark_utils.hpp"
 #include "cmdparser.hpp"
 
+#include <numeric>
+#include <random>
 #include <rocprim/rocprim.hpp>
 
 #include <hip/hip_runtime.h>
 
 #include <iostream>
 #include <stdint.h>
+#include <utility>
 #include <vector>
 
 constexpr uint32_t warmup_size   = 5;
@@ -79,53 +82,85 @@ std::vector<T> shuffled_exclusive_scan(const std::vector<S>& input, RandomGenera
     return result;
 }
 
-template<class ValueType, class BufferSizeType>
-void run_benchmark(benchmark::State& state,
-                   hipStream_t       stream,
-                   const int32_t     num_tlev_buffers = 1024,
-                   const int32_t     num_wlev_buffers = 1024,
-                   const int32_t     num_blev_buffers = 1024)
-{
-    const bool    shuffle_buffers = false;
-    const int32_t num_buffers     = num_tlev_buffers + num_wlev_buffers + num_blev_buffers;
+using offset_type = size_t;
 
-    using offset_type = size_t;
+template<typename ValueType, typename BufferSizeType>
+struct BatchMemcpyData
+{
+    size_t          total_num_elements = 0;
+    ValueType*      d_input            = nullptr;
+    ValueType*      d_output           = nullptr;
+    ValueType**     d_buffer_srcs      = nullptr;
+    ValueType**     d_buffer_dsts      = nullptr;
+    BufferSizeType* d_buffer_sizes     = nullptr;
+
+    BatchMemcpyData()                       = default;
+    BatchMemcpyData(const BatchMemcpyData&) = delete;
+
+    BatchMemcpyData(BatchMemcpyData&& other)
+        : total_num_elements{std::exchange(other.total_num_elements, 0)}
+        , d_input{std::exchange(other.d_input, nullptr)}
+        , d_output{std::exchange(other.d_output, nullptr)}
+        , d_buffer_srcs{std::exchange(other.d_buffer_srcs, nullptr)}
+        , d_buffer_dsts{std::exchange(other.d_buffer_dsts, nullptr)}
+        , d_buffer_sizes{std::exchange(other.d_buffer_sizes, nullptr)}
+    {}
+
+    BatchMemcpyData& operator=(BatchMemcpyData&& other)
+    {
+        total_num_elements = std::exchange(other.total_num_elements, 0);
+        d_input            = std::exchange(other.d_input, nullptr);
+        d_output           = std::exchange(other.d_output, nullptr);
+        d_buffer_srcs      = std::exchange(other.d_buffer_srcs, nullptr);
+        d_buffer_dsts      = std::exchange(other.d_buffer_dsts, nullptr);
+        d_buffer_sizes     = std::exchange(other.d_buffer_sizes, nullptr);
+        return *this;
+    };
+
+    BatchMemcpyData& operator=(const BatchMemcpyData&) = delete;
+
+    size_t total_num_bytes() const
+    {
+        return total_num_elements * sizeof(ValueType);
+    }
+
+    ~BatchMemcpyData()
+    {
+        HIP_CHECK(hipFree(d_buffer_sizes));
+        HIP_CHECK(hipFree(d_buffer_srcs));
+        HIP_CHECK(hipFree(d_buffer_dsts));
+        HIP_CHECK(hipFree(d_output));
+        HIP_CHECK(hipFree(d_input));
+    }
+};
+
+template<class ValueType, class BufferSizeType>
+BatchMemcpyData<ValueType, BufferSizeType> prepare_data(const int32_t num_tlev_buffers = 1024,
+                                                        const int32_t num_wlev_buffers = 1024,
+                                                        const int32_t num_blev_buffers = 1024)
+{
+    const bool shuffle_buffers = false;
+
+    BatchMemcpyData<ValueType, BufferSizeType> result;
+    const size_t num_buffers = num_tlev_buffers + num_wlev_buffers + num_blev_buffers;
+
+    constexpr int32_t wlev_min_elems
+        = rocprim::detail::ceiling_div(wlev_min_size, sizeof(ValueType));
+    constexpr int32_t blev_min_elems
+        = rocprim::detail::ceiling_div(blev_min_size, sizeof(ValueType));
+    constexpr int32_t max_elems = max_size / sizeof(ValueType);
 
     // Generate data
+    std::mt19937_64 rng(std::random_device{}());
 
     // Number of elements in each buffer.
     std::vector<BufferSizeType> h_buffer_num_elements(num_buffers);
 
-    // Total number of bytes.
-    offset_type total_num_bytes    = 0;
-    offset_type total_num_elements = 0;
+    auto iter = h_buffer_num_elements.begin();
 
-    std::default_random_engine rng{0};
-
-    // Get random buffer sizes
-
-    for(BufferSizeType i = 0; i < num_buffers; ++i)
-    {
-        BufferSizeType size;
-        if(i < num_tlev_buffers)
-        {
-            size = get_random_value<BufferSizeType>(1, wlev_min_size - 1);
-        }
-        else if(i < num_wlev_buffers)
-        {
-            size = get_random_value<BufferSizeType>(wlev_min_size, blev_min_size - 1);
-        }
-        else
-        {
-            size = get_random_value<BufferSizeType>(blev_min_size, max_size);
-        }
-
-        // convert from number of bytes to number of elements
-        size = max(1, size / sizeof(ValueType));
-
-        h_buffer_num_elements[i] = size;
-        total_num_elements += size;
-    }
+    iter = generate_random_data_n(iter, num_tlev_buffers, 1, wlev_min_elems - 1, rng);
+    iter = generate_random_data_n(iter, num_wlev_buffers, wlev_min_elems, blev_min_elems - 1, rng);
+    iter = generate_random_data_n(iter, num_blev_buffers, blev_min_elems, max_elems, rng);
 
     // Shuffle the sizes so that size classes aren't clustered
     std::shuffle(h_buffer_num_elements.begin(), h_buffer_num_elements.end(), rng);
@@ -137,40 +172,26 @@ void run_benchmark(benchmark::State& state,
         h_buffer_num_bytes[i] = h_buffer_num_elements[i] * sizeof(ValueType);
     }
 
-    // And the total byte size
-    total_num_bytes = total_num_elements * sizeof(ValueType);
-
-    // Device pointers
-    ValueType*      d_input{};
-    ValueType*      d_output{};
-    ValueType**     d_buffer_srcs{};
-    ValueType**     d_buffer_dsts{};
-    BufferSizeType* d_buffer_sizes{};
-
-    size_t temp_storage_bytes = 0;
-    HIP_CHECK(rocprim::batch_memcpy(nullptr,
-                                    temp_storage_bytes,
-                                    d_buffer_srcs,
-                                    d_buffer_dsts,
-                                    d_buffer_sizes,
-                                    num_buffers));
-
-    void* d_temp_storage{};
+    result.total_num_elements
+        = std::accumulate(h_buffer_num_elements.begin(), h_buffer_num_elements.end(), size_t{0});
 
     // Generate data.
-    std::vector<char> h_input = get_random_data<char>(total_num_bytes,
-                                                      std::numeric_limits<char>::min(),
-                                                      std::numeric_limits<char>::max(),
-                                                      rng());
+    std::independent_bits_engine<std::mt19937_64, 64, uint64_t> bits_engine{rng};
 
-    HIP_CHECK(hipMalloc(&d_input, total_num_bytes));
-    HIP_CHECK(hipMalloc(&d_output, total_num_bytes));
+    const size_t num_ints
+        = rocprim::detail::ceiling_div(result.total_num_bytes(), sizeof(uint64_t));
+    auto h_input = std::make_unique<unsigned char[]>(num_ints * sizeof(uint64_t));
 
-    HIP_CHECK(hipMalloc(&d_buffer_srcs, num_buffers * sizeof(ValueType*)));
-    HIP_CHECK(hipMalloc(&d_buffer_dsts, num_buffers * sizeof(ValueType*)));
-    HIP_CHECK(hipMalloc(&d_buffer_sizes, num_buffers * sizeof(BufferSizeType)));
+    std::for_each(reinterpret_cast<uint64_t*>(h_input.get()),
+                  reinterpret_cast<uint64_t*>(h_input.get() + num_ints * sizeof(uint64_t)),
+                  [&bits_engine](uint64_t& elem) { ::new(&elem) uint64_t{bits_engine()}; });
 
-    HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_bytes));
+    HIP_CHECK(hipMalloc(&result.d_input, result.total_num_bytes()));
+    HIP_CHECK(hipMalloc(&result.d_output, result.total_num_bytes()));
+
+    HIP_CHECK(hipMalloc(&result.d_buffer_srcs, num_buffers * sizeof(ValueType*)));
+    HIP_CHECK(hipMalloc(&result.d_buffer_dsts, num_buffers * sizeof(ValueType*)));
+    HIP_CHECK(hipMalloc(&result.d_buffer_sizes, num_buffers * sizeof(BufferSizeType)));
 
     // Generate the source and shuffled destination offsets.
     std::vector<offset_type> src_offsets;
@@ -200,37 +221,66 @@ void run_benchmark(benchmark::State& state,
     std::vector<ValueType*> h_buffer_srcs(num_buffers);
     std::vector<ValueType*> h_buffer_dsts(num_buffers);
 
-    for(int32_t i = 0; i < num_buffers; ++i)
+    for(size_t i = 0; i < num_buffers; ++i)
     {
-        h_buffer_srcs[i] = d_input + src_offsets[i];
-        h_buffer_dsts[i] = d_output + dst_offsets[i];
+        h_buffer_srcs[i] = result.d_input + src_offsets[i];
+        h_buffer_dsts[i] = result.d_output + dst_offsets[i];
     }
 
     // Prepare the batch memcpy.
-    HIP_CHECK(hipMemcpy(d_input, h_input.data(), total_num_bytes, hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy(d_buffer_srcs,
+    HIP_CHECK(
+        hipMemcpy(result.d_input, h_input.get(), result.total_num_bytes(), hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(result.d_buffer_srcs,
                         h_buffer_srcs.data(),
                         h_buffer_srcs.size() * sizeof(ValueType*),
                         hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy(d_buffer_dsts,
+    HIP_CHECK(hipMemcpy(result.d_buffer_dsts,
                         h_buffer_dsts.data(),
                         h_buffer_dsts.size() * sizeof(ValueType*),
                         hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy(d_buffer_sizes,
+    HIP_CHECK(hipMemcpy(result.d_buffer_sizes,
                         h_buffer_num_bytes.data(),
                         h_buffer_num_bytes.size() * sizeof(BufferSizeType),
                         hipMemcpyHostToDevice));
+
+    return result;
+}
+
+template<class ValueType, class BufferSizeType>
+void run_benchmark(benchmark::State& state,
+                   hipStream_t       stream,
+                   const int32_t     num_tlev_buffers = 1024,
+                   const int32_t     num_wlev_buffers = 1024,
+                   const int32_t     num_blev_buffers = 1024)
+{
+    const size_t num_buffers = num_tlev_buffers + num_wlev_buffers + num_blev_buffers;
+
+    size_t                                     temp_storage_bytes = 0;
+    BatchMemcpyData<ValueType, BufferSizeType> data;
+    HIP_CHECK(rocprim::batch_memcpy(nullptr,
+                                    temp_storage_bytes,
+                                    data.d_buffer_srcs,
+                                    data.d_buffer_dsts,
+                                    data.d_buffer_sizes,
+                                    num_buffers));
+
+    void* d_temp_storage = nullptr;
+    HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_bytes));
+
+    data = prepare_data<ValueType, BufferSizeType>(num_tlev_buffers,
+                                                   num_wlev_buffers,
+                                                   num_blev_buffers);
 
     // Warm-up
     for(size_t i = 0; i < warmup_size; i++)
     {
         HIP_CHECK(rocprim::batch_memcpy(d_temp_storage,
                                         temp_storage_bytes,
-                                        d_buffer_srcs,
-                                        d_buffer_dsts,
-                                        d_buffer_sizes,
+                                        data.d_buffer_srcs,
+                                        data.d_buffer_dsts,
+                                        data.d_buffer_sizes,
                                         num_buffers,
-                                        hipStreamDefault));
+                                        stream));
     }
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -246,11 +296,11 @@ void run_benchmark(benchmark::State& state,
 
         HIP_CHECK(rocprim::batch_memcpy(d_temp_storage,
                                         temp_storage_bytes,
-                                        d_buffer_srcs,
-                                        d_buffer_dsts,
-                                        d_buffer_sizes,
+                                        data.d_buffer_srcs,
+                                        data.d_buffer_dsts,
+                                        data.d_buffer_sizes,
                                         num_buffers,
-                                        hipStreamDefault));
+                                        stream));
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, stream));
@@ -260,15 +310,10 @@ void run_benchmark(benchmark::State& state,
         HIP_CHECK(hipEventElapsedTime(&elapsed_mseconds, start, stop));
         state.SetIterationTime(elapsed_mseconds / 1000);
     }
-    state.SetBytesProcessed(state.iterations() * total_num_bytes);
-    state.SetItemsProcessed(state.iterations() * total_num_elements);
+    state.SetBytesProcessed(state.iterations() * data.total_num_bytes());
+    state.SetItemsProcessed(state.iterations() * data.total_num_elements);
 
-    HIP_CHECK(hipFree(d_input));
-    HIP_CHECK(hipFree(d_output));
     HIP_CHECK(hipFree(d_temp_storage));
-    HIP_CHECK(hipFree(d_buffer_dsts));
-    HIP_CHECK(hipFree(d_buffer_srcs));
-    HIP_CHECK(hipFree(d_buffer_sizes));
 }
 
 // Naive implementation used for comparison
@@ -293,7 +338,7 @@ __launch_bounds__(BlockSize) __global__
 
     auto num_items_to_copy = size;
 
-    for(int32_t i = 0; i < tiles; ++i)
+    for(size_t i = 0; i < tiles; ++i)
     {
         underlying_type data[items_per_thread];
         rocprim::block_load_direct_blocked(rocprim::flat_block_thread_id(),
@@ -318,136 +363,19 @@ void run_naive_benchmark(benchmark::State& state,
                          const int32_t     num_wlev_buffers = 1024,
                          const int32_t     num_blev_buffers = 1024)
 {
-    const bool    shuffle_buffers = false;
-    const int32_t num_buffers     = num_tlev_buffers + num_wlev_buffers + num_blev_buffers;
+    const size_t num_buffers = num_tlev_buffers + num_wlev_buffers + num_blev_buffers;
 
-    using offset_type = size_t;
-
-    // Generate data
-
-    // Number of elements in each buffer.
-    std::vector<BufferSizeType> h_buffer_num_elements(num_buffers);
-
-    // Total number of bytes.
-    offset_type total_num_bytes    = 0;
-    offset_type total_num_elements = 0;
-
-    std::default_random_engine rng{0};
-
-    // Get random buffer sizes
-
-    for(BufferSizeType i = 0; i < num_buffers; ++i)
-    {
-        BufferSizeType size;
-        if(i < num_tlev_buffers)
-        {
-            size = get_random_value<BufferSizeType>(1, wlev_min_size - 1);
-        }
-        else if(i < num_wlev_buffers)
-        {
-            size = get_random_value<BufferSizeType>(wlev_min_size, blev_min_size - 1);
-        }
-        else
-        {
-            size = get_random_value<BufferSizeType>(blev_min_size, max_size);
-        }
-
-        // convert from number of bytes to number of elements
-        size = max(1, size / sizeof(ValueType));
-
-        h_buffer_num_elements[i] = size;
-        total_num_elements += size;
-    }
-
-    // Shuffle the sizes so that size classes aren't clustered
-    std::shuffle(h_buffer_num_elements.begin(), h_buffer_num_elements.end(), rng);
-
-    // Get the byte size of each buffer
-    std::vector<BufferSizeType> h_buffer_num_bytes(num_buffers);
-    for(size_t i = 0; i < num_buffers; ++i)
-    {
-        h_buffer_num_bytes[i] = h_buffer_num_elements[i] * sizeof(ValueType);
-    }
-
-    // And the total byte size
-    total_num_bytes = total_num_elements * sizeof(ValueType);
-
-    // Device pointers
-    ValueType*      d_input{};
-    ValueType*      d_output{};
-    ValueType**     d_buffer_srcs{};
-    ValueType**     d_buffer_dsts{};
-    BufferSizeType* d_buffer_sizes{};
-
-    // Generate data.
-    std::vector<char> h_input = get_random_data<char>(total_num_bytes,
-                                                      std::numeric_limits<char>::min(),
-                                                      std::numeric_limits<char>::max(),
-                                                      rng());
-
-    // Allocate memory.
-    HIP_CHECK(hipMalloc(&d_input, total_num_bytes));
-    HIP_CHECK(hipMalloc(&d_output, total_num_bytes));
-
-    HIP_CHECK(hipMalloc(&d_buffer_srcs, num_buffers * sizeof(ValueType*)));
-    HIP_CHECK(hipMalloc(&d_buffer_dsts, num_buffers * sizeof(ValueType*)));
-    HIP_CHECK(hipMalloc(&d_buffer_sizes, num_buffers * sizeof(BufferSizeType)));
-
-    // Generate the source and shuffled destination offsets.
-    std::vector<offset_type> src_offsets;
-    std::vector<offset_type> dst_offsets;
-
-    if(shuffle_buffers)
-    {
-        src_offsets = shuffled_exclusive_scan<offset_type>(h_buffer_num_elements, rng);
-        dst_offsets = shuffled_exclusive_scan<offset_type>(h_buffer_num_elements, rng);
-    }
-    else
-    {
-        src_offsets = std::vector<offset_type>(num_buffers);
-        dst_offsets = std::vector<offset_type>(num_buffers);
-
-        // Consecutive offsets (no shuffling).
-        // src/dst offsets first element is 0, so skip that!
-        std::partial_sum(h_buffer_num_elements.begin(),
-                         h_buffer_num_elements.end() - 1,
-                         src_offsets.begin() + 1);
-        std::partial_sum(h_buffer_num_elements.begin(),
-                         h_buffer_num_elements.end() - 1,
-                         dst_offsets.begin() + 1);
-    }
-
-    // Generate the source and destination pointers.
-    std::vector<ValueType*> h_buffer_srcs(num_buffers);
-    std::vector<ValueType*> h_buffer_dsts(num_buffers);
-
-    for(int32_t i = 0; i < num_buffers; ++i)
-    {
-        h_buffer_srcs[i] = d_input + src_offsets[i];
-        h_buffer_dsts[i] = d_output + dst_offsets[i];
-    }
-
-    // Prepare the batch memcpy.
-    HIP_CHECK(hipMemcpy(d_input, h_input.data(), total_num_bytes, hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy(d_buffer_srcs,
-                        h_buffer_srcs.data(),
-                        h_buffer_srcs.size() * sizeof(ValueType*),
-                        hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy(d_buffer_dsts,
-                        h_buffer_dsts.data(),
-                        h_buffer_dsts.size() * sizeof(ValueType*),
-                        hipMemcpyHostToDevice));
-    HIP_CHECK(hipMemcpy(d_buffer_sizes,
-                        h_buffer_num_bytes.data(),
-                        h_buffer_num_bytes.size() * sizeof(BufferSizeType),
-                        hipMemcpyHostToDevice));
+    const auto data = prepare_data<ValueType, BufferSizeType>(num_tlev_buffers,
+                                                              num_wlev_buffers,
+                                                              num_blev_buffers);
 
     // Warm-up
     for(size_t i = 0; i < warmup_size; i++)
     {
-        naive_kernel<BufferSizeType, 256><<<num_buffers, 256, 0, stream>>>((void**)d_buffer_srcs,
-                                                                           (void**)d_buffer_dsts,
-                                                                           d_buffer_sizes);
+        naive_kernel<BufferSizeType, 256>
+            <<<num_buffers, 256, 0, stream>>>((void**)data.d_buffer_srcs,
+                                              (void**)data.d_buffer_dsts,
+                                              data.d_buffer_sizes);
     }
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -461,9 +389,10 @@ void run_naive_benchmark(benchmark::State& state,
         // Record start event
         HIP_CHECK(hipEventRecord(start, stream));
 
-        naive_kernel<BufferSizeType, 256><<<num_buffers, 256, 0, stream>>>((void**)d_buffer_srcs,
-                                                                           (void**)d_buffer_dsts,
-                                                                           d_buffer_sizes);
+        naive_kernel<BufferSizeType, 256>
+            <<<num_buffers, 256, 0, stream>>>((void**)data.d_buffer_srcs,
+                                              (void**)data.d_buffer_dsts,
+                                              data.d_buffer_sizes);
 
         // Record stop event and wait until it completes
         HIP_CHECK(hipEventRecord(stop, stream));
@@ -473,14 +402,8 @@ void run_naive_benchmark(benchmark::State& state,
         HIP_CHECK(hipEventElapsedTime(&elapsed_mseconds, start, stop));
         state.SetIterationTime(elapsed_mseconds / 1000);
     }
-    state.SetBytesProcessed(state.iterations() * total_num_bytes);
-    state.SetItemsProcessed(state.iterations() * total_num_elements);
-
-    HIP_CHECK(hipFree(d_input));
-    HIP_CHECK(hipFree(d_output));
-    HIP_CHECK(hipFree(d_buffer_dsts));
-    HIP_CHECK(hipFree(d_buffer_srcs));
-    HIP_CHECK(hipFree(d_buffer_sizes));
+    state.SetBytesProcessed(state.iterations() * data.total_num_bytes());
+    state.SetItemsProcessed(state.iterations() * data.total_num_elements);
 }
 
     #define CREATE_NAIVE_BENCHMARK(item_size,                                                   \
@@ -565,9 +488,6 @@ int32_t main(int32_t argc, char* argv[])
     // Benchmark info
     add_common_benchmark_info();
     benchmark::AddCustomContext("size", std::to_string(size));
-
-    using custom_float2  = custom_type<float, float>;
-    using custom_double2 = custom_type<double, double>;
 
     // Add benchmarks
     std::vector<benchmark::internal::Benchmark*> benchmarks;
