@@ -479,11 +479,7 @@ autotune:execute-tuning:
     # On ROCm 5.7 or later, check if this can be removed - the presumption is that the failure is caused by a compiler issue.
     - >
       cd "${CI_PROJECT_DIR}"
-    - 'numberOfFiles=0'
-    - 'for filename in ${BUILD_DIR}/benchmark/benchmark*; do'
-    - '    numberOfFiles=$((numberOfFiles+1))'
-    - done
-    - 'if [ $numberOfFiles -eq 0 ]; then'
+    - 'if ! [ -d "${BUILD_DIR}/benchmark" ]; then'
     - '    echo "There are no benchmark executables. Run the build job with a BUILD_TARGET."'
     -     exit 1
     - fi
