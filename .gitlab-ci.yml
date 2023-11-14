@@ -481,7 +481,7 @@ autotune:execute-tuning:
       cd "${CI_PROJECT_DIR}"
     - 'numberOfFiles=0'
     - 'for filename in ${BUILD_DIR}/benchmark/benchmark*; do'
-    - '    numberOfFiles++'
+    - '    numberOfFiles=$((numberOfFiles+1))'
     - done
     - 'if [ $numberOfFiles -eq 0 ]; then'
     - '    echo "There are no benchmark executables. Run the build job with a BUILD_TARGET."'
