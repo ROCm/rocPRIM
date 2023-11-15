@@ -2,7 +2,7 @@
 
 Full documentation for rocPRIM is available at [https://rocprim.readthedocs.io/en/latest/](https://rocprim.readthedocs.io/en/latest/)
 
-## [rocPRIM-2.13.2 for ROCm 6.0.0]
+## [rocPRIM-3.0.0 for ROCm 6.0.0]
 ### Added
 - `block_sort::sort()` overload for keys and values with a dynamic size, for all block sort algorithms. Additionally, all `block_sort::sort()` overloads with a dynamic size are now supported for `block_sort_algorithm::merge_sort` and `block_sort_algorithm::bitonic_sort`.
 - New two-way partition primitive `partition_two_way` which can write to two separate iterators.
