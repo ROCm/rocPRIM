@@ -110,10 +110,10 @@ TYPED_TEST_SUITE(DeviceBatchMemcpyTests, DeviceBatchMemcpyTestsParams);
 //  batch_memcpy(
 //    [&a0 , &b0 , &c0 , &d0 ], // from (note the order is still just a, b, c, d!)
 //    [&a0', &b0', &c0', &d0'], // to   (order is the same as above too!)
-//    [2   , 3   , 1   , 2   ]) // size
+//    [3   , 2   , 1   , 2   ]) // size
 //
 // ┌───┬───┬───┬───┬───┬───┬───┬───┐
-// │b0 │b1 │b0 │a1 │a2 │d0 │d1 │c0 │ buffer x contains buffers a, b, c, d
+// │b0 │b1 │a0 │a1 │a2 │d0 │d1 │c0 │ buffer x contains buffers a, b, c, d
 // └───┴───┴───┴───┴───┴───┴───┴───┘ note that the order of buffers is shuffled!
 //  ───┬─── ─────┬───── ───┬─── ───
 //     └─────────┼─────────┼───┐
