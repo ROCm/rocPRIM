@@ -24,13 +24,13 @@
 #include "benchmark_utils.hpp"
 #include "cmdparser.hpp"
 
-#include <numeric>
-#include <random>
 #include <rocprim/rocprim.hpp>
 
 #include <hip/hip_runtime.h>
 
 #include <iostream>
+#include <numeric>
+#include <random>
 #include <stdint.h>
 #include <utility>
 #include <vector>
