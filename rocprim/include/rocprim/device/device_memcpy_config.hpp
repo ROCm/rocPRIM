@@ -47,13 +47,30 @@ template<unsigned int NonBlevBlockSize         = 256,
          unsigned int BlevSizeThreshold        = 1024>
 struct batch_memcpy_config
 {
-    static constexpr unsigned int non_blev_block_size         = NonBlevBlockSize;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+    /// \brief Number of threads per block for thread- and warp-level copy
+    static constexpr unsigned int non_blev_block_size = NonBlevBlockSize;
+
+    /// \brief Number of buffers processed per thread
     static constexpr unsigned int non_blev_buffers_per_thread = NonBlevBuffersPerThreaed;
-    static constexpr unsigned int tlev_bytes_per_thread       = TlevBytesPerThread;
-    static constexpr unsigned int blev_block_size             = BlevBlockSize;
-    static constexpr unsigned int blev_bytes_per_thread       = BlevBytesPerThread;
-    static constexpr unsigned int wlev_size_threshold         = WlevSizeThreshold;
-    static constexpr unsigned int blev_size_threshold         = BlevSizeThreshold;
+
+    /// \brief Number of bytes per thread for thread-level copy
+    static constexpr unsigned int tlev_bytes_per_thread = TlevBytesPerThread;
+
+    /// \brief Number of thread per block for block-level copy
+    static constexpr unsigned int blev_block_size = BlevBlockSize;
+
+    /// \brief Number of bytes per thread for block-level copy
+    static constexpr unsigned int blev_bytes_per_thread = BlevBytesPerThread;
+
+    /// \brief Minimum size to use warp-level copy instead of thread-level
+    static constexpr unsigned int wlev_size_threshold = WlevSizeThreshold;
+
+    /// \brief Minimum size to use block-level copy instead of warp-level
+    static constexpr unsigned int blev_size_threshold = BlevSizeThreshold;
+
+#endif
 };
 
 END_ROCPRIM_NAMESPACE
