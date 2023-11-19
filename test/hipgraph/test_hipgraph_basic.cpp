@@ -45,6 +45,12 @@ __global__ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void increment(int*
         data[gid]++;
 }
 
+// Another simple kernel that can be used to test atomics inside a graph.
+__global__ __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void atomicIncrement(int* data)
+{
+       atomicAdd(data, 1);
+}
+
 void testStreamCapture()
 {
     // The default stream does not support HipGraph stream capture, so create our own.
@@ -160,6 +166,64 @@ void testManualConstruction()
     HIP_CHECK(hipStreamDestroy(stream));
 }
 
+void testStreamCaptureWithAtomics()
+{
+    // The default stream does not support HipGraph stream capture, so create our own.
+    hipStream_t stream;
+    HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+
+    // Allocate a counter variable on the device.
+    // We will have each thread atomically increment it.
+    int* d_data = nullptr;
+    int h_data = 0;
+       const int num_blocks = 2;
+       const int num_threads = 33;
+
+    // Create a new graph
+    hipGraph_t graph;
+    HIP_CHECK(hipGraphCreate(&graph, 0));
+
+    // Note: currently, calls to hipMallocAsync do not work inside the stream capture section
+    HIP_CHECK(hipMallocAsync(&d_data, sizeof(int), stream));
+
+    // ** Begin stream capture **
+    HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+
+    // Transfer the host value
+    HIP_CHECK(hipMemcpyAsync(d_data, &h_data, sizeof(int), hipMemcpyHostToDevice, stream));
+
+    // Launch kernel
+    hipLaunchKernelGGL(atomicIncrement, dim3(num_blocks), dim3(num_threads), 0, stream, d_data);
+
+    // Transfer result back to host
+    HIP_CHECK(hipMemcpyAsync(&h_data, d_data, sizeof(int), hipMemcpyDeviceToHost, stream));
+
+    // ** End stream capture **
+    HIP_CHECK(hipStreamEndCapture(stream, &graph));
+
+    // Instantiate the graph
+    hipGraphExec_t instance;
+    HIP_CHECK(hipGraphInstantiate(&instance, graph, nullptr, nullptr, 0));
+
+    // Launch it
+    const int num_launches = 3;
+    for (int i = 0; i < num_launches; i++)
+    {
+        HIP_CHECK(hipGraphLaunch(instance, stream));
+    }
+    HIP_CHECK(hipStreamSynchronize(stream));
+
+    // Counter value should match the number of graph launches multiplied by
+    // the number of threads that were launched.
+    ASSERT_EQ(h_data, num_launches * num_blocks * num_threads);
+
+    // Clean up
+    HIP_CHECK(hipGraphDestroy(graph));
+    HIP_CHECK(hipGraphExecDestroy(instance));
+    HIP_CHECK(hipFree(d_data));
+    HIP_CHECK(hipStreamDestroy(stream));
+}
+
 TEST(TestHipGraphBasic, CaptureFromStream)
 {
     testStreamCapture();
@@ -168,4 +232,9 @@ TEST(TestHipGraphBasic, CaptureFromStream)
 TEST(TestHipGraphBasic, ManualConstruction)
 {
     testManualConstruction();
+}
+
+TEST(TestHipGraphBasic, StreamCaptureAtomics)
+{
+    testStreamCaptureWithAtomics();
 }

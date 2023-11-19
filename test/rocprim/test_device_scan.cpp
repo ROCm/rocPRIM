@@ -1657,24 +1657,32 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
             // temp_storage_size_bytes must be >0
             ASSERT_GT(temp_storage_size_bytes, 0);
 
+            if (TestFixture::use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+
             size_t temp_storage_reduce = 0;
             HIP_CHECK(rocprim::reduce(
-                nullptr, temp_storage_reduce, d_future_input, d_initial_value, 2048));
+                nullptr, temp_storage_reduce, d_future_input, d_initial_value, 2048, rocprim::plus<T>(), stream));
+
+            if (TestFixture::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
 
             // allocate temporary storage
             HIP_CHECK(test_common_utils::hipMallocHelper(
                 &d_temp_storage, temp_storage_size_bytes + temp_storage_reduce));
             HIP_CHECK(hipDeviceSynchronize());
 
+            if (TestFixture::use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+
             // Fill initial value on the device
             HIP_CHECK(rocprim::reduce(d_temp_storage + temp_storage_size_bytes,
                                       temp_storage_reduce,
                                       d_future_input,
                                       d_initial_value,
-                                      2048));
-
-            if (TestFixture::use_graphs)
-                test_utils::resetGraphHelper(graph, graph_instance, stream);
+                                      2048,
+                                      rocprim::plus<T>(), 
+                                      stream));
 
             // Run
             HIP_CHECK(rocprim::exclusive_scan<Config>(
@@ -1686,7 +1694,6 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
                 stream,
                 debug_synchronous));
             HIP_CHECK(hipGetLastError());
-            HIP_CHECK(hipDeviceSynchronize());
 
             if (TestFixture::use_graphs)
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);

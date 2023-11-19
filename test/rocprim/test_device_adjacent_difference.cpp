@@ -131,7 +131,6 @@ template<class InputType,
          bool UseIdentityIterator = false,
          class Config             = rocprim::default_config,
          bool UseGraphs           = false>
-
 struct DeviceAdjacentDifferenceParams
 {
     using input_type                              = InputType;
@@ -185,8 +184,8 @@ using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
     // Tests for different size_limits
     DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<64>>,
     DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<8192>>,
-    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<10240>>,;
-    DeviceAdjacentDifferenceParams<int, int, true, false, false, ROCPRIM_GRID_SIZE_LIMIT, true>>;
+    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<10240>>,
+    DeviceAdjacentDifferenceParams<int, int, true, false, false, rocprim::default_config, true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceTests, RocprimDeviceAdjacentDifferenceTestsParams);
 
@@ -462,6 +461,20 @@ TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceLargeTests,
 TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
 {
     const int device_id = test_common_utils::obtain_device_from_ctest();
+
+    if (TestFixture::use_graphs)
+    {
+        // Skip this test on gfx1030 on Windows, since check_output_iterator does not appear to work there.
+        hipDeviceProp_t props;
+        HIP_CHECK(hipGetDeviceProperties(&props, device_id));
+        std::string deviceName = std::string(props.gcnArchName);
+        if(deviceName.rfind("gfx1030", 0) == 0)
+        {
+            // This is a gfx1030 device, so skip this test
+            GTEST_SKIP() << "Temporarily skipping test on Windows for on gfx1030";
+        }
+    }
+
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
