@@ -293,7 +293,7 @@ autotune:build:
     - 'total_size_bytes=0'
     - 'while read -r file_size; do'
     - '  total_size_bytes=$((total_size_bytes + file_size))'
-    - 'done < <(stat --format='%s' benchmark/benchmark*)'
+    - 'done < <(stat --format="%s" benchmark/benchmark*)'
     - 'total_size_gib="$(numfmt --round=down --to-unit=Gi "$total_size_bytes")"'
     - 'if [ "$total_size_gib" -ge 3 ]; then'
     - '  printf "Total size: %s (%d bytes) > 3GiB, skipping benchmark executables from the artifact.\n" \'
