@@ -275,8 +275,20 @@ autotune:build:
     - mkdir -p $BUILD_DIR
     - cd $BUILD_DIR
     - 'printf "Building benchmark targets: %s\n" "$BENCHMARK_TARGETS"'
-    - 'mkdir benchmark'
-    - 'dd if=/dev/zero of=benchmark/benchmark_dummy bs=4M count=1024'
+    - cmake
+      -B $BUILD_DIR
+      -S $CI_PROJECT_DIR
+      -G Ninja
+      -D CMAKE_CXX_COMPILER="$AMDCLANG"
+      -D CMAKE_CXX_FLAGS="-Wno-#pragma-messages"
+      -D CMAKE_BUILD_TYPE=Release
+      -D BUILD_TEST=OFF
+      -D BUILD_EXAMPLE=OFF
+      -D BUILD_BENCHMARK=ON
+      -D BENCHMARK_CONFIG_TUNING=ON
+      -D GPU_TARGETS=$GPU_TARGETS
+    - cmake --build . --target $BENCHMARK_TARGETS
+    - 'rm -rf $BUILD_DIR/benchmark/benchmark*.parallel'
     # remove benchmark executables if their size together is too large for gitlab ci to handle
     - |
       total_size_bytes=0
@@ -285,8 +297,6 @@ autotune:build:
       done < <(stat --format="%s" benchmark/benchmark*)
       total_size_gib="$(numfmt --round=down --to-unit=Gi "$total_size_bytes")"
       if [ "$total_size_gib" -ge 3 ]; then
-        echo $total_size_bytes
-        echo $total_size_gib
         printf "Total size: %s (%d bytes) > 3GiB, skipping benchmark executables from the artifact.\n" \
           "$(numfmt --to=iec-i "$total_size_bytes")" "$total_size_bytes"
         rm benchmark/benchmark*
