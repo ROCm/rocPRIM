@@ -287,7 +287,8 @@ autotune:build:
       if [ "$total_size_gib" -ge 3 ]; then
         echo $total_size_bytes
         echo $total_size_gib
-        printf "Total size: %s (%d bytes) > 3GiB, skipping benchmark executables from the artifact.\n" "$(numfmt --to=iec-i "$total_size_bytes")" "$total_size_bytes"
+        printf "Total size: %s (%d bytes) > 3GiB, skipping benchmark executables from the artifact.\n" \
+          "$(numfmt --to=iec-i "$total_size_bytes")" "$total_size_bytes"
         rm benchmark/benchmark*
       fi
 
