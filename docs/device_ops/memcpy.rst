@@ -1,3 +1,11 @@
+Memcpy
+------
+
+Configuring the kernel
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenstruct::  rocprim::batch_memcpy_config
+
 batch_memcpy
 ~~~~~~~~~~~~
 
