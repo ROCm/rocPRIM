@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -441,6 +441,42 @@ public:
         (void) scan_op;
         ROCPRIM_PRINT_ERROR_ONCE("Specified warp size exceeds current hardware supported warp size . Aborting warp sort.");
         return;
+    }
+
+    /// \brief Performs exclusive scan across threads in a logical warp
+    /// \tparam BinaryFunction binary function used for scan
+    /// \param input Thread input value
+    /// \param[out] output Reference to thread output value. Each threads value for the scan will
+    /// be written to it. May be aliased with `input`. The value written is unspecified for the first
+    /// thread of each logical warp.
+    /// \param [in] storage - reference to a temporary storage object of type storage_type.
+    /// \param scan_op The function object used to combine elements used for the scan
+    template<class BinaryFunction = ::rocprim::plus<>>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void exclusive_scan(T              input,
+                                                      T&             output,
+                                                      storage_type&  storage,
+                                                      BinaryFunction scan_op = BinaryFunction())
+    {
+        base_type::exclusive_scan(input, output, storage, scan_op);
+    }
+
+    /// \brief Performs exclusive scan and reduction across threads in a logical warp
+    /// \tparam BinaryFunction binary function used for scan
+    /// \param input Thread input value
+    /// \param[out] output Reference to thread output value. Each threads value for the scan will
+    /// be written to it. May be aliased with `input`. The value written is unspecified for the first
+    /// thread of each logical warp.
+    /// \param[out] reduction result of reducing of all `input` values in the logical warp.
+    /// \param [in] storage - reference to a temporary storage object of type storage_type.
+    /// \param scan_op The function object used to combine elements used for the scan
+    template<class BinaryFunction = ::rocprim::plus<>>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void exclusive_scan(T              input,
+                                                      T&             output,
+                                                      storage_type&  storage,
+                                                      T&             reduction,
+                                                      BinaryFunction scan_op = BinaryFunction())
+    {
+        base_type::exclusive_scan(input, output, storage, reduction, scan_op);
     }
 
     /// \brief Performs inclusive and exclusive scan operations across threads
