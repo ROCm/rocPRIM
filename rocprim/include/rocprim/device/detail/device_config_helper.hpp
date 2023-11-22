@@ -515,6 +515,7 @@ struct WarpSortConfig
                   "The number of items processed by a small warp cannot be larger than the number "
                   "of items processed by a medium warp");
 
+    /// \brief True if partitioning by segment size is enabled
     static constexpr bool partitioning_allowed = true;
     /// \brief The number of threads in the logical warp in the small segment processing kernel.
     static constexpr unsigned int logical_warp_size_small = LogicalWarpSizeSmall;
@@ -537,6 +538,7 @@ struct WarpSortConfig
 /// device segmented radix sort configuration.
 struct DisabledWarpSortConfig
 {
+    /// \brief True if partitioning by segment size is enabled
     static constexpr bool partitioning_allowed = false;
     /// \brief The number of threads in the logical warp in the small segment processing kernel.
     static constexpr unsigned int logical_warp_size_small = 1;
@@ -570,6 +572,7 @@ template<unsigned int LongRadixBits,
          unsigned int SizeLimit                   = ROCPRIM_GRID_SIZE_LIMIT>
 struct segmented_radix_sort_config : public detail::segmented_radix_sort_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
     using tag = detail::segmented_radix_sort_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
