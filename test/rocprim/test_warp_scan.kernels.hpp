@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -120,6 +120,45 @@ void warp_exclusive_scan_reduce_kernel(
     using wscan_t = rocprim::warp_scan<T, LogicalWarpSize>;
     __shared__ typename wscan_t::storage_type storage[warps_no];
     wscan_t().exclusive_scan(value, value, init, reduction, storage[warp_id]);
+
+    device_output[index] = value;
+    if((threadIdx.x % LogicalWarpSize) == 0)
+    {
+        device_output_reductions[index / LogicalWarpSize] = reduction;
+    }
+}
+
+template<class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ __launch_bounds__(BlockSize) void warp_exclusive_scan_wo_init_kernel(T* device_input,
+                                                                                T* device_output)
+{
+    constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = threadIdx.x + (blockIdx.x * blockDim.x);
+
+    T value = device_input[index];
+
+    using wscan_t = rocprim::warp_scan<T, LogicalWarpSize>;
+    __shared__ typename wscan_t::storage_type storage[warps_no];
+    wscan_t().exclusive_scan(value, value, storage[warp_id]);
+
+    device_output[index] = value;
+}
+
+template<class T, unsigned int BlockSize, unsigned int LogicalWarpSize>
+__global__ __launch_bounds__(BlockSize) void warp_exclusive_scan_reduce_wo_init_kernel(
+    T* device_input, T* device_output, T* device_output_reductions)
+{
+    constexpr unsigned int warps_no = BlockSize / LogicalWarpSize;
+    const unsigned int     warp_id  = rocprim::detail::logical_warp_id<LogicalWarpSize>();
+    unsigned int           index    = threadIdx.x + (blockIdx.x * blockDim.x);
+
+    T value = device_input[index];
+    T reduction;
+
+    using wscan_t = rocprim::warp_scan<T, LogicalWarpSize>;
+    __shared__ typename wscan_t::storage_type storage[warps_no];
+    wscan_t().exclusive_scan(value, value, storage[warp_id], reduction);
 
     device_output[index] = value;
     if((threadIdx.x % LogicalWarpSize) == 0)
