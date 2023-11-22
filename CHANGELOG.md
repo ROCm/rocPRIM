@@ -3,6 +3,12 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
+## Unreleased rocPRIM-3.2.0 for ROCm 6.2.0
+
+### Additions
+
+* New overloads for `warp_scan::exclusive_scan` that take no initial value. These new overloads will write an unspecified result to the first value of each warp.
+
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
 ### Additions
