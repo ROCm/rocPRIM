@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -101,6 +101,15 @@ public:
                         storage_type& storage, BinaryFunction scan_op)
     {
         inclusive_scan(input, output, storage, scan_op);
+        to_exclusive(output, storage);
+    }
+
+    template<class BinaryFunction>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void exclusive_scan(
+        T input, T& output, storage_type& storage, T& reduction, BinaryFunction scan_op)
+    {
+        inclusive_scan(input, output, storage, scan_op);
+        reduction = storage.get().threads[WarpSize - 1];
         to_exclusive(output, storage);
     }
 
