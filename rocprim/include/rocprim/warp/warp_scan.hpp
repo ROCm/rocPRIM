@@ -443,7 +443,7 @@ public:
         return;
     }
 
-    /// \brief Performs exclusive scan across threads in a logical warp
+    /// \brief Performs exclusive scan without an initial value across threads in a logical warp
     /// \tparam BinaryFunction binary function used for scan
     /// \param input Thread input value
     /// \param[out] output Reference to thread output value. Each threads value for the scan will
@@ -456,11 +456,16 @@ public:
                                                       T&             output,
                                                       storage_type&  storage,
                                                       BinaryFunction scan_op = BinaryFunction())
+#ifndef DOXYGEN_DOCUMENTATION_BUILD
         -> std::enable_if_t<FunctionWarpSize <= __AMDGCN_WAVEFRONT_SIZE>
+#else
+        -> void
+#endif
     {
         base_type::exclusive_scan(input, output, storage, scan_op);
     }
 
+    /// \cond
     template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
     ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T /*input*/,
                                                       T& /*output*/,
@@ -471,8 +476,10 @@ public:
         ROCPRIM_PRINT_ERROR_ONCE("Specified warp size exceeds current hardware supported warp size."
                                  " Aborting warp scan.");
     }
+    /// \endcond
 
-    /// \brief Performs exclusive scan and reduction across threads in a logical warp
+    /// \brief Performs exclusive scan and reduction without an initial value across threads in
+    /// a logical warp
     /// \tparam BinaryFunction binary function used for scan
     /// \param input Thread input value
     /// \param[out] output Reference to thread output value. Each threads value for the scan will
@@ -487,11 +494,16 @@ public:
                                                       storage_type&  storage,
                                                       T&             reduction,
                                                       BinaryFunction scan_op = BinaryFunction())
+#ifndef DOXYGEN_DOCUMENTATION_BUILD
         -> std::enable_if_t<FunctionWarpSize <= __AMDGCN_WAVEFRONT_SIZE>
+#else
+        -> void
+#endif
     {
         base_type::exclusive_scan(input, output, storage, reduction, scan_op);
     }
 
+    /// \cond
     template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
     ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T /*input*/,
                                                       T& /*output*/,
@@ -503,6 +515,7 @@ public:
         ROCPRIM_PRINT_ERROR_ONCE("Specified warp size exceeds current hardware supported warp size."
                                  " Aborting warp scan.");
     }
+    /// \endcond
 
     /// \brief Performs inclusive and exclusive scan operations across threads
     /// in a logical warp.
