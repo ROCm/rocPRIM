@@ -449,7 +449,7 @@ public:
     /// \param[out] output Reference to thread output value. Each threads value for the scan will
     /// be written to it. May be aliased with `input`. The value written is unspecified for the first
     /// thread of each logical warp.
-    /// \param [in] storage - reference to a temporary storage object of type storage_type.
+    /// \param [in] storage Reference to a temporary storage object of type storage_type.
     /// \param scan_op The function object used to combine elements used for the scan
     template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
     ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T              input,
@@ -485,8 +485,8 @@ public:
     /// \param[out] output Reference to thread output value. Each threads value for the scan will
     /// be written to it. May be aliased with `input`. The value written is unspecified for the first
     /// thread of each logical warp.
-    /// \param[out] reduction result of reducing of all `input` values in the logical warp.
-    /// \param [in] storage - reference to a temporary storage object of type storage_type.
+    /// \param[out] reduction Result of reducing of all `input` values in the logical warp.
+    /// \param [in] storage Reference to a temporary storage object of type storage_type.
     /// \param scan_op The function object used to combine elements used for the scan
     template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
     ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T              input,
