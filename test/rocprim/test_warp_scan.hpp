@@ -434,8 +434,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScanWoInit)
     static constexpr size_t logical_warp_size = TestFixture::params::warp_size;
 
     // The different warp sizes
-    static constexpr size_t ws32 {ROCPRIM_WARP_SIZE_32};
-    static constexpr size_t ws64 {ROCPRIM_WARP_SIZE_64};
+    static constexpr size_t ws32{ROCPRIM_WARP_SIZE_32};
+    static constexpr size_t ws64{ROCPRIM_WARP_SIZE_64};
 
     // Block size of warp size 32
     static constexpr size_t block_size_ws32
