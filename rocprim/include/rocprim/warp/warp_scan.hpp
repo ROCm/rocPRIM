@@ -451,13 +451,25 @@ public:
     /// thread of each logical warp.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     /// \param scan_op The function object used to combine elements used for the scan
-    template<class BinaryFunction = ::rocprim::plus<>>
-    ROCPRIM_DEVICE ROCPRIM_INLINE void exclusive_scan(T              input,
+    template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
+    ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T              input,
                                                       T&             output,
                                                       storage_type&  storage,
                                                       BinaryFunction scan_op = BinaryFunction())
+        -> std::enable_if_t<FunctionWarpSize <= __AMDGCN_WAVEFRONT_SIZE>
     {
         base_type::exclusive_scan(input, output, storage, scan_op);
+    }
+
+    template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
+    ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T /*input*/,
+                                                      T& /*output*/,
+                                                      storage_type& /*storage*/,
+                                                      BinaryFunction /*scan_op*/ = BinaryFunction())
+        -> std::enable_if_t<(FunctionWarpSize > __AMDGCN_WAVEFRONT_SIZE)>
+    {
+        ROCPRIM_PRINT_ERROR_ONCE("Specified warp size exceeds current hardware supported warp size."
+                                 " Aborting warp scan.");
     }
 
     /// \brief Performs exclusive scan and reduction across threads in a logical warp
@@ -469,14 +481,27 @@ public:
     /// \param[out] reduction result of reducing of all `input` values in the logical warp.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     /// \param scan_op The function object used to combine elements used for the scan
-    template<class BinaryFunction = ::rocprim::plus<>>
-    ROCPRIM_DEVICE ROCPRIM_INLINE void exclusive_scan(T              input,
+    template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
+    ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T              input,
                                                       T&             output,
                                                       storage_type&  storage,
                                                       T&             reduction,
                                                       BinaryFunction scan_op = BinaryFunction())
+        -> std::enable_if_t<FunctionWarpSize <= __AMDGCN_WAVEFRONT_SIZE>
     {
         base_type::exclusive_scan(input, output, storage, reduction, scan_op);
+    }
+
+    template<class BinaryFunction = ::rocprim::plus<>, unsigned int FunctionWarpSize = WarpSize>
+    ROCPRIM_DEVICE ROCPRIM_INLINE auto exclusive_scan(T /*input*/,
+                                                      T& /*output*/,
+                                                      storage_type& /*storage*/,
+                                                      T& /*reduction*/,
+                                                      BinaryFunction /*scan_op*/ = BinaryFunction())
+        -> std::enable_if_t<(FunctionWarpSize > __AMDGCN_WAVEFRONT_SIZE)>
+    {
+        ROCPRIM_PRINT_ERROR_ONCE("Specified warp size exceeds current hardware supported warp size."
+                                 " Aborting warp scan.");
     }
 
     /// \brief Performs inclusive and exclusive scan operations across threads
