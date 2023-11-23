@@ -200,7 +200,6 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
     static constexpr bool left                  = TestFixture::left;
     static constexpr bool in_place              = TestFixture::in_place;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
-    static constexpr bool debug_synchronous     = TestFixture::debug_synchronous;
     using Config                                = typename TestFixture::config;
 
     SCOPED_TRACE(testing::Message() << "left = " << left << ", in_place = " << in_place);
