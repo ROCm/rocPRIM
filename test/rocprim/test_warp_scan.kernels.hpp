@@ -163,7 +163,7 @@ __global__ __launch_bounds__(BlockSize) void warp_exclusive_scan_reduce_wo_init_
     device_output[index] = value;
     if((threadIdx.x % LogicalWarpSize) == 0)
     {
-        device_output_reductions[index / LogicalWarpSize] = reduction;
+        device_output_reductions[warp_id] = reduction;
     }
 }
 

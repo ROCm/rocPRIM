@@ -156,7 +156,7 @@ public:
 
     template<class BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE void exclusive_scan(
-        T input, T& output, storage_type& /**storage*/, T& reduction, BinaryFunction scan_op)
+        T input, T& output, storage_type& /*storage*/, T& reduction, BinaryFunction scan_op)
     {
         inclusive_scan(input, output, scan_op);
         // Broadcast value from the last thread in warp
