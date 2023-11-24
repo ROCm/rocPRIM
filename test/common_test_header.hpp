@@ -113,7 +113,7 @@ inline int obtain_device_from_ctest()
 #ifdef _MSC_VER
     #pragma warning(push)
     #pragma warning( \
-            disable : 4996) // This function or variable may be unsafe. Consider using _dupenv_s instead.
+        disable : 4996) // This function or variable may be unsafe. Consider using _dupenv_s instead.
 #endif
 inline bool use_hmm()
 {
