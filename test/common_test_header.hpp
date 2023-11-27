@@ -110,19 +110,27 @@ inline int obtain_device_from_ctest()
 #endif
 }
 
+#ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning( \
+        disable : 4996) // This function or variable may be unsafe. Consider using _dupenv_s instead.
+#endif
 inline bool use_hmm()
 {
-    if (getenv("ROCPRIM_USE_HMM") == nullptr)
+    if(getenv("ROCPRIM_USE_HMM") == nullptr)
     {
         return false;
     }
 
-    if (strcmp(getenv("ROCPRIM_USE_HMM"), "1") == 0)
+    if(strcmp(getenv("ROCPRIM_USE_HMM"), "1") == 0)
     {
         return true;
     }
     return false;
 }
+#ifdef _MSC_VER
+    #pragma warning(pop)
+#endif
 
 // Helper for HMM allocations: HMM is requested through ROCPRIM_USE_HMM=1 environment variable
 template <class T>
