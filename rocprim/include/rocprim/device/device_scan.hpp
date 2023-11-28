@@ -304,24 +304,14 @@ inline auto scan_impl(void*               temporary_storage,
 
             if(std::string(prop.gcnArchName).find("908") != std::string::npos && asicRevision < 2)
             {
-                hipLaunchKernelGGL(
-                    HIP_KERNEL_NAME(init_lookback_scan_state_kernel<scan_state_with_sleep_type>),
-                    dim3(grid_size),
-                    dim3(block_size),
-                    0,
-                    stream,
-                    scan_state_with_sleep,
-                    number_of_blocks);
+                init_lookback_scan_state_kernel<scan_state_with_sleep_type>
+                    <<<dim3(grid_size), dim3(block_size), 0, stream>>>(scan_state_with_sleep,
+                                                                       number_of_blocks);
             } else
             {
-                hipLaunchKernelGGL(
-                    HIP_KERNEL_NAME(init_lookback_scan_state_kernel<scan_state_type>),
-                    dim3(grid_size),
-                    dim3(block_size),
-                    0,
-                    stream,
-                    scan_state,
-                    number_of_blocks);
+                init_lookback_scan_state_kernel<scan_state_type>
+                    <<<dim3(grid_size), dim3(block_size), 0, stream>>>(scan_state,
+                                                                       number_of_blocks);
             }
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_lookback_scan_state_kernel", number_of_blocks, start)
 
@@ -329,30 +319,24 @@ inline auto scan_impl(void*               temporary_storage,
             grid_size = number_of_blocks;
             if(std::string(prop.gcnArchName).find("908") != std::string::npos && asicRevision < 2)
             {
-                hipLaunchKernelGGL(
-                    HIP_KERNEL_NAME(
-                        lookback_scan_kernel<Exclusive, // flag for exclusive scan operation
-                                             config,
-                                             InputIterator,
-                                             OutputIterator,
-                                             BinaryFunction,
-                                             InitValueType,
-                                             scan_state_with_sleep_type>),
-                    dim3(grid_size),
-                    dim3(block_size),
-                    0,
-                    stream,
-                    input + offset,
-                    output + offset,
-                    current_size,
-                    initial_value,
-                    scan_op,
-                    scan_state_with_sleep,
-                    number_of_blocks,
-                    previous_last_element,
-                    new_last_element,
-                    i != size_t(0),
-                    number_of_launch > 1);
+                lookback_scan_kernel<Exclusive, // flag for exclusive scan operation
+                                     config,
+                                     InputIterator,
+                                     OutputIterator,
+                                     BinaryFunction,
+                                     InitValueType,
+                                     scan_state_with_sleep_type>
+                    <<<dim3(grid_size), dim3(block_size), 0, stream>>>(input + offset,
+                                                                       output + offset,
+                                                                       current_size,
+                                                                       initial_value,
+                                                                       scan_op,
+                                                                       scan_state_with_sleep,
+                                                                       number_of_blocks,
+                                                                       previous_last_element,
+                                                                       new_last_element,
+                                                                       i != size_t(0),
+                                                                       number_of_launch > 1);
             }
             else
             {
@@ -366,30 +350,24 @@ inline auto scan_impl(void*               temporary_storage,
                     std::cout << "items_per_block " << items_per_block << '\n';
                 }
 
-                hipLaunchKernelGGL(
-                    HIP_KERNEL_NAME(
-                        lookback_scan_kernel<Exclusive, // flag for exclusive scan operation
-                                             config,
-                                             InputIterator,
-                                             OutputIterator,
-                                             BinaryFunction,
-                                             InitValueType,
-                                             scan_state_type>),
-                    dim3(grid_size),
-                    dim3(block_size),
-                    0,
-                    stream,
-                    input + offset,
-                    output + offset,
-                    current_size,
-                    initial_value,
-                    scan_op,
-                    scan_state,
-                    number_of_blocks,
-                    previous_last_element,
-                    new_last_element,
-                    i != size_t(0),
-                    number_of_launch > 1);
+                lookback_scan_kernel<Exclusive, // flag for exclusive scan operation
+                                     config,
+                                     InputIterator,
+                                     OutputIterator,
+                                     BinaryFunction,
+                                     InitValueType,
+                                     scan_state_type>
+                    <<<dim3(grid_size), dim3(block_size), 0, stream>>>(input + offset,
+                                                                       output + offset,
+                                                                       current_size,
+                                                                       initial_value,
+                                                                       scan_op,
+                                                                       scan_state,
+                                                                       number_of_blocks,
+                                                                       previous_last_element,
+                                                                       new_last_element,
+                                                                       i != size_t(0),
+                                                                       number_of_launch > 1);
             }
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("lookback_scan_kernel", current_size, start)
 
@@ -414,24 +392,15 @@ inline auto scan_impl(void*               temporary_storage,
             std::cout << "block_size " << block_size << '\n';
             std::cout << "number of blocks " << number_of_blocks << '\n';
             std::cout << "items_per_block " << items_per_block << '\n';
+            start = std::chrono::high_resolution_clock::now();
         }
 
-        if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
-        hipLaunchKernelGGL(
-            HIP_KERNEL_NAME(single_scan_kernel<Exclusive, // flag for exclusive scan operation
-                                               config,
-                                               InputIterator,
-                                               OutputIterator,
-                                               BinaryFunction>),
-            dim3(1),
-            dim3(block_size),
-            0,
-            stream,
-            input,
-            size,
-            initial_value,
-            output,
-            scan_op);
+        single_scan_kernel<Exclusive, // flag for exclusive scan operation
+                           config,
+                           InputIterator,
+                           OutputIterator,
+                           BinaryFunction>
+            <<<dim3(1), dim3(block_size), 0, stream>>>(input, size, initial_value, output, scan_op);
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("single_scan_kernel", size, start);
     }
     return hipSuccess;
