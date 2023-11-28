@@ -54,19 +54,19 @@ template<bool Exclusive,
          typename CompareFunction,
          typename BinaryFunction,
          typename LookbackScanState,
-         typename ResultType>
+         typename AccType>
 void __global__ __launch_bounds__(device_params<Config>().kernel_config.block_size)
-    device_scan_by_key_kernel(const KeyInputIterator                          keys,
-                              const InputIterator                             values,
-                              const OutputIterator                            output,
-                              const InitialValueType                          initial_value,
-                              const CompareFunction                           compare,
-                              const BinaryFunction                            scan_op,
-                              const LookbackScanState                         scan_state,
-                              const size_t                                    size,
-                              const size_t                                    starting_block,
-                              const size_t                                    number_of_blocks,
-                              const ::rocprim::tuple<ResultType, bool>* const previous_last_value)
+    device_scan_by_key_kernel(const KeyInputIterator                       keys,
+                              const InputIterator                          values,
+                              const OutputIterator                         output,
+                              const InitialValueType                       initial_value,
+                              const CompareFunction                        compare,
+                              const BinaryFunction                         scan_op,
+                              const LookbackScanState                      scan_state,
+                              const size_t                                 size,
+                              const size_t                                 starting_block,
+                              const size_t                                 number_of_blocks,
+                              const ::rocprim::tuple<AccType, bool>* const previous_last_value)
 {
     device_scan_by_key_kernel_impl<Exclusive, Config>(keys,
                                                       values,
@@ -119,10 +119,14 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
                                    const hipStream_t     stream,
                                    const bool            debug_synchronous)
 {
-    using key_type             = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using real_init_value_type = input_type_t<InitValueType>;
+    using key_type   = typename std::iterator_traits<KeysInputIterator>::value_type;
+    using input_type = typename std::iterator_traits<input_type_t<InputIterator>>::value_type;
 
-    using config = wrapped_scan_by_key_config<Config, key_type, real_init_value_type>;
+    // The type of the intermediate accumulator 'acc_type'.
+    // We derive 'acc_type' as the resulting type of 'scan_op' uncurried on '(input_type, input_type)'
+    using acc_type = typename std::result_of<BinaryFunction(input_type, input_type)>::type;
+
+    using config = wrapped_scan_by_key_config<Config, key_type, acc_type>;
 
     detail::target_arch target_arch;
     hipError_t          result = host_target_arch(stream, target_arch);
@@ -132,7 +136,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
     }
     const scan_by_key_config_params params = dispatch_target_arch<config>(target_arch);
 
-    using wrapped_type = ::rocprim::tuple<real_init_value_type, bool>;
+    using wrapped_type = ::rocprim::tuple<input_type, bool>;
 
     using scan_state_type            = detail::lookback_scan_state<wrapped_type>;
     using scan_state_with_sleep_type = detail::lookback_scan_state<wrapped_type, true>;
