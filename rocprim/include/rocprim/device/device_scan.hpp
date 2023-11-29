@@ -635,7 +635,7 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
 ///     temporary_storage_ptr, temporary_storage_size_bytes,
 ///     input, output, start_value, input_size, min_op
 /// );
-/// // output: [9, 4, 7, 6, 2, 2, 1, 1]
+/// // output: [9, 4, 4, 4, 2, 2, 1, 1]
 /// \endcode
 /// \endparblock
 template<class Config = default_config,

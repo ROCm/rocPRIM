@@ -783,7 +783,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     is_selected_type is_selected;
     offset_type      output_indices[items_per_thread];
 
-    // Load input values into values
+    // Load input keys into keys
     if(is_global_last_block)
     {
         block_load_key_type().load(keys_input + block_offset,
@@ -828,6 +828,26 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     offset_type selected_prefix{};
     // Number of selected values in this block
     offset_type selected_in_block{};
+
+    // Load values before other blocks modify them.
+    static constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
+    value_type            values[items_per_thread];
+
+    if ROCPRIM_IF_CONSTEXPR(with_values)
+    {
+        if(is_global_last_block)
+        {
+            block_load_value_type().load(values_input + block_offset,
+                                         values,
+                                         valid_in_global_last_block,
+                                         storage.load_values);
+        }
+        else
+        {
+            block_load_value_type().load(values_input + block_offset, values, storage.load_values);
+        }
+        ::rocprim::syncthreads(); // sync threads to reuse shared memory
+    }
 
     // Calculate number of selected values in block and their indices
     if(flat_block_id == 0)
@@ -885,28 +905,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                                                 prev_selected_count_values,
                                                 prev_processed);
 
-    static constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
-
-    if ROCPRIM_IF_CONSTEXPR (with_values) {
-        value_type values[items_per_thread];
-
-        ::rocprim::syncthreads(); // sync threads to reuse shared memory
-        if(is_global_last_block)
-        {
-            block_load_value_type().load(values_input + block_offset,
-                                         values,
-                                         valid_in_global_last_block,
-                                         storage.load_values);
-        }
-        else
-        {
-            block_load_value_type()
-                .load(
-                    values_input + block_offset,
-                    values,
-                    storage.load_values
-                );
-        }
+    if ROCPRIM_IF_CONSTEXPR(with_values)
+    {
         ::rocprim::syncthreads(); // sync threads to reuse shared memory
 
         partition_scatter<OnlySelected, block_size>(values,
