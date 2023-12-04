@@ -154,9 +154,10 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
         // next block, otherwise the first item is needed for the previous block
         const auto offset = items_per_block - (Right ? 0 : 1);
 
-        const auto block_starts_iter = make_transform_iterator(
-            rocprim::make_counting_iterator(std::size_t{0}),
-            [=, base = input + offset](std::size_t i) { return base[i * items_per_block]; });
+        const auto block_starts_iter
+            = make_transform_iterator(rocprim::make_counting_iterator(std::size_t{0}),
+                                      [=, base = input + offset](std::size_t i) -> value_type
+                                      { return base[i * items_per_block]; });
 
         const hipError_t error = ::rocprim::transform(block_starts_iter,
                                                       previous_values,
