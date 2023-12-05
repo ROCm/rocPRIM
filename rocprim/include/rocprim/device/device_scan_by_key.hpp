@@ -68,17 +68,18 @@ void __global__ __launch_bounds__(device_params<Config>().kernel_config.block_si
                               const size_t                                 number_of_blocks,
                               const ::rocprim::tuple<AccType, bool>* const previous_last_value)
 {
-    device_scan_by_key_kernel_impl<Exclusive, Config>(keys,
-                                                      values,
-                                                      output,
-                                                      get_input_value(initial_value),
-                                                      compare,
-                                                      scan_op,
-                                                      scan_state,
-                                                      size,
-                                                      starting_block,
-                                                      number_of_blocks,
-                                                      previous_last_value);
+    device_scan_by_key_kernel_impl<Exclusive, Config>(
+        keys,
+        values,
+        output,
+        static_cast<AccType>(get_input_value(initial_value)),
+        compare,
+        scan_op,
+        scan_state,
+        size,
+        starting_block,
+        number_of_blocks,
+        previous_last_value);
 }
 
 #define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                           \
@@ -136,7 +137,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
     }
     const scan_by_key_config_params params = dispatch_target_arch<config>(target_arch);
 
-    using wrapped_type = ::rocprim::tuple<input_type, bool>;
+    using wrapped_type = ::rocprim::tuple<acc_type, bool>;
 
     using scan_state_type            = detail::lookback_scan_state<wrapped_type>;
     using scan_state_with_sleep_type = detail::lookback_scan_state<wrapped_type, true>;
@@ -288,7 +289,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
                                    keys + offset,
                                    input + offset,
                                    output + offset,
-                                   static_cast<real_init_value_type>(initial_value),
+                                   initial_value,
                                    compare,
                                    scan_op,
                                    scan_state,
