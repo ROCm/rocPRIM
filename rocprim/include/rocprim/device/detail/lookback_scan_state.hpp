@@ -38,6 +38,21 @@
 #include "../config_types.hpp"
 #include "rocprim/config.hpp"
 
+// This version is specific for devices with slow __threadfence ("agent" fence which does
+// L2 cache flushing and invalidation).
+// Fences with "workgroup" scope are used instead to ensure ordering only but not coherence,
+// they do not flush and invalidate cache.
+// Global coherence of prefixes_*_values is ensured by atomic_load/atomic_store that bypass
+// cache.
+#ifndef ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
+    #if defined(__HIP_DEVICE_COMPILE__) \
+        && (defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__))
+        #define ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES 1
+    #else
+        #define ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES 0
+    #endif
+#endif // ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
+
 extern "C"
 {
     void __builtin_amdgcn_s_sleep(int);
@@ -258,16 +273,6 @@ private:
     prefix_underlying_type * prefixes;
 };
 
-#if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__)
-    // This version is specific for devices with slow __threadfence ("agent" fence which does
-    // L2 cache flushing and invalidation).
-    // Fences with "workgroup" scope are used instead to ensure ordering only but not coherence,
-    // they do not flush and invalidate cache.
-    // Global coherence of prefixes_*_values is ensured by atomic_load/atomic_store that bypass
-    // cache.
-    #define ROCPRIM_LOOKBACK_WITHOUT_SLOW_FENCES
-#endif
-
 // Flag, partial and final prefixes are stored in separate arrays.
 // Consistency ensured by memory fences between flag and prefixes load/store operations.
 template<class T, bool UseSleep>
@@ -376,7 +381,7 @@ public:
 
             flag = ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]);
         }
-#if defined(ROCPRIM_LOOKBACK_WITHOUT_SLOW_FENCES)
+#if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
         __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 
         auto values = reinterpret_cast<const value_underlying_type*>(
@@ -413,7 +418,7 @@ private:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-#if defined(ROCPRIM_LOOKBACK_WITHOUT_SLOW_FENCES)
+#if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
         auto values = reinterpret_cast<value_underlying_type*>(
             flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
         value_underlying_type v;
@@ -449,8 +454,6 @@ private:
     char* prefixes_partial_values;
     char* prefixes_complete_values;
 };
-
-#undef ROCPRIM_LOOKBACK_WITHOUT_SLOW_FENCES
 
 template<class T, class BinaryFunction, class LookbackScanState>
 class lookback_scan_prefix_op
