@@ -407,9 +407,21 @@ public:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
+#if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
+        T    value;
+        auto values = reinterpret_cast<const value_underlying_type*>(prefixes_complete_values);
+        value_underlying_type v;
+        for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
+        {
+            v.words[i] = ::rocprim::detail::atomic_load(&values[padding + block_id].words[i]);
+        }
+        __builtin_memcpy(&value, &v, sizeof(value));
+        return value;
+#else
         assert(prefixes_flags[padding + block_id] == PREFIX_COMPLETE);
         auto values = reinterpret_cast<const T*>(prefixes_complete_values);
         return values[padding + block_id];
+#endif
     }
 
 private:
