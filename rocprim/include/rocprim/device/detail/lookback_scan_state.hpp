@@ -126,6 +126,16 @@ public:
         return hipSuccess;
     }
 
+    [[deprecated(
+        "Please use the overload returns an error code, this function assumes the default"
+        " stream and silently ignores errors.")]] ROCPRIM_HOST static inline lookback_scan_state
+        create(void* temp_storage, const unsigned int number_of_blocks)
+    {
+        lookback_scan_state result;
+        (void)create(result, temp_storage, number_of_blocks, /*default stream*/ 0);
+        return result;
+    }
+
     ROCPRIM_HOST static inline hipError_t get_storage_size(const unsigned int number_of_blocks,
                                                            const hipStream_t  stream,
                                                            size_t&            storage_size)
@@ -138,6 +148,15 @@ public:
         return error;
     }
 
+    [[deprecated("Please use the overload returns an error code, this function assumes the default"
+                 " stream and silently ignores errors.")]] ROCPRIM_HOST static inline size_t
+        get_storage_size(const unsigned int number_of_blocks)
+    {
+        size_t result;
+        (void)get_storage_size(number_of_blocks, /*default stream*/ 0, result);
+        return result;
+    }
+
     ROCPRIM_HOST static inline hipError_t
         get_temp_storage_layout(const unsigned int            number_of_blocks,
                                 const hipStream_t             stream,
@@ -147,6 +166,16 @@ public:
         hipError_t error        = get_storage_size(number_of_blocks, stream, storage_size);
         layout = detail::temp_storage::layout{storage_size, alignof(prefix_underlying_type)};
         return error;
+    }
+
+    [[deprecated("Please use the overload returns an error code, this function assumes the default"
+                 " stream and silently ignores errors.")]] ROCPRIM_HOST static inline detail::
+        temp_storage::layout
+        get_temp_storage_layout(const unsigned int number_of_blocks)
+    {
+        detail::temp_storage::layout result;
+        (void)get_temp_storage_layout(number_of_blocks, /*default stream*/ 0, result);
+        return result;
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
@@ -306,6 +335,16 @@ public:
         return error;
     }
 
+    [[deprecated(
+        "Please use the overload returns an error code, this function assumes the default"
+        " stream and silently ignores errors.")]] ROCPRIM_HOST static inline lookback_scan_state
+        create(void* temp_storage, const unsigned int number_of_blocks)
+    {
+        lookback_scan_state result;
+        (void)create(result, temp_storage, number_of_blocks, /*default stream*/ 0);
+        return result;
+    }
+
     ROCPRIM_HOST static inline hipError_t get_storage_size(const unsigned int number_of_blocks,
                                                            const hipStream_t  stream,
                                                            size_t&            storage_size)
@@ -320,6 +359,15 @@ public:
         return error;
     }
 
+    [[deprecated("Please use the overload returns an error code, this function assumes the default"
+                 " stream and silently ignores errors.")]] ROCPRIM_HOST static inline size_t
+        get_storage_size(const unsigned int number_of_blocks)
+    {
+        size_t result;
+        (void)get_storage_size(number_of_blocks, /*default stream*/ 0, result);
+        return result;
+    }
+
     ROCPRIM_HOST static inline hipError_t
         get_temp_storage_layout(const unsigned int            number_of_blocks,
                                 const hipStream_t             stream,
@@ -330,6 +378,16 @@ public:
         hipError_t error        = get_storage_size(number_of_blocks, stream, storage_size);
         layout                  = detail::temp_storage::layout{storage_size, alignment};
         return error;
+    }
+
+    [[deprecated("Please use the overload returns an error code, this function assumes the default"
+                 " stream and silently ignores errors.")]] ROCPRIM_HOST static inline detail::
+        temp_storage::layout
+        get_temp_storage_layout(const unsigned int number_of_blocks)
+    {
+        detail::temp_storage::layout result;
+        (void)get_temp_storage_layout(number_of_blocks, /*default stream*/ 0, result);
+        return result;
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void initialize_prefix(const unsigned int block_id,
