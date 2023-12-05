@@ -737,7 +737,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
     using is_plus_op = test_utils::is_plus_operator<scan_op_type>;
     using acc_type   = typename accum_type<T, scan_op_type>::type;
 
-    acc_type        initial_value;
+    T               initial_value;
     constexpr float single_op_precision = is_plus_op::value ? test_utils::precision<acc_type> : 0;
 
     const bool debug_synchronous = TestFixture::debug_synchronous;
@@ -774,7 +774,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             const bool use_unique_keys = bool(test_utils::get_random_value<int>(0, 1, seed_value));
 
             // Generate data
-            initial_value        = test_utils::get_random_value<acc_type>(1, 100, seed_value);
+            initial_value        = test_utils::get_random_value<T>(1, 100, seed_value);
             std::vector<T> input = test_utils::get_random_data<T>(size, 0, 9, seed_value);
             std::vector<K> keys;
             if(use_unique_keys)
