@@ -95,6 +95,24 @@ namespace detail
     {
         __hip_atomic_store(address, value, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
     }
+
+    /// \brief Wait for all vector memory operations to complete
+    ///
+    /// This ensures that previous visible writes to vector memory have completed before the function
+    /// returns. Atomic operations following the call are guaranteed to be visible
+    /// to other threads in the device after vmem writes preceding the call.
+    ///
+    /// Provides no guarantees about visibility, only ordering, i.e. caches are not flushed.
+    /// Visibility has to be enforced in another way (e.g. writing *through* cache)
+    ///
+    /// This is a dangerous internal function not meant for users, and only meant to be used by
+    /// developers that know what they are doing.
+    ROCPRIM_DEVICE ROCPRIM_INLINE void atomic_fence_release_vmem_order_only()
+    {
+        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
+        // Wait until all vmem operations complete (s_waitcnt vmcnt(0))
+        __builtin_amdgcn_s_waitcnt(/*vmcnt*/ 0 | (/*exp_cnt*/ 0x7 << 4) | (/*lgkmcnt*/ 0xf << 8));
+    }
 }
 
 END_ROCPRIM_NAMESPACE

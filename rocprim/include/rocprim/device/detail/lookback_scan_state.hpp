@@ -384,19 +384,19 @@ public:
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
         __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 
-        auto values = reinterpret_cast<const value_underlying_type*>(
+        const auto* values = static_cast<const value_underlying_type*>(
             flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
         value_underlying_type v;
         for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
         {
             v.words[i] = ::rocprim::detail::atomic_load(&values[padding + block_id].words[i]);
         }
-        __builtin_memcpy(&value, &v, sizeof(T));
+        __builtin_memcpy(&value, &v, sizeof(value));
 #else
         ::rocprim::detail::memory_fence_device();
 
-        auto values = reinterpret_cast<const T*>(flag == PREFIX_PARTIAL ? prefixes_partial_values
-                                                                        : prefixes_complete_values);
+        const auto* values = static_cast<const T*>(
+            flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
         value       = values[padding + block_id];
 #endif
     }
@@ -409,7 +409,7 @@ public:
 
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
         T    value;
-        auto values = reinterpret_cast<const value_underlying_type*>(prefixes_complete_values);
+        const auto* values = static_cast<const value_underlying_type*>(prefixes_complete_values);
         value_underlying_type v;
         for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
         {
@@ -419,7 +419,7 @@ public:
         return value;
 #else
         assert(prefixes_flags[padding + block_id] == PREFIX_COMPLETE);
-        auto values = reinterpret_cast<const T*>(prefixes_complete_values);
+        const auto* values = static_cast<const T*>(prefixes_complete_values);
         return values[padding + block_id];
 #endif
     }
@@ -431,20 +431,19 @@ private:
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
-        auto values = reinterpret_cast<value_underlying_type*>(
+        auto* values = static_cast<value_underlying_type*>(
             flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
         value_underlying_type v;
-        __builtin_memcpy(&v, &value, sizeof(T));
+        __builtin_memcpy(&v, &value, sizeof(value));
         for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
         {
             ::rocprim::detail::atomic_store(&values[padding + block_id].words[i], v.words[i]);
         }
-        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
-        // Wait when all atomic stores of prefixes_*_values complete (s_waitcnt vmcnt(0))
-        __builtin_amdgcn_s_waitcnt(/*vmcnt*/ 0 | (/*exp_cnt*/ 0x7 << 4) | (/*lgkmcnt*/ 0xf << 8));
+        // Wait for all atomic stores of prefixes_*_values before signaling complete / partial state
+        rocprim::detail::atomic_fence_release_vmem_order_only();
 #else
-        auto values = reinterpret_cast<T*>(flag == PREFIX_PARTIAL ? prefixes_partial_values
-                                                                  : prefixes_complete_values);
+        auto* values = static_cast<T*>(flag == PREFIX_PARTIAL ? prefixes_partial_values
+                                                              : prefixes_complete_values);
         values[padding + block_id] = value;
         ::rocprim::detail::memory_fence_device();
 #endif
@@ -463,8 +462,8 @@ private:
     // We need to separate arrays for partial and final prefixes, because
     // value can be overwritten before flag is changed (flag and value are
     // not stored in single instruction).
-    char* prefixes_partial_values;
-    char* prefixes_complete_values;
+    void* prefixes_partial_values;
+    void* prefixes_complete_values;
 };
 
 template<class T, class BinaryFunction, class LookbackScanState>
