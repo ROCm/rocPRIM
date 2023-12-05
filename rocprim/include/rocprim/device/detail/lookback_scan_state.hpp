@@ -440,7 +440,7 @@ public:
             flag = ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]);
         }
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
-        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
+        rocprim::detail::atomic_fence_acquire_order_only();
 
         const auto* values = static_cast<const value_underlying_type*>(
             flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);

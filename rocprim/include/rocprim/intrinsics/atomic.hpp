@@ -113,6 +113,20 @@ namespace detail
         // Wait until all vmem operations complete (s_waitcnt vmcnt(0))
         __builtin_amdgcn_s_waitcnt(/*vmcnt*/ 0 | (/*exp_cnt*/ 0x7 << 4) | (/*lgkmcnt*/ 0xf << 8));
     }
+
+    /// \brief Make sure visible operations are complete
+    ///
+    /// Ensure that following visible reads are not reordered before preceding atomic operations
+    /// Similarly to atomic_fence_release_vmem_order_only() this function provides no visibility
+    /// guarantees, visiblity of reads must be guaranteed in other wise (like reading *through*
+    /// caches)
+    ///
+    /// This is a dangerous internal function not meant for users, and only meant to be used by
+    /// developers that know what they are doing.
+    ROCPRIM_DEVICE ROCPRIM_INLINE void atomic_fence_acquire_order_only()
+    {
+        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
+    }
 }
 
 END_ROCPRIM_NAMESPACE
