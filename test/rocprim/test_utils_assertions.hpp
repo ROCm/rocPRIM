@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,18 +21,24 @@
 #ifndef ROCPRIM_TEST_UTILS_ASSERTIONS_HPP
 #define ROCPRIM_TEST_UTILS_ASSERTIONS_HPP
 
-// Std::memcpy and std::memcmp
-#include <cstring>
-
 #include "test_utils_half.hpp"
 #include "test_utils_bfloat16.hpp"
 #include "test_utils_custom_test_types.hpp"
+
+#include <rocprim/type_traits.hpp>
+
+#include <gtest/gtest.h>
+
+// Std::memcpy and std::memcmp
+#include <cstring>
+#include <vector>
 
 namespace test_utils {
 
 // begin assert_eq
 template<class T>
-bool inline bit_equal(T a, T b){
+bool inline bit_equal(const T& a, const T& b)
+{
     return std::memcmp(&a,  &b, sizeof(T))==0;
 }
 
@@ -240,6 +246,81 @@ void assert_bit_eq(const std::vector<T>& result, const std::vector<T>& expected)
     }
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+inline void assert_bit_eq(const std::vector<__int128_t>& result,
+                          const std::vector<__int128_t>& expected)
+{
+    ASSERT_EQ(result.size(), expected.size());
+
+    auto to_string = [](__int128_t value)
+    {
+        static const char* charmap = "0123456789";
+
+        std::string result;
+        result.reserve(41); // max. 40 digits possible ( uint64_t has 20) plus sign
+        __uint128_t helper = (value < 0) ? -value : value;
+
+        do
+        {
+            result += charmap[helper % 10];
+            helper /= 10;
+        }
+        while(helper);
+        if(value < 0)
+        {
+            result += "-";
+        }
+        std::reverse(result.begin(), result.end());
+        return result;
+    };
+
+    for(size_t i = 0; i < result.size(); i++)
+    {
+        if(!bit_equal(result[i], expected[i]))
+        {
+            FAIL() << "Expected strict/bitwise equality of these values: " << std::endl
+                   << "     result[i]: " << to_string(result[i]) << std::endl
+                   << "     expected[i]: " << to_string(expected[i]) << std::endl
+                   << "where index = " << i;
+        }
+    }
+}
+
+inline void assert_bit_eq(const std::vector<__uint128_t>& result,
+                          const std::vector<__uint128_t>& expected)
+{
+    ASSERT_EQ(result.size(), expected.size());
+
+    auto to_string = [](__uint128_t value)
+    {
+        static const char* charmap = "0123456789";
+
+        std::string result;
+        result.reserve(40); // max. 40 digits possible ( uint64_t has 20)
+        __uint128_t helper = value;
+
+        do
+        {
+            result += charmap[helper % 10];
+            helper /= 10;
+        }
+        while(helper);
+        std::reverse(result.begin(), result.end());
+        return result;
+    };
+
+    for(size_t i = 0; i < result.size(); i++)
+    {
+        if(!bit_equal(result[i], expected[i]))
+        {
+            FAIL() << "Expected strict/bitwise equality of these values: " << std::endl
+                   << "     result[i]: " << to_string(result[i]) << std::endl
+                   << "     expected[i]: " << to_string(expected[i]) << std::endl
+                   << "where index = " << i;
+        }
+    }
+}
+#endif
 }
 
 #endif //ROCPRIM_TEST_UTILS_ASSERTIONS_HPP

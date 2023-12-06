@@ -33,7 +33,8 @@ template<class Haystack,
          class Needle,
          class Output          = size_t,
          class CompareFunction = rocprim::less<>,
-         class Config          = rocprim::default_config>
+         class Config          = rocprim::default_config,
+         bool  UseGraphs       = false>
 struct params
 {
     using haystack_type = Haystack;
@@ -41,6 +42,7 @@ struct params
     using output_type = Output;
     using compare_op_type = CompareFunction;
     using config          = Config;
+    static constexpr bool use_graphs = UseGraphs;
 };
 
 template<class Params>
@@ -52,37 +54,25 @@ public:
 using custom_int2 = test_utils::custom_test_type<int>;
 using custom_double2 = test_utils::custom_test_type<double>;
 
-using custom_config_0 = rocprim::transform_config<128, 4>;
-using custom_config_1 = rocprim::binary_search_config<64, 2>;
-struct custom_config_2
-{
-    static constexpr unsigned int block_size       = 256;
-    static constexpr unsigned int items_per_thread = 1;
-    static constexpr unsigned int size_limit       = ROCPRIM_GRID_SIZE_LIMIT;
-};
+struct use_custom_config
+{};
 
-typedef ::testing::Types<params<int, int>,
-                         params<unsigned long long,
-                                unsigned long long,
-                                size_t,
-                                rocprim::greater<unsigned long long>,
-                                custom_config_0>,
-                         params<float, double, unsigned int, rocprim::greater<double>>,
-                         params<double, int>,
-                         params<int8_t, int8_t>,
-                         params<uint8_t, uint8_t>,
-                         params<rocprim::half, rocprim::half, size_t, rocprim::less<rocprim::half>>,
-                         params<rocprim::bfloat16,
-                                rocprim::bfloat16,
-                                size_t,
-                                rocprim::less<rocprim::bfloat16>,
-                                custom_config_1>,
-                         params<custom_int2, custom_int2>,
-                         params<custom_double2,
-                                custom_double2,
-                                unsigned int,
-                                rocprim::greater<custom_double2>,
-                                custom_config_2>>
+typedef ::testing::Types<
+    params<int, int>,
+    params<unsigned long long, unsigned long long, size_t, rocprim::greater<unsigned long long>>,
+    params<float, double, unsigned int, rocprim::greater<double>>,
+    params<double, int>,
+    params<int8_t, int8_t>,
+    params<uint8_t, uint8_t>,
+    params<rocprim::half, rocprim::half, size_t, rocprim::less<rocprim::half>>,
+    params<rocprim::bfloat16,
+           rocprim::bfloat16,
+           size_t,
+           rocprim::less<rocprim::bfloat16>,
+           use_custom_config>,
+    params<custom_int2, custom_int2>,
+    params<custom_double2, custom_double2, unsigned int, rocprim::greater<custom_double2>>,
+    params<int, int, size_t, rocprim::less<>, rocprim::default_config, true>>
     Params;
 
 TYPED_TEST_SUITE(RocprimDeviceBinarySearch, Params);
@@ -97,9 +87,17 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
     using needle_type = typename TestFixture::params::needle_type;
     using output_type = typename TestFixture::params::output_type;
     using compare_op_type = typename TestFixture::params::compare_op_type;
-    using config          = typename TestFixture::params::config;
+    using config          = std::conditional_t<
+        std::is_same<typename TestFixture::params::config, use_custom_config>::value,
+        rocprim::lower_bound_config<64, 2>,
+        typename TestFixture::params::config>;
 
     hipStream_t stream = 0;
+    if (TestFixture::params::use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     const bool debug_synchronous = false;
 
@@ -159,6 +157,11 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
                     haystack.begin();
             }
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (TestFixture::params::use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             void * d_temporary_storage = nullptr;
             size_t temporary_storage_bytes;
             HIP_CHECK(rocprim::lower_bound<config>(d_temporary_storage,
@@ -172,10 +175,16 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
                                                    stream,
                                                    debug_synchronous));
 
+            if (TestFixture::params::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+
             ASSERT_GT(temporary_storage_bytes, 0);
 
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
+            if (TestFixture::params::use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             HIP_CHECK(rocprim::lower_bound<config>(d_temporary_storage,
                                                    temporary_storage_bytes,
                                                    d_haystack,
@@ -187,6 +196,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
                                                    stream,
                                                    debug_synchronous));
 
+            if (TestFixture::params::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            
             std::vector<output_type> output(needles_size);
             HIP_CHECK(
                 hipMemcpy(
@@ -201,11 +213,15 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
             HIP_CHECK(hipFree(d_needles));
             HIP_CHECK(hipFree(d_output));
 
+            if (TestFixture::params::use_graphs)
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected));
         }
     }
 
-
+    if (TestFixture::params::use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
 }
 
 TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
@@ -218,9 +234,17 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
     using needle_type = typename TestFixture::params::needle_type;
     using output_type = typename TestFixture::params::output_type;
     using compare_op_type = typename TestFixture::params::compare_op_type;
-    using config          = typename TestFixture::params::config;
+    using config          = std::conditional_t<
+        std::is_same<typename TestFixture::params::config, use_custom_config>::value,
+        rocprim::upper_bound_config<64, 2>,
+        typename TestFixture::params::config>;
 
     hipStream_t stream = 0;
+    if (TestFixture::params::use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     const bool debug_synchronous = false;
 
@@ -279,6 +303,11 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
                     haystack.begin();
             }
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (TestFixture::params::use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             void * d_temporary_storage = nullptr;
             size_t temporary_storage_bytes;
             HIP_CHECK(rocprim::upper_bound<config>(d_temporary_storage,
@@ -291,11 +320,16 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
                                                    compare_op,
                                                    stream,
                                                    debug_synchronous));
-
+            if (TestFixture::params::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            
             ASSERT_GT(temporary_storage_bytes, 0);
 
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
+            if (TestFixture::params::use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             HIP_CHECK(rocprim::upper_bound<config>(d_temporary_storage,
                                                    temporary_storage_bytes,
                                                    d_haystack,
@@ -307,6 +341,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
                                                    stream,
                                                    debug_synchronous));
 
+            if (TestFixture::params::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            
             std::vector<output_type> output(needles_size);
             HIP_CHECK(
                 hipMemcpy(
@@ -321,11 +358,15 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
             HIP_CHECK(hipFree(d_needles));
             HIP_CHECK(hipFree(d_output));
 
+            if (TestFixture::params::use_graphs)
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected));
         }
     }
 
-
+    if (TestFixture::params::use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
 }
 
 TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
@@ -338,9 +379,17 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
     using needle_type = typename TestFixture::params::needle_type;
     using output_type = typename TestFixture::params::output_type;
     using compare_op_type = typename TestFixture::params::compare_op_type;
-    using config          = typename TestFixture::params::config;
+    using config          = std::conditional_t<
+        std::is_same<typename TestFixture::params::config, use_custom_config>::value,
+        rocprim::binary_search_config<64, 2>,
+        typename TestFixture::params::config>;
 
     hipStream_t stream = 0;
+    if (TestFixture::params::use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     const bool debug_synchronous = false;
 
@@ -398,6 +447,11 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
                 expected[i] = std::binary_search(haystack.begin(), haystack.end(), needles[i], compare_op);
             }
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (TestFixture::params::use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             void * d_temporary_storage = nullptr;
             size_t temporary_storage_bytes;
             HIP_CHECK(rocprim::binary_search<config>(d_temporary_storage,
@@ -411,10 +465,16 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
                                                      stream,
                                                      debug_synchronous));
 
+            if (TestFixture::params::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            
             ASSERT_GT(temporary_storage_bytes, 0);
 
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
+            if (TestFixture::params::use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             HIP_CHECK(rocprim::binary_search<config>(d_temporary_storage,
                                                      temporary_storage_bytes,
                                                      d_haystack,
@@ -426,6 +486,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
                                                      stream,
                                                      debug_synchronous));
 
+            if (TestFixture::params::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            
             std::vector<output_type> output(needles_size);
             HIP_CHECK(
                 hipMemcpy(
@@ -440,7 +503,13 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
             HIP_CHECK(hipFree(d_needles));
             HIP_CHECK(hipFree(d_output));
 
+            if (TestFixture::params::use_graphs)
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected));
         }
     }
+
+    if (TestFixture::params::use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
 }
