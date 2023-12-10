@@ -199,6 +199,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
     using output_type                           = typename TestFixture::output_type;
     static constexpr bool left                  = TestFixture::left;
     static constexpr bool in_place              = TestFixture::in_place;
+    const bool            debug_synchronous     = TestFixture::debug_synchronous;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     using Config                                = typename TestFixture::config;
 
@@ -263,9 +264,9 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            d_input,
                                                            output_it,
                                                            size,
-                                                           rocprim::minus<> {},
+                                                           rocprim::minus<>{},
                                                            stream,
-                                                           TestFixture::debug_synchronous));
+                                                           debug_synchronous));
 
             if (TestFixture::use_graphs)
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
@@ -285,9 +286,9 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            d_input,
                                                            output_it,
                                                            size,
-                                                           rocprim::minus<> {},
+                                                           rocprim::minus<>{},
                                                            stream,
-                                                           TestFixture::debug_synchronous));
+                                                           debug_synchronous));
             HIP_CHECK(hipGetLastError());
 
             if (TestFixture::use_graphs)
@@ -485,6 +486,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
     using T                                         = size_t;
     static constexpr bool         is_left           = TestFixture::left;
     static constexpr bool         is_in_place       = TestFixture::in_place;
+    const bool                    debug_synchronous = TestFixture::debug_synchronous;
     static constexpr unsigned int sampling_rate     = 10000;
     using OutputIterator                            = check_output_iterator<sampling_rate>;
     using flag_type                                 = OutputIterator::flag_type;
@@ -546,7 +548,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    size,
                                                    op,
                                                    stream,
-                                                   TestFixture::debug_synchronous));
+                                                   debug_synchronous));
 
             if (TestFixture::use_graphs)
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
@@ -568,7 +570,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    size,
                                                    op,
                                                    stream,
-                                                   TestFixture::debug_synchronous));
+                                                   debug_synchronous));
 
             if (TestFixture::use_graphs)
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);

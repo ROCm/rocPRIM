@@ -85,6 +85,19 @@ struct wrapped_segmented_radix_sort_config<default_config, key_type, value_type>
     };
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+template<class SegmentedRadixSortConfig, class key_type, class Value>
+template<target_arch Arch>
+constexpr segmented_radix_sort_config_params
+    wrapped_segmented_radix_sort_config<SegmentedRadixSortConfig, key_type, Value>::
+        architecture_config<Arch>::params;
+template<class key_type, class Value>
+template<target_arch Arch>
+constexpr segmented_radix_sort_config_params
+    wrapped_segmented_radix_sort_config<rocprim::default_config, key_type, Value>::
+        architecture_config<Arch>::params;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 } // end namespace detail
 
 END_ROCPRIM_NAMESPACE
