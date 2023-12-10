@@ -688,6 +688,153 @@ ROCPRIM_DEVICE void load_selected_count(const size_t* const prev_selected_count,
     }
 }
 
+template<unsigned int ItemsPerThread,
+         bool         OnlySelected,
+         unsigned int BlockSize,
+         typename BlockLoadValueType,
+         typename ValueIterator,
+         typename ValueType>
+class partition_values_helper
+{
+
+private:
+    ValueType values[ItemsPerThread];
+
+public:
+    ROCPRIM_DEVICE void load(ValueIterator                              values_input,
+                             unsigned int                               valid,
+                             unsigned int                               is_global_last_block,
+                             typename BlockLoadValueType::storage_type& load_values)
+    {
+        // Load values and sync threads
+        if(is_global_last_block)
+        {
+            BlockLoadValueType().load(values_input, values, valid, load_values);
+        }
+        else
+        {
+            BlockLoadValueType().load(values_input, values, load_values);
+        }
+        ::rocprim::syncthreads();
+    }
+
+    template<class OffsetType, class OutputType, class ScatterStorageType>
+    ROCPRIM_DEVICE void store(bool (&is_selected)[ItemsPerThread],
+                              OffsetType (&output_indices)[ItemsPerThread],
+                              OutputType          values_output,
+                              const size_t        total_size,
+                              const OffsetType    selected_prefix,
+                              const OffsetType    selected_in_block,
+                              ScatterStorageType& storage,
+                              const unsigned int  flat_block_id,
+                              const unsigned int  flat_block_thread_id,
+                              const bool          is_global_last_block,
+                              const unsigned int  valid_in_global_last_block,
+                              size_t (&prev_selected_count_values)[1],
+                              size_t prev_processed)
+    {
+        // Sync threads and store values
+        ::rocprim::syncthreads();
+        partition_scatter<OnlySelected, BlockSize>(values,
+                                                   is_selected,
+                                                   output_indices,
+                                                   values_output,
+                                                   total_size,
+                                                   selected_prefix,
+                                                   selected_in_block,
+                                                   storage,
+                                                   flat_block_id,
+                                                   flat_block_thread_id,
+                                                   is_global_last_block,
+                                                   valid_in_global_last_block,
+                                                   prev_selected_count_values,
+                                                   prev_processed);
+    }
+
+    template<class OffsetType, class OutputType, class ScatterStorageType>
+    ROCPRIM_DEVICE void store(bool (&is_selected)[2][ItemsPerThread],
+                              OffsetType (&output_indices)[ItemsPerThread],
+                              OutputType          values_output,
+                              const size_t        total_size,
+                              const OffsetType    selected_prefix,
+                              const OffsetType    selected_in_block,
+                              ScatterStorageType& storage,
+                              const unsigned int  flat_block_id,
+                              const unsigned int  flat_block_thread_id,
+                              const bool          is_global_last_block,
+                              const unsigned int  valid_in_global_last_block,
+                              size_t (&prev_selected_count_values)[2],
+                              size_t prev_processed)
+    {
+        // Sync threads and store values
+        ::rocprim::syncthreads();
+        partition_scatter<OnlySelected, BlockSize>(values,
+                                                   is_selected,
+                                                   output_indices,
+                                                   values_output,
+                                                   total_size,
+                                                   selected_prefix,
+                                                   selected_in_block,
+                                                   storage,
+                                                   flat_block_id,
+                                                   flat_block_thread_id,
+                                                   is_global_last_block,
+                                                   valid_in_global_last_block,
+                                                   prev_selected_count_values,
+                                                   prev_processed);
+    }
+};
+
+template<unsigned int ItemsPerThread,
+         bool         OnlySelected,
+         unsigned int BlockSize,
+         typename BlockLoadValueType,
+         typename ValueIterator>
+class partition_values_helper<ItemsPerThread,
+                              OnlySelected,
+                              BlockSize,
+                              BlockLoadValueType,
+                              ValueIterator,
+                              rocprim::empty_type>
+{
+public:
+    ROCPRIM_DEVICE void
+        load(ValueIterator, unsigned int, unsigned int, typename BlockLoadValueType::storage_type&)
+    {}
+
+    template<class OffsetType, class OutputType, class ScatterStorageType>
+    ROCPRIM_DEVICE void store(bool[ItemsPerThread],
+                              OffsetType[ItemsPerThread],
+                              OutputType,
+                              const size_t,
+                              const OffsetType,
+                              const OffsetType,
+                              ScatterStorageType&,
+                              const unsigned int,
+                              const unsigned int,
+                              const bool,
+                              const unsigned int,
+                              size_t[ItemsPerThread],
+                              size_t)
+    {}
+
+    template<class OffsetType, class OutputType, class ScatterStorageType>
+    ROCPRIM_DEVICE void store(bool[2][ItemsPerThread],
+                              OffsetType[ItemsPerThread],
+                              OutputType,
+                              const size_t,
+                              const OffsetType,
+                              const OffsetType,
+                              ScatterStorageType&,
+                              const unsigned int,
+                              const unsigned int,
+                              const bool,
+                              const unsigned int,
+                              size_t[ItemsPerThread],
+                              size_t)
+    {}
+};
+
 template<select_method SelectMethod,
          bool          OnlySelected,
          class Config,
@@ -802,6 +949,19 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     }
     ::rocprim::syncthreads(); // sync threads to reuse shared memory
 
+    // Load values before other blocks modify them.
+    partition_values_helper<items_per_thread,
+                            OnlySelected,
+                            block_size,
+                            block_load_value_type,
+                            ValueIterator,
+                            value_type>
+        values_helper;
+    values_helper.load(values_input + block_offset,
+                       valid_in_global_last_block,
+                       is_global_last_block,
+                       storage.load_values);
+
     // Load selection flags into is_selected, generate them using
     // input value and selection predicate, or generate them using
     // block_discontinuity primitive
@@ -828,26 +988,6 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     offset_type selected_prefix{};
     // Number of selected values in this block
     offset_type selected_in_block{};
-
-    // Load values before other blocks modify them.
-    static constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
-    value_type            values[items_per_thread];
-
-    if ROCPRIM_IF_CONSTEXPR(with_values)
-    {
-        if(is_global_last_block)
-        {
-            block_load_value_type().load(values_input + block_offset,
-                                         values,
-                                         valid_in_global_last_block,
-                                         storage.load_values);
-        }
-        else
-        {
-            block_load_value_type().load(values_input + block_offset, values, storage.load_values);
-        }
-        ::rocprim::syncthreads(); // sync threads to reuse shared memory
-    }
 
     // Calculate number of selected values in block and their indices
     if(flat_block_id == 0)
@@ -905,25 +1045,19 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                                                 prev_selected_count_values,
                                                 prev_processed);
 
-    if ROCPRIM_IF_CONSTEXPR(with_values)
-    {
-        ::rocprim::syncthreads(); // sync threads to reuse shared memory
-
-        partition_scatter<OnlySelected, block_size>(values,
-                                                    is_selected,
-                                                    output_indices,
-                                                    values_output,
-                                                    total_size,
-                                                    selected_prefix,
-                                                    selected_in_block,
-                                                    storage.exchange_values,
-                                                    flat_block_id,
-                                                    flat_block_thread_id,
-                                                    is_global_last_block,
-                                                    valid_in_global_last_block,
-                                                    prev_selected_count_values,
-                                                    prev_processed);
-    }
+    values_helper.store(is_selected,
+                        output_indices,
+                        values_output,
+                        total_size,
+                        selected_prefix,
+                        selected_in_block,
+                        storage.exchange_values,
+                        flat_block_id,
+                        flat_block_thread_id,
+                        is_global_last_block,
+                        valid_in_global_last_block,
+                        prev_selected_count_values,
+                        prev_processed);
 
     // Last block in grid stores number of selected values
     const bool is_last_block = flat_block_id == (number_of_blocks - 1);
