@@ -60,6 +60,12 @@
         }
 #endif
 
+#if(defined(__GNUC__) || defined(__clang__)) && (defined(__GLIBCXX__) || defined(_LIBCPP_VERSION))
+    #define ROCPRIM_HAS_INT128_SUPPORT 1
+#else
+    #define ROCPRIM_HAS_INT128_SUPPORT 0
+#endif
+
 #define INSTANTIATE_TYPED_TEST_EXPANDED_1(line, test_suite_name, ...)         \
     namespace Id##line                                                        \
     {                                                                         \
