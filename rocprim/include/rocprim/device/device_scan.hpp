@@ -183,7 +183,8 @@ template<bool Exclusive,
          class InputIterator,
          class OutputIterator,
          class InitValueType,
-         class BinaryFunction>
+         class BinaryFunction,
+         class AccType>
 inline auto scan_impl(void*               temporary_storage,
                       size_t&             storage_size,
                       InputIterator       input,
@@ -194,13 +195,7 @@ inline auto scan_impl(void*               temporary_storage,
                       const hipStream_t   stream,
                       bool                debug_synchronous)
 {
-    using input_type = typename std::iterator_traits<input_type_t<InputIterator>>::value_type;
-
-    // The type of the intermediate accumulator 'acc_type'.
-    // We derive this as the resulting type of 'BinaryFunction'
-    using acc_type = typename rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
-
-    using config = wrapped_scan_config<Config, acc_type>;
+    using config = wrapped_scan_config<Config, AccType>;
 
     detail::target_arch target_arch;
     hipError_t          result = host_target_arch(stream, target_arch);
@@ -210,8 +205,8 @@ inline auto scan_impl(void*               temporary_storage,
     }
     const scan_config_params params = dispatch_target_arch<config>(target_arch);
 
-    using scan_state_type            = detail::lookback_scan_state<acc_type>;
-    using scan_state_with_sleep_type = detail::lookback_scan_state<acc_type, true>;
+    using scan_state_type            = detail::lookback_scan_state<AccType>;
+    using scan_state_with_sleep_type = detail::lookback_scan_state<AccType, true>;
 
     const unsigned int block_size       = params.kernel_config.block_size;
     const unsigned int items_per_thread = params.kernel_config.items_per_thread;
@@ -226,9 +221,9 @@ inline auto scan_impl(void*               temporary_storage,
     unsigned int number_of_blocks = (limited_size + items_per_block - 1)/items_per_block;
 
     // Pointer to array with block_prefixes
-    void*     scan_state_storage;
-    acc_type* previous_last_element;
-    acc_type* new_last_element;
+    void*    scan_state_storage;
+    AccType* previous_last_element;
+    AccType* new_last_element;
 
     detail::temp_storage::layout layout{};
     hipError_t                   layout_result
@@ -329,7 +324,7 @@ inline auto scan_impl(void*               temporary_storage,
                                      OutputIterator,
                                      BinaryFunction,
                                      InitValueType,
-                                     acc_type,
+                                     AccType,
                                      scan_state_with_sleep_type>
                     <<<dim3(grid_size), dim3(block_size), 0, stream>>>(input + offset,
                                                                        output + offset,
@@ -361,7 +356,7 @@ inline auto scan_impl(void*               temporary_storage,
                                      OutputIterator,
                                      BinaryFunction,
                                      InitValueType,
-                                     acc_type,
+                                     AccType,
                                      scan_state_type>
                     <<<dim3(grid_size), dim3(block_size), 0, stream>>>(input + offset,
                                                                        output + offset,
@@ -383,7 +378,7 @@ inline auto scan_impl(void*               temporary_storage,
                 hipError_t error = ::rocprim::transform(new_last_element,
                                                         previous_last_element,
                                                         1,
-                                                        ::rocprim::identity<acc_type>(),
+                                                        ::rocprim::identity<AccType>(),
                                                         stream,
                                                         debug_synchronous);
                 if(error != hipSuccess) return error;
@@ -407,7 +402,7 @@ inline auto scan_impl(void*               temporary_storage,
                            OutputIterator,
                            BinaryFunction,
                            InitValueType,
-                           acc_type>
+                           AccType>
             <<<dim3(1), dim3(block_size), 0, stream>>>(input, size, initial_value, output, scan_op);
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("single_scan_kernel", size, start);
     }
@@ -497,7 +492,10 @@ template<class Config = default_config,
          class InputIterator,
          class OutputIterator,
          class BinaryFunction
-         = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>>
+         = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
+         class AccType = typename rocprim::detail::match_result_type<
+             typename std::iterator_traits<InputIterator>::value_type,
+             BinaryFunction>::type>
 inline hipError_t inclusive_scan(void*             temporary_storage,
                                  size_t&           storage_size,
                                  InputIterator     input,
@@ -507,19 +505,18 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
                                  const hipStream_t stream            = 0,
                                  bool              debug_synchronous = false)
 {
-    using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using acc_type   = typename rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
-
     // input_type() is a dummy initial value (not used)
-    return detail::scan_impl<false, Config>(temporary_storage,
-                                            storage_size,
-                                            input,
-                                            output,
-                                            acc_type{},
-                                            size,
-                                            scan_op,
-                                            stream,
-                                            debug_synchronous);
+    return detail::
+        scan_impl<false, Config, InputIterator, OutputIterator, AccType, BinaryFunction, AccType>(
+            temporary_storage,
+            storage_size,
+            input,
+            output,
+            AccType{},
+            size,
+            scan_op,
+            stream,
+            debug_synchronous);
 }
 
 /// \brief Parallel exclusive scan primitive for device level.
@@ -611,7 +608,10 @@ template<class Config = default_config,
          class OutputIterator,
          class InitValueType,
          class BinaryFunction
-         = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>>
+         = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
+         class AccType = typename rocprim::detail::match_result_type<
+             typename std::iterator_traits<InputIterator>::value_type,
+             BinaryFunction>::type>
 inline hipError_t exclusive_scan(void*               temporary_storage,
                                  size_t&             storage_size,
                                  InputIterator       input,
@@ -622,15 +622,21 @@ inline hipError_t exclusive_scan(void*               temporary_storage,
                                  const hipStream_t   stream            = 0,
                                  bool                debug_synchronous = false)
 {
-    return detail::scan_impl<true, Config>(temporary_storage,
-                                           storage_size,
-                                           input,
-                                           output,
-                                           initial_value,
-                                           size,
-                                           scan_op,
-                                           stream,
-                                           debug_synchronous);
+    return detail::scan_impl<true,
+                             Config,
+                             InputIterator,
+                             OutputIterator,
+                             InitValueType,
+                             BinaryFunction,
+                             AccType>(temporary_storage,
+                                      storage_size,
+                                      input,
+                                      output,
+                                      initial_value,
+                                      size,
+                                      scan_op,
+                                      stream,
+                                      debug_synchronous);
 }
 
 /// @}
