@@ -564,7 +564,8 @@ inline hipError_t exclusive_scan_by_key(void* const                temporary_sto
                                         const hipStream_t stream            = 0,
                                         const bool        debug_synchronous = false)
 {
-    return detail::scan_by_key_impl<true, Config,
+    return detail::scan_by_key_impl<true,
+                                    Config,
                                     KeysInputIterator,
                                     ValuesInputIterator,
                                     ValuesOutputIterator,
@@ -572,16 +573,16 @@ inline hipError_t exclusive_scan_by_key(void* const                temporary_sto
                                     BinaryFunction,
                                     KeyCompareFunction,
                                     AccType>(temporary_storage,
-                                                  storage_size,
-                                                  keys_input,
-                                                  values_input,
-                                                  values_output,
-                                                  initial_value,
-                                                  size,
-                                                  scan_op,
-                                                  key_compare_op,
-                                                  stream,
-                                                  debug_synchronous);
+                                             storage_size,
+                                             keys_input,
+                                             values_input,
+                                             values_output,
+                                             initial_value,
+                                             size,
+                                             scan_op,
+                                             key_compare_op,
+                                             stream,
+                                             debug_synchronous);
 }
 
 /// @}
