@@ -435,6 +435,8 @@ inline auto scan_impl(void*               temporary_storage,
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
 /// \tparam BinaryFunction - type of binary function used for scan. Default type
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
+/// \tparam AccType - accumulator type used to propagate the scanned values. Default type
+/// is the resulting type of the inputs applied on \p BinaryFunction .
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -540,6 +542,8 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
 /// \tparam InitValueType - type of the initial value.
 /// \tparam BinaryFunction - type of binary function used for scan. Default type
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
+/// \tparam AccType - accumulator type used to propagate the scanned values. Default type
+/// is the resulting type of the inputs applied on \p BinaryFunction .
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to

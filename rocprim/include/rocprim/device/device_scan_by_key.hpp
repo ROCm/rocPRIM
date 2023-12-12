@@ -333,6 +333,8 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
 /// \tparam KeyCompareFunction - type of binary function used to determine keys equality. Default type
 /// is \p rocprim::equal_to<T>, where \p T is a \p value_type of \p KeysInputIterator.
+/// \tparam AccType - accumulator type used to propagate the scanned values. Default type
+/// is the resulting type of the inputs applied on \p BinaryFunction .
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -468,6 +470,8 @@ inline hipError_t inclusive_scan_by_key(void* const                temporary_sto
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
 /// \tparam KeyCompareFunction - type of binary function used to determine keys equality. Default type
 /// is \p rocprim::equal_to<T>, where \p T is a \p value_type of \p KeysInputIterator.
+/// \tparam AccType - accumulator type used to propagate the scanned values. Default type
+/// is the resulting type of the inputs applied on \p BinaryFunction .
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
