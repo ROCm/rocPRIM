@@ -22,6 +22,7 @@
 #define ROCPRIM_DEVICE_DEVICE_SCAN_BY_KEY_HPP_
 
 #include "../config.hpp"
+#include "../detail/match_result_type.hpp"
 #include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 #include "../functional.hpp"
@@ -124,8 +125,8 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
     using input_type = typename std::iterator_traits<input_type_t<InputIterator>>::value_type;
 
     // The type of the intermediate accumulator 'acc_type'.
-    // We derive 'acc_type' as the resulting type of 'scan_op' uncurried on '(input_type, input_type)'
-    using acc_type = typename std::result_of<BinaryFunction(input_type, input_type)>::type;
+    // We derive 'acc_type' as the resulting type of 'scan_op'
+    using acc_type = typename rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
 
     using config = wrapped_scan_by_key_config<Config, key_type, acc_type>;
 

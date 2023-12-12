@@ -197,8 +197,8 @@ inline auto scan_impl(void*               temporary_storage,
     using input_type = typename std::iterator_traits<input_type_t<InputIterator>>::value_type;
 
     // The type of the intermediate accumulator 'acc_type'.
-    // We derive this as the resulting type of 'BinaryFunction' uncurried on '(input_type, input_type)'
-    using acc_type = typename std::result_of<BinaryFunction(input_type, input_type)>::type;
+    // We derive this as the resulting type of 'BinaryFunction'
+    using acc_type = typename rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
 
     using config = wrapped_scan_config<Config, acc_type>;
 
@@ -508,14 +508,14 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
                                  bool              debug_synchronous = false)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using acc_type   = typename std::result_of<BinaryFunction(input_type, input_type)>::type;
+    using acc_type   = typename rocprim::detail::match_result_type<input_type, BinaryFunction>::type;
 
     // input_type() is a dummy initial value (not used)
     return detail::scan_impl<false, Config>(temporary_storage,
                                             storage_size,
                                             input,
                                             output,
-                                            acc_type(),
+                                            acc_type{},
                                             size,
                                             scan_op,
                                             stream,
