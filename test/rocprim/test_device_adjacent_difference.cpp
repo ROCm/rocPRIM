@@ -181,7 +181,8 @@ template<class InputType,
          api_variant Aliasing            = api_variant::no_alias,
          bool        UseIdentityIterator = false,
          class Config                    = rocprim::default_config,
-         bool UseGraphs                  = false>
+         bool UseGraphs                  = false,
+         bool UseWeirdIterator           = false>
 struct DeviceAdjacentDifferenceParams
 {
     using input_type                            = InputType;
@@ -191,6 +192,7 @@ struct DeviceAdjacentDifferenceParams
     static constexpr bool use_identity_iterator = UseIdentityIterator;
     using config                                = Config;
     static constexpr bool use_graphs            = UseGraphs;
+    static constexpr bool use_weird_iterator           = UseWeirdIterator;
 };
 
 template <class Params>
@@ -202,6 +204,7 @@ public:
     static constexpr bool left                  = Params::left;
     static constexpr api_variant aliasing              = Params::aliasing;
     static constexpr bool use_identity_iterator = Params::use_identity_iterator;
+    static constexpr bool        use_weird_iterator    = Params::use_weird_iterator;
     static constexpr bool debug_synchronous     = false;
     using config                                = typename Params::config;
     static constexpr bool use_graphs            = Params::use_graphs;
@@ -258,13 +261,17 @@ using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
                                    true,
                                    api_variant::no_alias,
                                    false,
-                                   custom_size_limit_config<8192>>,
+                                   custom_size_limit_config<8192>,
+                                   false,
+                                   true>,
     DeviceAdjacentDifferenceParams<int,
                                    int,
                                    true,
                                    api_variant::no_alias,
                                    false,
-                                   custom_size_limit_config<10240>>,
+                                   custom_size_limit_config<10240>,
+                                   false,
+                                   true>,
     DeviceAdjacentDifferenceParams<int,
                                    int,
                                    true,
@@ -333,6 +340,9 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             const auto expected
                 = get_expected_result<output_type>(input, rocprim::minus<> {}, left_tag);
 
+            auto input_it
+                = test_utils::wrap_in_weird_iterator<TestFixture::use_weird_iterator>(d_input);
+
             const auto output_it
                 = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output);
 
@@ -348,7 +358,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            alias_tag,
                                                            d_temp_storage,
                                                            temp_storage_size,
-                                                           d_input,
+                                                           input_it,
                                                            output_it,
                                                            size,
                                                            rocprim::minus<>{},
@@ -370,7 +380,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            alias_tag,
                                                            d_temp_storage,
                                                            temp_storage_size,
-                                                           d_input,
+                                                           input_it,
                                                            output_it,
                                                            size,
                                                            rocprim::minus<>{},

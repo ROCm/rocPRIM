@@ -29,6 +29,8 @@
 
 // Identity iterator
 #include "identity_iterator.hpp"
+// Weird iterator
+#include "weird_iterator.hpp"
 // Bounds checking iterator
 #include "bounds_checking_iterator.hpp"
 // Seed values
