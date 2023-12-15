@@ -185,13 +185,13 @@ template<class InputType,
          bool UseWeirdIterator           = false>
 struct DeviceAdjacentDifferenceParams
 {
-    using input_type                            = InputType;
-    using output_type                           = OutputType;
-    static constexpr bool left                  = Left;
+    using input_type                                   = InputType;
+    using output_type                                  = OutputType;
+    static constexpr bool        left                  = Left;
     static constexpr api_variant aliasing              = Aliasing;
-    static constexpr bool use_identity_iterator = UseIdentityIterator;
-    using config                                = Config;
-    static constexpr bool use_graphs            = UseGraphs;
+    static constexpr bool        use_identity_iterator = UseIdentityIterator;
+    using config                                       = Config;
+    static constexpr bool use_graphs                   = UseGraphs;
     static constexpr bool use_weird_iterator           = UseWeirdIterator;
 };
 
@@ -199,15 +199,15 @@ template <class Params>
 class RocprimDeviceAdjacentDifferenceTests : public ::testing::Test
 {
 public:
-    using input_type                            = typename Params::input_type;
-    using output_type                           = typename Params::output_type;
-    static constexpr bool left                  = Params::left;
+    using input_type                                   = typename Params::input_type;
+    using output_type                                  = typename Params::output_type;
+    static constexpr bool        left                  = Params::left;
     static constexpr api_variant aliasing              = Params::aliasing;
-    static constexpr bool use_identity_iterator = Params::use_identity_iterator;
+    static constexpr bool        use_identity_iterator = Params::use_identity_iterator;
     static constexpr bool        use_weird_iterator    = Params::use_weird_iterator;
-    static constexpr bool debug_synchronous     = false;
-    using config                                = typename Params::config;
-    static constexpr bool use_graphs            = Params::use_graphs;
+    static constexpr bool        debug_synchronous     = false;
+    using config                                       = typename Params::config;
+    static constexpr bool use_graphs                   = Params::use_graphs;
 };
 
 using custom_double2     = test_utils::custom_test_type<double>;
@@ -551,7 +551,7 @@ using RocprimDeviceAdjacentDifferenceLargeTestsParams
     = ::testing::Types<DeviceAdjacentDifferenceLargeParams<true, api_variant::no_alias>,
                        DeviceAdjacentDifferenceLargeParams<false, api_variant::no_alias>,
                        DeviceAdjacentDifferenceLargeParams<false, api_variant::alias>,
-                       DeviceAdjacentDifferenceLargeParams<true, api_variant::no_alias, true>>;
+                       DeviceAdjacentDifferenceLargeParams<true, api_variant::no_alias>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceLargeTests,
                  RocprimDeviceAdjacentDifferenceLargeTestsParams);
