@@ -22,6 +22,7 @@
 #define ROCPRIM_DEVICE_DEVICE_SCAN_BY_KEY_HPP_
 
 #include "../config.hpp"
+#include "../detail/match_result_type.hpp"
 #include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 #include "../functional.hpp"
@@ -107,7 +108,8 @@ template<bool Exclusive,
          typename OutputIterator,
          typename InitValueType,
          typename BinaryFunction,
-         typename CompareFunction>
+         typename CompareFunction,
+         typename AccType>
 inline hipError_t scan_by_key_impl(void* const           temporary_storage,
                                    size_t&               storage_size,
                                    KeysInputIterator     keys,
@@ -120,14 +122,9 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
                                    const hipStream_t     stream,
                                    const bool            debug_synchronous)
 {
-    using key_type   = typename std::iterator_traits<KeysInputIterator>::value_type;
-    using input_type = typename std::iterator_traits<input_type_t<InputIterator>>::value_type;
+    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
-    // The type of the intermediate accumulator 'acc_type'.
-    // We derive 'acc_type' as the resulting type of 'scan_op' uncurried on '(input_type, input_type)'
-    using acc_type = typename std::result_of<BinaryFunction(input_type, input_type)>::type;
-
-    using config = wrapped_scan_by_key_config<Config, key_type, acc_type>;
+    using config = wrapped_scan_by_key_config<Config, key_type, AccType>;
 
     detail::target_arch target_arch;
     hipError_t          result = host_target_arch(stream, target_arch);
@@ -137,7 +134,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
     }
     const scan_by_key_config_params params = dispatch_target_arch<config>(target_arch);
 
-    using wrapped_type = ::rocprim::tuple<acc_type, bool>;
+    using wrapped_type = ::rocprim::tuple<AccType, bool>;
 
     using scan_state_type            = detail::lookback_scan_state<wrapped_type>;
     using scan_state_with_sleep_type = detail::lookback_scan_state<wrapped_type, true>;
@@ -336,6 +333,8 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
 /// \tparam KeyCompareFunction - type of binary function used to determine keys equality. Default type
 /// is \p rocprim::equal_to<T>, where \p T is a \p value_type of \p KeysInputIterator.
+/// \tparam AccType - accumulator type used to propagate the scanned values. Default type
+/// is the resulting type of the inputs applied on \p BinaryFunction .
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -407,7 +406,10 @@ template<typename Config = default_config,
          typename BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
          typename KeyCompareFunction
-         = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>>
+         = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>,
+         typename AccType = typename rocprim::detail::match_result_type<
+             typename std::iterator_traits<ValuesInputIterator>::value_type,
+             BinaryFunction>::type>
 inline hipError_t inclusive_scan_by_key(void* const                temporary_storage,
                                         size_t&                    storage_size,
                                         const KeysInputIterator    keys_input,
@@ -421,17 +423,25 @@ inline hipError_t inclusive_scan_by_key(void* const                temporary_sto
                                         const bool        debug_synchronous = false)
 {
     using value_type = typename std::iterator_traits<ValuesInputIterator>::value_type;
-    return detail::scan_by_key_impl<false, Config>(temporary_storage,
-                                                   storage_size,
-                                                   keys_input,
-                                                   values_input,
-                                                   values_output,
-                                                   value_type(),
-                                                   size,
-                                                   scan_op,
-                                                   key_compare_op,
-                                                   stream,
-                                                   debug_synchronous);
+    return detail::scan_by_key_impl<false,
+                                    Config,
+                                    KeysInputIterator,
+                                    ValuesInputIterator,
+                                    ValuesOutputIterator,
+                                    value_type,
+                                    BinaryFunction,
+                                    KeyCompareFunction,
+                                    AccType>(temporary_storage,
+                                             storage_size,
+                                             keys_input,
+                                             values_input,
+                                             values_output,
+                                             value_type(),
+                                             size,
+                                             scan_op,
+                                             key_compare_op,
+                                             stream,
+                                             debug_synchronous);
 }
 
 /// \brief Parallel exclusive scan-by-key primitive for device level.
@@ -460,6 +470,8 @@ inline hipError_t inclusive_scan_by_key(void* const                temporary_sto
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
 /// \tparam KeyCompareFunction - type of binary function used to determine keys equality. Default type
 /// is \p rocprim::equal_to<T>, where \p T is a \p value_type of \p KeysInputIterator.
+/// \tparam AccType - accumulator type used to propagate the scanned values. Default type
+/// is the resulting type of the inputs applied on \p BinaryFunction .
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -535,7 +547,10 @@ template<typename Config = default_config,
          typename BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
          typename KeyCompareFunction
-         = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>>
+         = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>,
+         typename AccType = typename rocprim::detail::match_result_type<
+             typename std::iterator_traits<ValuesInputIterator>::value_type,
+             BinaryFunction>::type>
 inline hipError_t exclusive_scan_by_key(void* const                temporary_storage,
                                         size_t&                    storage_size,
                                         const KeysInputIterator    keys_input,
@@ -549,17 +564,25 @@ inline hipError_t exclusive_scan_by_key(void* const                temporary_sto
                                         const hipStream_t stream            = 0,
                                         const bool        debug_synchronous = false)
 {
-    return detail::scan_by_key_impl<true, Config>(temporary_storage,
-                                                  storage_size,
-                                                  keys_input,
-                                                  values_input,
-                                                  values_output,
-                                                  initial_value,
-                                                  size,
-                                                  scan_op,
-                                                  key_compare_op,
-                                                  stream,
-                                                  debug_synchronous);
+    return detail::scan_by_key_impl<true,
+                                    Config,
+                                    KeysInputIterator,
+                                    ValuesInputIterator,
+                                    ValuesOutputIterator,
+                                    InitialValueType,
+                                    BinaryFunction,
+                                    KeyCompareFunction,
+                                    AccType>(temporary_storage,
+                                             storage_size,
+                                             keys_input,
+                                             values_input,
+                                             values_output,
+                                             initial_value,
+                                             size,
+                                             scan_op,
+                                             key_compare_op,
+                                             stream,
+                                             debug_synchronous);
 }
 
 /// @}
