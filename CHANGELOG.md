@@ -11,7 +11,7 @@ Documentation for rocPRIM is available at
 * The internal accumulator type of `inclusive_scan(_by_key)` and `exclusive_scan(_by_key)` is now exposed as an optional type parameter.
   * The default accumulator type is still the value type of the input iterator (inclusive scan) or the initial value's type (exclusive scan).
     This is the same behaviour as before this change.
-* Added new API for `device_adjacent_difference` to have in-place function with explicit out parameter.
+* Added new API for `device_adjacent_difference` that allows overlapping input and output.
 
 ### Fixed
 - Fixed incorrect results of `warp_exchange::blocked_to_striped_shuffle` and `warp_exchange::striped_to_blocked_shuffle` when the block size is

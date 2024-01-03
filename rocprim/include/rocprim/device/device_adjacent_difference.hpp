@@ -260,7 +260,7 @@ hipError_t adjacent_difference_impl(void* const          temporary_storage,
 /// `storage_size` and function returns without performing the scan operation
 /// \param storage_size - reference to a size (in bytes) of `temporary_storage`
 /// \param input - iterator to the input range
-/// \param output - iterator to the output range, must have any overlap with input
+/// \param output - iterator to the output range, must have any overlap with input. Aliasing is not allowed.
 /// \param size - number of items in the input
 /// \param op - [optional] the binary operation to apply
 /// \param stream - [optional] HIP stream object. Default is `0` (the default stream)
@@ -381,7 +381,7 @@ hipError_t adjacent_difference_inplace(void* const          temporary_storage,
 }
 
 /// \brief Parallel primitive for applying a binary operation across pairs of consecutive elements
-/// in device accessible memory. Writes the output to the position of the left item in place.
+/// in device accessible memory. Writes the output to the position of the left item.
 ///
 /// \tparam Config - [optional] configuration of the primitive. It has to be
 /// `adjacent_difference_config` or a class derived from it.
@@ -398,7 +398,7 @@ hipError_t adjacent_difference_inplace(void* const          temporary_storage,
 /// `storage_size` and function returns without performing the scan operation
 /// \param storage_size - reference to a size (in bytes) of `temporary_storage`
 /// \param input - iterator to the range values, will be overwritten with the results
-/// \param output - iterator to the output range, must have any overlap with input
+/// \param output - iterator to the output range, must have any overlap with input. Aliasing is not allowed.
 /// \param size - number of items in the input
 /// \param op - [optional] the binary operation to apply
 /// \param stream - [optional] HIP stream object. Default is `0` (the default stream)
@@ -462,7 +462,7 @@ hipError_t adjacent_difference_alias(void* const          temporary_storage,
 /// `storage_size` and function returns without performing the scan operation
 /// \param storage_size - reference to a size (in bytes) of `temporary_storage`
 /// \param input - iterator to the input range
-/// \param output - iterator to the output range, must have any overlap with input
+/// \param output - iterator to the output range, must have any overlap with input. Aliasing is not allowed.
 /// \param size - number of items in the input
 /// \param op - [optional] the binary operation to apply
 /// \param stream - [optional] HIP stream object. Default is `0` (the default stream)
@@ -583,7 +583,7 @@ hipError_t adjacent_difference_right_inplace(void* const          temporary_stor
 }
 
 /// \brief Parallel primitive for applying a binary operation across pairs of consecutive elements
-/// in device accessible memory. Writes the output to the position of the right item in place.
+/// in device accessible memory. Writes the output to the position of the right item.
 ///
 /// \tparam Config - [optional] configuration of the primitive. It has to be
 /// `adjacent_difference_config` or a class derived from it.
@@ -600,7 +600,7 @@ hipError_t adjacent_difference_right_inplace(void* const          temporary_stor
 /// `storage_size` and function returns without performing the scan operation
 /// \param storage_size - reference to a size (in bytes) of `temporary_storage`
 /// \param input - iterator to the range values, will be overwritten with the results
-/// \param output - iterator to the output range, must have any overlap with input
+/// \param output - iterator to the output range, must have any overlap with input. Aliasing is allowed.
 /// \param size - number of items in the input
 /// \param op - [optional] the binary operation to apply
 /// \param stream - [optional] HIP stream object. Default is `0` (the default stream)
