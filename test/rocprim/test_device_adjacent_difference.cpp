@@ -551,7 +551,7 @@ using RocprimDeviceAdjacentDifferenceLargeTestsParams
     = ::testing::Types<DeviceAdjacentDifferenceLargeParams<true, api_variant::no_alias>,
                        DeviceAdjacentDifferenceLargeParams<false, api_variant::no_alias>,
                        DeviceAdjacentDifferenceLargeParams<false, api_variant::alias>,
-                       DeviceAdjacentDifferenceLargeParams<true, api_variant::no_alias>>;
+                       DeviceAdjacentDifferenceLargeParams<true, api_variant::no_alias, true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceLargeTests,
                  RocprimDeviceAdjacentDifferenceLargeTestsParams);
