@@ -427,7 +427,7 @@ inline auto scan_impl(void*               temporary_storage,
 /// if \p temporary_storage in a null pointer.
 /// * Ranges specified by \p input and \p output must have at least \p size elements.
 /// * By default, the input type is used for accumulation. A custom type
-/// can be specified using <tt>rocprim::transform_iterator</tt>, see the example below.
+/// can be specified using the \p AccType type parameter, see the example below.
 ///
 /// \tparam Config - [optional] configuration of the primitive, has to be \p scan_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. Must meet the
@@ -500,24 +500,27 @@ inline auto scan_impl(void*               temporary_storage,
 /// short * input;
 /// int * output;
 ///
-/// // Use a transform iterator to specify a custom accumulator type
-/// auto input_iterator = rocprim::make_transform_iterator(
-///     input, [] __device__ (T in) { return static_cast<int>(in); });
-///
 /// size_t temporary_storage_size_bytes;
 /// void * temporary_storage_ptr = nullptr;
-/// // Use the transform iterator
+///
 /// rocprim::inclusive_scan(
 ///     temporary_storage_ptr, temporary_storage_size_bytes,
-///     input_iterator, output, input_size, rocprim::plus<int>()
+///     input, output, input_size, rocprim::plus<int>()
 /// );
 ///
 /// hipMalloc(&temporary_storage_ptr, temporary_storage_size_bytes);
 ///
-/// rocprim::inclusive_scan(
-///     temporary_storage_ptr, temporary_storage_size_bytes,
-///     input_iterator, output, input_size, rocprim::plus<int>()
-/// );
+/// // Use type parameter to set custom accumulator type
+/// rocprim::inclusive_scan<rocprim::default_config,
+///                         short*,
+///                         int*,
+///                         rocprim::plus<int>,
+///                         int>(temporary_storage_ptr,
+///                              temporary_storage_size_bytes,
+///                              input_iterator,
+///                              output,
+///                              input_size,
+///                              rocprim::plus<int>());
 /// \endcode
 /// \endparblock
 template<class Config = default_config,

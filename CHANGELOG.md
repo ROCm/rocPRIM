@@ -8,11 +8,9 @@ Documentation for rocPRIM is available at
 ### Additions
 
 * New overloads for `warp_scan::exclusive_scan` that take no initial value. These new overloads will write an unspecified result to the first value of each warp.
-
-### Changes
-
 * The internal accumulator type of `inclusive_scan(_by_key)` and `exclusive_scan(_by_key)` is now exposed as an optional type parameter.
-  * The default type is the type of the inputs (inclusive) or initial value (exclusive).
+  * The default accumulator type is still the value type of the input iterator (inclusive scan) or the initial value's type (exclusive scan).
+    This is the same behaviour as before this change.
 
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
