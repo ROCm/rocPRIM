@@ -641,7 +641,7 @@ template<class Config = default_config,
          class InitValueType,
          class BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
-         class AccType = typename std::iterator_traits<InputIterator>::value_type>
+         class AccType = detail::input_type_t<InitValueType>>
 inline hipError_t exclusive_scan(void*               temporary_storage,
                                  size_t&             storage_size,
                                  InputIterator       input,

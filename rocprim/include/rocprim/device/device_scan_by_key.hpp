@@ -546,7 +546,7 @@ template<typename Config = default_config,
          = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
          typename KeyCompareFunction
          = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>,
-         typename AccType = typename std::iterator_traits<ValuesInputIterator>::value_type>
+         typename AccType = detail::input_type_t<InitialValueType>>
 inline hipError_t exclusive_scan_by_key(void* const                temporary_storage,
                                         size_t&                    storage_size,
                                         const KeysInputIterator    keys_input,
