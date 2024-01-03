@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,34 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef TEST_WEIRD_ITERATOR_HPP_
-#define TEST_WEIRD_ITERATOR_HPP_
+#ifndef TEST_INDIRECT_ITERATOR_HPP_
+#define TEST_INDIRECT_ITERATOR_HPP_
 
 #include <functional>
 #include <type_traits>
 
+#include <rocprim/config.hpp>
+
 namespace test_utils
 {
-
-namespace detail
-{
-template<class T>
-constexpr T& FUN(T& t) noexcept
-{
-    return t;
-}
-template<class T>
-void FUN(T&&) = delete;
-
-template<class T>
-ROCPRIM_HOST_DEVICE
-    typename std::enable_if<std::is_object<typename std::remove_reference<T>::type>::value,
-                            T*>::type
-    addressof(T& arg) noexcept
-{
-    return reinterpret_cast<T*>(&const_cast<char&>(reinterpret_cast<const volatile char&>(arg)));
-}
-} // namespace detail
 
 // assign-through reference_wrapper implementation
 template<class T>
@@ -56,14 +38,7 @@ public:
     using type = T;
 
     // construct/copy/destroy
-    template<class U,
-             class = decltype(detail::FUN<T>(std::declval<U>()),
-                              std::enable_if_t<!std::is_same<
-                                  reference_wrapper,
-                                  std::remove_cv_t<std::remove_reference_t<U>>>::value>())>
-    constexpr reference_wrapper(U&& u) noexcept(noexcept(detail::FUN<T>(std::forward<U>(u))))
-        : _ptr(detail::addressof(detail::FUN<T>(std::forward<U>(u))))
-    {}
+    constexpr reference_wrapper(T& t) : _ptr(&t) {}
 
     reference_wrapper(const reference_wrapper&) noexcept = default;
 
@@ -88,10 +63,10 @@ private:
 };
 
 // Iterator used in tests to check situtations when value_type of the
-// iterator is not the same as the return type of operator[] in the
-// device_adjacent_difference API. This doesn't work for in_place version.
+// iterator is not the same as the return type of operator[].
+// It is a simplified version of device_vector::iterator from thrust.
 template<class T>
-class weird_iterator
+class indirect_iterator
 {
 public:
     // Iterator traits
@@ -102,32 +77,32 @@ public:
 
     using iterator_category = std::random_access_iterator_tag;
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator(T* ptr) : ptr_(ptr) {}
+    ROCPRIM_HOST_DEVICE inline indirect_iterator(T* ptr) : ptr_(ptr) {}
 
-    ROCPRIM_HOST_DEVICE inline ~weird_iterator() = default;
+    ROCPRIM_HOST_DEVICE inline ~indirect_iterator() = default;
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator& operator++()
+    ROCPRIM_HOST_DEVICE inline indirect_iterator& operator++()
     {
         ptr_++;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator operator++(int)
+    ROCPRIM_HOST_DEVICE inline indirect_iterator operator++(int)
     {
-        weird_iterator old = *this;
+        indirect_iterator old = *this;
         ptr_++;
         return old;
     }
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator& operator--()
+    ROCPRIM_HOST_DEVICE inline indirect_iterator& operator--()
     {
         ptr_--;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator operator--(int)
+    ROCPRIM_HOST_DEVICE inline indirect_iterator operator--(int)
     {
-        weird_iterator old = *this;
+        indirect_iterator old = *this;
         ptr_--;
         return old;
     }
@@ -142,41 +117,41 @@ public:
         return *(ptr_ + n);
     }
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator operator+(difference_type distance) const
+    ROCPRIM_HOST_DEVICE inline indirect_iterator operator+(difference_type distance) const
     {
         auto i = ptr_ + distance;
-        return weird_iterator(i);
+        return indirect_iterator(i);
     }
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator& operator+=(difference_type distance)
+    ROCPRIM_HOST_DEVICE inline indirect_iterator& operator+=(difference_type distance)
     {
         ptr_ += distance;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator operator-(difference_type distance) const
+    ROCPRIM_HOST_DEVICE inline indirect_iterator operator-(difference_type distance) const
     {
         auto i = ptr_ - distance;
-        return weird_iterator(i);
+        return indirect_iterator(i);
     }
 
-    ROCPRIM_HOST_DEVICE inline weird_iterator& operator-=(difference_type distance)
+    ROCPRIM_HOST_DEVICE inline indirect_iterator& operator-=(difference_type distance)
     {
         ptr_ -= distance;
         return *this;
     }
 
-    ROCPRIM_HOST_DEVICE inline difference_type operator-(weird_iterator other) const
+    ROCPRIM_HOST_DEVICE inline difference_type operator-(indirect_iterator other) const
     {
         return ptr_ - other.ptr_;
     }
 
-    ROCPRIM_HOST_DEVICE inline bool operator==(weird_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator==(indirect_iterator other) const
     {
         return ptr_ == other.ptr_;
     }
 
-    ROCPRIM_HOST_DEVICE inline bool operator!=(weird_iterator other) const
+    ROCPRIM_HOST_DEVICE inline bool operator!=(indirect_iterator other) const
     {
         return ptr_ != other.ptr_;
     }
@@ -186,17 +161,18 @@ private:
 };
 
 template<bool Wrap, class T>
-inline auto wrap_in_weird_iterator(T* ptr) -> typename std::enable_if<Wrap, weird_iterator<T>>::type
+inline auto wrap_in_indirect_iterator(T* ptr) ->
+    typename std::enable_if<Wrap, indirect_iterator<T>>::type
 {
-    return weird_iterator<T>(ptr);
+    return indirect_iterator<T>(ptr);
 }
 
 template<bool Wrap, class T>
-inline auto wrap_in_weird_iterator(T* ptr) -> typename std::enable_if<!Wrap, T*>::type
+inline auto wrap_in_indirect_iterator(T* ptr) -> typename std::enable_if<!Wrap, T*>::type
 {
     return ptr;
 }
 
 } // namespace test_utils
 
-#endif // TEST_IDENTITY_ITERATOR_HPP_
+#endif // TEST_INDIRECT_ITERATOR_HPP_

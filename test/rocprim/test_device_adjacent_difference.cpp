@@ -22,6 +22,7 @@
 
 #include "../common_test_header.hpp"
 
+#include "indirect_iterator.hpp"
 #include "test_utils_types.hpp"
 
 #include <rocprim/device/device_adjacent_difference.hpp>
@@ -192,7 +193,7 @@ struct DeviceAdjacentDifferenceParams
     static constexpr bool        use_identity_iterator = UseIdentityIterator;
     using config                                       = Config;
     static constexpr bool use_graphs                   = UseGraphs;
-    static constexpr bool use_weird_iterator           = UseWeirdIterator;
+    static constexpr bool use_indirect_iterator        = UseWeirdIterator;
 };
 
 template <class Params>
@@ -204,7 +205,7 @@ public:
     static constexpr bool        left                  = Params::left;
     static constexpr api_variant aliasing              = Params::aliasing;
     static constexpr bool        use_identity_iterator = Params::use_identity_iterator;
-    static constexpr bool        use_weird_iterator    = Params::use_weird_iterator;
+    static constexpr bool        use_indirect_iterator = Params::use_indirect_iterator;
     static constexpr bool        debug_synchronous     = false;
     using config                                       = typename Params::config;
     static constexpr bool use_graphs                   = Params::use_graphs;
@@ -341,7 +342,8 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                 = get_expected_result<output_type>(input, rocprim::minus<> {}, left_tag);
 
             auto input_it
-                = test_utils::wrap_in_weird_iterator<TestFixture::use_weird_iterator>(d_input);
+                = test_utils::wrap_in_indirect_iterator<TestFixture::use_indirect_iterator>(
+                    d_input);
 
             const auto output_it
                 = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output);
