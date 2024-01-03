@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -381,6 +381,67 @@ hipError_t adjacent_difference_inplace(void* const          temporary_storage,
 }
 
 /// \brief Parallel primitive for applying a binary operation across pairs of consecutive elements
+/// in device accessible memory. Writes the output to the position of the left item in place.
+///
+/// \tparam Config - [optional] configuration of the primitive. It has to be
+/// `adjacent_difference_config` or a class derived from it.
+/// \tparam InputIt - [inferred] random-access iterator type of the value range. Must meet the
+/// requirements of a C++ InputIterator concept. It can be a simple pointer type.
+/// \tparam OutputIt - [inferred] random-access iterator type of the output range. Must meet the
+/// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
+/// \tparam BinaryFunction - [inferred] binary operation function object that will be applied to
+/// consecutive items. The signature of the function should be equivalent to the following:
+/// `U f(const T1& a, const T2& b)`. The signature does not need to have
+/// `const &`, but function object must not modify the object passed to it
+/// \param temporary_storage - pointer to a device-accessible temporary storage. When
+/// a null pointer is passed, the required allocation size (in bytes) is written to
+/// `storage_size` and function returns without performing the scan operation
+/// \param storage_size - reference to a size (in bytes) of `temporary_storage`
+/// \param input - iterator to the range values, will be overwritten with the results
+/// \param output - iterator to the output range, must have any overlap with input
+/// \param size - number of items in the input
+/// \param op - [optional] the binary operation to apply
+/// \param stream - [optional] HIP stream object. Default is `0` (the default stream)
+/// \param debug_synchronous - [optional] If true, synchronization after every kernel
+/// launch is forced in order to check for errors and extra debugging info is printed to the
+/// standard output. Default value is `false`
+///
+/// \return `hipSuccess` (0) after successful scan, otherwise the HIP runtime error of
+/// type `hipError_t`
+///
+/// \overload hipError_t adjacent_difference_inplace(void* const          temporary_storage,
+///                                                  std::size_t&         storage_size,
+///                                                  const InputIt        values,
+///                                                  const std::size_t    size,
+///                                                  const BinaryFunction op,
+///                                                  const hipStream_t    stream,
+///                                                  const bool           debug_synchronous)
+template<typename Config = default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename BinaryFunction = ::rocprim::minus<>>
+hipError_t adjacent_difference_inplace(void* const          temporary_storage,
+                                       std::size_t&         storage_size,
+                                       const InputIt        input,
+                                       const OutputIt       output,
+                                       const std::size_t    size,
+                                       const BinaryFunction op                = BinaryFunction{},
+                                       const hipStream_t    stream            = 0,
+                                       const bool           debug_synchronous = false)
+{
+    static constexpr bool in_place = true;
+    static constexpr bool right    = false;
+    return detail::adjacent_difference_impl<Config, in_place, right>(temporary_storage,
+                                                                     storage_size,
+                                                                     input,
+                                                                     output,
+                                                                     size,
+                                                                     op,
+                                                                     stream,
+                                                                     debug_synchronous);
+}
+
+/// \brief Parallel primitive for applying a binary operation across pairs of consecutive elements
 /// in device accessible memory. Writes the output to the position of the right item.
 ///
 /// Copies the last item to the output then performs calls the supplied operator with each pair
@@ -527,6 +588,67 @@ hipError_t adjacent_difference_right_inplace(void* const          temporary_stor
     static constexpr bool right    = true;
     return detail::adjacent_difference_impl<Config, in_place, right>(
         temporary_storage, storage_size, values, values, size, op, stream, debug_synchronous);
+}
+
+/// \brief Parallel primitive for applying a binary operation across pairs of consecutive elements
+/// in device accessible memory. Writes the output to the position of the right item in place.
+///
+/// \tparam Config - [optional] configuration of the primitive. It has to be
+/// `adjacent_difference_config` or a class derived from it.
+/// \tparam InputIt - [inferred] random-access iterator type of the value range. Must meet the
+/// requirements of a C++ InputIterator concept. It can be a simple pointer type.
+/// \tparam OutputIt - [inferred] random-access iterator type of the output range. Must meet the
+/// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
+/// \tparam BinaryFunction - [inferred] binary operation function object that will be applied to
+/// consecutive items. The signature of the function should be equivalent to the following:
+/// `U f(const T1& a, const T2& b)`. The signature does not need to have
+/// `const &`, but function object must not modify the object passed to it
+/// \param temporary_storage - pointer to a device-accessible temporary storage. When
+/// a null pointer is passed, the required allocation size (in bytes) is written to
+/// `storage_size` and function returns without performing the scan operation
+/// \param storage_size - reference to a size (in bytes) of `temporary_storage`
+/// \param input - iterator to the range values, will be overwritten with the results
+/// \param output - iterator to the output range, must have any overlap with input
+/// \param size - number of items in the input
+/// \param op - [optional] the binary operation to apply
+/// \param stream - [optional] HIP stream object. Default is `0` (the default stream)
+/// \param debug_synchronous - [optional] If true, synchronization after every kernel
+/// launch is forced in order to check for errors and extra debugging info is printed to the
+/// standard output. Default value is `false`
+///
+/// \return `hipSuccess` (0) after successful scan, otherwise the HIP runtime error of
+/// type `hipError_t`
+///
+/// \overload hipError_t adjacent_difference_right_inplace(void* const          temporary_storage,
+///                                                        std::size_t&         storage_size,
+///                                                        const InputIt        values,
+///                                                        const std::size_t    size,
+///                                                        const BinaryFunction op,
+///                                                        const hipStream_t    stream,
+///                                                        const bool           debug_synchronous)
+template<typename Config = default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename BinaryFunction = ::rocprim::minus<>>
+hipError_t adjacent_difference_right_inplace(void* const          temporary_storage,
+                                             std::size_t&         storage_size,
+                                             const InputIt        input,
+                                             const OutputIt       output,
+                                             const std::size_t    size,
+                                             const BinaryFunction op     = BinaryFunction{},
+                                             const hipStream_t    stream = 0,
+                                             const bool           debug_synchronous = false)
+{
+    static constexpr bool in_place = true;
+    static constexpr bool right    = true;
+    return detail::adjacent_difference_impl<Config, in_place, right>(temporary_storage,
+                                                                     storage_size,
+                                                                     input,
+                                                                     output,
+                                                                     size,
+                                                                     op,
+                                                                     stream,
+                                                                     debug_synchronous);
 }
 
 /// @}

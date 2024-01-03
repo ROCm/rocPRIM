@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,12 +37,13 @@
 namespace
 {
 
-template <typename Config = rocprim::default_config,
-          typename InputIt,
-          typename OutputIt,
-          typename... Args>
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
 auto dispatch_adjacent_difference(std::true_type /*left*/,
                                   std::false_type /*in_place*/,
+                                  std::false_type /*always_in_place*/,
                                   void* const    temporary_storage,
                                   std::size_t&   storage_size,
                                   const InputIt  input,
@@ -53,12 +54,13 @@ auto dispatch_adjacent_difference(std::true_type /*left*/,
         temporary_storage, storage_size, input, output, std::forward<Args>(args)...);
 }
 
-template <typename Config = rocprim::default_config,
-          typename InputIt,
-          typename OutputIt,
-          typename... Args>
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
 auto dispatch_adjacent_difference(std::false_type /*left*/,
                                   std::false_type /*in_place*/,
+                                  std::false_type /*always_in_place*/,
                                   void* const    temporary_storage,
                                   std::size_t&   storage_size,
                                   const InputIt  input,
@@ -69,12 +71,13 @@ auto dispatch_adjacent_difference(std::false_type /*left*/,
         temporary_storage, storage_size, input, output, std::forward<Args>(args)...);
 }
 
-template <typename Config = rocprim::default_config,
-          typename InputIt,
-          typename OutputIt,
-          typename... Args>
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
 auto dispatch_adjacent_difference(std::true_type /*left*/,
                                   std::true_type /*in_place*/,
+                                  std::false_type /*always_in_place*/,
                                   void* const   temporary_storage,
                                   std::size_t&  storage_size,
                                   const InputIt input,
@@ -85,12 +88,13 @@ auto dispatch_adjacent_difference(std::true_type /*left*/,
         temporary_storage, storage_size, input, std::forward<Args>(args)...);
 }
 
-template <typename Config = rocprim::default_config,
-          typename InputIt,
-          typename OutputIt,
-          typename... Args>
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
 auto dispatch_adjacent_difference(std::false_type /*left*/,
                                   std::true_type /*in_place*/,
+                                  std::false_type /*always_in_place*/,
                                   void* const   temporary_storage,
                                   std::size_t&  storage_size,
                                   const InputIt input,
@@ -99,6 +103,86 @@ auto dispatch_adjacent_difference(std::false_type /*left*/,
 {
     return ::rocprim::adjacent_difference_right_inplace<Config>(
         temporary_storage, storage_size, input, std::forward<Args>(args)...);
+}
+
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
+auto dispatch_adjacent_difference(std::true_type /*left*/,
+                                  std::false_type /*in_place*/,
+                                  std::true_type /*always_in_place*/,
+                                  void* const    temporary_storage,
+                                  std::size_t&   storage_size,
+                                  const InputIt  input,
+                                  const OutputIt output,
+                                  Args&&... args)
+{
+    return ::rocprim::adjacent_difference_inplace<Config>(temporary_storage,
+                                                          storage_size,
+                                                          input,
+                                                          output,
+                                                          std::forward<Args>(args)...);
+}
+
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
+auto dispatch_adjacent_difference(std::false_type /*left*/,
+                                  std::false_type /*in_place*/,
+                                  std::true_type /*always_in_place*/,
+                                  void* const    temporary_storage,
+                                  std::size_t&   storage_size,
+                                  const InputIt  input,
+                                  const OutputIt output,
+                                  Args&&... args)
+{
+    return ::rocprim::adjacent_difference_right_inplace<Config>(temporary_storage,
+                                                                storage_size,
+                                                                input,
+                                                                output,
+                                                                std::forward<Args>(args)...);
+}
+
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
+auto dispatch_adjacent_difference(std::true_type /*left*/,
+                                  std::true_type /*in_place*/,
+                                  std::true_type /*always_in_place*/,
+                                  void* const   temporary_storage,
+                                  std::size_t&  storage_size,
+                                  const InputIt input,
+                                  const OutputIt /*output*/,
+                                  Args&&... args)
+{
+    return ::rocprim::adjacent_difference_inplace<Config>(temporary_storage,
+                                                          storage_size,
+                                                          input,
+                                                          input,
+                                                          std::forward<Args>(args)...);
+}
+
+template<typename Config = rocprim::default_config,
+         typename InputIt,
+         typename OutputIt,
+         typename... Args>
+auto dispatch_adjacent_difference(std::false_type /*left*/,
+                                  std::true_type /*in_place*/,
+                                  std::true_type /*always_in_place*/,
+                                  void* const   temporary_storage,
+                                  std::size_t&  storage_size,
+                                  const InputIt input,
+                                  const OutputIt /*output*/,
+                                  Args&&... args)
+{
+    return ::rocprim::adjacent_difference_right_inplace<Config>(temporary_storage,
+                                                                storage_size,
+                                                                input,
+                                                                input,
+                                                                std::forward<Args>(args)...);
 }
 
 template <typename Output, typename T, typename BinaryFunction>
@@ -128,32 +212,35 @@ template<class InputType,
          class OutputType         = InputType,
          bool Left                = true,
          bool InPlace             = false,
+         bool AlwaysInPlace       = false,
          bool UseIdentityIterator = false,
          class Config             = rocprim::default_config,
          bool UseGraphs           = false>
 struct DeviceAdjacentDifferenceParams
 {
-    using input_type                              = InputType;
-    using output_type                             = OutputType;
-    static constexpr bool   left                  = Left;
-    static constexpr bool   in_place              = InPlace;
-    static constexpr bool   use_identity_iterator = UseIdentityIterator;
-    using config                                  = Config;
-    static constexpr bool   use_graphs            = UseGraphs;
+    using input_type                            = InputType;
+    using output_type                           = OutputType;
+    static constexpr bool left                  = Left;
+    static constexpr bool in_place              = InPlace;
+    static constexpr bool always_in_place       = AlwaysInPlace;
+    static constexpr bool use_identity_iterator = UseIdentityIterator;
+    using config                                = Config;
+    static constexpr bool use_graphs            = UseGraphs;
 };
 
 template <class Params>
 class RocprimDeviceAdjacentDifferenceTests : public ::testing::Test
 {
 public:
-    using input_type                              = typename Params::input_type;
-    using output_type                             = typename Params::output_type;
-    static constexpr bool   left                  = Params::left;
-    static constexpr bool   in_place              = Params::in_place;
-    static constexpr bool   use_identity_iterator = Params::use_identity_iterator;
-    static constexpr bool   debug_synchronous     = false;
-    using config                                  = typename Params::config;
-    static constexpr bool   use_graphs            = Params::use_graphs;
+    using input_type                            = typename Params::input_type;
+    using output_type                           = typename Params::output_type;
+    static constexpr bool left                  = Params::left;
+    static constexpr bool in_place              = Params::in_place;
+    static constexpr bool always_in_place       = Params::always_in_place;
+    static constexpr bool use_identity_iterator = Params::use_identity_iterator;
+    static constexpr bool debug_synchronous     = false;
+    using config                                = typename Params::config;
+    static constexpr bool use_graphs            = Params::use_graphs;
 };
 
 using custom_double2     = test_utils::custom_test_type<double>;
@@ -179,13 +266,74 @@ using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
     DeviceAdjacentDifferenceParams<rocprim::half, rocprim::half, true, true, false>,
     DeviceAdjacentDifferenceParams<custom_int64_array, custom_int64_array, false, true, true>,
     // Tests for supported config structs
-    DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false, custom_config_0>,
+    DeviceAdjacentDifferenceParams<rocprim::bfloat16,
+                                   float,
+                                   true,
+                                   false,
+                                   false,
+                                   false,
+                                   custom_config_0>,
     DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false>,
     // Tests for different size_limits
-    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<64>>,
-    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<8192>>,
-    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<10240>>,
-    DeviceAdjacentDifferenceParams<int, int, true, false, false, rocprim::default_config, true>>;
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   false,
+                                   custom_size_limit_config<64>>,
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   false,
+                                   custom_size_limit_config<8192>>,
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   false,
+                                   custom_size_limit_config<10240>>,
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   false,
+                                   rocprim::default_config,
+                                   true>,
+
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   true,
+                                   custom_size_limit_config<64>>,
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   true,
+                                   custom_size_limit_config<8192>>,
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   true,
+                                   custom_size_limit_config<10240>>,
+    DeviceAdjacentDifferenceParams<int,
+                                   int,
+                                   true,
+                                   false,
+                                   false,
+                                   true,
+                                   rocprim::default_config,
+                                   true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceTests, RocprimDeviceAdjacentDifferenceTestsParams);
 
@@ -239,8 +387,10 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                              output.size() * sizeof(output[0])));
             }
 
-            static constexpr auto left_tag     = rocprim::detail::bool_constant<left> {};
-            static constexpr auto in_place_tag = rocprim::detail::bool_constant<in_place> {};
+            static constexpr auto left_tag     = rocprim::detail::bool_constant<left>{};
+            static constexpr auto in_place_tag = rocprim::detail::bool_constant<in_place>{};
+            static constexpr auto always_in_place_tag
+                = rocprim::detail::bool_constant<always_in_place>{};
 
             // Calculate expected results on host
             const auto expected
@@ -259,6 +409,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             void*       d_temp_storage = nullptr;
             HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
                                                            in_place_tag,
+                                                           always_in_place_tag,
                                                            d_temp_storage,
                                                            temp_storage_size,
                                                            d_input,
@@ -281,6 +432,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             // Run
             HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
                                                            in_place_tag,
+                                                           always_in_place_tag,
                                                            d_temp_storage,
                                                            temp_storage_size,
                                                            d_input,
@@ -324,12 +476,13 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
 }
 
 // Params for tests
-template <bool Left = true, bool InPlace = false, bool UseGraphs = false>
+template<bool Left = true, bool InPlace = false, bool AlwaysInPlace = false, bool UseGraphs = false>
 struct DeviceAdjacentDifferenceLargeParams
 {
-    static constexpr bool left       = Left;
-    static constexpr bool in_place   = InPlace;
-    static constexpr bool use_graphs = UseGraphs;
+    static constexpr bool left            = Left;
+    static constexpr bool in_place        = InPlace;
+    static constexpr bool always_in_place = AlwaysInPlace;
+    static constexpr bool use_graphs      = UseGraphs;
 };
 
 template <class Params>
@@ -338,6 +491,7 @@ class RocprimDeviceAdjacentDifferenceLargeTests : public ::testing::Test
 public:
     static constexpr bool left              = Params::left;
     static constexpr bool in_place          = Params::in_place;
+    static constexpr bool always_in_place   = Params::always_in_place;
     static constexpr bool debug_synchronous = false;
     static constexpr bool use_graphs        = Params::use_graphs;
 };
@@ -453,7 +607,8 @@ private:
 using RocprimDeviceAdjacentDifferenceLargeTestsParams
     = ::testing::Types<DeviceAdjacentDifferenceLargeParams<true, false>,
                        DeviceAdjacentDifferenceLargeParams<false, false>,
-                       DeviceAdjacentDifferenceLargeParams<true, false, true>>;
+                       DeviceAdjacentDifferenceLargeParams<false, false, true>,
+                       DeviceAdjacentDifferenceLargeParams<true, false, false, true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceLargeTests,
                  RocprimDeviceAdjacentDifferenceLargeTestsParams);
@@ -530,6 +685,8 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
 
             static constexpr auto left_tag     = rocprim::detail::bool_constant<is_left>{};
             static constexpr auto in_place_tag = rocprim::detail::bool_constant<is_in_place>{};
+            static constexpr auto always_in_place_tag
+                = rocprim::detail::bool_constant<always_in_place>{};
 
             hipGraph_t graph;
             hipGraphExec_t graph_instance;
@@ -541,6 +698,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             void*       d_temp_storage = nullptr;
             HIP_CHECK(dispatch_adjacent_difference(left_tag,
                                                    in_place_tag,
+                                                   always_in_place_tag,
                                                    d_temp_storage,
                                                    temp_storage_size,
                                                    input,
@@ -563,6 +721,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             // Run
             HIP_CHECK(dispatch_adjacent_difference(left_tag,
                                                    in_place_tag,
+                                                   always_in_place_tag,
                                                    d_temp_storage,
                                                    temp_storage_size,
                                                    input,
