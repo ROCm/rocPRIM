@@ -12,7 +12,7 @@ Documentation for rocPRIM is available at
 ### Changes
 
 * The internal accumulator type of `inclusive_scan(_by_key)` and `exclusive_scan(_by_key)` is now exposed as an optional type parameter.
-  * The default type is the return type of the binary operator instead of the type of the inputs (inclusive) or initial value (exclusive).
+  * The default type is the type of the inputs (inclusive) or initial value (exclusive).
 
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
