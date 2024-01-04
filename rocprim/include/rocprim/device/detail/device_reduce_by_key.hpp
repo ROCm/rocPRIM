@@ -51,7 +51,7 @@ using value_type_t = typename std::iterator_traits<Iterator>::value_type;
 
 template<typename ValueIterator, typename BinaryOp>
 using accumulator_type_t =
-    typename detail::match_result_type<reduce_by_key::value_type_t<ValueIterator>, BinaryOp>::type;
+    typename invoke_result_binary_op<reduce_by_key::value_type_t<ValueIterator>, BinaryOp>::type;
 
 template<typename AccumulatorType>
 using wrapped_type_t = rocprim::tuple<unsigned int, AccumulatorType>;

@@ -32,6 +32,7 @@
 
 #include "detail/config/device_reduce.hpp"
 #include "detail/device_segmented_reduce.hpp"
+#include "rocprim/type_traits.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -100,7 +101,7 @@ hipError_t segmented_reduce_impl(void * temporary_storage,
                                  bool debug_synchronous)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
+    using result_type = typename ::rocprim::invoke_result_binary_op<
         input_type, BinaryFunction
     >::type;
 

@@ -96,15 +96,6 @@ struct invoke_result_impl<decltype(void(INVOKE(std::declval<F>(), std::declval<A
     using type = decltype(INVOKE(std::declval<F>(), std::declval<Args>()...));
 };
 
-template <class F, class... ArgTypes>
-struct invoke_result : invoke_result_impl<void, F, ArgTypes...> {};
-
-template<class InputType, class BinaryFunction>
-struct match_result_type
-{
-    using type = typename invoke_result<BinaryFunction, InputType, InputType>::type;
-};
-
 } // end namespace detail
 END_ROCPRIM_NAMESPACE
 

@@ -175,7 +175,7 @@ namespace detail
 // rocPRIM (as well as Thrust) uses result type of BinaryFunction instead (if not void):
 //
 // using input_type = typename std::iterator_traits<InputIterator>::value_type;
-// using result_type = typename ::rocprim::detail::match_result_type<
+// using result_type = typename ::rocprim::match_result_type<
 //     input_type, BinaryFunction
 // >::type;
 //

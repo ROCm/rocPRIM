@@ -21,11 +21,11 @@
 #ifndef ROCPRIM_TYPE_TRAITS_HPP_
 #define ROCPRIM_TYPE_TRAITS_HPP_
 
-#include <type_traits>
-
-// Meta configuration for rocPRIM
 #include "config.hpp"
+#include "detail/match_result_type.hpp"
 #include "types.hpp"
+
+#include <type_traits>
 
 /// \addtogroup utilsmodule_typetraits
 /// @{
@@ -197,6 +197,18 @@ auto TwiddleOut(UnsignedBits key)
 };
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
+/// \brief Behaves like ``std::invoke_result``, but allows the use of invoke_result
+/// with device-only lambdas/functors in host-only functions on HIP-clang.
+template<class F, class... ArgTypes>
+struct invoke_result : detail::invoke_result_impl<void, F, ArgTypes...>
+{};
+
+/// \brief Utility wrapper around ``invoke_result`` for binary operators.
+template<class InputType, class BinaryFunction>
+struct invoke_result_binary_op
+{
+    using type = typename invoke_result<BinaryFunction, InputType, InputType>::type;
+};
 
 END_ROCPRIM_NAMESPACE
 

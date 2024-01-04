@@ -27,6 +27,7 @@
 
 #include "../config.hpp"
 #include "../detail/match_result_type.hpp"
+#include "../type_traits.hpp"
 
 /// \addtogroup iteratormodule
 /// @{
@@ -47,14 +48,11 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam UnaryFunction - type of the transform functor.
 /// \tparam ValueType - type of value that can be obtained by dereferencing the iterator.
 /// By default it is the return type of \p UnaryFunction.
-template<
-    class InputIterator,
-    class UnaryFunction,
-    class ValueType =
-        typename ::rocprim::detail::invoke_result<
-            UnaryFunction, typename std::iterator_traits<InputIterator>::value_type
-        >::type
->
+template<class InputIterator,
+         class UnaryFunction,
+         class ValueType = typename ::rocprim::invoke_result<
+             UnaryFunction,
+             typename std::iterator_traits<InputIterator>::value_type>::type>
 class transform_iterator
 {
 public:

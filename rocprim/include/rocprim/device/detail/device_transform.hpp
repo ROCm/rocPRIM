@@ -45,7 +45,7 @@ namespace detail
 template<class T1, class T2, class BinaryFunction>
 struct unpack_binary_op
 {
-    using result_type = typename ::rocprim::detail::invoke_result<BinaryFunction, T1, T2>::type;
+    using result_type = typename ::rocprim::invoke_result<BinaryFunction, T1, T2>::type;
 
     ROCPRIM_HOST_DEVICE inline
     unpack_binary_op() = default;

@@ -112,7 +112,7 @@ hipError_t reduce_impl(void * temporary_storage,
                        bool debug_synchronous)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
+    using result_type = typename ::rocprim::invoke_result_binary_op<
         input_type, BinaryFunction
     >::type;
 
