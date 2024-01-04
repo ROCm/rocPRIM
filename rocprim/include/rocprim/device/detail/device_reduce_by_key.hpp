@@ -28,7 +28,6 @@
 #include "../../block/block_load.hpp"
 #include "../../block/block_scan.hpp"
 #include "../../block/block_store.hpp"
-#include "../../detail/match_result_type.hpp"
 #include "../../detail/various.hpp"
 #include "../../intrinsics/thread.hpp"
 #include "../../thread/thread_operators.hpp"

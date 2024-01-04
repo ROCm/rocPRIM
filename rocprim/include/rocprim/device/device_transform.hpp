@@ -28,9 +28,8 @@
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
-#include "../detail/match_result_type.hpp"
-#include "../types/tuple.hpp"
 #include "../iterator/zip_iterator.hpp"
+#include "../types/tuple.hpp"
 
 #include "device_transform_config.hpp"
 #include "detail/device_transform.hpp"

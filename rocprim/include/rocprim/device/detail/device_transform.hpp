@@ -26,7 +26,6 @@
 
 #include "../../config.hpp"
 #include "../../detail/various.hpp"
-#include "../../detail/match_result_type.hpp"
 
 #include "../../intrinsics.hpp"
 #include "../../functional.hpp"

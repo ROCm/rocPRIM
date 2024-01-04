@@ -27,7 +27,6 @@
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
-#include "../detail/match_result_type.hpp"
 
 #include "../iterator/zip_iterator.hpp"
 #include "../iterator/discard_iterator.hpp"

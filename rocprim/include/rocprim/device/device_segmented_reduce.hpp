@@ -26,9 +26,8 @@
 #include <type_traits>
 
 #include "../config.hpp"
-#include "../functional.hpp"
 #include "../detail/various.hpp"
-#include "../detail/match_result_type.hpp"
+#include "../functional.hpp"
 
 #include "detail/config/device_reduce.hpp"
 #include "detail/device_segmented_reduce.hpp"

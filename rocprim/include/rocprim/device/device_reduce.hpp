@@ -29,7 +29,6 @@
 #include "config_types.hpp"
 
 #include "../config.hpp"
-#include "../detail/match_result_type.hpp"
 #include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 

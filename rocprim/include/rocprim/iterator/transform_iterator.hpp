@@ -26,7 +26,6 @@
 #include <type_traits>
 
 #include "../config.hpp"
-#include "../detail/match_result_type.hpp"
 #include "../type_traits.hpp"
 
 /// \addtogroup iteratormodule
