@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -207,6 +207,7 @@ struct invoke_result : detail::invoke_result_impl<void, F, ArgTypes...>
 template<class InputType, class BinaryFunction>
 struct invoke_result_binary_op
 {
+    /// \brief The result type of the binary operator.
     using type = typename invoke_result<BinaryFunction, InputType, InputType>::type;
 };
 
