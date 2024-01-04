@@ -57,7 +57,6 @@ __global__
     rocprim::block_load_direct_blocked(global_thread_idx, d_run_items, run_items);
     rocprim::block_load_direct_blocked(global_thread_idx, d_run_offsets, run_offsets);
 
-    ROCPRIM_SHARED_MEMORY typename BlockRunLengthDecodeT::storage_type temp_storage;
     BlockRunLengthDecodeT block_run_length_decode(run_items, run_offsets);
 
     const OffsetT total_decoded_size

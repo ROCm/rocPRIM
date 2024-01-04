@@ -358,8 +358,8 @@ struct device_histogram_benchmark_generator
             template<unsigned int Channels,
                      unsigned int ActiveChannels,
                      unsigned int items_per_thread = ItemsPerThread>
-            auto create(std::vector<std::unique_ptr<config_autotune_interface>>& storage,
-                        const std::vector<unsigned int>&                         cases) ->
+            auto create(std::vector<std::unique_ptr<config_autotune_interface>>& /*storage*/,
+                        const std::vector<unsigned int>&                         /*cases*/) ->
                 typename std::enable_if<!(items_per_thread * Channels <= max_items_per_thread),
                                         void>::type
             {}

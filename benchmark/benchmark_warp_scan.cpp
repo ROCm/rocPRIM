@@ -179,7 +179,6 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t size)
 
 template<bool Inclusive>
 void add_benchmarks(std::vector<benchmark::internal::Benchmark*>& benchmarks,
-                    const std::string& method_name,
                     hipStream_t stream,
                     size_t size)
 {
@@ -226,8 +225,8 @@ int main(int argc, char *argv[])
 
     // Add benchmarks
     std::vector<benchmark::internal::Benchmark*> benchmarks;
-    add_benchmarks<true>(benchmarks, "inclusive", stream, size);
-    add_benchmarks<false>(benchmarks, "exclusive", stream, size);
+    add_benchmarks<true>(benchmarks, stream, size); //inclusive
+    add_benchmarks<false>(benchmarks, stream, size); //exclusive
 
     // Use manual timing
     for(auto& b : benchmarks)
