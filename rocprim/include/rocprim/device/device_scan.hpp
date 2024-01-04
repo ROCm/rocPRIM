@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -426,7 +426,8 @@ inline auto scan_impl(void*               temporary_storage,
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 /// * Ranges specified by \p input and \p output must have at least \p size elements.
-/// * By default, the resulting type of ``BinaryFunction`` is used for accumulation.
+/// * By default, the input type is used for accumulation. A custom type
+/// can be specified using the \p AccType type parameter, see the example below.
 ///
 /// \tparam Config - [optional] configuration of the primitive, has to be \p scan_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. Must meet the
@@ -436,7 +437,7 @@ inline auto scan_impl(void*               temporary_storage,
 /// \tparam BinaryFunction - type of binary function used for scan. Default type
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
 /// \tparam AccType - accumulator type used to propagate the scanned values. Default type
-/// is the resulting type of the inputs applied on \p BinaryFunction .
+/// is value type of the input iterator.
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -482,12 +483,44 @@ inline auto scan_impl(void*               temporary_storage,
 /// // allocate temporary storage
 /// hipMalloc(&temporary_storage_ptr, temporary_storage_size_bytes);
 ///
-/// // perform scan with type 'int' as accumulator
+/// // perform scan
 /// rocprim::inclusive_scan(
 ///     temporary_storage_ptr, temporary_storage_size_bytes,
 ///     input, output, input_size, rocprim::plus<int>()
 /// );
 /// // output: [1, 3, 6, 10, 15, 21, 28, 36]
+/// \endcode
+///
+/// The same example as above, but now a custom accumulator type is specified.
+///
+/// \code{.cpp}
+/// #include <rocprim/rocprim.hpp>
+///
+/// size_t input_size;
+/// short * input;
+/// int * output;
+///
+/// size_t temporary_storage_size_bytes;
+/// void * temporary_storage_ptr = nullptr;
+///
+/// rocprim::inclusive_scan(
+///     temporary_storage_ptr, temporary_storage_size_bytes,
+///     input, output, input_size, rocprim::plus<int>()
+/// );
+///
+/// hipMalloc(&temporary_storage_ptr, temporary_storage_size_bytes);
+///
+/// // Use type parameter to set custom accumulator type
+/// rocprim::inclusive_scan<rocprim::default_config,
+///                         short*,
+///                         int*,
+///                         rocprim::plus<int>,
+///                         int>(temporary_storage_ptr,
+///                              temporary_storage_size_bytes,
+///                              input_iterator,
+///                              output,
+///                              input_size,
+///                              rocprim::plus<int>());
 /// \endcode
 /// \endparblock
 template<class Config = default_config,
@@ -495,9 +528,7 @@ template<class Config = default_config,
          class OutputIterator,
          class BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
-         class AccType = typename rocprim::detail::match_result_type<
-             typename std::iterator_traits<InputIterator>::value_type,
-             BinaryFunction>::type>
+         class AccType = typename std::iterator_traits<InputIterator>::value_type>
 inline hipError_t inclusive_scan(void*             temporary_storage,
                                  size_t&           storage_size,
                                  InputIterator     input,
@@ -543,7 +574,7 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
 /// \tparam BinaryFunction - type of binary function used for scan. Default type
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
 /// \tparam AccType - accumulator type used to propagate the scanned values. Default type
-/// is the resulting type of the inputs applied on \p BinaryFunction .
+/// is 'InitValueType', unless it's 'rocprim::future_value'. Then it will be the wrapped input type.
 ///
 /// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -613,9 +644,7 @@ template<class Config = default_config,
          class InitValueType,
          class BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
-         class AccType = typename rocprim::detail::match_result_type<
-             typename std::iterator_traits<InputIterator>::value_type,
-             BinaryFunction>::type>
+         class AccType = detail::input_type_t<InitValueType>>
 inline hipError_t exclusive_scan(void*               temporary_storage,
                                  size_t&             storage_size,
                                  InputIterator       input,
