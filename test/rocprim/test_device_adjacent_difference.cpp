@@ -126,11 +126,11 @@ auto dispatch_adjacent_difference(
     const OutputIt output,
     Args&&... args)
 {
-    return ::rocprim::adjacent_difference_alias<Config>(temporary_storage,
-                                                        storage_size,
-                                                        input,
-                                                        output,
-                                                        std::forward<Args>(args)...);
+    return ::rocprim::adjacent_difference_inplace<Config>(temporary_storage,
+                                                          storage_size,
+                                                          input,
+                                                          output,
+                                                          std::forward<Args>(args)...);
 }
 
 template<typename Config = rocprim::default_config,
@@ -146,11 +146,11 @@ auto dispatch_adjacent_difference(
     const OutputIt output,
     Args&&... args)
 {
-    return ::rocprim::adjacent_difference_right_alias<Config>(temporary_storage,
-                                                              storage_size,
-                                                              input,
-                                                              output,
-                                                              std::forward<Args>(args)...);
+    return ::rocprim::adjacent_difference_right_inplace<Config>(temporary_storage,
+                                                                storage_size,
+                                                                input,
+                                                                output,
+                                                                std::forward<Args>(args)...);
 }
 
 template <typename Output, typename T, typename BinaryFunction>

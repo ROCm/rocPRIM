@@ -412,14 +412,14 @@ template<typename Config = default_config,
          typename InputIt,
          typename OutputIt,
          typename BinaryFunction = ::rocprim::minus<>>
-hipError_t adjacent_difference_alias(void* const          temporary_storage,
-                                     std::size_t&         storage_size,
-                                     const InputIt        input,
-                                     const OutputIt       output,
-                                     const std::size_t    size,
-                                     const BinaryFunction op                = BinaryFunction{},
-                                     const hipStream_t    stream            = 0,
-                                     const bool           debug_synchronous = false)
+hipError_t adjacent_difference_inplace(void* const          temporary_storage,
+                                       std::size_t&         storage_size,
+                                       const InputIt        input,
+                                       const OutputIt       output,
+                                       const std::size_t    size,
+                                       const BinaryFunction op                = BinaryFunction{},
+                                       const hipStream_t    stream            = 0,
+                                       const bool           debug_synchronous = false)
 {
     static constexpr bool in_place = true;
     static constexpr bool right    = false;
@@ -614,14 +614,14 @@ template<typename Config = default_config,
          typename InputIt,
          typename OutputIt,
          typename BinaryFunction = ::rocprim::minus<>>
-hipError_t adjacent_difference_right_alias(void* const          temporary_storage,
-                                           std::size_t&         storage_size,
-                                           const InputIt        input,
-                                           const OutputIt       output,
-                                           const std::size_t    size,
-                                           const BinaryFunction op     = BinaryFunction{},
-                                           const hipStream_t    stream = 0,
-                                           const bool           debug_synchronous = false)
+hipError_t adjacent_difference_right_inplace(void* const          temporary_storage,
+                                             std::size_t&         storage_size,
+                                             const InputIt        input,
+                                             const OutputIt       output,
+                                             const std::size_t    size,
+                                             const BinaryFunction op     = BinaryFunction{},
+                                             const hipStream_t    stream = 0,
+                                             const bool           debug_synchronous = false)
 {
     static constexpr bool in_place = true;
     static constexpr bool right    = true;
