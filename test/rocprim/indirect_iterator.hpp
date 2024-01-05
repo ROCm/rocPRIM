@@ -73,7 +73,7 @@ public:
     using difference_type = std::ptrdiff_t;
     using value_type      = T;
     using pointer         = T*;
-    using reference       = T&;
+    using reference       = reference_wrapper<T>;
 
     using iterator_category = std::random_access_iterator_tag;
 
@@ -83,27 +83,27 @@ public:
 
     ROCPRIM_HOST_DEVICE inline indirect_iterator& operator++()
     {
-        ptr_++;
+        ++ptr_;
         return *this;
     }
 
     ROCPRIM_HOST_DEVICE inline indirect_iterator operator++(int)
     {
         indirect_iterator old = *this;
-        ptr_++;
+        ++ptr_;
         return old;
     }
 
     ROCPRIM_HOST_DEVICE inline indirect_iterator& operator--()
     {
-        ptr_--;
+        --ptr_;
         return *this;
     }
 
     ROCPRIM_HOST_DEVICE inline indirect_iterator operator--(int)
     {
         indirect_iterator old = *this;
-        ptr_--;
+        --ptr_;
         return old;
     }
 
@@ -112,7 +112,7 @@ public:
         return *ptr_;
     }
 
-    ROCPRIM_HOST_DEVICE inline reference_wrapper<T> operator[](difference_type n) const
+    ROCPRIM_HOST_DEVICE inline reference operator[](difference_type n) const
     {
         return *(ptr_ + n);
     }
@@ -120,7 +120,7 @@ public:
     ROCPRIM_HOST_DEVICE inline indirect_iterator operator+(difference_type distance) const
     {
         auto i = ptr_ + distance;
-        return indirect_iterator(i);
+        return indirect_iterator{i};
     }
 
     ROCPRIM_HOST_DEVICE inline indirect_iterator& operator+=(difference_type distance)
@@ -132,7 +132,7 @@ public:
     ROCPRIM_HOST_DEVICE inline indirect_iterator operator-(difference_type distance) const
     {
         auto i = ptr_ - distance;
-        return indirect_iterator(i);
+        return indirect_iterator{i};
     }
 
     ROCPRIM_HOST_DEVICE inline indirect_iterator& operator-=(difference_type distance)
