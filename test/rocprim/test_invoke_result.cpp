@@ -25,10 +25,11 @@
 
 #include <rocprim/functional.hpp>
 #include <rocprim/type_traits.hpp>
+
 #include <type_traits>
 
 template<class InputType, class Function, class ExpectedType = InputType>
-struct RocprimTypeTraitsOpParams
+struct RocprimTypeInvokeResultParams
 {
     using input_type    = InputType;
     using function      = Function;
@@ -36,7 +37,7 @@ struct RocprimTypeTraitsOpParams
 };
 
 template<class Params>
-class RocprimTypeTraitsOpTests : public ::testing::Test
+class RocprimInvokeResultBinOpTests : public ::testing::Test
 {
 public:
     using input_type    = typename Params::input_type;
@@ -45,19 +46,19 @@ public:
 };
 
 typedef ::testing::Types<
-    RocprimTypeTraitsOpParams<ushort, rocprim::plus<ushort>>,
-    RocprimTypeTraitsOpParams<int, rocprim::plus<int>>,
-    RocprimTypeTraitsOpParams<float, rocprim::plus<float>>,
-    RocprimTypeTraitsOpParams<rocprim::bfloat16, rocprim::plus<rocprim::bfloat16>>,
-    RocprimTypeTraitsOpParams<rocprim::half, rocprim::plus<rocprim::half>>,
-    RocprimTypeTraitsOpParams<int, rocprim::equal_to<int>, bool>,
-    RocprimTypeTraitsOpParams<rocprim::bfloat16, rocprim::equal_to<rocprim::bfloat16>, bool>,
-    RocprimTypeTraitsOpParams<rocprim::half, rocprim::equal_to<rocprim::half>, bool>>
-    RocprimTypeTraitsBinOpTestsParams;
+    RocprimTypeInvokeResultParams<ushort, rocprim::plus<ushort>>,
+    RocprimTypeInvokeResultParams<int, rocprim::plus<int>>,
+    RocprimTypeInvokeResultParams<float, rocprim::plus<float>>,
+    RocprimTypeInvokeResultParams<rocprim::bfloat16, rocprim::plus<rocprim::bfloat16>>,
+    RocprimTypeInvokeResultParams<rocprim::half, rocprim::plus<rocprim::half>>,
+    RocprimTypeInvokeResultParams<int, rocprim::equal_to<int>, bool>,
+    RocprimTypeInvokeResultParams<rocprim::bfloat16, rocprim::equal_to<rocprim::bfloat16>, bool>,
+    RocprimTypeInvokeResultParams<rocprim::half, rocprim::equal_to<rocprim::half>, bool>>
+    RocprimInvokeResultBinOpTestsParams;
 
-TYPED_TEST_SUITE(RocprimTypeTraitsOpTests, RocprimTypeTraitsBinOpTestsParams);
+TYPED_TEST_SUITE(RocprimInvokeResultBinOpTests, RocprimInvokeResultBinOpTestsParams);
 
-TYPED_TEST(RocprimTypeTraitsOpTests, BinaryOpTraits)
+TYPED_TEST(RocprimInvokeResultBinOpTests, HostInvokeResult)
 {
     using input_type      = typename TestFixture::input_type;
     using binary_function = typename TestFixture::function;
@@ -80,7 +81,7 @@ struct static_cast_op
 };
 
 template<class Params>
-class RocprimTypeTraitsUnOpTests : public ::testing::Test
+class RocprimInvokeResultUnOpTests : public ::testing::Test
 {
 public:
     using input_type    = typename Params::input_type;
@@ -89,14 +90,14 @@ public:
 };
 
 typedef ::testing::Types<
-    RocprimTypeTraitsOpParams<ushort, static_cast_op<ushort, float>, float>,
-    RocprimTypeTraitsOpParams<double, static_cast_op<double, rocprim::bfloat16>, rocprim::bfloat16>,
-    RocprimTypeTraitsOpParams<char, rocprim::identity<char>>>
-    RocprimTypeTraitsUnOpTestsParams;
+    RocprimTypeInvokeResultParams<ushort, static_cast_op<ushort, float>, float>,
+    RocprimTypeInvokeResultParams<double, static_cast_op<double, rocprim::bfloat16>, rocprim::bfloat16>,
+    RocprimTypeInvokeResultParams<char, rocprim::identity<char>>>
+    RocprimInvokeResultUnOpTestsParams;
 
-TYPED_TEST_SUITE(RocprimTypeTraitsUnOpTests, RocprimTypeTraitsUnOpTestsParams);
+TYPED_TEST_SUITE(RocprimInvokeResultUnOpTests, RocprimInvokeResultUnOpTestsParams);
 
-TYPED_TEST(RocprimTypeTraitsUnOpTests, UnaryOpTraits)
+TYPED_TEST(RocprimInvokeResultUnOpTests, HostInvokeResult)
 {
     using input_type     = typename TestFixture::input_type;
     using unary_function = typename TestFixture::function;
