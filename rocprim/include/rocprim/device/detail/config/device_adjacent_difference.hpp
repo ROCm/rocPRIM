@@ -39,8 +39,10 @@ namespace detail
 {
 
 template<unsigned int arch, class value_type, class enable = void>
-struct default_adjacent_difference_config : default_adjacent_difference_config_base<value_type>::type
+struct default_adjacent_difference_config
+    : default_adjacent_difference_config_base<value_type>::type
 {};
+
 // Based on value_type = double
 template<class value_type>
 struct default_adjacent_difference_config<
