@@ -101,7 +101,9 @@ public:
 
 typedef ::testing::Types<
     RocprimTypeInvokeResultParams<ushort, static_cast_op<ushort, float>, float>,
-    RocprimTypeInvokeResultParams<double, static_cast_op<double, rocprim::bfloat16>, rocprim::bfloat16>,
+    RocprimTypeInvokeResultParams<double,
+                                  static_cast_op<double, rocprim::bfloat16>,
+                                  rocprim::bfloat16>,
     RocprimTypeInvokeResultParams<char, rocprim::identity<char>>>
     RocprimInvokeResultUnOpTestsParams;
 

@@ -281,7 +281,7 @@ struct invoke_result : detail::invoke_result_impl<void, F, Args...>
 ///
 /// \tparam F Type of the function.
 /// \tparam Args Input type(s) to the function ``F``.
-template <class F, class... Args>
+template<class F, class... Args>
 using invoke_result_t = typename invoke_result<F, Args...>::type;
 
 /// \brief Utility wrapper around ``invoke_result`` for binary operators.
