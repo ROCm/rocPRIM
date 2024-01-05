@@ -270,17 +270,37 @@ struct invoke_result_impl<decltype(void(INVOKE(std::declval<F>(), std::declval<A
 
 /// \brief Behaves like ``std::invoke_result``, but allows the use of invoke_result
 /// with device-only lambdas/functors in host-only functions on HIP-clang.
-template<class F, class... ArgTypes>
-struct invoke_result : detail::invoke_result_impl<void, F, ArgTypes...>
+///
+/// \tparam F Type of the function.
+/// \tparam Args Input type(s) to the function ``F``.
+template<class F, class... Args>
+struct invoke_result : detail::invoke_result_impl<void, F, Args...>
 {};
 
+/// \brief Helper type. It is an alias for `typename invoke_result<F, Args...>::type`.
+///
+/// \tparam F Type of the function.
+/// \tparam Args Input type(s) to the function ``F``.
+template <class F, class... Args>
+using invoke_result_t = typename invoke_result<F, Args...>::type;
+
 /// \brief Utility wrapper around ``invoke_result`` for binary operators.
-template<class InputType, class BinaryFunction>
+///
+/// \tparam T Input type to the binary operator.
+/// \tparam F Type of the binary operator.
+template<class T, class F>
 struct invoke_result_binary_op
 {
     /// \brief The result type of the binary operator.
-    using type = typename invoke_result<BinaryFunction, InputType, InputType>::type;
+    using type = typename invoke_result<F, T, T>::type;
 };
+
+/// \brief Helper type. It is an alias for ``typename invoke_result_binary_op<T, F>::type``.
+///
+/// \tparam T Input type to the binary operator.
+/// \tparam F Type of the binary operator.
+template<class T, class F>
+using invoke_result_binary_op_t = typename invoke_result_binary_op<T, F>::type;
 
 END_ROCPRIM_NAMESPACE
 

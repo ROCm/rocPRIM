@@ -74,8 +74,7 @@ TYPED_TEST(RocprimInvokeResultBinOpTests, HostInvokeResult)
     using binary_function = typename TestFixture::function;
     using expected_type   = typename TestFixture::expected_type;
 
-    using resulting_type =
-        typename rocprim::invoke_result_binary_op<input_type, binary_function>::type;
+    using resulting_type = rocprim::invoke_result_binary_op_t<input_type, binary_function>;
 
     // Compile and check on host
     static_assert(std::is_same<resulting_type, expected_type>::value,
@@ -114,7 +113,7 @@ TYPED_TEST(RocprimInvokeResultUnOpTests, HostInvokeResult)
     using unary_function = typename TestFixture::function;
     using expected_type  = typename TestFixture::expected_type;
 
-    using resulting_type = typename rocprim::invoke_result<unary_function, input_type>::type;
+    using resulting_type = rocprim::invoke_result_t<unary_function, input_type>;
 
     static_assert(std::is_same<resulting_type, expected_type>::value,
                   "Resulting type is not equal to expected type!");
