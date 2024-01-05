@@ -26,6 +26,7 @@
 #include <rocprim/functional.hpp>
 #include <rocprim/type_traits.hpp>
 
+#include <cstdint>
 #include <type_traits>
 
 template<class T>
@@ -55,13 +56,13 @@ public:
 };
 
 typedef ::testing::Types<
-    RocprimTypeInvokeResultParams<unsigned short, rocprim::plus<unsigned short>>,
-    RocprimTypeInvokeResultParams<int, rocprim::plus<int>>,
+    RocprimTypeInvokeResultParams<uint16_t, rocprim::plus<uint16_t>>,
+    RocprimTypeInvokeResultParams<int32_t, rocprim::plus<int32_t>>,
     RocprimTypeInvokeResultParams<float, rocprim::plus<float>>,
-    RocprimTypeInvokeResultParams<int, device_plus<int>>,
+    RocprimTypeInvokeResultParams<int32_t, device_plus<int32_t>>,
     RocprimTypeInvokeResultParams<rocprim::bfloat16, device_plus<rocprim::bfloat16>>,
     RocprimTypeInvokeResultParams<rocprim::half, device_plus<rocprim::half>>,
-    RocprimTypeInvokeResultParams<int, rocprim::equal_to<int>, bool>,
+    RocprimTypeInvokeResultParams<int32_t, rocprim::equal_to<int32_t>, bool>,
     RocprimTypeInvokeResultParams<rocprim::bfloat16, rocprim::equal_to<rocprim::bfloat16>, bool>,
     RocprimTypeInvokeResultParams<rocprim::half, rocprim::equal_to<rocprim::half>, bool>>
     RocprimInvokeResultBinOpTestsParams;
@@ -100,11 +101,11 @@ public:
 };
 
 typedef ::testing::Types<
-    RocprimTypeInvokeResultParams<ushort, static_cast_op<ushort, float>, float>,
+    RocprimTypeInvokeResultParams<uint16_t, static_cast_op<uint16_t, float>, float>,
     RocprimTypeInvokeResultParams<double,
                                   static_cast_op<double, rocprim::bfloat16>,
                                   rocprim::bfloat16>,
-    RocprimTypeInvokeResultParams<char, rocprim::identity<char>>>
+    RocprimTypeInvokeResultParams<uint8_t, rocprim::identity<uint8_t>>>
     RocprimInvokeResultUnOpTestsParams;
 
 TYPED_TEST_SUITE(RocprimInvokeResultUnOpTests, RocprimInvokeResultUnOpTestsParams);
