@@ -28,6 +28,15 @@
 
 #include <type_traits>
 
+template<class T>
+struct device_plus
+{
+    __device__ inline constexpr T operator()(const T& a, const T& b) const
+    {
+        return a + b;
+    }
+};
+
 template<class InputType, class Function, class ExpectedType = InputType>
 struct RocprimTypeInvokeResultParams
 {
@@ -46,11 +55,12 @@ public:
 };
 
 typedef ::testing::Types<
-    RocprimTypeInvokeResultParams<ushort, rocprim::plus<ushort>>,
+    RocprimTypeInvokeResultParams<unsigned short, rocprim::plus<unsigned short>>,
     RocprimTypeInvokeResultParams<int, rocprim::plus<int>>,
     RocprimTypeInvokeResultParams<float, rocprim::plus<float>>,
-    RocprimTypeInvokeResultParams<rocprim::bfloat16, rocprim::plus<rocprim::bfloat16>>,
-    RocprimTypeInvokeResultParams<rocprim::half, rocprim::plus<rocprim::half>>,
+    RocprimTypeInvokeResultParams<int, device_plus<int>>,
+    RocprimTypeInvokeResultParams<rocprim::bfloat16, device_plus<rocprim::bfloat16>>,
+    RocprimTypeInvokeResultParams<rocprim::half, device_plus<rocprim::half>>,
     RocprimTypeInvokeResultParams<int, rocprim::equal_to<int>, bool>,
     RocprimTypeInvokeResultParams<rocprim::bfloat16, rocprim::equal_to<rocprim::bfloat16>, bool>,
     RocprimTypeInvokeResultParams<rocprim::half, rocprim::equal_to<rocprim::half>, bool>>
@@ -67,6 +77,7 @@ TYPED_TEST(RocprimInvokeResultBinOpTests, HostInvokeResult)
     using resulting_type =
         typename rocprim::invoke_result_binary_op<input_type, binary_function>::type;
 
+    // Compile and check on host
     static_assert(std::is_same<resulting_type, expected_type>::value,
                   "Resulting type is not equal to expected type!");
 }
@@ -74,7 +85,7 @@ TYPED_TEST(RocprimInvokeResultBinOpTests, HostInvokeResult)
 template<typename FromType, typename ToType>
 struct static_cast_op
 {
-    ROCPRIM_HOST_DEVICE inline constexpr ToType operator()(FromType a) const
+    __device__ inline constexpr ToType operator()(FromType a) const
     {
         return static_cast<ToType>(a);
     }
