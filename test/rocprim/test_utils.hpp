@@ -21,7 +21,6 @@
 #ifndef TEST_TEST_UTILS_HPP_
 #define TEST_TEST_UTILS_HPP_
 
-#include <rocprim/detail/match_result_type.hpp>
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/intrinsics.hpp>
