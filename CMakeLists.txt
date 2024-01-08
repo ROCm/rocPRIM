@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,12 @@ set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended 
 
 # rocPRIM project
 project(rocprim LANGUAGES CXX)
+
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  set(ROCPRIM_PROJECT_IS_TOP_LEVEL TRUE)
+else()
+  set(ROCPRIM_PROJECT_IS_TOP_LEVEL FALSE)
+endif()
 
 #Adding CMAKE_PREFIX_PATH
 if(WIN32)
@@ -124,20 +130,24 @@ print_configuration_summary()
 # rocPRIM library
 add_subdirectory(rocprim)
 
-if(NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
+if(ROCPRIM_PROJECT_IS_TOP_LEVEL AND NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
   rocm_package_setup_component(clients)
 endif()
 
 # Tests
 if(BUILD_TEST AND NOT ONLY_INSTALL)
-  rocm_package_setup_client_component(tests)
+  if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
+    rocm_package_setup_client_component(tests)
+  endif()
   enable_testing()
   add_subdirectory(test)
 endif()
 
 # Benchmarks
 if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
-  rocm_package_setup_client_component(benchmarks)
+  if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
+    rocm_package_setup_client_component(benchmarks)
+  endif()
   add_subdirectory(benchmark)
 endif()
 
@@ -147,20 +157,21 @@ if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
 endif()
 
 # Package
-set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
-rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
+  set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
+  rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
+  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+  set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
+  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
 
-rocm_create_package(
-  NAME rocprim
-  DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
-  MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
-  HEADER_ONLY
-)
-
+  rocm_create_package(
+    NAME rocprim
+    DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
+    MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
+    HEADER_ONLY
+  )
+endif()
 
 #
 # ADDITIONAL TARGETS FOR CODE COVERAGE
