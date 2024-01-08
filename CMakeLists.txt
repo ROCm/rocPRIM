@@ -50,6 +50,7 @@ option(USE_HIP_CPU "Prefer HIP-CPU runtime instead of HW acceleration" OFF)
 # Disables building tests, benchmarks, examples
 option(ONLY_INSTALL "Only install" OFF)
 option(BUILD_CODE_COVERAGE "Build with code coverage enabled" OFF)
+option(ROCPRIM_INSTALL "Enable installation of rocPRIM (projects embedding rocPRIM may want to turn this OFF)" ON)
 
 # CMake modules
 list(APPEND CMAKE_MODULE_PATH
@@ -100,7 +101,7 @@ endif()
 
 # FOR HANDLING ENABLE/DISABLE OPTIONAL BACKWARD COMPATIBILITY for FILE/FOLDER REORG
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" OFF)
-if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
+if(ROCPRIM_INSTALL AND BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
   rocm_wrap_header_dir(
     "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
     WRAPPER_LOCATIONS rocprim/include/rocprim

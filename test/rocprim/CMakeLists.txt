@@ -36,7 +36,9 @@ endfunction()
 
 function(add_rocprim_test_internal TEST_NAME TEST_SOURCES TEST_TARGET)
   add_executable(${TEST_TARGET} ${TEST_SOURCES})
-  rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
+  if (ROCPRIM_INSTALL)
+    rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
+  endif()
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC

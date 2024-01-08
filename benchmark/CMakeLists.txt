@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -95,7 +95,9 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmark"
   )
 
-  rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
+  if (ROCPRIM_INSTALL)
+    rocm_install(TARGETS ${BENCHMARK_TARGET} COMPONENT benchmarks)
+  endif()
   if (WIN32 AND NOT DEFINED DLLS_COPIED)
     set(DLLS_COPIED "YES")
     set(DLLS_COPIED ${DLLS_COPIED} PARENT_SCOPE)
