@@ -677,8 +677,8 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
     using OutputIterator                            = check_output_iterator<sampling_rate>;
     using flag_type                                 = OutputIterator::flag_type;
 
-    SCOPED_TRACE(testing::Message() << "is_left = " << is_left
-                                    << ", is_in_place = " << (aliasing == api_variant::in_place));
+    SCOPED_TRACE(testing::Message()
+                 << "is_left = " << is_left << ", api_variant = " << to_string(aliasing));
 
     hipStream_t stream = 0; // default
     if (TestFixture::use_graphs)

@@ -38,14 +38,15 @@ public:
     using type = T;
 
     // construct/copy/destroy
-    constexpr reference_wrapper(T& t) : _ptr(&t) {}
+    explicit constexpr reference_wrapper(T& t) : _ptr(&t) {}
 
-    reference_wrapper(const reference_wrapper&) noexcept = default;
+    constexpr reference_wrapper(const reference_wrapper&) noexcept = default;
 
     // assignment
-    reference_wrapper& operator=(const T& x) noexcept
+    constexpr reference_wrapper& operator=(const T& x) noexcept
     {
         *_ptr = x;
+        return *this;
     }
 
     // access
@@ -114,7 +115,7 @@ public:
 
     ROCPRIM_HOST_DEVICE inline reference operator[](difference_type n) const
     {
-        return *(ptr_ + n);
+        return reference{*(ptr_ + n)};
     }
 
     ROCPRIM_HOST_DEVICE inline indirect_iterator operator+(difference_type distance) const
