@@ -11,6 +11,9 @@ Documentation for rocPRIM is available at
 * The internal accumulator type of `inclusive_scan(_by_key)` and `exclusive_scan(_by_key)` is now exposed as an optional type parameter.
   * The default accumulator type is still the value type of the input iterator (inclusive scan) or the initial value's type (exclusive scan).
     This is the same behaviour as before this change.
+### Fixed
+- Fixed incorrect results of `warp_exchange::blocked_to_striped_shuffle` and `warp_exchange::striped_to_blocked_shuffle` when the block size is
+  larger than the logical warp size. The test suite has been updated with such cases.
 
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
