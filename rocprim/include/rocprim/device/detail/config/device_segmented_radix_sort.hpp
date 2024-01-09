@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ namespace detail
 {
 
 template<unsigned int arch, class key_type, typename value_type, class enable = void>
-struct default_segmented_radix_sort_config : default_segmented_radix_sort_config_base<7, 6>
+struct default_segmented_radix_sort_config : default_segmented_radix_sort_config_base<7, 6>::type
 {};
 
 // Based on key_type = double, value_type = int64_t

@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -255,7 +255,7 @@ namespace detail
 {
 
 template<class Value>
-struct default_reduce_config_base_helper
+struct default_reduce_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
@@ -264,10 +264,6 @@ struct default_reduce_config_base_helper
                                ::rocprim::max(1u, 16u / item_scale),
                                ::rocprim::block_reduce_algorithm::using_warp_reduce>;
 };
-
-template<class Value>
-struct default_reduce_config_base : default_reduce_config_base_helper<Value>::type
-{};
 
 struct scan_config_tag
 {};
@@ -337,7 +333,7 @@ struct scan_by_key_config_tag
 {};
 
 template<class Value>
-struct default_scan_config_base_helper
+struct default_scan_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
@@ -348,10 +344,6 @@ struct default_scan_config_base_helper
                              ::rocprim::block_store_method::block_store_transpose,
                              ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
-
-template<class Value>
-struct default_scan_config_base : default_scan_config_base_helper<Value>::type
-{};
 
 /// \brief Provides the kernel parameters for exclusive_scan_by_key and inclusive_scan_by_key based
 ///        on autotuned configurations or user-provided configurations.
@@ -415,7 +407,7 @@ namespace detail
 {
 
 template<class Key, class Value>
-struct default_scan_by_key_config_base_helper
+struct default_scan_by_key_config_base
 {
     static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
         sizeof(Key) + sizeof(Value), 2 * sizeof(int));
@@ -427,10 +419,6 @@ struct default_scan_by_key_config_base_helper
         ::rocprim::block_store_method::block_store_transpose,
         ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
-
-template<class Key, class Value>
-struct default_scan_by_key_config_base : default_scan_by_key_config_base_helper<Key, Value>::type
-{};
 
 struct transform_config_tag
 {};
@@ -624,23 +612,18 @@ namespace detail
 /// \tparam LongRadixBits - Long bits used during the sorting.
 /// \tparam ShortRadixBits - Short bits used during the sorting.
 /// \tparam ItemsPerThread - Items per thread when type Key has size 1.
-template<unsigned int LongRadixBits, unsigned int ShortRadixBits, unsigned int ItemsPerThread>
-struct default_segmented_radix_sort_config_base_helper
+template<unsigned int LongRadixBits, unsigned int ShortRadixBits>
+struct default_segmented_radix_sort_config_base
 {
     static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
         sizeof(unsigned int) + sizeof(unsigned int), sizeof(int));
     using type = segmented_radix_sort_config<LongRadixBits,
                                              ShortRadixBits,
                                              128,
-                                             ItemsPerThread,
+                                             17u,
                                              true,
                                              WarpSortConfig<32, 4, 256, 3000, 32, 4, 256>>;
 };
-
-template<unsigned int LongRadixBits, unsigned int ShortRadixBits>
-struct default_segmented_radix_sort_config_base
-    : default_segmented_radix_sort_config_base_helper<LongRadixBits, ShortRadixBits, 17u>::type
-{};
 
 } // namespace detail
 
@@ -678,17 +661,13 @@ namespace detail
 {
 
 template<class Value>
-struct default_transform_config_base_helper
+struct default_transform_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
     using type = transform_config<256, ::rocprim::max(1u, 16u / item_scale)>;
 };
-
-template<class Value>
-struct default_transform_config_base : default_transform_config_base_helper<Value>::type
-{};
 
 struct binary_search_config_tag : public transform_config_tag
 {};
@@ -799,7 +778,7 @@ namespace detail
 {
 
 template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
-struct default_histogram_config_base_helper
+struct default_histogram_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div(sizeof(Sample), sizeof(int));
@@ -807,11 +786,6 @@ struct default_histogram_config_base_helper
     using type
         = histogram_config<kernel_config<256, ::rocprim::max(8u / Channels / item_scale, 1u)>>;
 };
-
-template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
-struct default_histogram_config_base
-    : default_histogram_config_base_helper<Sample, Channels, ActiveChannels>::type
-{};
 
 struct adjacent_difference_config_tag
 {};
@@ -859,7 +833,7 @@ namespace detail
 {
 
 template<class Value>
-struct default_adjacent_difference_config_base_helper
+struct default_adjacent_difference_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
@@ -870,11 +844,6 @@ struct default_adjacent_difference_config_base_helper
         ::rocprim::block_load_method::block_load_transpose,
         ::rocprim::block_store_method::block_store_transpose>;
 };
-
-template<class Value>
-struct default_adjacent_difference_config_base
-    : default_adjacent_difference_config_base_helper<Value>::type
-{};
 
 } // namespace detail
 
