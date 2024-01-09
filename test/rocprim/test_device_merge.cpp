@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -72,6 +72,7 @@ typedef ::testing::Types<
     DeviceMergeParams<unsigned long, unsigned int, rocprim::greater<unsigned long>>,
     DeviceMergeParams<float, custom_double2>,
     DeviceMergeParams<int, float>,
+    DeviceMergeParams<double, double>,
     DeviceMergeParams<int8_t, int8_t>,
     DeviceMergeParams<uint8_t, uint8_t>,
     DeviceMergeParams<rocprim::half, rocprim::half, rocprim::less<rocprim::half>>,

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -70,9 +70,10 @@ using bfloat16       = rocprim::bfloat16;
 typedef ::testing::Types<
     params<unsigned char, unsigned int, rocprim::plus<unsigned int>>,
     params<int, int, rocprim::plus<int>, -100, 0, 10000>,
+    params<int8_t, int8_t, rocprim::plus<int8_t>, -100, 0, 10000>,
     params<custom_double2, custom_double2, rocprim::minimum<custom_double2>, 1000, 0, 10000>,
     params<custom_int2, custom_short2, rocprim::maximum<custom_int2>, 10, 1000, 10000>,
-    params<float, double, rocprim::maximum<double>, 50, 2, 10>,
+    params<double, double, rocprim::maximum<double>, 50, 2, 10>,
     params<float, float, rocprim::plus<float>, 123, 100, 200, true>,
     params<bfloat16, float, rocprim::plus<bfloat16>, 0, 3, 50, true>,
     params<bfloat16, bfloat16, rocprim::minimum<bfloat16>, 0, 1000, 30000>,

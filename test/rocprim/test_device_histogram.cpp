@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -129,6 +129,10 @@ public:
 using custom_config1 = rocprim::histogram_config<rocprim::kernel_config<128, 5>>;
 
 typedef ::testing::Types<params1<int, 10, 0, 10>,
+                         params1<float, 10, 0, 10>,
+                         // params1<rocprim::half, 10, 0, 10>,
+                         // params1<rocprim::bfloat16, 10, 0, 10>,
+                         params1<int8_t, 10, 0, 10>,
                          params1<int, 128, 0, 256, int, int, custom_config1>,
                          params1<unsigned int, 12345, 10, 12355, short>,
                          params1<unsigned short, 65536, 0, 65536, int>,

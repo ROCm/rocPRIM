@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -67,24 +67,23 @@ using custom_short2  = test_utils::custom_test_type<short>;
 using custom_int2    = test_utils::custom_test_type<int>;
 using custom_double2 = test_utils::custom_test_type<double>;
 
-typedef ::testing::Types<
-    DeviceTransformParams<int, int, true>,
-    DeviceTransformParams<int8_t, int8_t>,
-    DeviceTransformParams<uint8_t, uint8_t>,
-    DeviceTransformParams<rocprim::half, rocprim::half>,
-    DeviceTransformParams<rocprim::bfloat16, rocprim::bfloat16>,
-    DeviceTransformParams<unsigned long>,
-    DeviceTransformParams<short, int, true>,
-    DeviceTransformParams<custom_short2, custom_int2, true>,
-    DeviceTransformParams<int, float>,
-    DeviceTransformParams<custom_double2, custom_double2>,
-    DeviceTransformParams<int, int, false, 512>,
-    DeviceTransformParams<float, float, false, 2048>,
-    DeviceTransformParams<int, int, false, 4096>,
-    DeviceTransformParams<int, int, false, 2097152>,
-    DeviceTransformParams<int, int, false, 1073741824>,
-    DeviceTransformParams<int, int, false, ROCPRIM_GRID_SIZE_LIMIT, true>
-> RocprimDeviceTransformTestsParams;
+typedef ::testing::Types<DeviceTransformParams<int, int, true>,
+                         DeviceTransformParams<int8_t, int8_t>,
+                         DeviceTransformParams<uint8_t, uint8_t>,
+                         DeviceTransformParams<rocprim::half, rocprim::half>,
+                         DeviceTransformParams<rocprim::bfloat16, rocprim::bfloat16>,
+                         DeviceTransformParams<unsigned long>,
+                         DeviceTransformParams<short, int, true>,
+                         DeviceTransformParams<custom_short2, custom_int2, true>,
+                         DeviceTransformParams<int, float>,
+                         DeviceTransformParams<custom_double2, custom_double2>,
+                         DeviceTransformParams<int, int, false, 512>,
+                         DeviceTransformParams<float, float, false, 2048>,
+                         DeviceTransformParams<double, double, false, 4096>,
+                         DeviceTransformParams<int, int, false, 2097152>,
+                         DeviceTransformParams<int, int, false, 1073741824>,
+                         DeviceTransformParams<int, int, false, ROCPRIM_GRID_SIZE_LIMIT, true>>
+    RocprimDeviceTransformTestsParams;
 
 template <unsigned int SizeLimit>
 struct size_limit_config {

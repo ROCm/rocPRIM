@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@
 #include <rocprim/iterator/transform_iterator.hpp>
 
 // required test headers
+#include "rocprim/types.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_types.hpp"
 
@@ -95,7 +96,9 @@ typedef ::testing::Types<
     params<custom_double2, custom_int2, rocprim::plus<custom_int2>, 1, 10>,
     params<unsigned long long, float, rocprim::minimum<float>, 1, 30>,
     params<int, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
+    //params<rocprim::half, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
     params<int, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
+    //params<rocprim::bfloat16, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
     params<int, unsigned int, rocprim::maximum<unsigned int>, 20, 100>,
     params<float, long long, rocprim::maximum<unsigned long long>, 100, 400, long long, custom_key_compare_op1<float>>,
     params<unsigned int, unsigned char, rocprim::plus<unsigned char>, 200, 600>,

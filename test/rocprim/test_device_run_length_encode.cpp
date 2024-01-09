@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 #include <rocprim/device/device_run_length_encode.hpp>
 
 // required test headers
+#include "rocprim/types.hpp"
 #include "test_utils_types.hpp"
 
 template<
@@ -54,29 +55,28 @@ public:
 using custom_int2 = test_utils::custom_test_type<int>;
 using custom_double2 = test_utils::custom_test_type<double>;
 
-typedef ::testing::Types<
-    params<int, int, 1, 1, true>,
-    params<double, int, 3, 5>,
-    params<float, int, 1, 10>,
-    params<unsigned long long, size_t, 1, 30>,
-    params<custom_int2, unsigned int, 20, 100>,
-    params<float, unsigned long long, 100, 400>,
-    params<unsigned int, unsigned int, 200, 600>,
-    params<double, int, 100, 2000>,
-    params<custom_double2, custom_int2, 10, 30000, true>,
-    params<int, unsigned int, 1000, 5000>,
-    params<int8_t, int8_t, 100, 2000>,
-    params<uint8_t, uint8_t, 100, 2000>,
-    params<int, rocprim::half, 100, 2000>,
-    params<rocprim::bfloat16, int, 100, 2000>,
-    params<int8_t, int8_t, 1000, 5000>,
-    params<uint8_t, uint8_t, 1000, 5000>,
-    params<int, rocprim::half, 1000, 5000>,
-    params<rocprim::bfloat16, int, 1000, 5000>,
-    params<unsigned int, size_t, 2048, 2048>,
-    params<unsigned int, unsigned int, 1000, 50000>,
-    params<unsigned long long, custom_double2, 100000, 100000>
-> Params;
+typedef ::testing::Types<params<int, int, 1, 1, true>,
+                         params<double, int, 3, 5>,
+                         params<float, int, 1, 10>,
+                         params<unsigned long long, size_t, 1, 30>,
+                         params<custom_int2, unsigned int, 20, 100>,
+                         params<float, unsigned long long, 100, 400>,
+                         params<unsigned int, unsigned int, 200, 600>,
+                         params<double, int, 100, 2000>,
+                         params<custom_double2, custom_int2, 10, 30000, true>,
+                         params<int, unsigned int, 1000, 5000>,
+                         params<int8_t, int8_t, 100, 2000>,
+                         params<uint8_t, uint8_t, 100, 2000>,
+                         params<int, rocprim::half, 100, 2000>,
+                         //params<rocprim::half, int, 100, 2000>,
+                         params<int8_t, int8_t, 1000, 5000>,
+                         params<uint8_t, uint8_t, 1000, 5000>,
+                         params<int, rocprim::bfloat16, 1000, 5000>,
+                         params<rocprim::bfloat16, int, 1000, 5000>,
+                         params<unsigned int, size_t, 2048, 2048>,
+                         params<unsigned int, unsigned int, 1000, 50000>,
+                         params<unsigned long long, custom_double2, 100000, 100000>>
+    Params;
 
 TYPED_TEST_SUITE(RocprimDeviceRunLengthEncode, Params);
 

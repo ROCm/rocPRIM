@@ -21,6 +21,7 @@
 #ifndef TEST_TEST_UTILS_TYPES_HPP_
 #define TEST_TEST_UTILS_TYPES_HPP_
 
+#include "rocprim/types.hpp"
 #include "test_utils.hpp"
 
 // required rocprim headers
@@ -112,11 +113,11 @@ typedef ::testing::Types<
     warp_param_type(uint8_t)
 > WarpParamsIntegral;
 
-typedef ::testing::Types<
-    warp_param_type(float),
-    warp_param_type(rocprim::half),
-    warp_param_type(rocprim::bfloat16)
-> WarpParamsFloating;
+typedef ::testing::Types<warp_param_type(float),
+                         warp_param_type(double),
+                         warp_param_type(rocprim::half),
+                         warp_param_type(rocprim::bfloat16)>
+    WarpParamsFloating;
 
 // Separate sort params (only power of two warp sizes)
 #define warp_sort_param_type(type, items_per_thread) \
@@ -134,10 +135,11 @@ typedef ::testing::Types<
     warp_sort_param_type(int8_t, 1)
 > WarpSortParamsIntegral;
 
-typedef ::testing::Types<
-    warp_sort_param_type(rocprim::half, 1),
-    warp_sort_param_type(rocprim::bfloat16, 1)
-> WarpSortParamsFloating;
+typedef ::testing::Types<warp_sort_param_type(float, 1),
+                         warp_sort_param_type(double, 1),
+                         warp_sort_param_type(rocprim::half, 1),
+                         warp_sort_param_type(rocprim::bfloat16, 1)>
+    WarpSortParamsFloating;
 
 typedef ::testing::Types<
     warp_sort_param_type(int, 2),
@@ -189,9 +191,10 @@ typedef ::testing::Types<block_param_type(float, long),
                          block_param_type(rocprim::bfloat16, rocprim::bfloat16)>
     BlockDiscParamsFloating;
 
-typedef ::testing::Types<
-    block_param_type(unsigned int, unsigned int)
-> BlockHistAtomicParamsIntegral;
+typedef ::testing::Types<block_param_type(unsigned int, unsigned int),
+                         //block_param_type(int8_t, unsigned int),
+                         block_param_type(uint8_t, unsigned int)>
+    BlockHistAtomicParamsIntegral;
 
 typedef ::testing::Types<block_param_type(float, long),
                          block_param_type(double, test_utils::custom_test_type<double>),
@@ -204,10 +207,15 @@ typedef ::testing::Types<block_param_type(float, float),
                          block_param_type(float, unsigned long long),
                          block_param_type(double, float),
                          block_param_type(double, unsigned long long),
+<<<<<<< HEAD
                          block_param_type(rocprim::half, float),
                          block_param_type(rocprim::half, unsigned long long),
                          block_param_type(rocprim::bfloat16, float),
                          block_param_type(rocprim::bfloat16, unsigned long long)>
+=======
+                         block_param_type(rocprim::half, unsigned int),
+                         block_param_type(rocprim::bfloat16, unsigned int)>
+>>>>>>> 24442219 (add tests for supported data types)
     BlockHistAtomicParamsFloating;
 
 typedef ::testing::Types<

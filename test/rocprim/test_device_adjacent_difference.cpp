@@ -27,6 +27,7 @@
 
 #include <rocprim/device/device_adjacent_difference.hpp>
 
+#include "rocprim/types.hpp"
 #include <rocprim/detail/various.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/discard_iterator.hpp>
@@ -237,6 +238,9 @@ using custom_size_limit_config
 using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
     // Tests with default configuration
     DeviceAdjacentDifferenceParams<int>,
+    DeviceAdjacentDifferenceParams<double>,
+    DeviceAdjacentDifferenceParams<float>,
+    DeviceAdjacentDifferenceParams<rocprim::bfloat16>,
     DeviceAdjacentDifferenceParams<float, double, false>,
     DeviceAdjacentDifferenceParams<int8_t, int8_t, true, api_variant::in_place>,
     DeviceAdjacentDifferenceParams<custom_double2, custom_double2, false, api_variant::in_place>,

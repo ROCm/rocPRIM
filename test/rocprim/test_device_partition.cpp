@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -60,17 +60,18 @@ public:
     static constexpr bool use_graphs = Params::use_graphs;
 };
 
-typedef ::testing::Types<
-    DevicePartitionParams<int, int, unsigned char, true>,
-    DevicePartitionParams<unsigned int, unsigned long>,
-    DevicePartitionParams<unsigned char, float>,
-    DevicePartitionParams<int8_t, int8_t>,
-    DevicePartitionParams<uint8_t, uint8_t>,
-    DevicePartitionParams<rocprim::half, rocprim::half>,
-    DevicePartitionParams<rocprim::bfloat16, rocprim::bfloat16>,
-    DevicePartitionParams<test_utils::custom_test_type<long long>>,
-    DevicePartitionParams<int, int, unsigned int, false, true>
-> RocprimDevicePartitionTestsParams;
+typedef ::testing::Types<DevicePartitionParams<int, int, unsigned char, true>,
+                         DevicePartitionParams<unsigned int, unsigned long>,
+                         DevicePartitionParams<unsigned char, float>,
+                         DevicePartitionParams<float, float>,
+                         DevicePartitionParams<double, double>,
+                         DevicePartitionParams<int8_t, int8_t>,
+                         DevicePartitionParams<uint8_t, uint8_t>,
+                         DevicePartitionParams<rocprim::half, rocprim::half>,
+                         DevicePartitionParams<rocprim::bfloat16, rocprim::bfloat16>,
+                         DevicePartitionParams<test_utils::custom_test_type<long long>>,
+                         DevicePartitionParams<int, int, unsigned int, false, true>>
+    RocprimDevicePartitionTestsParams;
 
 TYPED_TEST_SUITE(RocprimDevicePartitionTests, RocprimDevicePartitionTestsParams);
 

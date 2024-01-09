@@ -61,17 +61,20 @@ public:
     static constexpr bool use_graphs = Params::use_graphs;
 };
 
-typedef ::testing::Types<
-    DeviceSelectParams<int, long>,
-    DeviceSelectParams<int8_t, int8_t>,
-    DeviceSelectParams<uint8_t, uint8_t>,
-    DeviceSelectParams<rocprim::half, rocprim::half>,
-    DeviceSelectParams<rocprim::bfloat16, rocprim::bfloat16>,
-    DeviceSelectParams<unsigned char, float, int, true>,
-    DeviceSelectParams<double, double, int, true>,
-    DeviceSelectParams<test_utils::custom_test_type<double>, test_utils::custom_test_type<double>, int, true>,
-    DeviceSelectParams<int, int, unsigned int, false, true>
-> RocprimDeviceSelectTestsParams;
+typedef ::testing::Types<DeviceSelectParams<int, long>,
+                         DeviceSelectParams<int8_t, int8_t>,
+                         DeviceSelectParams<uint8_t, uint8_t>,
+                         DeviceSelectParams<rocprim::half, rocprim::half>,
+                         DeviceSelectParams<rocprim::bfloat16, rocprim::bfloat16>,
+                         DeviceSelectParams<float, float>,
+                         DeviceSelectParams<unsigned char, float, int, true>,
+                         DeviceSelectParams<double, double, int, true>,
+                         DeviceSelectParams<test_utils::custom_test_type<double>,
+                                            test_utils::custom_test_type<double>,
+                                            int,
+                                            true>,
+                         DeviceSelectParams<int, int, unsigned int, false, true>>
+    RocprimDeviceSelectTestsParams;
 
 TYPED_TEST_SUITE(RocprimDeviceSelectTests, RocprimDeviceSelectTestsParams);
 

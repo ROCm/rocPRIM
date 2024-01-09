@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -98,13 +98,14 @@ typedef ::testing::Types<
     DeviceReduceParams<int, float>,
     DeviceReduceParamsList(int, int, false, 512),
     DeviceReduceParamsList(float, float, false, 2048),
+    DeviceReduceParamsList(double, double, false, 2048),
     DeviceReduceParamsList(int, int, false, 4096),
     DeviceReduceParamsList(int, int, false, 2097152),
     DeviceReduceParamsList(int, int, false, 1073741824),
     DeviceReduceParams<int8_t, int8_t>,
     DeviceReduceParams<uint8_t, uint8_t>,
     // #156 temporarily disable half test due to known issue with converting from double to half
-    // DeviceReduceParams<rocprim::half, rocprim::half>,
+    DeviceReduceParams<rocprim::half, rocprim::half>,
     DeviceReduceParams<rocprim::bfloat16, rocprim::bfloat16>,
     DeviceReduceParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<float>>,
     DeviceReduceParams<test_utils::custom_test_type<int>, test_utils::custom_test_type<float>>,
