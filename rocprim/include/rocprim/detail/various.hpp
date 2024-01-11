@@ -333,17 +333,17 @@ template<class Tuple, class Function, size_t... Indices>
 ROCPRIM_HOST_DEVICE inline void
     for_each_in_tuple_impl(Tuple&& t, Function&& f, ::rocprim::index_sequence<Indices...>)
 {
-    auto swallow
+    int swallow[]
         = {(std::forward<Function>(f)(::rocprim::get<Indices>(std::forward<Tuple>(t))), 0)...};
     (void)swallow;
 }
 
-template<class Type, class Function>
-ROCPRIM_HOST_DEVICE inline auto for_each_in_tuple(Type&& t, Function&& f)
-    -> void_t<tuple_size<std::remove_reference_t<Type>>>
+template<class Tuple, class Function>
+ROCPRIM_HOST_DEVICE inline auto for_each_in_tuple(Tuple&& t, Function&& f)
+    -> void_t<tuple_size<std::remove_reference_t<Tuple>>>
 {
-    static constexpr size_t size = tuple_size<std::remove_reference_t<Type>>::value;
-    for_each_in_tuple_impl(std::forward<Type>(t),
+    static constexpr size_t size = tuple_size<std::remove_reference_t<Tuple>>::value;
+    for_each_in_tuple_impl(std::forward<Tuple>(t),
                            std::forward<Function>(f),
                            ::rocprim::make_index_sequence<size>());
 }
