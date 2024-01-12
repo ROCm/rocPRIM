@@ -192,7 +192,7 @@ typedef ::testing::Types<block_param_type(float, long),
     BlockDiscParamsFloating;
 
 typedef ::testing::Types<block_param_type(unsigned int, unsigned int),
-                         //block_param_type(int8_t, unsigned int),
+                         block_param_type(int8_t, unsigned int),
                          block_param_type(uint8_t, unsigned int)>
     BlockHistAtomicParamsIntegral;
 
@@ -207,15 +207,10 @@ typedef ::testing::Types<block_param_type(float, float),
                          block_param_type(float, unsigned long long),
                          block_param_type(double, float),
                          block_param_type(double, unsigned long long),
-<<<<<<< HEAD
                          block_param_type(rocprim::half, float),
                          block_param_type(rocprim::half, unsigned long long),
                          block_param_type(rocprim::bfloat16, float),
                          block_param_type(rocprim::bfloat16, unsigned long long)>
-=======
-                         block_param_type(rocprim::half, unsigned int),
-                         block_param_type(rocprim::bfloat16, unsigned int)>
->>>>>>> 24442219 (add tests for supported data types)
     BlockHistAtomicParamsFloating;
 
 typedef ::testing::Types<

@@ -32,6 +32,9 @@
 #include "../common_test_header.hpp"
 #include "test_utils_types.hpp"
 
+#include <algorithm>
+#include <limits>
+
 template<
     unsigned int BlockSize,
     unsigned int ItemsPerThread,
@@ -107,7 +110,11 @@ void test_block_histogram_input_arrays()
         SCOPED_TRACE(testing::Message() << "with ItemsPerThread = " << items_per_thread);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 0, bin - 1, seed_value);
+        std::vector<T> output = test_utils::get_random_data<T>(
+            size,
+            0,
+            std::min<size_t>(std::numeric_limits<T>::max(), bin - 1),
+            seed_value);
 
         // Output histogram results
         std::vector<BinType> output_bin(bin_sizes, 0);
@@ -120,9 +127,7 @@ void test_block_histogram_input_arrays()
             {
                 auto bin_idx = i * bin;
                 auto idx = i * items_per_block + j;
-                auto index   = bin_idx + static_cast<unsigned int>(output[idx]);
-                std::cout << "index: " << index << " - size: " << expected_bin.size() << std::endl;
-                expected_bin[index]++;
+                expected_bin[bin_idx + static_cast<unsigned int>(output[idx])]++;
             }
         }
 
