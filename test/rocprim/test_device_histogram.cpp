@@ -60,8 +60,8 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_dims()
 // Generate values ouside the desired histogram range (+-10%)
 // (correctly handling test cases like uchar [0, 256), ushort [0, 65536))
 template<class T, class U>
-inline auto get_random_samples(size_t size, U min, U max, int seed_value)
-    -> typename std::enable_if<std::is_integral<T>::value, std::vector<T>>::type
+inline auto get_random_samples(size_t size, U min, U max, int seed_value) ->
+    typename std::enable_if<rocprim::is_integral<T>::value, std::vector<T>>::type
 {
     const long long min1 = static_cast<long long>(min);
     const long long max1 = static_cast<long long>(max);
@@ -75,8 +75,8 @@ inline auto get_random_samples(size_t size, U min, U max, int seed_value)
 }
 
 template<class T, class U>
-inline auto get_random_samples(size_t size, U min, U max, int seed_value)
-    -> typename std::enable_if<std::is_floating_point<T>::value, std::vector<T>>::type
+inline auto get_random_samples(size_t size, U min, U max, int seed_value) ->
+    typename std::enable_if<rocprim::is_floating_point<T>::value, std::vector<T>>::type
 {
     const double min1 = static_cast<double>(min);
     const double max1 = static_cast<double>(max);
@@ -130,8 +130,8 @@ using custom_config1 = rocprim::histogram_config<rocprim::kernel_config<128, 5>>
 
 typedef ::testing::Types<params1<int, 10, 0, 10>,
                          params1<float, 10, 0, 10>,
-                         // params1<rocprim::half, 10, 0, 10>,
-                         // params1<rocprim::bfloat16, 10, 0, 10>,
+                         //params1<rocprim::half, 10, 0, 10>,
+                         params1<rocprim::bfloat16, 10, 0, 10>,
                          params1<int8_t, 10, 0, 10>,
                          params1<int, 128, 0, 256, int, int, custom_config1>,
                          params1<unsigned int, 12345, 10, 12355, short>,
@@ -210,8 +210,8 @@ TYPED_TEST(RocprimDeviceHistogramEven, Even)
     using counter_type = typename TestFixture::params::counter_type;
     using level_type = typename TestFixture::params::level_type;
     constexpr unsigned int bins = TestFixture::params::bins;
-    constexpr level_type lower_level = TestFixture::params::lower_level;
-    constexpr level_type upper_level = TestFixture::params::upper_level;
+    const level_type       lower_level = static_cast<level_type>(TestFixture::params::lower_level);
+    const level_type       upper_level = static_cast<level_type>(TestFixture::params::upper_level);
 
     hipStream_t stream = 0;
     if (TestFixture::params::use_graphs)
@@ -259,7 +259,7 @@ TYPED_TEST(RocprimDeviceHistogramEven, Even)
 
             // Calculate expected results on host
             std::vector<counter_type> histogram_expected(bins, 0);
-            const level_type scale = (upper_level - lower_level) / bins;
+            const level_type scale = static_cast<level_type>((upper_level - lower_level) / bins);
             for(size_t row = 0; row < rows; row++)
             {
                 for(size_t column = 0; column < columns; column++)

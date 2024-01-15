@@ -98,7 +98,7 @@ typedef ::testing::Types<
     params<int, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
     //params<rocprim::half, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
     params<int, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
-    //params<rocprim::bfloat16, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
+    params<rocprim::bfloat16, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
     params<int, unsigned int, rocprim::maximum<unsigned int>, 20, 100>,
     params<float, long long, rocprim::maximum<unsigned long long>, 100, 400, long long, custom_key_compare_op1<float>>,
     params<unsigned int, unsigned char, rocprim::plus<unsigned char>, 200, 600>,
@@ -137,12 +137,10 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
         typename std::conditional<
             test_utils::is_valid_for_int_distribution<key_inner_type>::value,
             std::uniform_int_distribution<key_inner_type>,
-            typename std::conditional<std::is_signed<key_inner_type>::value,
-                std::uniform_int_distribution<int>,
-                std::uniform_int_distribution<unsigned int>
-            >::type
-        >::type
-    >::type;
+            typename std::conditional<rocprim::is_signed<key_inner_type>::value,
+                                      std::uniform_int_distribution<int>,
+                                      std::uniform_int_distribution<unsigned int>>::type>::type>::
+        type;
 
     constexpr bool use_identity_iterator = TestFixture::params::use_identity_iterator;
     const bool debug_synchronous = false;
@@ -186,8 +184,8 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
             std::vector<value_type> values_input = test_utils::get_random_data<value_type>(size, 0, 100, seed_value);
 
             size_t offset = 0;
-            key_type prev_key = key_distribution_type(0, 100)(gen);
-            key_type current_key = prev_key + key_delta_dis(gen);
+            key_type prev_key    = static_cast<key_type>(key_distribution_type(0, 100)(gen));
+            key_type current_key = static_cast<key_type>(prev_key + key_delta_dis(gen));
             while(offset < size)
             {
                 const size_t key_count = key_count_dis(gen);
