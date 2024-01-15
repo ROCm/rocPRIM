@@ -17,7 +17,7 @@ Data type support
     *
       - Input/Output Types
       - Library Data Type
-      - AMD Supports
+      - Support
     *
       - int8
       - int8_t
@@ -60,6 +60,6 @@ Data type support
       - ✅
 
 The 🟧 means that the data type is mostly supported, but there are some API tests, that do not work.
-The block_histogram test fails with int8.
-The device_histogram and device_reduce_by_key doesn't work with rocprim::half and rocprim::bfloat16.
-The device_run_length_encode, warp_exchange and warp_load doesn't work with rocprim::half.
+* The ``block_histogram`` test fails with ``int8``.
+* The ``device_histogram`` and ``device_reduce_by_key`` doesn't work with ``rocprim::half`` and ``rocprim::bfloat16``.
+* The ``device_run_length_encode``, ``warp_exchange`` and ``warp_load`` doesn't work with ``rocprim::half``.
