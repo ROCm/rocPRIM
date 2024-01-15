@@ -18,6 +18,8 @@ Documentation for rocPRIM is available at
   * `rocprim::invoke_result_binary_op`
   * `rocprim::invoke_result_binary_op_t`
 * New `rocprim::batch_copy` function added. Similar to `rocprim::batch_memcpy`, but copies by element, not with memcpy.
+* Added more test cases, to better cover supported data types.
+* Updated some tests to work with supported data types.
 
 ### Fixes
 
