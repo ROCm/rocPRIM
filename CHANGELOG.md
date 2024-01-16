@@ -13,10 +13,11 @@ Documentation for rocPRIM is available at
     This is the same behaviour as before this change.
 * New overload for `device_adjacent_difference_inplace` that allows separate input and output iterators, but allows them to point to the same element.
 
-### Fixed
-- Fixed incorrect results of `warp_exchange::blocked_to_striped_shuffle` and `warp_exchange::striped_to_blocked_shuffle` when the block size is
+### Fixes
+
+* Fixed incorrect results of `warp_exchange::blocked_to_striped_shuffle` and `warp_exchange::striped_to_blocked_shuffle` when the block size is
   larger than the logical warp size. The test suite has been updated with such cases.
-- Fixed incorrect results returned when calling device `unique_by_key` with overlapping `values_input` and `values_output`.
+* Fixed incorrect results returned when calling device `unique_by_key` with overlapping `values_input` and `values_output`.
 
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
