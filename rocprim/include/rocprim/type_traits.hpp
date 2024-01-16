@@ -275,9 +275,15 @@ struct invoke_result_impl<decltype(void(INVOKE(std::declval<F>(), std::declval<A
 /// \tparam Args Input type(s) to the function ``F``.
 template<class F, class... Args>
 struct invoke_result : detail::invoke_result_impl<void, F, Args...>
-{};
+{
+#ifdef DOXYGEN_DOCUMENTATION_BUILD
+    /// \brief The return type of the Callable type F if invoked with the arguments Args.
+    /// \hideinitializer
+    using type = detail::invoke_result_impl<void, F, Args...>::type;
+#endif // DOXYGEN_DOCUMENTATION_BUILD
+};
 
-/// \brief Helper type. It is an alias for `typename invoke_result<F, Args...>::type`.
+/// \brief Helper type. It is an alias for ``invoke_result::type``.
 ///
 /// \tparam F Type of the function.
 /// \tparam Args Input type(s) to the function ``F``.
@@ -295,7 +301,7 @@ struct invoke_result_binary_op
     using type = typename invoke_result<F, T, T>::type;
 };
 
-/// \brief Helper type. It is an alias for ``typename invoke_result_binary_op<T, F>::type``.
+/// \brief Helper type. It is an alias for ``invoke_result_binary_op::type``.
 ///
 /// \tparam T Input type to the binary operator.
 /// \tparam F Type of the binary operator.
