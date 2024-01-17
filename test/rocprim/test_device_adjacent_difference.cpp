@@ -345,52 +345,38 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                 = test_utils::wrap_in_indirect_iterator<TestFixture::use_indirect_iterator>(
                     d_input);
 
-            // if api_variant is not in_place we should check the non aliased function call
-            if(aliasing != api_variant::in_place)
+            hipGraph_t     graph;
+            hipGraphExec_t graph_instance;
+            if(TestFixture::use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+
+            // Allocate temporary storage
+            std::size_t temp_storage_size;
+            void*       d_temp_storage = nullptr;
+            HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
+                                                           alias_tag,
+                                                           d_temp_storage,
+                                                           temp_storage_size,
+                                                           input_it,
+                                                           (output_type*){nullptr},
+                                                           size,
+                                                           rocprim::minus<>{},
+                                                           stream,
+                                                           debug_synchronous));
+
+            if(TestFixture::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+
+            ASSERT_GT(temp_storage_size, 0);
+
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
+
+            // We might call the API multiple times, with almost the same parameter
+            // (in-place and out-of-place)
+            // we should be able to use the same amount of temp storage for and get the same
+            // results (maybe with different types) for both.
+            auto run_and_verify = [&](const auto output_it, auto* d_output)
             {
-                // allocate memory for output
-                std::vector<output_type> output(input.size());
-                output_type*             d_output = nullptr;
-
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_output,
-                                                             output.size() * sizeof(output[0])));
-
-                // Calculate expected results on host
-                const auto expected
-                    = get_expected_result<output_type>(input, rocprim::minus<>{}, left_tag);
-
-                const auto output_it
-                    = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output);
-
-                hipGraph_t     graph;
-                hipGraphExec_t graph_instance;
-                if(TestFixture::use_graphs)
-                    graph = test_utils::createGraphHelper(stream);
-
-                // Allocate temporary storage
-                std::size_t temp_storage_size;
-                void*       d_temp_storage = nullptr;
-                HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
-                                                               alias_tag,
-                                                               d_temp_storage,
-                                                               temp_storage_size,
-                                                               input_it,
-                                                               output_it,
-                                                               size,
-                                                               rocprim::minus<>{},
-                                                               stream,
-                                                               debug_synchronous));
-
-                if(TestFixture::use_graphs)
-                    graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-
-                ASSERT_GT(temp_storage_size, 0);
-
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
-
-                if(TestFixture::use_graphs)
-                    test_utils::resetGraphHelper(graph, graph_instance, stream);
-
                 // Run
                 HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
                                                                alias_tag,
@@ -409,100 +395,62 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                     graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
                 }
 
+                // input_type for in-place, output_type for out of place
+                using current_output_type = std::remove_reference_t<decltype(*d_output)>;
+
+                // allocate memory for output
+                std::vector<current_output_type> output(size);
+
                 // Copy output to host
                 HIP_CHECK(hipMemcpy(output.data(),
-                                    static_cast<void*>(d_output),
+                                    d_output,
                                     output.size() * sizeof(output[0]),
                                     hipMemcpyDeviceToHost));
 
+                // Calculate expected results on host
+                const auto expected
+                    = get_expected_result<current_output_type>(input, rocprim::minus<>{}, left_tag);
+
                 // Check if output values are as expected
-                ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
+                test_utils::assert_near(
                     output,
                     expected,
-                    std::max(test_utils::precision<T>, test_utils::precision<output_type>)));
+                    std::max(test_utils::precision<T>, test_utils::precision<output_type>));
+            };
 
-                hipFree(d_output);
-                hipFree(d_temp_storage);
+            // if api_variant is not in_place we should check the non aliased function call
+            if(aliasing != api_variant::in_place)
+            {
+                output_type* d_output = nullptr;
+                HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, size * sizeof(*d_output)));
 
                 if(TestFixture::use_graphs)
-                {
-                    test_utils::cleanupGraphHelper(graph, graph_instance);
-                    HIP_CHECK(hipStreamDestroy(stream));
-                }
+                    test_utils::resetGraphHelper(graph, graph_instance, stream);
+
+                const auto output_it
+                    = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output);
+
+                ASSERT_NO_FATAL_FAILURE(run_and_verify(output_it, d_output));
+
+                hipFree(d_output);
             }
 
             // if api_variant is not no_alias we should check the inplace function call
             if(aliasing != api_variant::no_alias)
             {
-                // Calculate expected results on host
-                const auto expected = get_expected_result<T>(input, rocprim::minus<>{}, left_tag);
-
-                hipGraph_t     graph;
-                hipGraphExec_t graph_instance;
                 if(TestFixture::use_graphs)
-                {
-                    graph = test_utils::createGraphHelper(stream);
-                }
+                    test_utils::resetGraphHelper(graph, graph_instance, stream);
 
-                std::size_t temp_storage_size;
-                void*       d_temp_storage = nullptr;
-                HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
-                                                               alias_tag,
-                                                               d_temp_storage,
-                                                               temp_storage_size,
-                                                               input_it,
-                                                               input_it,
-                                                               size,
-                                                               rocprim::minus<>{},
-                                                               stream,
-                                                               debug_synchronous));
-                if(TestFixture::use_graphs)
-                {
-                    graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-                }
-
-                ASSERT_GT(temp_storage_size, 0);
-
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
-
-                HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
-                                                               alias_tag,
-                                                               d_temp_storage,
-                                                               temp_storage_size,
-                                                               input_it,
-                                                               input_it,
-                                                               size,
-                                                               rocprim::minus<>{},
-                                                               stream,
-                                                               debug_synchronous));
-                HIP_CHECK(hipGetLastError());
-
-                if(TestFixture::use_graphs)
-                {
-                    graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-                }
-
-                // Copy output to host
-                HIP_CHECK(hipMemcpy(input.data(),
-                                    static_cast<void*>(d_input),
-                                    input.size() * sizeof(input[0]),
-                                    hipMemcpyDeviceToHost));
-
-                ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
-                    input,
-                    expected,
-                    std::max(test_utils::precision<T>, test_utils::precision<T>)));
-
-                hipFree(d_temp_storage);
-
-                if(TestFixture::use_graphs)
-                {
-                    test_utils::cleanupGraphHelper(graph, graph_instance);
-                    HIP_CHECK(hipStreamDestroy(stream));
-                }
+                ASSERT_NO_FATAL_FAILURE(run_and_verify(input_it, d_input));
             }
 
-            // free input memory
+            if(TestFixture::use_graphs)
+            {
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+                HIP_CHECK(hipStreamDestroy(stream));
+            }
+
+            hipFree(d_temp_storage);
             hipFree(d_input);
         }
     }
