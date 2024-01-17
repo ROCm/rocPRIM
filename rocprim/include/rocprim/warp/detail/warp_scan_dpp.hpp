@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -244,8 +244,8 @@ public:
     }
 
 protected:
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void to_exclusive(T inclusive_input, T& exclusive_output, storage_type& storage)
+    [[deprecated]] ROCPRIM_DEVICE ROCPRIM_INLINE void
+        to_exclusive(T inclusive_input, T& exclusive_output, storage_type& storage)
     {
         (void) storage;
         return to_exclusive(inclusive_input, exclusive_output);
