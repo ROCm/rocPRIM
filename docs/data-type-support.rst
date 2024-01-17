@@ -21,7 +21,7 @@ Data type support
     *
       - int8
       - int8_t
-      - 🟧
+      - ⚠️
     *
       - float8
       - Not Supported
@@ -37,11 +37,11 @@ Data type support
     *
       - float16
       - rocprim::half
-      - 🟧
+      - ⚠️
     *
       - bfloat16      
       - rocprim::bfloat16
-      - 🟧
+      - ⚠️
     *
       - int32
       - int
@@ -59,7 +59,7 @@ Data type support
       - double
       - ✅
 
-The 🟧 means that the data type is mostly supported, but there are some API tests, that do not work.
-* The ``block_histogram`` test fails with ``int8``.
-* The ``device_histogram`` and ``device_reduce_by_key`` doesn't work with ``rocprim::half`` and ``rocprim::bfloat16``.
-* The ``device_run_length_encode``, ``warp_exchange`` and ``warp_load`` doesn't work with ``rocprim::half``.
+* The ⚠️ means that the data type is mostly supported, but there are some API tests, that do not work.
+   * The ``block_histogram`` test fails with ``int8``.
+   * The ``device_histogram`` and ``device_reduce_by_key`` doesn't work with ``rocprim::half`` and ``rocprim::bfloat16``.
+   * The ``device_run_length_encode``, ``warp_exchange`` and ``warp_load`` doesn't work with ``rocprim::half``.
