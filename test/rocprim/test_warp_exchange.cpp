@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <type_traits>
 
 #include <stdint.h>
 
@@ -155,14 +156,11 @@ using WarpExchangeTestParams
                        Params<int16_t, 4U, 32U, StripedToBlockedShuffleOp>,
                        Params<int64_t, 4U, 64U, StripedToBlockedShuffleOp>>;
 
-template<class T, unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class Op>
-__global__ void warp_exchange_kernel(T* d_input, T* d_output)
+template<unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class Op, class T>
+__device__ auto warp_exchange_test(T* d_input, T* d_output)
+    -> std::enable_if_t<test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
 {
-    using warp_exchange_type = ::rocprim::warp_exchange<
-        T,
-        ItemsPerThread,
-        test_utils::DeviceSelectWarpSize<LogicalWarpSize>::value
-    >;
+    using warp_exchange_type         = ::rocprim::warp_exchange<T, ItemsPerThread, LogicalWarpSize>;
     constexpr unsigned int num_warps = ::rocprim::device_warp_size() / LogicalWarpSize;
     ROCPRIM_SHARED_MEMORY typename warp_exchange_type::storage_type storage[num_warps];
 
@@ -179,6 +177,17 @@ __global__ void warp_exchange_kernel(T* d_input, T* d_output)
     {
         d_output[threadIdx.x * ItemsPerThread + i] = thread_data[i];
     }
+}
+
+template<unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class Op, class T>
+__device__ auto warp_exchange_test(T* /*d_input*/, T* /*d_output*/)
+    -> std::enable_if_t<!test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
+{}
+
+template<unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class Op, class T>
+__global__ void warp_exchange_kernel(T* d_input, T* d_output)
+{
+    warp_exchange_test<ItemsPerThread, LogicalWarpSize, Op>(d_input, d_output);
 }
 
 template<class T>
@@ -232,7 +241,7 @@ TYPED_TEST(WarpExchangeTest, WarpExchange)
     HIP_CHECK(hipMalloc(&d_output, items_count * sizeof(T)));
     HIP_CHECK(hipMemset(d_output, 0, items_count * sizeof(T)));
 
-    warp_exchange_kernel<T, items_per_thread, warp_size, exchange_op>
+    warp_exchange_kernel<items_per_thread, warp_size, exchange_op>
         <<<dim3(1), dim3(block_size), 0, 0>>>(d_input, d_output);
     HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipDeviceSynchronize());
@@ -266,14 +275,11 @@ public:
     using params = Params;
 };
 
-template<class T, class OffsetT, unsigned int ItemsPerThread, unsigned int LogicalWarpSize>
-__global__ void warp_exchange_scatter_kernel(T* d_input, T* d_output, OffsetT* d_ranks)
+template<unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class T, class OffsetT>
+__device__ auto warp_exchange_scatter_test(T* d_input, T* d_output, OffsetT* d_ranks)
+    -> std::enable_if_t<test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
 {
-    using warp_exchange_type = ::rocprim::warp_exchange<
-        T,
-        ItemsPerThread,
-        test_utils::DeviceSelectWarpSize<LogicalWarpSize>::value
-        >;
+    using warp_exchange_type = ::rocprim::warp_exchange<T, ItemsPerThread, LogicalWarpSize>;
 
     constexpr unsigned int num_warps = ::rocprim::device_warp_size() / LogicalWarpSize;
     ROCPRIM_SHARED_MEMORY typename warp_exchange_type::storage_type storage[num_warps];
@@ -296,6 +302,17 @@ __global__ void warp_exchange_scatter_kernel(T* d_input, T* d_output, OffsetT* d
     {
         d_output[threadIdx.x * ItemsPerThread + i] = thread_data[i];
     }
+}
+
+template<unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class T, class OffsetT>
+__device__ auto warp_exchange_scatter_test(T* /*d_input*/, T* /*d_output*/, OffsetT* /*d_ranks*/)
+    -> std::enable_if_t<!test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
+{}
+
+template<unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class T, class OffsetT>
+__global__ void warp_exchange_scatter_kernel(T* d_input, T* d_output, OffsetT* d_ranks)
+{
+    warp_exchange_scatter_test<ItemsPerThread, LogicalWarpSize>(d_input, d_output, d_ranks);
 }
 
 TYPED_TEST_SUITE(WarpExchangeScatterTest, WarpExchangeScatterTestParams);
@@ -339,7 +356,7 @@ TYPED_TEST(WarpExchangeScatterTest, WarpExchangeScatter)
     HIP_CHECK(hipMalloc(&d_ranks, items_count * sizeof(OffsetT)));
     HIP_CHECK(hipMemcpy(d_ranks, ranks.data(), items_count * sizeof(OffsetT), hipMemcpyHostToDevice));
 
-    warp_exchange_scatter_kernel<T, OffsetT, items_per_thread, warp_size>
+    warp_exchange_scatter_kernel<items_per_thread, warp_size>
         <<<dim3(1), dim3(block_size), 0, 0>>>(d_input, d_output, d_ranks);
     HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipDeviceSynchronize());

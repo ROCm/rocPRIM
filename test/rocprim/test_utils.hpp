@@ -445,12 +445,8 @@ void iota(ForwardIt first, ForwardIt last, T value)
     }
 
 template<unsigned int LogicalWarpSize>
-struct DeviceSelectWarpSize
-{
-    static constexpr unsigned value = ::rocprim::device_warp_size() >= LogicalWarpSize
-        ? LogicalWarpSize
-        : ::rocprim::device_warp_size();
-};
+__device__ constexpr bool device_test_enabled_for_warp_size_v
+    = ::rocprim::device_warp_size() >= LogicalWarpSize;
 
 } // end test_utils namespace
 
