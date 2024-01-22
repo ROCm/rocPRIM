@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam InputBufferItType type of iterator to source pointers.
 /// \tparam OutputBufferItType type of iterator to desetination pointers.
 /// \tparam BufferSizeItType type of iterator to sizes.
+/// \tparam IsMemCpy a flag to set whether the copy is a memcopy, or a copy by element.
 ///
 /// \param [in] temporary_storage pointer to device-accessible temporary storage.
 /// When a null pointer is passed, the required allocation size in bytes is written to
@@ -120,7 +121,8 @@ BEGIN_ROCPRIM_NAMESPACE
 template<class Config_ = default_config,
          class InputBufferItType,
          class OutputBufferItType,
-         class BufferSizeItType>
+         class BufferSizeItType,
+         bool IsMemCpy = false>
 ROCPRIM_INLINE static hipError_t batch_memcpy(void*              temporary_storage,
                                               size_t&            storage_size,
                                               InputBufferItType  sources,
@@ -140,8 +142,11 @@ ROCPRIM_INLINE static hipError_t batch_memcpy(void*              temporary_stora
 
     hipError_t error = hipSuccess;
 
-    using batch_memcpy_impl_type = detail::
-        batch_memcpy_impl<Config, InputBufferItType, OutputBufferItType, BufferSizeItType>;
+    using batch_memcpy_impl_type = detail::batch_memcpy_impl<Config,
+                                                             IsMemCpy,
+                                                             InputBufferItType,
+                                                             OutputBufferItType,
+                                                             BufferSizeItType>;
 
     static constexpr uint32_t non_blev_block_size         = Config::non_blev_block_size;
     static constexpr uint32_t non_blev_buffers_per_thread = Config::non_blev_buffers_per_thread;

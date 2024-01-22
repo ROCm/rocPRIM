@@ -1,6 +1,6 @@
 /******************************************************************************
  * Copyright (c) 2011-2022, NVIDIA CORPORATION. All rights reserved.
- * Modifications Copyright (c) 2023, Advanced Micro Devices, Inc.  All rights reserved.
+ * Modifications Copyright (c) 2023-2024, Advanced Micro Devices, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -104,20 +104,49 @@ public:
     }
 };
 
-template<class Offset>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static uint8_t read_byte(void* buffer_src, Offset offset)
+template<bool IsMemCpy,
+         class Alias,
+         class InputIt,
+         class Offset,
+         typename std::enable_if<IsMemCpy, int>::type = 0>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static Alias read_item(InputIt buffer_src, Offset offset)
 {
     return rocprim::thread_load<rocprim::cache_load_modifier::load_cs>(
-        reinterpret_cast<uint8_t*>(buffer_src) + offset);
+        reinterpret_cast<Alias*>(buffer_src) + offset);
 }
 
-template<class Offset>
+template<bool IsMemCpy,
+         class Alias,
+         class InputIt,
+         class Offset,
+         typename std::enable_if<!IsMemCpy, int>::type = 0>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static Alias read_item(InputIt buffer_src, Offset offset)
+{
+    return rocprim::thread_load<rocprim::cache_load_modifier::load_cs>(buffer_src + offset);
+}
+
+template<bool IsMemCpy,
+         class Alias,
+         class InputIt,
+         class Offset,
+         typename std::enable_if<IsMemCpy, int>::type = 0>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static void
-    write_byte(void* buffer_dst, Offset offset, uint8_t value)
+    write_item(InputIt buffer_dst, Offset offset, Alias value)
 {
     rocprim::thread_store<rocprim::cache_store_modifier::store_cs>(
-        reinterpret_cast<uint8_t*>(buffer_dst) + offset,
+        reinterpret_cast<Alias*>(buffer_dst) + offset,
         value);
+}
+
+template<bool IsMemCpy,
+         class Alias,
+         class InputIt,
+         class Offset,
+         typename std::enable_if<!IsMemCpy, int>::type = 0>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static void
+    write_item(InputIt buffer_dst, Offset offset, Alias value)
+{
+    rocprim::thread_store<rocprim::cache_store_modifier::store_cs>(buffer_dst + offset, value);
 }
 
 template<class VectorType>
@@ -267,9 +296,42 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static void vectorized_copy_bytes(const void
         in_ptr += warp_size;
     }
 }
+
+template<bool IsMemCpy,
+         class InputIt,
+         class OutputIt,
+         class Offset,
+         typename std::enable_if<IsMemCpy, int>::type = 0>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static void
+    copy_items(InputIt input_buffer, OutputIt output_buffer, Offset num_items, Offset offset = 0)
+{
+    vectorized_copy_bytes<Offset>(input_buffer, output_buffer, num_items, offset);
+}
+
+template<bool IsMemCpy,
+         class InputIt,
+         class OutputIt,
+         class Offset,
+         typename std::enable_if<!IsMemCpy, int>::type = 0>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static void
+    copy_items(InputIt input_buffer, OutputIt output_buffer, Offset num_items, Offset offset = 0)
+{
+    output_buffer += offset;
+    input_buffer += offset;
+    for(Offset i = threadIdx.x % 32 /*LOGICAL_WARP_SIZE*/; i < num_items;
+        i += 32 /*LOGICAL_WARP_SIZE*/)
+    {
+        *(output_buffer + i) = *(input_buffer + i);
+    }
+}
+
 } // namespace batch_memcpy
 
-template<class Config, class InputBufferItType, class OutputBufferItType, class BufferSizeItType>
+template<class Config,
+         bool IsMemCpy,
+         class InputBufferItType,
+         class OutputBufferItType,
+         class BufferSizeItType>
 struct batch_memcpy_impl
 {
     using input_buffer_type  = typename std::iterator_traits<InputBufferItType>::value_type;
@@ -277,6 +339,11 @@ struct batch_memcpy_impl
     using buffer_size_type   = typename std::iterator_traits<BufferSizeItType>::value_type;
 
     using input_type = typename std::iterator_traits<input_buffer_type>::value_type;
+
+    using Alias = typename std::conditional<IsMemCpy,
+                                            std::iterator_traits<char*>,
+                                            std::iterator_traits<typename std::iterator_traits<
+                                                InputBufferItType>::value_type>>::type::value_type;
 
     // top level policy
     static constexpr uint32_t block_size            = Config::non_blev_block_size;
@@ -549,9 +616,9 @@ private:
             {
                 const auto buffer_id = buffers_by_size_class[buffer_offset].buffer_id;
 
-                batch_memcpy::vectorized_copy_bytes(tile_buffers.srcs[buffer_id],
-                                                    tile_buffers.dsts[buffer_id],
-                                                    tile_buffers.sizes[buffer_id]);
+                batch_memcpy::copy_items<IsMemCpy>(tile_buffers.srcs[buffer_id],
+                                                   tile_buffers.dsts[buffer_id],
+                                                   tile_buffers.sizes[buffer_id]);
             }
         }
 
@@ -638,12 +705,12 @@ private:
 
                 if(is_full_window)
                 {
-                    uint8_t src_byte[tlev_bytes_per_thread];
+                    Alias src_byte[tlev_bytes_per_thread];
 
                     ROCPRIM_UNROLL
                     for(uint32_t i = 0; i < tlev_bytes_per_thread; ++i)
                     {
-                        src_byte[i] = batch_memcpy::read_byte(
+                        src_byte[i] = batch_memcpy::read_item<IsMemCpy, Alias>(
                             tile_buffers.srcs[zipped_byte_assignment[i].tile_buffer_id],
                             zipped_byte_assignment[i].buffer_byte_offset);
                     }
@@ -651,7 +718,7 @@ private:
                     ROCPRIM_UNROLL
                     for(uint32_t i = 0; i < tlev_bytes_per_thread; ++i)
                     {
-                        batch_memcpy::write_byte(
+                        batch_memcpy::write_item<IsMemCpy, Alias>(
                             tile_buffers.dsts[zipped_byte_assignment[i].tile_buffer_id],
                             zipped_byte_assignment[i].buffer_byte_offset,
                             src_byte[i]);
@@ -669,12 +736,12 @@ private:
                             const auto buffer_id     = zipped_byte_assignment[i].tile_buffer_id;
                             const auto buffer_offset = zipped_byte_assignment[i].buffer_byte_offset;
 
-                            const auto src_byte
-                                = batch_memcpy::read_byte(tile_buffers.srcs[buffer_id],
-                                                          buffer_offset);
-                            batch_memcpy::write_byte(tile_buffers.dsts[buffer_id],
-                                                     buffer_offset,
-                                                     src_byte);
+                            const auto src_byte = batch_memcpy::read_item<IsMemCpy, Alias>(
+                                tile_buffers.srcs[buffer_id],
+                                buffer_offset);
+                            batch_memcpy::write_item<IsMemCpy, Alias>(tile_buffers.dsts[buffer_id],
+                                                                      buffer_offset,
+                                                                      src_byte);
                         }
                         absolute_tlev_byte_offset += block_size;
                     }
@@ -916,9 +983,12 @@ public:
                 {
                     if(thread_offset < blev_buffers.sizes[buffer_id])
                     {
-                        uint8_t item
-                            = batch_memcpy::read_byte(blev_buffers.srcs[buffer_id], thread_offset);
-                        batch_memcpy::write_byte(blev_buffers.dsts[buffer_id], thread_offset, item);
+                        Alias item
+                            = batch_memcpy::read_item<IsMemCpy, Alias>(blev_buffers.srcs[buffer_id],
+                                                                       thread_offset);
+                        batch_memcpy::write_item<IsMemCpy, Alias>(blev_buffers.dsts[buffer_id],
+                                                                  thread_offset,
+                                                                  item);
                     }
                 }
                 tile_id += flat_grid_size;
@@ -930,10 +1000,10 @@ public:
                                                              - tile_offset_within_buffer),
                                static_cast<buffer_size_type>(blev_tile_size));
 
-            batch_memcpy::vectorized_copy_bytes(blev_buffers.srcs[buffer_id],
-                                                blev_buffers.dsts[buffer_id],
-                                                items_to_copy,
-                                                tile_offset_within_buffer);
+            batch_memcpy::copy_items<IsMemCpy>(blev_buffers.srcs[buffer_id],
+                                               blev_buffers.dsts[buffer_id],
+                                               items_to_copy,
+                                               tile_offset_within_buffer);
 
             tile_id += flat_grid_size;
         }
