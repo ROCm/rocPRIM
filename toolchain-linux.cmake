@@ -12,8 +12,8 @@ endif()
 
 # set(CMAKE_CXX_COMPILER "hipcc")
 # set(CMAKE_C_COMPILER "hipcc")
-set(CMAKE_CXX_COMPILER "${rocm_bin}/hipcc")
-set(CMAKE_C_COMPILER "${rocm_bin}/hipcc")
+set(CMAKE_CXX_COMPILER "${rocm_bin}/amdclang++")
+set(CMAKE_C_COMPILER "${rocm_bin}/amdclang")
 
 #set(CMAKE_CXX_LINKER "hipcc" )
 
