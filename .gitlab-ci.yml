@@ -29,6 +29,7 @@ include:
       - /deps-docs.yaml
       - /deps-rocm.yaml
       - /deps-vcpkg.yaml
+      - /deps-windows.yaml
       - /gpus-rocm.yaml
       - /rules.yaml
 
@@ -261,6 +262,48 @@ build:benchmark:
       - $BUILD_DIR/deps/googlebenchmark/
     expire_in: 2 weeks
 
+build:windows:
+  stage: build
+  needs: []
+  extends:
+    - .rules:build
+    - .gpus:rocm-windows
+    - .deps:rocm-windows
+    - .deps:visual-studio-devshell
+  parallel:
+    matrix:
+      - BUILD_TYPE:
+        # Disabled due to extensive link times. 
+        # This is tracked in issue 679
+        #- Debug
+        - Release
+        BUILD_TARGET:
+        - BENCHMARK
+        - TEST
+  script:
+    - mkdir -p $CI_PROJECT_DIR/build
+    - cmake -G Ninja 
+      -S $CI_PROJECT_DIR 
+      -B $CI_PROJECT_DIR/build 
+      -D BUILD_$BUILD_TARGET=ON 
+      -D GPU_TARGETS=$GPU_TARGET
+      -D CMAKE_CXX_COMPILER:PATH="${env:HIP_PATH}\bin\clang++.exe" 
+      -D CMAKE_C_COMPILER:PATH="${env:HIP_PATH}\bin\clang.exe" 
+      -D CMAKE_PREFIX_PATH:PATH="${env:HIP_PATH}" 
+      -D CMAKE_BUILD_TYPE="$BUILD_TYPE" 
+    - cmake --build "$CI_PROJECT_DIR/build" 
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/build/test/test_*
+      - $CI_PROJECT_DIR/build/test/rocprim/test_*
+      - $CI_PROJECT_DIR/build/test/CTestTestfile.cmake
+      - $CI_PROJECT_DIR/build/test/rocprim/CTestTestfile.cmake
+      - $CI_PROJECT_DIR/build/gtest/
+      - $CI_PROJECT_DIR/build/CMakeCache.txt
+      - $CI_PROJECT_DIR/build/.ninja_log
+      - $CI_PROJECT_DIR/build/CTestTestfile.cmake
+    expire_in: 2 weeks
+
 autotune:build:
   stage: autotune
   needs: []
@@ -333,6 +376,39 @@ test:
       --tests-regex "hip|$GPU_TARGET"
       --resource-spec-file ./resources.json
       --parallel $PARALLEL_JOBS
+
+.test-windows-base:
+  stage: test
+  extends:
+    - .deps:rocm-windows
+    - .gpus:rocm-gpus-windows
+    - .deps:visual-studio-devshell
+    - .rules:test
+  script:
+    - cd $CI_PROJECT_DIR/build
+    - ctest --output-on-failure
+
+# Disabled due to extensive link times. 
+# This is tracked in issue 679
+# test-windows-debug:
+#   extends:
+#     - .test-windows-base
+#   needs:
+#     - job: build:windows
+#       parallel:
+#         matrix:
+#           - BUILD_TYPE: Debug
+#             BUILD_TARGET: TEST
+
+test-windows-release:
+  extends:
+    - .test-windows-base
+  needs:
+    - job: build:windows
+      parallel:
+        matrix:
+          - BUILD_TYPE: Release
+            BUILD_TARGET: TEST
 
 .test-package:
   script:
