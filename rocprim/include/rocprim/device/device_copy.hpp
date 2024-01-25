@@ -27,18 +27,17 @@
 #include "config_types.hpp"
 
 #include "detail/device_batch_memcpy.hpp"
-#include "device_memcpy_config.hpp"
+#include "device_copy_config.hpp"
 #include "rocprim/device/detail/device_config_helper.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
-/// \brief Copy `sizes[i]` bytes from `sources[i]` to `destinations[i]` for all `i` in the range [0, `num_copies`].
+/// \brief Copy `sizes[i]` elements from `sources[i]` to `destinations[i]` for all `i` in the range [0, `num_copies`].
 ///
-/// \tparam Config [optional] configuration of  the primitive. It has to be \p batch_copy_config .
+/// \tparam Config [optional] configuration of  the primitive. It has to be \p batch_mcopy_config .
 /// \tparam InputBufferItType type of iterator to source pointers.
 /// \tparam OutputBufferItType type of iterator to desetination pointers.
 /// \tparam BufferSizeItType type of iterator to sizes.
-/// \tparam IsMemCpy a flag to set whether the copy is a memcopy, or a copy by element.
 ///
 /// \param [in] temporary_storage pointer to device-accessible temporary storage.
 /// When a null pointer is passed, the required allocation size in bytes is written to
@@ -52,14 +51,17 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. The default value is `false`.
 ///
-/// Performs multiple device to device memory copies as a single batched operation.
+/// Performs multiple device to device copies as a single batched operation.
 /// Roughly equivalent to
 /// \code{.cpp}
 /// for (auto i = 0; i < num_copies; ++i) {
-///     char* src = sources[i];
-///     char* dst = destinations[i];
+///     auto* src = sources[i];
+///     auto* dst = destinations[i];
 ///     auto size = sizes[i];
-///     hipMemcpyAsync(dst, src, size, hipMemcpyDeviceToDevice, stream);
+///     for (auto j = 0; j < size; ++j)
+///     {
+///         dst[j] = src[j];
+///     }
 /// }
 /// \endcode
 /// except executed on the device in parallel.
@@ -88,7 +90,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// int** destinations;  // Pointer to destination pointers.
 ///                      // e.g, [&b[5], &b[2] &b[0]]
 /// int*  sizes;         // Size of buffers to copy.
-///                      // e.g., [3 * sizeof(int), 2 * sizeof(int), 2 * sizeof(int)]
+///                      // e.g., [3, 2, 2]
 ///
 /// // Calculate the required temporary storage.
 /// size_t temporary_storage_size_bytes;

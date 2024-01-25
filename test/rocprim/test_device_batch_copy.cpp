@@ -47,7 +47,7 @@ template<class ValueType,
          bool     Shuffled   = false,
          uint32_t NumBuffers = 1024,
          uint32_t MaxSize    = 4 * 1024>
-struct DeviceBatchMemcpyParams
+struct DeviceBatchCopyParams
 {
     using value_type                      = ValueType;
     using size_type                       = SizeType;
@@ -57,7 +57,7 @@ struct DeviceBatchMemcpyParams
 };
 
 template<class Params>
-struct DeviceBatchMemcpyTests : public ::testing::Test
+struct DeviceBatchCopyTests : public ::testing::Test
 {
     using value_type                      = typename Params::value_type;
     using size_type                       = typename Params::size_type;
@@ -69,40 +69,40 @@ struct DeviceBatchMemcpyTests : public ::testing::Test
 typedef ::testing::Types<
     // Unshuffled inputs and outputs
     // Variable value_type
-    DeviceBatchMemcpyParams<uint8_t, uint32_t, false>,
-    DeviceBatchMemcpyParams<uint32_t, uint32_t, false>,
-    DeviceBatchMemcpyParams<uint64_t, uint32_t, false>,
+    DeviceBatchCopyParams<uint8_t, uint32_t, false>,
+    DeviceBatchCopyParams<uint32_t, uint32_t, false>,
+    DeviceBatchCopyParams<uint64_t, uint32_t, false>,
     // size_type: uint16_t
-    DeviceBatchMemcpyParams<uint16_t, uint16_t, false, 1024, 1024>,
+    DeviceBatchCopyParams<uint16_t, uint16_t, false, 1024, 1024>,
     // size_type: int64_t
-    DeviceBatchMemcpyParams<uint8_t, int64_t, false, 1024, 64 * 1024>,
-    DeviceBatchMemcpyParams<uint8_t, int64_t, false, 1024, 128 * 1024>,
+    DeviceBatchCopyParams<uint8_t, int64_t, false, 1024, 64 * 1024>,
+    DeviceBatchCopyParams<uint8_t, int64_t, false, 1024, 128 * 1024>,
 
     // weird amount of buffers
-    DeviceBatchMemcpyParams<uint8_t, uint32_t, false, 3 * 1023>,
-    DeviceBatchMemcpyParams<uint8_t, uint32_t, false, 3 * 1025>,
-    DeviceBatchMemcpyParams<uint8_t, uint32_t, false, 1024 * 1024, 256>,
+    DeviceBatchCopyParams<uint8_t, uint32_t, false, 3 * 1023>,
+    DeviceBatchCopyParams<uint8_t, uint32_t, false, 3 * 1025>,
+    DeviceBatchCopyParams<uint8_t, uint32_t, false, 1024 * 1024, 256>,
 
     // Shuffled inputs and outputs
     // Variable value_type
-    DeviceBatchMemcpyParams<uint8_t, uint32_t, true>,
-    DeviceBatchMemcpyParams<uint32_t, uint32_t, true>,
-    DeviceBatchMemcpyParams<uint64_t, uint32_t, true>,
+    DeviceBatchCopyParams<uint8_t, uint32_t, true>,
+    DeviceBatchCopyParams<uint32_t, uint32_t, true>,
+    DeviceBatchCopyParams<uint64_t, uint32_t, true>,
     // size_type: uint16_t
-    DeviceBatchMemcpyParams<uint8_t, uint16_t, true, 1024, 1024>,
+    DeviceBatchCopyParams<uint8_t, uint16_t, true, 1024, 1024>,
     // size_type: int64_t
-    DeviceBatchMemcpyParams<uint8_t, int64_t, true, 1024, 64 * 1024>,
-    DeviceBatchMemcpyParams<uint8_t, int64_t, true, 1024, 128 * 1024>>
-    DeviceBatchMemcpyTestsParams;
+    DeviceBatchCopyParams<uint8_t, int64_t, true, 1024, 64 * 1024>,
+    DeviceBatchCopyParams<uint8_t, int64_t, true, 1024, 128 * 1024>>
+    DeviceBatchCopyTestsParams;
 
-TYPED_TEST_SUITE(DeviceBatchMemcpyTests, DeviceBatchMemcpyTestsParams);
+TYPED_TEST_SUITE(DeviceBatchCopyTests, DeviceBatchCopyTestsParams);
 
 // Used for generating offsets. We generate a permutation map and then derive
 // offsets via a sum scan over the sizes in the order of the permutation. This
-// allows us to keep the order of buffers we pass to batch_memcpy, but still
+// allows us to keep the order of buffers we pass to batch_copy, but still
 // have source and destinations mappings not be the identity function:
 //
-//  batch_memcpy(
+//  batch_copy(
 //    [&a0 , &b0 , &c0 , &d0 ], // from (note the order is still just a, b, c, d!)
 //    [&a0', &b0', &c0', &d0'], // to   (order is the same as above too!)
 //    [3   , 2   , 1   , 2   ]) // size
@@ -112,7 +112,7 @@ TYPED_TEST_SUITE(DeviceBatchMemcpyTests, DeviceBatchMemcpyTestsParams);
 // └───┴───┴───┴───┴───┴───┴───┴───┘ note that the order of buffers is shuffled!
 //  ───┬─── ─────┬───── ───┬─── ───
 //     └─────────┼─────────┼───┐
-//           ┌───┘     ┌───┘   │ what batch_memcpy does
+//           ┌───┘     ┌───┘   │ what batch_copy does
 //           ▼         ▼       ▼
 //  ─── ─────────── ─────── ───────
 // ┌───┬───┬───┬───┬───┬───┬───┬───┐
@@ -140,7 +140,7 @@ std::vector<T> shuffled_exclusive_scan(const std::vector<S>& input, RandomGenera
     return result;
 }
 
-TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
+TYPED_TEST(DeviceBatchCopyTests, SizeAndTypeVariation)
 {
     using value_type         = typename TestFixture::value_type;
     using buffer_size_type   = typename TestFixture::size_type;
@@ -151,8 +151,8 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
     constexpr int32_t max_size    = TestFixture::max_size;
     constexpr bool    shuffled    = TestFixture::shuffled;
 
-    constexpr int32_t wlev_min_size = rocprim::batch_memcpy_config<>::wlev_size_threshold;
-    constexpr int32_t blev_min_size = rocprim::batch_memcpy_config<>::blev_size_threshold;
+    constexpr int32_t wlev_min_size = rocprim::batch_copy_config<>::wlev_size_threshold;
+    constexpr int32_t blev_min_size = rocprim::batch_copy_config<>::blev_size_threshold;
 
     constexpr int32_t wlev_min_elems
         = rocprim::detail::ceiling_div(wlev_min_size, sizeof(value_type));
