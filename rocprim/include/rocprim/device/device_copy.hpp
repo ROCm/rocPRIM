@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef ROCPRIM_DEVICE_DEVICE_MEMCPY_HPP_
-#define ROCPRIM_DEVICE_DEVICE_MEMCPY_HPP_
+#ifndef ROCPRIM_DEVICE_DEVICE_COPY_HPP_
+#define ROCPRIM_DEVICE_DEVICE_COPY_HPP_
 
 #include "../config.hpp"
 #include "../functional.hpp"
@@ -34,7 +34,7 @@ BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Copy `sizes[i]` bytes from `sources[i]` to `destinations[i]` for all `i` in the range [0, `num_copies`].
 ///
-/// \tparam Config [optional] configuration of  the primitive. It has to be \p batch_memcpy_config .
+/// \tparam Config [optional] configuration of  the primitive. It has to be \p batch_copy_config .
 /// \tparam InputBufferItType type of iterator to source pointers.
 /// \tparam OutputBufferItType type of iterator to desetination pointers.
 /// \tparam BufferSizeItType type of iterator to sizes.
@@ -93,7 +93,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// // Calculate the required temporary storage.
 /// size_t temporary_storage_size_bytes;
 /// void* temporary_storage_ptr = nullptr;
-/// rocprim::batch_memcpy(
+/// rocprim::batch_copy(
 ///     temporary_storage_ptr,
 ///     temporary_storage_size_bytes,
 ///     sources,
@@ -105,7 +105,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// hipMalloc(&temporary_storage_ptr, temporary_storage_size_bytes);
 ///
 /// // Copy buffers.
-/// rocprim::batch_memcpy(
+/// rocprim::batch_copy(
 ///     temporary_storage_ptr,
 ///     temporary_storage_size_bytes,
 ///     sources,
@@ -122,17 +122,17 @@ template<class Config_ = default_config,
          class InputBufferItType,
          class OutputBufferItType,
          class BufferSizeItType>
-ROCPRIM_INLINE static hipError_t batch_memcpy(void*              temporary_storage,
-                                              size_t&            storage_size,
-                                              InputBufferItType  sources,
-                                              OutputBufferItType destinations,
-                                              BufferSizeItType   sizes,
-                                              uint32_t           num_copies,
-                                              hipStream_t        stream = hipStreamDefault,
-                                              bool               debug_synchronous = false)
+ROCPRIM_INLINE static hipError_t batch_copy(void*              temporary_storage,
+                                            size_t&            storage_size,
+                                            InputBufferItType  sources,
+                                            OutputBufferItType destinations,
+                                            BufferSizeItType   sizes,
+                                            uint32_t           num_copies,
+                                            hipStream_t        stream            = hipStreamDefault,
+                                            bool               debug_synchronous = false)
 {
     return detail::
-        batch_memcpy_func<Config_, InputBufferItType, OutputBufferItType, BufferSizeItType, true>(
+        batch_memcpy_func<Config_, InputBufferItType, OutputBufferItType, BufferSizeItType, false>(
             temporary_storage,
             storage_size,
             sources,

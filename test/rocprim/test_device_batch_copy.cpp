@@ -27,7 +27,7 @@
 #include "test_utils_types.hpp"
 
 #include "rocprim/detail/various.hpp"
-#include "rocprim/device/device_memcpy.hpp"
+#include "rocprim/device/device_copy.hpp"
 #include "rocprim/intrinsics/thread.hpp"
 
 #include <gtest/gtest-typed-test.h>
@@ -69,11 +69,11 @@ struct DeviceBatchMemcpyTests : public ::testing::Test
 typedef ::testing::Types<
     // Unshuffled inputs and outputs
     // Variable value_type
-    //DeviceBatchMemcpyParams<uint8_t, uint32_t, false>,
+    DeviceBatchMemcpyParams<uint8_t, uint32_t, false>,
     DeviceBatchMemcpyParams<uint32_t, uint32_t, false>,
     DeviceBatchMemcpyParams<uint64_t, uint32_t, false>,
     // size_type: uint16_t
-    DeviceBatchMemcpyParams<uint8_t, uint16_t, false, 1024, 1024>,
+    DeviceBatchMemcpyParams<uint16_t, uint16_t, false, 1024, 1024>,
     // size_type: int64_t
     DeviceBatchMemcpyParams<uint8_t, int64_t, false, 1024, 64 * 1024>,
     DeviceBatchMemcpyParams<uint8_t, int64_t, false, 1024, 128 * 1024>,
@@ -193,13 +193,6 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
     // Shuffle the sizes so that size classes aren't clustered
     std::shuffle(h_buffer_num_elements.begin(), h_buffer_num_elements.end(), rng);
 
-    // Get the byte size of each buffer
-    std::vector<buffer_size_type> h_buffer_num_bytes(num_buffers);
-    for(size_t i = 0; i < num_buffers; ++i)
-    {
-        h_buffer_num_bytes[i] = h_buffer_num_elements[i] * sizeof(value_type);
-    }
-
     // And the total byte size
     const byte_offset_type total_num_bytes = total_num_elements * sizeof(value_type);
 
@@ -214,12 +207,12 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
 
     size_t temp_storage_bytes = 0;
 
-    HIP_CHECK(rocprim::batch_memcpy(nullptr,
-                                    temp_storage_bytes,
-                                    d_buffer_srcs,
-                                    d_buffer_dsts,
-                                    d_buffer_sizes,
-                                    num_buffers));
+    HIP_CHECK(rocprim::batch_copy(nullptr,
+                                  temp_storage_bytes,
+                                  d_buffer_srcs,
+                                  d_buffer_dsts,
+                                  d_buffer_sizes,
+                                  num_buffers));
 
     void* d_temp_storage = nullptr;
 
@@ -285,27 +278,28 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
                         h_buffer_dsts.size() * sizeof(*d_buffer_dsts),
                         hipMemcpyHostToDevice));
     HIP_CHECK(hipMemcpy(d_buffer_sizes,
-                        h_buffer_num_bytes.data(),
-                        h_buffer_num_bytes.size() * sizeof(*d_buffer_sizes),
+                        h_buffer_num_elements.data(),
+                        h_buffer_num_elements.size() * sizeof(*d_buffer_sizes),
                         hipMemcpyHostToDevice));
 
     // Run batched memcpy.
-    HIP_CHECK(rocprim::batch_memcpy(d_temp_storage,
-                                    temp_storage_bytes,
-                                    d_buffer_srcs,
-                                    d_buffer_dsts,
-                                    d_buffer_sizes,
-                                    num_buffers,
-                                    hipStreamDefault));
+    HIP_CHECK(rocprim::batch_copy(d_temp_storage,
+                                  temp_storage_bytes,
+                                  d_buffer_srcs,
+                                  d_buffer_dsts,
+                                  d_buffer_sizes,
+                                  num_buffers,
+                                  hipStreamDefault));
+
     // Verify results.
     std::vector<value_type> h_output = std::vector<value_type>(total_num_elements);
     HIP_CHECK(hipMemcpy(h_output.data(), d_output, total_num_bytes, hipMemcpyDeviceToHost));
 
     for(int32_t i = 0; i < num_buffers; ++i)
     {
-        ASSERT_EQ(std::memcmp(h_input.data() + src_offsets[i] * sizeof(value_type),
-                              h_output.data() + dst_offsets[i] * sizeof(value_type),
-                              h_buffer_num_bytes[i]),
+        ASSERT_EQ(std::memcmp(h_input.data() + src_offsets[i],
+                              h_output.data() + dst_offsets[i],
+                              h_buffer_num_elements[i]),
                   0)
             << "with index = " << i;
     }
