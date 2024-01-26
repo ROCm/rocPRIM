@@ -226,7 +226,6 @@ TYPED_TEST(DeviceBatchCopyTests, SizeAndTypeVariation)
 
     HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_bytes));
 
-    const size_t num_ints = rocprim::detail::ceiling_div(total_num_bytes, sizeof(uint64_t));
     const std::vector<value_type> h_input
         = test_utils::get_random_data<value_type>(total_num_elements,
                                                   value_type(0),
