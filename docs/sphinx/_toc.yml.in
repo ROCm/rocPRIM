@@ -1,9 +1,13 @@
-# Anywhere {branch} is used, the branch name will be substituted.
-# These comments will also be removed.
+defaults:
+  numbered: False
 root: index
 subtrees:
-  - entries:
+  - caption: Concepts
+    entries:
     - file: intro
+    - file: glossary
+  - caption: Reference
+    entries:
     - file: ops_summary
     - file: device_ops/index
     - file: block_ops/index
@@ -11,7 +15,7 @@ subtrees:
     - file: thread_ops
     - file: iterators
     - file: intrinsics
-    - file: glossary
+    - file: acknowledge
   - caption: About
     entries:
     - file: license
