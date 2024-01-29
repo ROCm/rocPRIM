@@ -38,7 +38,6 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam InputBufferItType type of iterator to source pointers.
 /// \tparam OutputBufferItType type of iterator to desetination pointers.
 /// \tparam BufferSizeItType type of iterator to sizes.
-/// \tparam IsMemCpy a flag to set whether the copy is a memcopy, or a copy by element.
 ///
 /// \param [in] temporary_storage pointer to device-accessible temporary storage.
 /// When a null pointer is passed, the required allocation size in bytes is written to

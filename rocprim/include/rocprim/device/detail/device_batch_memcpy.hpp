@@ -341,10 +341,11 @@ struct batch_memcpy_impl
 
     using input_type = typename std::iterator_traits<input_buffer_type>::value_type;
 
-    using Alias = typename std::conditional<IsMemCpy,
-                                            std::iterator_traits<char*>,
-                                            std::iterator_traits<typename std::iterator_traits<
-                                                InputBufferItType>::value_type>>::type::value_type;
+    using Alias =
+        typename std::conditional<IsMemCpy,
+                                  unsigned char,
+                                  typename std::iterator_traits<typename std::iterator_traits<
+                                      InputBufferItType>::value_type>::value_type>::type;
 
     // top level policy
     static constexpr uint32_t block_size            = Config::non_blev_block_size;
