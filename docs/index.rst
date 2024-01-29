@@ -24,6 +24,7 @@ The rocPRIM documentation is structured as follows:
   .. grid-item-card:: API reference
 
     * :ref:`ops-summary`
+    * :ref:`data-type-support`
     * :ref:`dev-index`
     * :ref:`block-index`
     * :ref:`warp-index` 

@@ -16,6 +16,9 @@ A rocPRIM operation is a computation over a sequence of objects returning one va
 
 A high level view of the available operations can be found on :ref:`ops-summary`. rocPRIM includes a variety of generic operations that are frequently very useful.
 
+.. note::
+  Refer to :ref:`data-type-support` for information on supported datatypes.
+
 Scope
 ======
 
