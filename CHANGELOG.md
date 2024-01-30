@@ -12,12 +12,21 @@ Documentation for rocPRIM is available at
   * The default accumulator type is still the value type of the input iterator (inclusive scan) or the initial value's type (exclusive scan).
     This is the same behaviour as before this change.
 * New overload for `device_adjacent_difference_inplace` that allows separate input and output iterators, but allows them to point to the same element.
+* New public API for deriving resulting type on device-only functions:
+  * `rocprim::invoke_result`
+  * `rocprim::invoke_result_t`
+  * `rocprim::invoke_result_binary_op`
+  * `rocprim::invoke_result_binary_op_t`
 
 ### Fixes
 
 * Fixed incorrect results of `warp_exchange::blocked_to_striped_shuffle` and `warp_exchange::striped_to_blocked_shuffle` when the block size is
   larger than the logical warp size. The test suite has been updated with such cases.
 * Fixed incorrect results returned when calling device `unique_by_key` with overlapping `values_input` and `values_output`.
+
+### Deprecations
+
+* The internal header `detail/match_result_type.hpp` has been depracated.
 
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
