@@ -142,8 +142,6 @@ fi
 # Configure rocPRIM, setup options for your system.
 # See README.md under "Build and Install" for options and defaults.
 
-compiler="amdclang++"
-
 cmake_executable="cmake"
 cmake_common_options="--toolchain=toolchain-linux.cmake"
 
