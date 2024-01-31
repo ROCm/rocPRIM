@@ -31,7 +31,7 @@ def runTestCommand (platform, project)
     def testCommand = "ctest --output-on-failure "
     def testCommandExcludeRegex = /(rocprim.device_scan)/
     def testCommandExclude = "--exclude-regex \"${testCommandExcludeRegex}\""
-    //def hmmExcludeRegex = ''
+    def hmmExcludeRegex = ''
     def hmmTestCommandExclude = "--exclude-regex \"${hmmExcludeRegex}\""
     def hmmTestCommand = ''
     if (platform.jenkinsLabel.contains('gfx90a'))
