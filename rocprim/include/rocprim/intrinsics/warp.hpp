@@ -24,6 +24,8 @@
 #include "../config.hpp"
 #include "../types.hpp"
 
+#include <type_traits>
+
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \addtogroup intrinsicsmodule
@@ -117,45 +119,70 @@ int warp_all(int predicate)
 /// @}
 // end of group intrinsicsmodule
 
-/**
- * This function computes a lane mask of active lanes in the warp which which have
- * the same value for <tt>label</tt> as the lane which calls the function. The bit at
- * index \p i in the lane mask is set if the thread of lane \p i calls this function
- * with the same value <tt>label</tt>. Only the least-significant \p LabelBits bits
- * are taken into account when labels are considered to be equal.
- */
+/// \brief Group active lanes having the same bits of \p label
+///
+/// Threads that have the same least significant \p LabelBits bits are grouped into the same group.
+/// Every lane in the warp receives a mask of all active lanes participating in its group.
+///
+/// \tparam LabelBits number of bits to compare between labels
+///
+/// \param [in] label the label for the calling lane
+/// \param [in] valid lanes passing <tt>false</tt> will be ignored for comparisons,
+/// such lanes will not be part of any group, and will always return an empty mask (0)
+///
+/// \return A bit mask of lanes sharing the same bits for \p label. The bit at index
+/// lane <tt>i</tt>'s result includes bit <tt>j</tt> in the lane mask if lane <tt>j</tt> is part
+/// of the same group as lane <tt>i</tt>, i.e. lane <tt>i</tt> and <tt>j</tt> called with the
+/// same value for label.
 template<unsigned int LabelBits>
-ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label)
+ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool valid = true)
 {
     // Obtain a mask with the threads which are currently active.
-    lane_mask_type peer_mask = ballot(1);
+    lane_mask_type peer_mask = ballot(valid);
 
     // Compute the final value iteratively by testing each bit separately.
     ROCPRIM_UNROLL
     for(unsigned int bit = 0; bit < LabelBits; ++bit)
     {
-        const auto bit_set = label & (1u << bit);
-        // Create mask of threads which have the same bit set or unset.
-        const auto same_mask = ballot(bit_set);
-        // Remove bits which do not match from the peer mask.
-        peer_mask &= (bit_set ? same_mask : ~same_mask);
+        static constexpr int lane_width = std::numeric_limits<lane_mask_type>::digits;
+        using lane_mask_type_s          = std::make_signed_t<lane_mask_type>;
+        const auto label_signed         = static_cast<lane_mask_type_s>(label);
+
+        // Get all zeros or all ones depending on label's i-th bit.
+        // Moves the bit into the sign position by left shifting, then shifts it into all the bits
+        // by (arithmetic) right shift which does sign-extension.
+        const lane_mask_type_s bit_set
+            = (label_signed << (lane_width - 1 - bit)) >> (lane_width - 1);
+
+        // Remove all lanes from the mask with a bit that differs from ours
+        // - if we have the bit set we keep the lanes that do too so we mask with the result
+        //   of the ballot
+        // - if we don't have it, then we keep the lanes that also don't, so we flip all bits
+        //   in the mask before and-ing.
+        // since bit_set is all ones if we have the bit and all zeros if not, the flipping is
+        // the same as xor-ing with its inverse
+        const lane_mask_type bit_set_mask = ballot(bit_set);
+        peer_mask &= bit_set_mask ^ ~bit_set;
     }
 
-    return peer_mask;
+    return -lane_mask_type{valid} & peer_mask;
 }
 
-/**
- * This function computes a lane mask of active lanes in the warp which which have
- * the same value for <tt>label</tt> as the lane which calls the function. The bit at
- * index \p i in the lane mask is set if the thread of lane \p i calls this function
- * with the same value <tt>label</tt>. Only the least-significant \p LabelBits bits
- * are taken into account when labels are considered to be equal.
- */
-template<int LabelBits>
-[[deprecated("use rocprim::match_any instead")]] ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type
-    MatchAny(unsigned int label)
+/// \brief Elect a single lane for each group in \p mask
+///
+/// \param [in] mask bit mask of the lanes in the same group as the calling lane.
+/// The <tt>i</tt>-th bit should be set if lane <tt>i</tt> is in the same group
+/// as the calling lane.
+///
+/// \returns <tt>true</tt> for one unspecified lane in the <tt>mask</tt>, false for everyone else.
+/// Returns <tt>false</tt> for all lanes not in any group, that is lanes passing 0 as \p mask.
+///
+/// \pre The relation specified by \p mask must be symmetric and transitive, in other words: the groups
+/// should be consistent between threads.
+ROCPRIM_DEVICE ROCPRIM_INLINE bool group_elect(lane_mask_type mask)
 {
-    return match_any<LabelBits>(label);
+    const unsigned int prev_same_count = ::rocprim::masked_bit_count(mask);
+    return prev_same_count == 0 && mask != 0;
 }
 
 END_ROCPRIM_NAMESPACE

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,28 +36,6 @@
 
 namespace
 {
-template <typename T, unsigned int SizeLimit>
-struct size_limit_config
-{
-    static constexpr unsigned int item_scale
-        = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(T), sizeof(int));
-
-    using type
-        = rocprim::adjacent_difference_config<256,
-                                              ::rocprim::max(1u, 16u / item_scale),
-                                              rocprim::block_load_method::block_load_transpose,
-                                              rocprim::block_store_method::block_store_transpose,
-                                              SizeLimit>;
-};
-
-template <typename T>
-struct size_limit_config<T, ROCPRIM_GRID_SIZE_LIMIT>
-{
-    using type = rocprim::default_config;
-};
-
-template <typename T, unsigned int SizeLimit>
-using size_limit_config_t = typename size_limit_config<T, SizeLimit>::type;
 
 template <typename Config = rocprim::default_config,
           typename InputIt,
@@ -146,12 +124,13 @@ auto get_expected_result(const std::vector<T>& input,
 } // namespace
 
 // Params for tests
-template <class InputType,
-          class OutputType                 = InputType,
-          bool         Left                = true,
-          bool         InPlace             = false,
-          bool         UseIdentityIterator = false,
-          unsigned int SizeLimit           = ROCPRIM_GRID_SIZE_LIMIT>
+template<class InputType,
+         class OutputType         = InputType,
+         bool Left                = true,
+         bool InPlace             = false,
+         bool UseIdentityIterator = false,
+         class Config             = rocprim::default_config,
+         bool UseGraphs           = false>
 struct DeviceAdjacentDifferenceParams
 {
     using input_type                              = InputType;
@@ -159,7 +138,8 @@ struct DeviceAdjacentDifferenceParams
     static constexpr bool   left                  = Left;
     static constexpr bool   in_place              = InPlace;
     static constexpr bool   use_identity_iterator = UseIdentityIterator;
-    static constexpr size_t size_limit            = SizeLimit;
+    using config                                  = Config;
+    static constexpr bool   use_graphs            = UseGraphs;
 };
 
 template <class Params>
@@ -172,25 +152,40 @@ public:
     static constexpr bool   in_place              = Params::in_place;
     static constexpr bool   use_identity_iterator = Params::use_identity_iterator;
     static constexpr bool   debug_synchronous     = false;
-    static constexpr size_t size_limit            = Params::size_limit;
+    using config                                  = typename Params::config;
+    static constexpr bool   use_graphs            = Params::use_graphs;
 };
 
 using custom_double2     = test_utils::custom_test_type<double>;
 using custom_int64_array = test_utils::custom_test_array_type<std::int64_t, 8>;
 
+using custom_config_0 = rocprim::adjacent_difference_config<128, 4>;
+
+template<int SizeLimit>
+using custom_size_limit_config
+    = rocprim::adjacent_difference_config<1024,
+                                          2,
+                                          rocprim::block_load_method::block_load_transpose,
+                                          rocprim::block_store_method::block_store_transpose,
+                                          SizeLimit>;
+
 using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
+    // Tests with default configuration
     DeviceAdjacentDifferenceParams<int>,
     DeviceAdjacentDifferenceParams<float, double, false>,
     DeviceAdjacentDifferenceParams<int8_t, int8_t, true, true>,
     DeviceAdjacentDifferenceParams<custom_double2, custom_double2, false, true>,
-    DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false, 512>,
-    DeviceAdjacentDifferenceParams<rocprim::half, rocprim::half, true, true, false, 2048>,
-    DeviceAdjacentDifferenceParams<custom_int64_array,
-                                   custom_int64_array,
-                                   false,
-                                   true,
-                                   true,
-                                   4096>>;
+    DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false>,
+    DeviceAdjacentDifferenceParams<rocprim::half, rocprim::half, true, true, false>,
+    DeviceAdjacentDifferenceParams<custom_int64_array, custom_int64_array, false, true, true>,
+    // Tests for supported config structs
+    DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false, custom_config_0>,
+    DeviceAdjacentDifferenceParams<rocprim::bfloat16, float, true, false, false>,
+    // Tests for different size_limits
+    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<64>>,
+    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<8192>>,
+    DeviceAdjacentDifferenceParams<int, int, true, false, false, custom_size_limit_config<10240>>,
+    DeviceAdjacentDifferenceParams<int, int, true, false, false, rocprim::default_config, true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceTests, RocprimDeviceAdjacentDifferenceTestsParams);
 
@@ -206,7 +201,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
     static constexpr bool in_place              = TestFixture::in_place;
     static constexpr bool use_identity_iterator = TestFixture::use_identity_iterator;
     static constexpr bool debug_synchronous     = TestFixture::debug_synchronous;
-    using Config                                = size_limit_config_t<T, TestFixture::size_limit>;
+    using Config                                = typename TestFixture::config;
 
     SCOPED_TRACE(testing::Message() << "left = " << left << ", in_place = " << in_place);
 
@@ -218,8 +213,13 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
-            static constexpr hipStream_t stream = 0; // default
-
+            hipStream_t stream = 0; // default
+            if (TestFixture::use_graphs)
+            {
+                // Default stream does not support hipGraph stream capture, so create one
+                HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+            }
+            
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -249,6 +249,11 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             const auto output_it
                 = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output);
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (TestFixture::use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             // Allocate temporary storage
             std::size_t temp_storage_size;
             void*       d_temp_storage = nullptr;
@@ -261,12 +266,18 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            size,
                                                            rocprim::minus<> {},
                                                            stream,
-                                                           debug_synchronous));
+                                                           TestFixture::debug_synchronous));
 
+            if (TestFixture::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            
             ASSERT_GT(temp_storage_size, 0);
 
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
 
+            if (TestFixture::use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             // Run
             HIP_CHECK(dispatch_adjacent_difference<Config>(left_tag,
                                                            in_place_tag,
@@ -277,8 +288,11 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                                                            size,
                                                            rocprim::minus<> {},
                                                            stream,
-                                                           debug_synchronous));
+                                                           TestFixture::debug_synchronous));
             HIP_CHECK(hipGetLastError());
+
+            if (TestFixture::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
 
             // Copy output to host
             HIP_CHECK(
@@ -299,16 +313,23 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
                 hipFree(d_output);
             }
             hipFree(d_temp_storage);
+
+            if (TestFixture::use_graphs)
+            {
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+                HIP_CHECK(hipStreamDestroy(stream));
+            }
         }
     }
 }
 
 // Params for tests
-template <bool Left = true, bool InPlace = false>
+template <bool Left = true, bool InPlace = false, bool UseGraphs = false>
 struct DeviceAdjacentDifferenceLargeParams
 {
-    static constexpr bool left     = Left;
-    static constexpr bool in_place = InPlace;
+    static constexpr bool left       = Left;
+    static constexpr bool in_place   = InPlace;
+    static constexpr bool use_graphs = UseGraphs;
 };
 
 template <class Params>
@@ -318,6 +339,7 @@ public:
     static constexpr bool left              = Params::left;
     static constexpr bool in_place          = Params::in_place;
     static constexpr bool debug_synchronous = false;
+    static constexpr bool use_graphs        = Params::use_graphs;
 };
 
 template<unsigned int SamplingRate>
@@ -430,7 +452,8 @@ private:
 
 using RocprimDeviceAdjacentDifferenceLargeTestsParams
     = ::testing::Types<DeviceAdjacentDifferenceLargeParams<true, false>,
-                       DeviceAdjacentDifferenceLargeParams<false, false>>;
+                       DeviceAdjacentDifferenceLargeParams<false, false>,
+                       DeviceAdjacentDifferenceLargeParams<true, false, true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceLargeTests,
                  RocprimDeviceAdjacentDifferenceLargeTestsParams);
@@ -438,13 +461,26 @@ TYPED_TEST_SUITE(RocprimDeviceAdjacentDifferenceLargeTests,
 TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
 {
     const int device_id = test_common_utils::obtain_device_from_ctest();
+
+    if (TestFixture::use_graphs)
+    {
+        // Skip this test on gfx1030 on Windows, since check_output_iterator does not appear to work there.
+        hipDeviceProp_t props;
+        HIP_CHECK(hipGetDeviceProperties(&props, device_id));
+        std::string deviceName = std::string(props.gcnArchName);
+        if(deviceName.rfind("gfx1030", 0) == 0)
+        {
+            // This is a gfx1030 device, so skip this test
+            GTEST_SKIP() << "Temporarily skipping test on Windows for on gfx1030";
+        }
+    }
+
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
     using T                                         = size_t;
     static constexpr bool         is_left           = TestFixture::left;
     static constexpr bool         is_in_place       = TestFixture::in_place;
-    const bool                    debug_synchronous = TestFixture::debug_synchronous;
     static constexpr unsigned int sampling_rate     = 10000;
     using OutputIterator                            = check_output_iterator<sampling_rate>;
     using flag_type                                 = OutputIterator::flag_type;
@@ -452,7 +488,12 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
     SCOPED_TRACE(testing::Message()
                  << "is_left = " << is_left << ", is_in_place = " << is_in_place);
 
-    static constexpr hipStream_t stream = 0; // default
+    hipStream_t stream = 0; // default
+    if (TestFixture::use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     for(std::size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -484,6 +525,11 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             static constexpr auto left_tag     = rocprim::detail::bool_constant<is_left>{};
             static constexpr auto in_place_tag = rocprim::detail::bool_constant<is_in_place>{};
 
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+            if (TestFixture::use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+            
             // Allocate temporary storage
             std::size_t temp_storage_size;
             void*       d_temp_storage = nullptr;
@@ -496,12 +542,18 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    size,
                                                    op,
                                                    stream,
-                                                   debug_synchronous));
+                                                   TestFixture::debug_synchronous));
 
+            if (TestFixture::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            
             ASSERT_GT(temp_storage_size, 0);
 
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
 
+            if (TestFixture::use_graphs)
+                test_utils::resetGraphHelper(graph, graph_instance, stream);
+            
             // Run
             HIP_CHECK(dispatch_adjacent_difference(left_tag,
                                                    in_place_tag,
@@ -512,7 +564,10 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    size,
                                                    op,
                                                    stream,
-                                                   debug_synchronous));
+                                                   TestFixture::debug_synchronous));
+
+            if (TestFixture::use_graphs)
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
 
             // Copy output to host
             flag_type incorrect_flag;
@@ -529,6 +584,12 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             hipFree(d_temp_storage);
             hipFree(d_incorrect_flag);
             hipFree(d_counter);
+
+            if (TestFixture::use_graphs)
+                test_utils::cleanupGraphHelper(graph, graph_instance);
         }
     }
+
+    if (TestFixture::use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
 }
