@@ -317,10 +317,10 @@ template<bool IsMemCpy,
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE static void
     copy_items(InputIt input_buffer, OutputIt output_buffer, Offset num_items, Offset offset = 0)
 {
+    constexpr auto warp_size = rocprim::device_warp_size();
     output_buffer += offset;
     input_buffer += offset;
-    for(Offset i = threadIdx.x % 32 /*LOGICAL_WARP_SIZE*/; i < num_items;
-        i += 32 /*LOGICAL_WARP_SIZE*/)
+    for(Offset i = threadIdx.x % warp_size; i < num_items; i += warp_size)
     {
         *(output_buffer + i) = *(input_buffer + i);
     }
