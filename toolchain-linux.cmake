@@ -1,40 +1,19 @@
-#set(CMAKE_MAKE_PROGRAM "nmake.exe")
-#set(CMAKE_GENERATOR "Ninja")
-# Ninja doesn't support platform
-#set(CMAKE_GENERATOR_PLATFORM x64)
 
 if (DEFINED ENV{ROCM_PATH})
   set(rocm_bin "$ENV{ROCM_PATH}/bin")
-  set(llvm_bin "$ENV{ROCM_PATH}/llvm/bin")
 else()
+  set(ROCM_PATH "/opt/rocm" CACHE PATH "Path to the ROCm installation.")
   set(rocm_bin "/opt/rocm/bin")
-  set(llvm_bin "/opt/rocm/llvm/bin")
 endif()
 
+if (NOT DEFINED ENV{CXX})
+  set(CMAKE_CXX_COMPILER "${rocm_bin}/amdclang++")
+else()
+  set(CMAKE_CXX_COMPILER "$ENV{CXX}")
+endif()
 
-set(CMAKE_CXX_COMPILER "${llvm_bin}/clang++")
-set(CMAKE_C_COMPILER "${llvm_bin}/clang")
-
-# TODO remove, just to speed up slow cmake
-# set(CMAKE_C_COMPILER_WORKS 1)
-# set(CMAKE_CXX_COMPILER_WORKS 1)
-#
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -IC:/hip/include -IC:/hip/lib/clang/12.0.0 -DWIN32 -D_CRT_SECURE_NO_WARNINGS")
-
-# flags for clang direct use
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fms-extensions -fms-compatibility")
-# -Wno-ignored-attributes to avoid warning: __declspec attribute 'dllexport' is not supported [-Wignored-attributes] which is used by msvc compiler
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fms-extensions -fms-compatibility -Wno-ignored-attributes")
-
-# flags for clang direct use with hip
-# -x hip causes linker error
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x hip -IC:/hip/include/hip -D__HIP_PLATFORM_AMD__ -D__HIP_ROCclr__")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -IC:/hip/include/hip -D__HIP_PLATFORM_AMD__ -D__HIP_ROCclr__")
-
-
-# set(GTEST_DIR "C:/rocm/Utils/GTestMSVC")
-# set(GTEST_INCLUDE_DIR "${GTEST_DIR}/include")
-# set(GTEST_LIBRARY "${GTEST_DIR}/lib/Release/gtest.lib")
-# set(GTEST_MAIN_LIBRARY "${GTEST_DIR}/lib/Release/gtest_main.lib")
-# set(GTEST_LIBRARIES "${GTEST_DIR}/lib/Release/gtest.lib;${GTEST_DIR}/lib/Release/gtest_main.lib")
+if (NOT DEFINED ENV{CC})
+  set(CMAKE_C_COMPILER "${rocm_bin}/amdclang")
+else()
+  set(CMAKE_C_COMPILER "$ENV{CC}")
+endif()
