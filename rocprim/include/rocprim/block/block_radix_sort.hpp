@@ -100,7 +100,6 @@ class block_radix_sort
     static constexpr bool         with_values         = !std::is_same<Value, empty_type>::value;
     static constexpr unsigned int radix_bits_per_pass = 4;
 
-    using bit_key_type    = typename ::rocprim::detail::radix_key_codec<Key>::bit_key_type;
     using block_rank_type = ::rocprim::block_radix_rank<BlockSizeX,
                                                         radix_bits_per_pass,
                                                         block_radix_rank_algorithm::basic_memoize,
@@ -137,6 +136,8 @@ public:
 
     /// \brief Performs ascending radix sort over keys partitioned across threads in a block.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
@@ -144,6 +145,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -176,14 +180,15 @@ public:
     /// If the \p input values across threads in a block are <tt>{[256, 255], ..., [4, 3], [2, 1]}}</tt>, then
     /// then after sort they will be equal <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt>.
     /// \endparblock
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort(Key (&keys)[ItemsPerThread],
-              storage_type& storage,
-              unsigned int begin_bit = 0,
-              unsigned int end_bit = 8 * sizeof(Key))
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void sort(Key (&keys)[ItemsPerThread],
+                                            storage_type& storage,
+                                            unsigned int  begin_bit  = 0,
+                                            unsigned int  end_bit    = 8 * sizeof(Key),
+                                            Decomposer    decomposer = {})
     {
         empty_type values[ItemsPerThread];
-        sort_impl<false>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<false>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -198,16 +203,19 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort(Key (&keys)[ItemsPerThread],
-              unsigned int begin_bit = 0,
-              unsigned int end_bit = 8 * sizeof(Key))
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort(Key (&keys)[ItemsPerThread],
+                                                  unsigned int begin_bit  = 0,
+                                                  unsigned int end_bit    = 8 * sizeof(Key),
+                                                  Decomposer   decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort(keys, storage, begin_bit, end_bit);
+        sort(keys, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \brief Performs descending radix sort over keys partitioned across threads in a block.
+    ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
     ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
@@ -216,6 +224,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -248,14 +259,15 @@ public:
     /// If the \p input values across threads in a block are <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt>,
     /// then after sort they will be equal <tt>{[256, 255], ..., [4, 3], [2, 1]}</tt>.
     /// \endparblock
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort_desc(Key (&keys)[ItemsPerThread],
-                   storage_type& storage,
-                   unsigned int begin_bit = 0,
-                   unsigned int end_bit = 8 * sizeof(Key))
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void sort_desc(Key (&keys)[ItemsPerThread],
+                                                 storage_type& storage,
+                                                 unsigned int  begin_bit  = 0,
+                                                 unsigned int  end_bit    = 8 * sizeof(Key),
+                                                 Decomposer    decomposer = {})
     {
         empty_type values[ItemsPerThread];
-        sort_impl<true>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<true>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -264,25 +276,33 @@ public:
     /// * This overload does not accept storage argument. Required shared memory is
     /// allocated by the method itself.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
     /// key comparison. Must be in range <tt>[0; 8 * sizeof(Key))</tt>. Default value: \p 0.
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort_desc(Key (&keys)[ItemsPerThread],
-                   unsigned int begin_bit = 0,
-                   unsigned int end_bit = 8 * sizeof(Key))
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_desc(Key (&keys)[ItemsPerThread],
+                                                       unsigned int begin_bit  = 0,
+                                                       unsigned int end_bit    = 8 * sizeof(Key),
+                                                       Decomposer   decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort_desc(keys, storage, begin_bit, end_bit);
+        sort_desc(keys, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \brief Performs ascending radix sort over key-value pairs partitioned across
     /// threads in a block.
     ///
     /// \pre Method is enabled only if \p Value type is different than empty_type.
+    ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
     ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
@@ -292,6 +312,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -328,15 +351,17 @@ public:
     /// will be equal <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt> and the \p values will be
     /// equal <tt>{[128, 128], [127, 127]  ..., [2, 2], [1, 1]}</tt>.
     /// \endparblock
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort(Key (&keys)[ItemsPerThread],
-              typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-              storage_type& storage,
-              unsigned int begin_bit = 0,
-              unsigned int end_bit = 8 * sizeof(Key))
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        sort(Key (&keys)[ItemsPerThread],
+             typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+             storage_type& storage,
+             unsigned int  begin_bit  = 0,
+             unsigned int  end_bit    = 8 * sizeof(Key),
+             Decomposer    decomposer = {})
     {
-        sort_impl<false>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<false>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -348,6 +373,8 @@ public:
     ///
     /// \pre Method is enabled only if \p Value type is different than empty_type.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
@@ -355,21 +382,28 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort(Key (&keys)[ItemsPerThread],
-              typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-              unsigned int begin_bit = 0,
-              unsigned int end_bit = 8 * sizeof(Key))
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+        sort(Key (&keys)[ItemsPerThread],
+             typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+             unsigned int begin_bit  = 0,
+             unsigned int end_bit    = 8 * sizeof(Key),
+             Decomposer   decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort(keys, values, storage, begin_bit, end_bit);
+        sort(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \brief Performs descending radix sort over key-value pairs partitioned across
     /// threads in a block.
     ///
     /// \pre Method is enabled only if \p Value type is different than empty_type.
+    ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
     ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
@@ -379,6 +413,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -415,15 +452,17 @@ public:
     /// the \p keys will be equal <tt>{[256, 255], ..., [4, 3], [2, 1]}</tt> and the \p values
     /// will be equal <tt>{[1, 1], [2, 2]  ..., [128, 128]}</tt>.
     /// \endparblock
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort_desc(Key (&keys)[ItemsPerThread],
-                   typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-                   storage_type& storage,
-                   unsigned int begin_bit = 0,
-                   unsigned int end_bit = 8 * sizeof(Key))
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        sort_desc(Key (&keys)[ItemsPerThread],
+                  typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+                  storage_type& storage,
+                  unsigned int  begin_bit  = 0,
+                  unsigned int  end_bit    = 8 * sizeof(Key),
+                  Decomposer    decomposer = {})
     {
-        sort_impl<true>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<true>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -435,6 +474,8 @@ public:
     ///
     /// \pre Method is enabled only if \p Value type is different than empty_type.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
@@ -442,19 +483,26 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort_desc(Key (&keys)[ItemsPerThread],
-                   typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-                   unsigned int begin_bit = 0,
-                   unsigned int end_bit = 8 * sizeof(Key))
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+        sort_desc(Key (&keys)[ItemsPerThread],
+                  typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+                  unsigned int begin_bit  = 0,
+                  unsigned int end_bit    = 8 * sizeof(Key),
+                  Decomposer   decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort_desc(keys, values, storage, begin_bit, end_bit);
+        sort_desc(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \brief Performs ascending radix sort over keys partitioned across threads in a block,
     /// results are saved in a striped arrangement.
+    ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
     ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
@@ -463,6 +511,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -495,14 +546,15 @@ public:
     /// If the \p input values across threads in a block are <tt>{[256, 255], ..., [4, 3], [2, 1]}}</tt>, then
     /// then after sort they will be equal <tt>{[1, 129], [2, 130]  ..., [128, 256]}</tt>.
     /// \endparblock
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort_to_striped(Key (&keys)[ItemsPerThread],
-                         storage_type& storage,
-                         unsigned int begin_bit = 0,
-                         unsigned int end_bit = 8 * sizeof(Key))
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void sort_to_striped(Key (&keys)[ItemsPerThread],
+                                                       storage_type& storage,
+                                                       unsigned int  begin_bit  = 0,
+                                                       unsigned int  end_bit    = 8 * sizeof(Key),
+                                                       Decomposer    decomposer = {})
     {
         empty_type values[ItemsPerThread];
-        sort_impl<false, true>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<false, true>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -512,23 +564,31 @@ public:
     /// * This overload does not accept storage argument. Required shared memory is
     /// allocated by the method itself.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
     /// key comparison. Must be in range <tt>[0; 8 * sizeof(Key))</tt>. Default value: \p 0.
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort_to_striped(Key (&keys)[ItemsPerThread],
-                         unsigned int begin_bit = 0,
-                         unsigned int end_bit = 8 * sizeof(Key))
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_to_striped(Key (&keys)[ItemsPerThread],
+                                                             unsigned int begin_bit = 0,
+                                                             unsigned int end_bit = 8 * sizeof(Key),
+                                                             Decomposer   decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort_to_striped(keys, storage, begin_bit, end_bit);
+        sort_to_striped(keys, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \brief Performs descending radix sort over keys partitioned across threads in a block,
     /// results are saved in a striped arrangement.
+    ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
     ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in] storage - reference to a temporary storage object of type storage_type.
@@ -537,6 +597,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -569,14 +632,15 @@ public:
     /// If the \p input values across threads in a block are <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt>,
     /// then after sort they will be equal <tt>{[256, 128], ..., [130, 2], [129, 1]}</tt>.
     /// \endparblock
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
-                              storage_type& storage,
-                              unsigned int begin_bit = 0,
-                              unsigned int end_bit = 8 * sizeof(Key))
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
+                                                            storage_type& storage,
+                                                            unsigned int  begin_bit = 0,
+                                                            unsigned int  end_bit = 8 * sizeof(Key),
+                                                            Decomposer    decomposer = {})
     {
         empty_type values[ItemsPerThread];
-        sort_impl<true, true>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<true, true>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -586,25 +650,34 @@ public:
     /// * This overload does not accept storage argument. Required shared memory is
     /// allocated by the method itself.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
     /// key comparison. Must be in range <tt>[0; 8 * sizeof(Key))</tt>. Default value: \p 0.
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
-                              unsigned int begin_bit = 0,
-                              unsigned int end_bit = 8 * sizeof(Key))
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
+    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
+                                                                  unsigned int begin_bit = 0,
+                                                                  unsigned int end_bit
+                                                                  = 8 * sizeof(Key),
+                                                                  Decomposer decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort_desc_to_striped(keys, storage, begin_bit, end_bit);
+        sort_desc_to_striped(keys, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \brief Performs ascending radix sort over key-value pairs partitioned across
     /// threads in a block, results are saved in a striped arrangement.
     ///
     /// \pre Method is enabled only if \p Value type is different than empty_type.
+    ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
     ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
@@ -614,6 +687,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -650,15 +726,17 @@ public:
     /// \p keys will be equal <tt>{[1, 5], [2, 6], [3, 7], [4, 8]}</tt> and the \p values will be
     /// equal <tt>{[-8, -4], [-7, -3], [-6, -2], [-5, -1]}</tt>.
     /// \endparblock
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort_to_striped(Key (&keys)[ItemsPerThread],
-                         typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-                         storage_type& storage,
-                         unsigned int begin_bit = 0,
-                         unsigned int end_bit = 8 * sizeof(Key))
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        sort_to_striped(Key (&keys)[ItemsPerThread],
+                        typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+                        storage_type& storage,
+                        unsigned int  begin_bit  = 0,
+                        unsigned int  end_bit    = 8 * sizeof(Key),
+                        Decomposer    decomposer = {})
     {
-        sort_impl<false, true>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<false, true>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -668,6 +746,8 @@ public:
     /// * This overload does not accept storage argument. Required shared memory is
     /// allocated by the method itself.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
@@ -675,21 +755,28 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort_to_striped(Key (&keys)[ItemsPerThread],
-                         typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-                         unsigned int begin_bit = 0,
-                         unsigned int end_bit = 8 * sizeof(Key))
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+        sort_to_striped(Key (&keys)[ItemsPerThread],
+                        typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+                        unsigned int begin_bit  = 0,
+                        unsigned int end_bit    = 8 * sizeof(Key),
+                        Decomposer   decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort_to_striped(keys, values, storage, begin_bit, end_bit);
+        sort_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \brief Performs descending radix sort over key-value pairs partitioned across
     /// threads in a block, results are saved in a striped arrangement.
     ///
     /// \pre Method is enabled only if \p Value type is different than empty_type.
+    ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
     ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
@@ -699,6 +786,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     ///
     /// \par Storage reusage
     /// Synchronization barrier should be placed before \p storage is reused
@@ -735,15 +825,17 @@ public:
     /// \p keys will be equal <tt>{[8, 4], [7, 3], [6, 2], [5, 1]}</tt> and the \p values will be
     /// equal <tt>{[10, 50], [20, 60], [30, 70], [40, 80]}</tt>.
     /// \endparblock
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
-                              typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-                              storage_type& storage,
-                              unsigned int begin_bit = 0,
-                              unsigned int end_bit = 8 * sizeof(Key))
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void sort_desc_to_striped(
+        Key (&keys)[ItemsPerThread],
+        typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+        storage_type& storage,
+        unsigned int  begin_bit  = 0,
+        unsigned int  end_bit    = 8 * sizeof(Key),
+        Decomposer    decomposer = {})
     {
-        sort_impl<true, true>(keys, values, storage, begin_bit, end_bit);
+        sort_impl<true, true>(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
     /// \overload
@@ -753,6 +845,8 @@ public:
     /// * This overload does not accept storage argument. Required shared memory is
     /// allocated by the method itself.
     ///
+    /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
+    ///
     /// \param [in, out] keys - reference to an array of keys provided by a thread.
     /// \param [in, out] values - reference to an array of values provided by a thread.
     /// \param [in] begin_bit - [optional] index of the first (least significant) bit used in
@@ -760,33 +854,37 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    template<bool WithValues = with_values>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-    void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
-                              typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
-                              unsigned int begin_bit = 0,
-                              unsigned int end_bit = 8 * sizeof(Key))
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
+    template<bool WithValues  = with_values,
+             class Decomposer = ::rocprim::detail::identity_decomposer>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_desc_to_striped(
+        Key (&keys)[ItemsPerThread],
+        typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
+        unsigned int begin_bit  = 0,
+        unsigned int end_bit    = 8 * sizeof(Key),
+        Decomposer   decomposer = {})
     {
         ROCPRIM_SHARED_MEMORY storage_type storage;
-        sort_desc_to_striped(keys, values, storage, begin_bit, end_bit);
+        sort_desc_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 
 private:
-
-    template<bool Descending, bool ToStriped = false, class SortedValue>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void sort_impl(Key (&keys)[ItemsPerThread],
-                   SortedValue (&values)[ItemsPerThread],
-                   storage_type& storage,
-                   unsigned int begin_bit,
-                   unsigned int end_bit)
+    template<bool Descending, bool ToStriped = false, class SortedValue, class Decomposer>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void sort_impl(Key (&keys)[ItemsPerThread],
+                                                 SortedValue (&values)[ItemsPerThread],
+                                                 storage_type& storage,
+                                                 unsigned int  begin_bit,
+                                                 unsigned int  end_bit,
+                                                 Decomposer    decomposer)
     {
-        using key_codec = ::rocprim::detail::radix_key_codec<Key, Descending>;
+        using key_codec = ::rocprim::detail::radix_key_codec_inplace<Key, Descending>;
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            key_codec::encode_inplace(keys[i]);
+            key_codec::encode_inplace(keys[i], decomposer);
         }
 
         while(true)
@@ -798,8 +896,8 @@ private:
                 keys,
                 ranks,
                 storage.get().rank,
-                [begin_bit, pass_bits](const Key& key)
-                { return key_codec::extract_digit_from_key(key, begin_bit, pass_bits); });
+                [begin_bit, pass_bits, decomposer](const Key& key) mutable
+                { return key_codec::extract_digit(key, begin_bit, pass_bits, decomposer); });
             begin_bit += radix_bits_per_pass;
 
             exchange_keys(storage, keys, ranks);
@@ -823,7 +921,7 @@ private:
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            key_codec::decode_inplace(keys[i]);
+            key_codec::decode_inplace(keys[i], decomposer);
         }
     }
 
