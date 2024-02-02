@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -106,14 +106,15 @@ class block_radix_sort
                                                         block_radix_rank_algorithm::basic_memoize,
                                                         BlockSizeY,
                                                         BlockSizeZ>;
-    using bit_keys_exchange_type = ::rocprim::block_exchange<bit_key_type, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
+    using keys_exchange_type
+        = ::rocprim::block_exchange<Key, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
     using values_exchange_type
         = ::rocprim::block_exchange<Value, BlockSizeX, ItemsPerThread, BlockSizeY, BlockSizeZ>;
 
     // Struct used for creating a raw_storage object for this primitive's temporary storage.
     union storage_type_
     {
-        typename bit_keys_exchange_type::storage_type bit_keys_exchange;
+        typename keys_exchange_type::storage_type     keys_exchange;
         typename values_exchange_type::storage_type   values_exchange;
         typename block_rank_type::storage_type        rank;
     };
@@ -782,11 +783,10 @@ private:
     {
         using key_codec = ::rocprim::detail::radix_key_codec<Key, Descending>;
 
-        bit_key_type bit_keys[ItemsPerThread];
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            bit_keys[i] = key_codec::encode(keys[i]);
+            key_codec::encode_inplace(keys[i]);
         }
 
         while(true)
@@ -795,44 +795,45 @@ private:
 
             unsigned int ranks[ItemsPerThread];
             block_rank_type().rank_keys(
-                bit_keys,
+                keys,
                 ranks,
                 storage.get().rank,
-                [begin_bit, pass_bits](const bit_key_type& key)
-                { return key_codec::extract_digit(key, begin_bit, pass_bits); });
+                [begin_bit, pass_bits](const Key& key)
+                { return key_codec::extract_digit_from_key(key, begin_bit, pass_bits); });
             begin_bit += radix_bits_per_pass;
 
-            exchange_keys(storage, bit_keys, ranks);
+            exchange_keys(storage, keys, ranks);
             exchange_values(storage, values, ranks);
 
             if(begin_bit >= end_bit)
+            {
                 break;
+            }
 
-            // Synchronization required to make bock_rank wait on the next iteration.
+            // Synchronization required to make block_rank wait on the next iteration.
             ::rocprim::syncthreads();
         }
 
         if ROCPRIM_IF_CONSTEXPR(ToStriped)
         {
-            to_striped_keys(storage, bit_keys);
+            to_striped_keys(storage, keys);
             to_striped_values(storage, values);
         }
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)
         {
-            keys[i] = key_codec::decode(bit_keys[i]);
+            key_codec::decode_inplace(keys[i]);
         }
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void exchange_keys(storage_type& storage,
-                       bit_key_type (&bit_keys)[ItemsPerThread],
-                       const unsigned int (&ranks)[ItemsPerThread])
+    ROCPRIM_DEVICE ROCPRIM_INLINE void exchange_keys(storage_type& storage,
+                                                     Key (&keys)[ItemsPerThread],
+                                                     const unsigned int (&ranks)[ItemsPerThread])
     {
         storage_type_& storage_ = storage.get();
         ::rocprim::syncthreads(); // Storage will be reused (union), synchronization is needed
-        bit_keys_exchange_type().scatter_to_blocked(bit_keys, bit_keys, ranks, storage_.bit_keys_exchange);
+        keys_exchange_type().scatter_to_blocked(keys, keys, ranks, storage_.keys_exchange);
     }
 
     template<class SortedValue>
@@ -856,13 +857,12 @@ private:
         (void) ranks;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void to_striped_keys(storage_type& storage,
-                         bit_key_type (&bit_keys)[ItemsPerThread])
+    ROCPRIM_DEVICE ROCPRIM_INLINE void to_striped_keys(storage_type& storage,
+                                                       Key (&keys)[ItemsPerThread])
     {
         storage_type_& storage_ = storage.get();
         ::rocprim::syncthreads(); // Storage will be reused (union), synchronization is needed
-        bit_keys_exchange_type().blocked_to_striped(bit_keys, bit_keys, storage_.bit_keys_exchange);
+        keys_exchange_type().blocked_to_striped(keys, keys, storage_.keys_exchange);
     }
 
     template<class SortedValue>
