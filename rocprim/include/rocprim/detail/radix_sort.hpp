@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 
 #include "../config.hpp"
 #include "../type_traits.hpp"
+#include "various.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 namespace detail
@@ -49,13 +50,13 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static bit_key_type encode(Key key)
     {
-        return __builtin_bit_cast(bit_key_type, key);
+        return ::rocprim::detail::bit_cast<bit_key_type>(key);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static Key decode(bit_key_type bit_key)
     {
-        return __builtin_bit_cast(Key, bit_key);
+        return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
@@ -77,12 +78,12 @@ struct radix_key_codec_integral<
 
     ROCPRIM_DEVICE ROCPRIM_INLINE static bit_key_type encode(Key key)
     {
-        return __builtin_bit_cast(bit_key_type, key);
+        return ::rocprim::detail::bit_cast<bit_key_type>(key);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE static Key decode(bit_key_type bit_key)
     {
-        return __builtin_bit_cast(Key, bit_key);
+        return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
@@ -104,7 +105,7 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static bit_key_type encode(Key key)
     {
-        const bit_key_type bit_key = __builtin_bit_cast(bit_key_type, key);
+        const auto bit_key = ::rocprim::detail::bit_cast<bit_key_type>(key);
         return sign_bit ^ bit_key;
     }
 
@@ -112,7 +113,7 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
     static Key decode(bit_key_type bit_key)
     {
         bit_key ^= sign_bit;
-        return __builtin_bit_cast(Key, bit_key);
+        return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
@@ -135,14 +136,14 @@ struct radix_key_codec_integral<Key,
 
     ROCPRIM_DEVICE ROCPRIM_INLINE static bit_key_type encode(Key key)
     {
-        const bit_key_type bit_key = __builtin_bit_cast(bit_key_type, key);
+        const auto bit_key = ::rocprim::detail::bit_cast<bit_key_type>(key);
         return sign_bit ^ bit_key;
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE static Key decode(bit_key_type bit_key)
     {
         bit_key ^= sign_bit;
-        return __builtin_bit_cast(Key, bit_key);
+        return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
@@ -203,7 +204,7 @@ struct radix_key_codec_floating
     ROCPRIM_DEVICE ROCPRIM_INLINE
     static bit_key_type encode(Key key)
     {
-        bit_key_type bit_key = __builtin_bit_cast(bit_key_type, key);
+        bit_key_type bit_key = ::rocprim::detail::bit_cast<bit_key_type>(key);
         bit_key ^= (sign_bit & bit_key) == 0 ? sign_bit : bit_key_type(-1);
         return bit_key;
     }
@@ -212,7 +213,7 @@ struct radix_key_codec_floating
     static Key decode(bit_key_type bit_key)
     {
         bit_key ^= (sign_bit & bit_key) == 0 ? bit_key_type(-1) : sign_bit;
-        return __builtin_bit_cast(Key, bit_key);
+        return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,8 @@
 #include <type_traits>
 
 #include "../config.hpp"
-#include "thread.hpp"
+    #include "../detail/various.hpp"
+    #include "thread.hpp"
 
 /// \addtogroup warpmodule
 /// @{
@@ -34,24 +35,6 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-#ifdef __HIP_CPU_RT__
-// TODO: consider adding macro checks relaying to std::bit_cast when compiled
-//       using C++20.
-template <class To, class From>
-typename std::enable_if_t<
-    sizeof(To) == sizeof(From) &&
-    std::is_trivially_copyable_v<From> &&
-    std::is_trivially_copyable_v<To>,
-    To>
-// constexpr support needs compiler magic
-bit_cast(const From& src) noexcept
-{
-    To dst;
-    std::memcpy(&dst, &src, sizeof(To));
-    return dst;
-}
-#endif
-
 template<class T, class ShuffleOp>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 typename std::enable_if<std::is_trivially_copyable<T>::value && (sizeof(T) % sizeof(int) == 0), T>::type
@@ -60,11 +43,8 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
     constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
 
     struct V { int words[words_no]; };
-#ifdef __HIP_CPU_RT__
-    V a = bit_cast<V>(input);
-#else
-    V a = __builtin_bit_cast(V, input);
-#endif
+
+    auto a = ::rocprim::detail::bit_cast<V>(input);
 
     ROCPRIM_UNROLL
     for(int i = 0; i < words_no; i++)
@@ -72,11 +52,7 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
         a.words[i] = op(a.words[i]);
     }
 
-#ifdef __HIP_CPU_RT__
-    return bit_cast<T>(a);
-#else
-    return __builtin_bit_cast(T, a);
-#endif
+    return ::rocprim::detail::bit_cast<T>(a);
 }
 
 template<class T, class ShuffleOp>

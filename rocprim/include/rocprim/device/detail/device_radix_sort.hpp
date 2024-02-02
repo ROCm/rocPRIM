@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -528,8 +528,8 @@ auto compare_nan_sensitive(const T& a, const T& b)
     using bit_key_type = typename float_bit_mask<T>::bit_type;
     static constexpr auto sign_bit = float_bit_mask<T>::sign_bit;
 
-    auto a_bits = __builtin_bit_cast(bit_key_type, a);
-    auto b_bits = __builtin_bit_cast(bit_key_type, b);
+    auto a_bits = ::rocprim::detail::bit_cast<bit_key_type>(a);
+    auto b_bits = ::rocprim::detail::bit_cast<bit_key_type>(b);
 
     // convert -0.0 to +0.0
     a_bits = a_bits == sign_bit ? 0 : a_bits;
