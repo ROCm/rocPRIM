@@ -185,16 +185,25 @@ template<bool IsMemCpy,
          class byte_offset_type,
          typename std::enable_if<!IsMemCpy, int>::type = 0>
 void init_input(ContainerMemCpy& /*h_input_for_memcpy*/,
-                ContainerCopy& h_input_for_copy,
-                std::mt19937_64& /*rng*/,
+                ContainerCopy&   h_input_for_copy,
+                std::mt19937_64& rng,
                 byte_offset_type total_num_bytes,
                 byte_offset_type total_num_elements)
 {
     using value_type = typename ContainerCopy::value_type;
-    h_input_for_copy = test_utils::get_random_data<value_type>(total_num_elements,
-                                                               value_type(0),
-                                                               value_type(100),
-                                                               rand());
+
+    std::independent_bits_engine<std::mt19937_64, 64, uint64_t> bits_engine{rng};
+
+    const size_t num_ints = rocprim::detail::ceiling_div(total_num_bytes, sizeof(uint64_t));
+    const size_t num_of_elements
+        = rocprim::detail::ceiling_div(num_ints * sizeof(uint64_t), sizeof(value_type));
+    h_input_for_copy = std::vector<value_type>(num_of_elements);
+
+    // generate_n for uninitialized memory, pragmatically use placement-new, since there are no
+    // uint64_t objects alive yet in the storage.
+    std::for_each(reinterpret_cast<uint64_t*>(h_input_for_copy.data()),
+                  reinterpret_cast<uint64_t*>(h_input_for_copy.data()) + num_ints,
+                  [&bits_engine](uint64_t& elem) { ::new(&elem) uint64_t{bits_engine()}; });
 }
 
 template<bool IsMemCpy,
