@@ -28,6 +28,7 @@
 #include "../../detail/various.hpp"
 
 #include "../../config.hpp"
+#include "../../type_traits.hpp"
 #include "device_config_helper.hpp"
 
 #include <hip/hip_runtime.h>
@@ -179,11 +180,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void adjacent_difference_kernel_impl(
     const std::size_t                                         starting_block)
 {
     using input_type  = typename std::iterator_traits<InputIt>::value_type;
-    // If output iterator's value type is void, use input iterator's.
-    using output_type = typename std::conditional<
-        (std::is_same<typename std::iterator_traits<OutputIt>::value_type, void>::value),
-        typename std::iterator_traits<InputIt>::value_type,
-        typename std::iterator_traits<OutputIt>::value_type>::type;
+    using output_type = rocprim::invoke_result_binary_op_t<input_type, BinaryFunction>;
 
     static constexpr adjacent_difference_config_params params = device_params<Config>();
 
