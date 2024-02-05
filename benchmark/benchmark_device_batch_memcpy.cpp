@@ -91,8 +91,7 @@ template<bool IsMemCpy,
 void init_input(ContainerMemCpy& h_input_for_memcpy,
                 ContainerCopy& /*h_input_for_copy*/,
                 std::mt19937_64& rng,
-                offset_type      total_num_bytes,
-                offset_type      total_num_elements)
+                offset_type      total_num_bytes)
 {
     std::independent_bits_engine<std::mt19937_64, 64, uint64_t> bits_engine{rng};
 
@@ -115,8 +114,7 @@ template<bool IsMemCpy,
 void init_input(ContainerMemCpy& /*h_input_for_memcpy*/,
                 ContainerCopy&   h_input_for_copy,
                 std::mt19937_64& rng,
-                byte_offset_type total_num_bytes,
-                byte_offset_type total_num_elements)
+                byte_offset_type total_num_bytes)
 {
     using value_type = typename ContainerCopy::value_type;
 
@@ -274,8 +272,7 @@ BatchMemcpyData<ValueType, BufferSizeType> prepare_data(const int32_t num_tlev_b
     init_input<IsMemCpy>(h_input_for_memcpy,
                          h_input_for_copy,
                          rng,
-                         result.total_num_elements * sizeof(ValueType),
-                         result.total_num_elements);
+                         result.total_num_elements * sizeof(ValueType));
 
     HIP_CHECK(hipMalloc(&result.d_input, result.total_num_bytes()));
     HIP_CHECK(hipMalloc(&result.d_output, result.total_num_bytes()));

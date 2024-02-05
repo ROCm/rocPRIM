@@ -163,8 +163,7 @@ template<bool IsMemCpy,
 void init_input(ContainerMemCpy& h_input_for_memcpy,
                 ContainerCopy& /*h_input_for_copy*/,
                 std::mt19937_64& rng,
-                byte_offset_type total_num_bytes,
-                byte_offset_type total_num_elements)
+                byte_offset_type total_num_bytes)
 {
     std::independent_bits_engine<std::mt19937_64, 64, uint64_t> bits_engine{rng};
 
@@ -187,8 +186,7 @@ template<bool IsMemCpy,
 void init_input(ContainerMemCpy& /*h_input_for_memcpy*/,
                 ContainerCopy&   h_input_for_copy,
                 std::mt19937_64& rng,
-                byte_offset_type total_num_bytes,
-                byte_offset_type total_num_elements)
+                byte_offset_type total_num_bytes)
 {
     using value_type = typename ContainerCopy::value_type;
 
@@ -262,7 +260,7 @@ void check_result(ContainerMemCpy& h_input_for_memcpy,
                   ContainerCopy& /*h_input_for_copy*/,
                   ptr              d_output,
                   byte_offset_type total_num_bytes,
-                  byte_offset_type total_num_elements,
+                  byte_offset_type /*total_num_elements*/,
                   int32_t          num_buffers,
                   OffsetContainer& src_offsets,
                   OffsetContainer& dst_offsets,
@@ -403,11 +401,7 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
     // Generate data.
     std::vector<unsigned char> h_input_for_memcpy;
     std::vector<value_type>    h_input_for_copy;
-    init_input<isMemCpy>(h_input_for_memcpy,
-                         h_input_for_copy,
-                         rng,
-                         total_num_bytes,
-                         total_num_elements);
+    init_input<isMemCpy>(h_input_for_memcpy, h_input_for_copy, rng, total_num_bytes);
 
     // Generate the source and shuffled destination offsets.
     std::vector<buffer_offset_type> src_offsets;
