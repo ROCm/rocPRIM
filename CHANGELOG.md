@@ -24,6 +24,7 @@ Documentation for rocPRIM is available at
 * Fixed incorrect results of `warp_exchange::blocked_to_striped_shuffle` and `warp_exchange::striped_to_blocked_shuffle` when the block size is
   larger than the logical warp size. The test suite has been updated with such cases.
 * Fixed incorrect results returned when calling device `unique_by_key` with overlapping `values_input` and `values_output`.
+* Fixed incorrect output type used in `device_adjacent_difference`.
 
 ### Deprecations
 
