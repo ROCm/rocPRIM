@@ -418,6 +418,9 @@ void run_benchmark(benchmark::State& state,
     state.SetBytesProcessed(state.iterations() * data.total_num_bytes());
     state.SetItemsProcessed(state.iterations() * data.total_num_elements);
 
+    HIP_CHECK(hipEventDestroy(start));
+    HIP_CHECK(hipEventDestroy(stop));
+
     HIP_CHECK(hipFree(d_temp_storage));
 }
 
@@ -509,6 +512,9 @@ void run_naive_benchmark(benchmark::State& state,
     }
     state.SetBytesProcessed(state.iterations() * data.total_num_bytes());
     state.SetItemsProcessed(state.iterations() * data.total_num_elements);
+
+    HIP_CHECK(hipEventDestroy(start));
+    HIP_CHECK(hipEventDestroy(stop));
 }
 
     #define CREATE_NAIVE_BENCHMARK(item_size,                                           \
