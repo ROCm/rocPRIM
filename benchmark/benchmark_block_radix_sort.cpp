@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 // Google Benchmark
@@ -51,6 +52,10 @@ enum class benchmark_kinds
 
 namespace rp = rocprim;
 
+template<class T>
+using select_decomposer_t = std::
+    conditional_t<is_custom_type<T>::value, custom_type_decomposer<T>, rp::identity_decomposer>;
+
 template<
     class T,
     unsigned int BlockSize,
@@ -71,7 +76,7 @@ void sort_keys_kernel(const T * input, T * output)
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         rp::block_radix_sort<T, BlockSize, ItemsPerThread> sort;
-        sort.sort(keys);
+        sort.sort(keys, 0, sizeof(T) * 8, select_decomposer_t<T>{});
     }
 
     rp::block_store_direct_striped<BlockSize>(lid, output + block_offset, keys);
@@ -102,7 +107,7 @@ void sort_pairs_kernel(const T * input, T * output)
     for(unsigned int trial = 0; trial < Trials; trial++)
     {
         rp::block_radix_sort<T, BlockSize, ItemsPerThread, T> sort;
-        sort.sort(keys, values);
+        sort.sort(keys, values, 0, sizeof(T) * 8, select_decomposer_t<T>{});
     }
 
     for(unsigned int i = 0; i < ItemsPerThread; i++)
@@ -220,8 +225,9 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
                     hipStream_t stream,
                     size_t size)
 {
-    std::vector<benchmark::internal::Benchmark*> bs =
-    {
+    using custom_int_type = custom_type<int, int>;
+
+    std::vector<benchmark::internal::Benchmark*> bs = {
         BENCHMARK_TYPE(int, 64),
         BENCHMARK_TYPE(int, 128),
         BENCHMARK_TYPE(int, 192),
@@ -256,6 +262,13 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         BENCHMARK_TYPE(long long, 256),
         BENCHMARK_TYPE(long long, 320),
         BENCHMARK_TYPE(long long, 512),
+
+        BENCHMARK_TYPE(custom_int_type, 64),
+        BENCHMARK_TYPE(custom_int_type, 128),
+        BENCHMARK_TYPE(custom_int_type, 192),
+        BENCHMARK_TYPE(custom_int_type, 256),
+        BENCHMARK_TYPE(custom_int_type, 320),
+        BENCHMARK_TYPE(custom_int_type, 512),
     };
 
     benchmarks.insert(benchmarks.end(), bs.begin(), bs.end());

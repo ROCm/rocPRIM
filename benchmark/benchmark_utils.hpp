@@ -231,6 +231,13 @@ struct custom_type
     {
         return x == rhs.x && y == rhs.y;
     }
+
+    ROCPRIM_HOST_DEVICE custom_type& operator+=(const custom_type& rhs)
+    {
+        this->x += rhs.x;
+        this->y += rhs.y;
+        return *this;
+    }
 };
 
 template<typename>
@@ -238,6 +245,21 @@ struct is_custom_type : std::false_type {};
 
 template<class T, class U>
 struct is_custom_type<custom_type<T,U>> : std::true_type {};
+
+template<class CustomType>
+struct custom_type_decomposer
+{
+    static_assert(is_custom_type<CustomType>::value,
+                  "custom_type_decomposer can only be used with instantiations of custom_type");
+
+    using T = typename CustomType::first_type;
+    using U = typename CustomType::second_type;
+
+    __host__ __device__ ::rocprim::tuple<T&, U&> operator()(CustomType& key) const
+    {
+        return ::rocprim::tuple<T&, U&>{key.x, key.y};
+    }
+};
 
 template<class OutputIterator, class Generator>
 inline auto generate_random_data_n(OutputIterator             it,
