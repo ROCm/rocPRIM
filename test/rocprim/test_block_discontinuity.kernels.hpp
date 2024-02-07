@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -185,11 +185,15 @@ auto test_block_discontinuity()
 {
     using type = Type;
     // std::vector<bool> is a special case that will cause an error in hipMemcpy
+    // rocprim::half/rocprim::bfloat16 are special cases that cannot be compared '=='
+    // in ASSERT_EQ
     using stored_flag_type = typename std::conditional<
-                               std::is_same<bool, FlagType>::value,
-                               int,
-                               FlagType
-                           >::type;
+        std::is_same<bool, FlagType>::value,
+        int,
+        typename std::conditional<std::is_same<rocprim::half, FlagType>::value
+                                      || std::is_same<rocprim::bfloat16, FlagType>::value,
+                                  float,
+                                  FlagType>::type>::type;
     using flag_type = FlagType;
     using flag_op_type = FlagOpType;
     static constexpr size_t block_size = BlockSize;
@@ -223,9 +227,8 @@ auto test_block_discontinuity()
                 const size_t i = bi * items_per_block + ii;
                 if(ii == 0)
                 {
-                    expected_heads[i] = bi % 2 == 1
-                        ? apply(flag_op, input[i - 1], input[i], ii)
-                        : flag_type(true);
+                    expected_heads[i] = bi % 2 == 1 ? apply(flag_op, input[i - 1], input[i], ii)
+                                                    : stored_flag_type(true);
                 }
                 else
                 {
@@ -296,11 +299,15 @@ auto test_block_discontinuity()
 {
     using type = Type;
     // std::vector<bool> is a special case that will cause an error in hipMemcpy
+    // rocprim::half/rocprim::bfloat16 are special cases that cannot be compared '=='
+    // in ASSERT_EQ
     using stored_flag_type = typename std::conditional<
-                               std::is_same<bool, FlagType>::value,
-                               int,
-                               FlagType
-                           >::type;
+        std::is_same<bool, FlagType>::value,
+        int,
+        typename std::conditional<std::is_same<rocprim::half, FlagType>::value
+                                      || std::is_same<rocprim::bfloat16, FlagType>::value,
+                                  float,
+                                  FlagType>::type>::type;
     using flag_type = FlagType;
     using flag_op_type = FlagOpType;
     static constexpr size_t block_size = BlockSize;
@@ -334,9 +341,8 @@ auto test_block_discontinuity()
                 const size_t i = bi * items_per_block + ii;
                 if(ii == items_per_block - 1)
                 {
-                    expected_tails[i] = bi % 2 == 0
-                        ? apply(flag_op, input[i], input[i + 1], ii + 1)
-                        : flag_type(true);
+                    expected_tails[i] = bi % 2 == 0 ? apply(flag_op, input[i], input[i + 1], ii + 1)
+                                                    : stored_flag_type(true);
                 }
                 else
                 {
@@ -407,11 +413,15 @@ auto test_block_discontinuity()
 {
     using type = Type;
     // std::vector<bool> is a special case that will cause an error in hipMemcpy
+    // rocprim::half/rocprim::bfloat16 are special cases that cannot be compared '=='
+    // in ASSERT_EQ
     using stored_flag_type = typename std::conditional<
-                               std::is_same<bool, FlagType>::value,
-                               int,
-                               FlagType
-                           >::type;
+        std::is_same<bool, FlagType>::value,
+        int,
+        typename std::conditional<std::is_same<rocprim::half, FlagType>::value
+                                      || std::is_same<rocprim::bfloat16, FlagType>::value,
+                                  float,
+                                  FlagType>::type>::type;
     using flag_type = FlagType;
     using flag_op_type = FlagOpType;
     static constexpr size_t block_size = BlockSize;
@@ -448,8 +458,8 @@ auto test_block_discontinuity()
                 if(ii == 0)
                 {
                     expected_heads[i] = (bi % 4 == 1 || bi % 4 == 2)
-                        ? apply(flag_op, input[i - 1], input[i], ii)
-                        : flag_type(true);
+                                            ? apply(flag_op, input[i - 1], input[i], ii)
+                                            : stored_flag_type(true);
                 }
                 else
                 {
@@ -458,8 +468,8 @@ auto test_block_discontinuity()
                 if(ii == items_per_block - 1)
                 {
                     expected_tails[i] = (bi % 4 == 0 || bi % 4 == 1)
-                        ? apply(flag_op, input[i], input[i + 1], ii + 1)
-                        : flag_type(true);
+                                            ? apply(flag_op, input[i], input[i + 1], ii + 1)
+                                            : stored_flag_type(true);
                 }
                 else
                 {
