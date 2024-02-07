@@ -151,7 +151,7 @@ struct custom_test_type_decomposer
 template<class Key>
 struct select_decomposer
 {
-    using type = ::rocprim::detail::identity_decomposer;
+    using type = ::rocprim::identity_decomposer;
 };
 
 template<class InnerType>

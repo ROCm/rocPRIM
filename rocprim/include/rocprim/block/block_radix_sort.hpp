@@ -180,7 +180,7 @@ public:
     /// If the \p input values across threads in a block are <tt>{[256, 255], ..., [4, 3], [2, 1]}}</tt>, then
     /// then after sort they will be equal <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt>.
     /// \endparblock
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void sort(Key (&keys)[ItemsPerThread],
                                             storage_type& storage,
                                             unsigned int  begin_bit  = 0,
@@ -203,7 +203,7 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort(Key (&keys)[ItemsPerThread],
                                                   unsigned int begin_bit  = 0,
                                                   unsigned int end_bit    = 8 * sizeof(Key),
@@ -259,7 +259,7 @@ public:
     /// If the \p input values across threads in a block are <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt>,
     /// then after sort they will be equal <tt>{[256, 255], ..., [4, 3], [2, 1]}</tt>.
     /// \endparblock
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void sort_desc(Key (&keys)[ItemsPerThread],
                                                  storage_type& storage,
                                                  unsigned int  begin_bit  = 0,
@@ -287,7 +287,7 @@ public:
     /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
     ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
     /// fundamental types from this custom type.
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_desc(Key (&keys)[ItemsPerThread],
                                                        unsigned int begin_bit  = 0,
                                                        unsigned int end_bit    = 8 * sizeof(Key),
@@ -351,8 +351,7 @@ public:
     /// will be equal <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt> and the \p values will be
     /// equal <tt>{[128, 128], [127, 127]  ..., [2, 2], [1, 1]}</tt>.
     /// \endparblock
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         sort(Key (&keys)[ItemsPerThread],
              typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
@@ -385,8 +384,7 @@ public:
     /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
     ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
     /// fundamental types from this custom type.
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         sort(Key (&keys)[ItemsPerThread],
              typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
@@ -452,8 +450,7 @@ public:
     /// the \p keys will be equal <tt>{[256, 255], ..., [4, 3], [2, 1]}</tt> and the \p values
     /// will be equal <tt>{[1, 1], [2, 2]  ..., [128, 128]}</tt>.
     /// \endparblock
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         sort_desc(Key (&keys)[ItemsPerThread],
                   typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
@@ -486,8 +483,7 @@ public:
     /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
     ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
     /// fundamental types from this custom type.
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         sort_desc(Key (&keys)[ItemsPerThread],
                   typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
@@ -546,7 +542,7 @@ public:
     /// If the \p input values across threads in a block are <tt>{[256, 255], ..., [4, 3], [2, 1]}}</tt>, then
     /// then after sort they will be equal <tt>{[1, 129], [2, 130]  ..., [128, 256]}</tt>.
     /// \endparblock
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void sort_to_striped(Key (&keys)[ItemsPerThread],
                                                        storage_type& storage,
                                                        unsigned int  begin_bit  = 0,
@@ -575,7 +571,7 @@ public:
     /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
     ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
     /// fundamental types from this custom type.
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_to_striped(Key (&keys)[ItemsPerThread],
                                                              unsigned int begin_bit = 0,
                                                              unsigned int end_bit = 8 * sizeof(Key),
@@ -632,7 +628,7 @@ public:
     /// If the \p input values across threads in a block are <tt>{[1, 2], [3, 4]  ..., [255, 256]}</tt>,
     /// then after sort they will be equal <tt>{[256, 128], ..., [130, 2], [129, 1]}</tt>.
     /// \endparblock
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
                                                             storage_type& storage,
                                                             unsigned int  begin_bit = 0,
@@ -661,7 +657,7 @@ public:
     /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
     ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
     /// fundamental types from this custom type.
-    template<class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_desc_to_striped(Key (&keys)[ItemsPerThread],
                                                                   unsigned int begin_bit = 0,
                                                                   unsigned int end_bit
@@ -726,8 +722,7 @@ public:
     /// \p keys will be equal <tt>{[1, 5], [2, 6], [3, 7], [4, 8]}</tt> and the \p values will be
     /// equal <tt>{[-8, -4], [-7, -3], [-6, -2], [-5, -1]}</tt>.
     /// \endparblock
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         sort_to_striped(Key (&keys)[ItemsPerThread],
                         typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
@@ -758,8 +753,7 @@ public:
     /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
     ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
     /// fundamental types from this custom type.
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         sort_to_striped(Key (&keys)[ItemsPerThread],
                         typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
@@ -825,8 +819,7 @@ public:
     /// \p keys will be equal <tt>{[8, 4], [7, 3], [6, 2], [5, 1]}</tt> and the \p values will be
     /// equal <tt>{[10, 50], [20, 60], [30, 70], [40, 80]}</tt>.
     /// \endparblock
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE void sort_desc_to_striped(
         Key (&keys)[ItemsPerThread],
         typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
@@ -857,8 +850,7 @@ public:
     /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
     ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
     /// fundamental types from this custom type.
-    template<bool WithValues  = with_values,
-             class Decomposer = ::rocprim::detail::identity_decomposer>
+    template<bool WithValues = with_values, class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_desc_to_striped(
         Key (&keys)[ItemsPerThread],
         typename std::enable_if<WithValues, Value>::type (&values)[ItemsPerThread],
