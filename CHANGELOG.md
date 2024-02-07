@@ -30,11 +30,6 @@ Documentation for rocPRIM is available at
 
 * The internal header `detail/match_result_type.hpp` has been depracated.
 
-### Known Issues
-
-* Due to a compiler bug, device scan algorithms on Navi 31 (gfx1100), Navi 32 (gfx1101), and Navi 33 (gfx1102) may produce inaccurate results.
-  This can be fixed on these devices by disabling caching via the 'hipDeviceMallocUncached'-flag when allocating the temporary storage.
-
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
 ### Additions

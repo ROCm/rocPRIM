@@ -33,8 +33,7 @@
 // required test headers
 #include "test_utils_types.hpp"
 
-#include <algorithm>
-#include <array>
+#include <functional>
 #include <iterator>
 #include <numeric>
 
@@ -348,32 +347,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-
-            // Disable caching on GFX11 (Navi 3x) due to a compiler bug.
-            // Note: we use the detail namespace to temporarily work around this bug!
-            std::array<rocprim::detail::target_arch, 3> disabled_archs = {
-                rocprim::detail::target_arch::gfx1100,
-                rocprim::detail::target_arch::gfx1101,
-                rocprim::detail::target_arch::gfx1102,
-            };
-
-            // Retrieve current arch.
-            rocprim::detail::target_arch arch{};
-            HIP_CHECK(rocprim::detail::get_device_arch(device_id, arch));
-
-            // If 'arch' is any of 'disabled_archs', disable caching:
-            if(disabled_archs.end()
-               != std::find(disabled_archs.begin(), disabled_archs.end(), arch))
-            {
-               HIP_CHECK(hipExtMallocWithFlags(&d_temp_storage,
-                                               temp_storage_size_bytes,
-                                               hipDeviceMallocUncached));
-            }
-            else
-            {
-               HIP_CHECK(
-                   test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            }
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
             HIP_CHECK(hipDeviceSynchronize());
 
             if (TestFixture::use_graphs)
@@ -536,32 +510,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-
-            // Disable caching on GFX11 (Navi 3x) due to a compiler bug.
-            // Note: we use the detail namespace to temporarily work around this bug!
-            std::array<rocprim::detail::target_arch, 3> disabled_archs = {
-                rocprim::detail::target_arch::gfx1100,
-                rocprim::detail::target_arch::gfx1101,
-                rocprim::detail::target_arch::gfx1102,
-            };
-
-            // Retrieve current arch.
-            rocprim::detail::target_arch arch{};
-            HIP_CHECK(rocprim::detail::get_device_arch(device_id, arch));
-
-            // If 'arch' is any of 'disabled_archs', disable caching:
-            if(disabled_archs.end()
-               != std::find(disabled_archs.begin(), disabled_archs.end(), arch))
-            {
-                HIP_CHECK(hipExtMallocWithFlags(&d_temp_storage,
-                                                temp_storage_size_bytes,
-                                                hipDeviceMallocUncached));
-            }
-            else
-            {
-                HIP_CHECK(
-                    test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            }
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
             HIP_CHECK(hipDeviceSynchronize());
 
             if (TestFixture::use_graphs)
@@ -1111,32 +1060,7 @@ void testLargeIndicesInclusiveScan()
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-
-            // Disable caching on GFX11 (Navi 3x) due to a compiler bug.
-            // Note: we use the detail namespace to temporarily work around this bug!
-            std::array<rocprim::detail::target_arch, 3> disabled_archs = {
-                rocprim::detail::target_arch::gfx1100,
-                rocprim::detail::target_arch::gfx1101,
-                rocprim::detail::target_arch::gfx1102,
-            };
-
-            // Retrieve current arch.
-            rocprim::detail::target_arch arch{};
-            HIP_CHECK(rocprim::detail::get_device_arch(device_id, arch));
-
-            // If 'arch' is any of 'disabled_archs', disable caching:
-            if(disabled_archs.end()
-               != std::find(disabled_archs.begin(), disabled_archs.end(), arch))
-            {
-                HIP_CHECK(hipExtMallocWithFlags(&d_temp_storage,
-                                                temp_storage_size_bytes,
-                                                hipDeviceMallocUncached));
-            }
-            else
-            {
-                HIP_CHECK(
-                    test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            }
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
             HIP_CHECK(hipDeviceSynchronize());
 
             if (UseGraphs)
@@ -1263,32 +1187,7 @@ void testLargeIndicesExclusiveScan()
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-
-            // Disable caching on GFX11 (Navi 3x) due to a compiler bug.
-            // Note: we use the detail namespace to temporarily work around this bug!
-            std::array<rocprim::detail::target_arch, 3> disabled_archs = {
-                rocprim::detail::target_arch::gfx1100,
-                rocprim::detail::target_arch::gfx1101,
-                rocprim::detail::target_arch::gfx1102,
-            };
-
-            // Retrieve current arch.
-            rocprim::detail::target_arch arch{};
-            HIP_CHECK(rocprim::detail::get_device_arch(device_id, arch));
-
-            // If 'arch' is any of 'disabled_archs', disable caching:
-            if(disabled_archs.end()
-               != std::find(disabled_archs.begin(), disabled_archs.end(), arch))
-            {
-                HIP_CHECK(hipExtMallocWithFlags(&d_temp_storage,
-                                                temp_storage_size_bytes,
-                                                hipDeviceMallocUncached));
-            }
-            else
-            {
-                HIP_CHECK(
-                    test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            }
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
             HIP_CHECK(hipDeviceSynchronize());
 
             if (UseGraphs)

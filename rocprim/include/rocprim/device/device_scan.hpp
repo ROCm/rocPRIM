@@ -36,7 +36,6 @@
 #include "detail/device_scan_common.hpp"
 #include "device_scan_config.hpp"
 #include "device_transform.hpp"
-#include "rocprim/device/config_types.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -539,12 +538,6 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
                                  const hipStream_t stream            = 0,
                                  bool              debug_synchronous = false)
 {
-#if defined(__GFX11__)
-    ROCPRIM_PRAGMA_MESSAGE(
-        "Due to a compiler bug on Navi 31 (gfx1100), Navi 32 (gfx1101), and Navi 33 (gfx1102), "
-        "device scan may produce inaccuracies on large workloads. Allocate the temporary storage "
-        "with the 'hipDeviceMallocUncached'-flag on these devices to ensure correct results.")
-#endif
     // input_type() is a dummy initial value (not used)
     return detail::
         scan_impl<false, Config, InputIterator, OutputIterator, AccType, BinaryFunction, AccType>(
@@ -662,13 +655,6 @@ inline hipError_t exclusive_scan(void*               temporary_storage,
                                  const hipStream_t   stream            = 0,
                                  bool                debug_synchronous = false)
 {
-#if defined(__GFX11__)
-    ROCPRIM_PRAGMA_MESSAGE(
-        "Due to a compiler bug on Navi 31 (gfx1100), Navi 32 (gfx1101), and Navi 33 (gfx1102), "
-        "device scan may produce inaccuracies on large workloads. Allocate the temporary storage "
-        "with the 'hipDeviceMallocUncached'-flag on these devices to ensure correct results.")
-#endif
-
     return detail::scan_impl<true,
                              Config,
                              InputIterator,

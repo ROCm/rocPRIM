@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -165,8 +165,6 @@ enum class target_arch : unsigned int
     gfx908  = 908,
     gfx90a  = 910,
     gfx1030 = 1030,
-    gfx1100 = 1100,
-    gfx1101 = 1101,
     gfx1102 = 1102,
     unknown = std::numeric_limits<unsigned int>::max(),
 };
@@ -199,16 +197,8 @@ constexpr bool prefix_equals(const char* lhs, const char* rhs, std::size_t n)
 
 constexpr target_arch get_target_arch_from_name(const char* const arch_name, const std::size_t n)
 {
-    constexpr const char* target_names[] = {"gfx803",
-                                            "gfx900",
-                                            "gfx906",
-                                            "gfx908",
-                                            "gfx90a",
-                                            "gfx1030",
-                                            "gfx1100",
-                                            "gfx1101",
-                                            "gfx1102"};
-
+    constexpr const char* target_names[]
+        = {"gfx803", "gfx900", "gfx906", "gfx908", "gfx90a", "gfx1030", "gfx1102"};
     constexpr target_arch target_architectures[] = {
         target_arch::gfx803,
         target_arch::gfx900,
@@ -216,8 +206,6 @@ constexpr target_arch get_target_arch_from_name(const char* const arch_name, con
         target_arch::gfx908,
         target_arch::gfx90a,
         target_arch::gfx1030,
-        target_arch::gfx1100,
-        target_arch::gfx1101,
         target_arch::gfx1102,
     };
     static_assert(sizeof(target_names) / sizeof(target_names[0])
@@ -273,10 +261,6 @@ auto dispatch_target_arch(const target_arch target_arch)
             return Config::template architecture_config<target_arch::gfx90a>::params;
         case target_arch::gfx1030:
             return Config::template architecture_config<target_arch::gfx1030>::params;
-        case target_arch::gfx1100:
-            return Config::template architecture_config<target_arch::gfx1100>::params;
-        case target_arch::gfx1101:
-            return Config::template architecture_config<target_arch::gfx1101>::params;
         case target_arch::gfx1102:
             return Config::template architecture_config<target_arch::gfx1102>::params;
         case target_arch::invalid:
