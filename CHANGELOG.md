@@ -25,6 +25,7 @@ Documentation for rocPRIM is available at
   larger than the logical warp size. The test suite has been updated with such cases.
 * Fixed incorrect results returned when calling device `unique_by_key` with overlapping `values_input` and `values_output`.
 * Fixed incorrect output type used in `device_adjacent_difference`.
+* Hotfix for incorrect results on the GFX10 (Navi 10/RDNA1, Navi 20/RDNA2) ISA and GFX11 ISA (Navi 30 GPUs) on device scan algorithms `rocprim::inclusive_scan(_by_key)` and `rocprim::exclusive_scan(_by_key)` with large input types.
 
 ### Deprecations
 
