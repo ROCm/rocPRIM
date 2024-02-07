@@ -53,6 +53,20 @@ struct Floating;
 #define warp_params BlockParamsFloating
 #define name_suffix Floating
 
+#elif ROCPRIM_TEST_SLICE == 2
+
+typedef ::testing::Types<
+    block_param_type(test_utils::custom_test_type<int>, int),
+    block_param_type(test_utils::custom_test_type<float>, int8_t),
+    block_param_type(test_utils::custom_test_type<uint8_t>, uint16_t),
+    block_param_type(test_utils::custom_test_type<double>, double)
+> BlockParamsCustom;
+
+struct Custom;
+#define suite_name RocprimBlockRadixSort
+#define warp_params BlockParamsCustom
+#define name_suffix Custom
+
 #endif
 
 #include "test_block_radix_sort.hpp"

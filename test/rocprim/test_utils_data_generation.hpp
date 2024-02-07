@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -287,9 +287,10 @@ inline auto generate_random_data_n(OutputIter             it,
                                    it_value_t<OutputIter> min,
                                    it_value_t<OutputIter> max,
                                    Generator&             gen)
-    -> std::enable_if_t<is_custom_test_type<it_value_t<OutputIter>>::value
-                            && std::is_integral<typename it_value_t<OutputIter>::value_type>::value,
-                        OutputIter>
+    -> std::enable_if_t<
+        is_custom_test_type<it_value_t<OutputIter>>::value
+            && rocprim::is_integral<typename it_value_t<OutputIter>::value_type>::value,
+        OutputIter>
 {
     using T = it_value_t<OutputIter>;
 
@@ -308,7 +309,7 @@ inline auto generate_random_data_n(OutputIter             it,
                                    Generator&             gen)
     -> std::enable_if_t<
         is_custom_test_type<it_value_t<OutputIter>>::value
-            && std::is_floating_point<typename it_value_t<OutputIter>::value_type>::value,
+            && rocprim::is_floating_point<typename it_value_t<OutputIter>::value_type>::value,
         OutputIter>
 {
     using T = typename std::iterator_traits<OutputIter>::value_type;

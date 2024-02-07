@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -59,30 +59,35 @@ void sort_key_kernel(
     const unsigned int block_offset = blockIdx.x * items_per_block;
 
     key_type keys[ItemsPerThread];
-#ifdef __HIP_CPU_RT__
-    // TODO: check if it's really neccessary
-    // Initialize contents, as non-hipcc compilers don't unconditionally zero out allocated memory
-    std::memset(keys, 0, ItemsPerThread * sizeof(key_type));
-#endif
     rocprim::block_load_direct_blocked(lid, device_keys_output + block_offset, keys);
 
     rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread> bsort;
 
+    test_utils::select_decomposer_t<key_type> decomposer{};
+
     if(to_striped)
     {
         if(descending)
-            bsort.sort_desc_to_striped(keys, start_bit, end_bit);
+        {
+            bsort.sort_desc_to_striped(keys, start_bit, end_bit, decomposer);
+        }
         else
-            bsort.sort_to_striped(keys, start_bit, end_bit);
+        {
+            bsort.sort_to_striped(keys, start_bit, end_bit, decomposer);
+        }
 
         rocprim::block_store_direct_striped<BlockSize>(lid, device_keys_output + block_offset, keys);
     }
     else
     {
         if(descending)
-            bsort.sort_desc(keys, start_bit, end_bit);
+        {
+            bsort.sort_desc(keys, start_bit, end_bit, decomposer);
+        }
         else
-            bsort.sort(keys, start_bit, end_bit);
+        {
+            bsort.sort(keys, start_bit, end_bit, decomposer);
+        }
 
         rocprim::block_store_direct_blocked(lid, device_keys_output + block_offset, keys);
     }
@@ -114,12 +119,17 @@ void sort_key_value_kernel(
     rocprim::block_load_direct_blocked(lid, device_values_output + block_offset, values);
 
     rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread, value_type> bsort;
+    test_utils::select_decomposer_t<key_type>                                  decomposer{};
     if(to_striped)
     {
         if(descending)
-            bsort.sort_desc_to_striped(keys, values, start_bit, end_bit);
+        {
+            bsort.sort_desc_to_striped(keys, values, start_bit, end_bit, decomposer);
+        }
         else
-            bsort.sort_to_striped(keys, values, start_bit, end_bit);
+        {
+            bsort.sort_to_striped(keys, values, start_bit, end_bit, decomposer);
+        }
 
         rocprim::block_store_direct_striped<BlockSize>(lid, device_keys_output + block_offset, keys);
         rocprim::block_store_direct_striped<BlockSize>(lid, device_values_output + block_offset, values);
@@ -127,9 +137,13 @@ void sort_key_value_kernel(
     else
     {
         if(descending)
-            bsort.sort_desc(keys, values, start_bit, end_bit);
+        {
+            bsort.sort_desc(keys, values, start_bit, end_bit, decomposer);
+        }
         else
-            bsort.sort(keys, values, start_bit, end_bit);
+        {
+            bsort.sort(keys, values, start_bit, end_bit, decomposer);
+        }
 
         rocprim::block_store_direct_blocked(lid, device_keys_output + block_offset, keys);
         rocprim::block_store_direct_blocked(lid, device_values_output + block_offset, values);
