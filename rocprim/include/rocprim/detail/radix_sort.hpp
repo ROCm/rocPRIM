@@ -341,7 +341,7 @@ private:
     template<size_t Index>
     ROCPRIM_HOST_DEVICE static constexpr bool is_tuple_of_references_impl()
     {
-        using tuple_t = ::rocprim::tuple<Args...>;
+        using tuple_t   = ::rocprim::tuple<Args...>;
         using element_t = ::rocprim::tuple_element_t<Index, tuple_t>;
         return std::is_reference<element_t>::value && is_tuple_of_references_impl<Index + 1>();
     }
@@ -394,7 +394,7 @@ public:
                       "The decomposer must return a tuple of references.");
         const auto per_element_encode = [](auto& tuple_element)
         {
-            using element_type_t = std::decay_t<decltype(tuple_element)>;
+            using element_type_t  = std::decay_t<decltype(tuple_element)>;
             using codec_inplace_t = radix_key_codec_inplace<element_type_t, Descending>;
             codec_inplace_t::encode_inplace(tuple_element);
         };
@@ -415,7 +415,7 @@ public:
                       "The decomposer must return a tuple of references.");
         const auto per_element_decode = [](auto& tuple_element)
         {
-            using element_type_t = std::decay_t<decltype(tuple_element)>;
+            using element_type_t  = std::decay_t<decltype(tuple_element)>;
             using codec_inplace_t = radix_key_codec_inplace<element_type_t, Descending>;
             codec_inplace_t::decode_inplace(tuple_element);
         };
