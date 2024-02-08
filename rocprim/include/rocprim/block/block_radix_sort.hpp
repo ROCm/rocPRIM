@@ -203,6 +203,9 @@ public:
     /// \param [in] end_bit - [optional] past-the-end index (most significant) bit used in
     /// key comparison. Must be in range <tt>(begin_bit; 8 * sizeof(Key)]</tt>. Default
     /// value: \p <tt>8 * sizeof(Key)</tt>.
+    /// \param [in] decomposer [optional] If `Key` is not an arithmetic type (integral, floating point),
+    ///  a custom decomposer functor should be passed that produces a `::rocprim::tuple` of references to
+    /// fundamental types from this custom type.
     template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort(Key (&keys)[ItemsPerThread],
                                                   unsigned int begin_bit  = 0,
