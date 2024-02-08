@@ -388,7 +388,7 @@ class radix_key_codec_inplace
 {
 public:
     template<class Decomposer = ::rocprim::identity_decomposer>
-    ROCPRIM_DEVICE static void encode_inplace(Key& key, Decomposer decomposer = {})
+    ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, Decomposer decomposer = {})
     {
         static_assert(is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
@@ -402,14 +402,14 @@ public:
     }
 
     template<>
-    ROCPRIM_DEVICE static void encode_inplace(Key& key, ::rocprim::identity_decomposer)
+    ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, ::rocprim::identity_decomposer)
     {
         using codec = radix_key_codec<Key, Descending>;
         key         = ::rocprim::detail::bit_cast<Key>(codec::encode(key));
     }
 
     template<class Decomposer = ::rocprim::identity_decomposer>
-    ROCPRIM_DEVICE static void decode_inplace(Key& key, Decomposer decomposer = {})
+    ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, Decomposer decomposer = {})
     {
         static_assert(is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
@@ -423,7 +423,7 @@ public:
     }
 
     template<>
-    ROCPRIM_DEVICE static void decode_inplace(Key& key, ::rocprim::identity_decomposer)
+    ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, ::rocprim::identity_decomposer)
     {
         using codec        = radix_key_codec<Key, Descending>;
         using bit_key_type = typename codec::bit_key_type;
@@ -431,7 +431,7 @@ public:
     }
 
     template<class Decomposer>
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(Key key, unsigned int start, unsigned int radix_bits, Decomposer decomposer)
     {
         static_assert(is_tuple_of_references<decltype(decomposer(key))>::value,
@@ -446,10 +446,10 @@ public:
     }
 
     template<>
-    ROCPRIM_DEVICE static unsigned int extract_digit(Key          key,
-                                                     unsigned int start,
-                                                     unsigned int radix_bits,
-                                                     ::rocprim::identity_decomposer)
+    ROCPRIM_HOST_DEVICE static unsigned int extract_digit(Key          key,
+                                                          unsigned int start,
+                                                          unsigned int radix_bits,
+                                                          ::rocprim::identity_decomposer)
     {
         using codec        = radix_key_codec<Key, Descending>;
         using bit_key_type = typename codec::bit_key_type;
@@ -460,7 +460,7 @@ public:
 
 private:
     template<int ElementIndex, class... Args>
-    ROCPRIM_DEVICE static auto
+    ROCPRIM_HOST_DEVICE static auto
         extract_digit_from_key_impl(unsigned int                     digit,
                                     const ::rocprim::tuple<Args...>& key_tuple,
                                     const int                        start,
@@ -507,7 +507,7 @@ private:
     }
 
     template<int ElementIndex, class... Args>
-    ROCPRIM_DEVICE static auto
+    ROCPRIM_HOST_DEVICE static auto
         extract_digit_from_key_impl(unsigned int digit,
                                     const ::rocprim::tuple<Args...>& /*key_tuple*/,
                                     const int /*start*/,
