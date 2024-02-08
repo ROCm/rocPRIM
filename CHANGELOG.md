@@ -33,7 +33,7 @@ Documentation for rocPRIM is available at
 
 ### Deprecations
 
-* The internal header `detail/match_result_type.hpp` has been depracated.
+* The internal header `detail/match_result_type.hpp` has been deprecated.
 
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 
