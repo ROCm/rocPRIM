@@ -162,9 +162,8 @@ if [[ "${build_clients}" == true ]]; then
     clients="ON"
 fi
 
-static_libs="OFF"
 if [[ "${build_static_libraries}" == true ]]; then
-    static_libs="ON"
+    static_libs="-DBUILD_SHARED_LIBS=OFF"
 fi
 
 if [[ "${build_address_sanitizer}" == true ]]; then
@@ -194,12 +193,12 @@ if [[ "${build_relocatable}" == true ]]; then
        -DCMAKE_PREFIX_PATH="${rocm_path}  ${rocm_path}/hip" \
        -DBUILD_BENCHMARK=${benchmark} -DBUILD_TEST=${clients} \
        -DCMAKE_MODULE_PATH="${rocm_path}/lib/cmake/hip ${rocm_path}/hip/cmake" \
-       -DBUILD_STATIC_LIBS="${static_libs}" \
+       "${static_libs}" \
        ../../.     # or cmake-gui ../.
 else
     CXX=${rocm_path}/bin/${compiler} ${cmake_executable} ${cmake_common_options} -DBUILD_BENCHMARK=${benchmark} \
        -DBUILD_TEST=${clients} -DCMAKE_BUILD_TYPE=${build_type} -DBUILD_CODE_COVERAGE=${codecoverage} \
-       -DBUILD_STATIC_LIBS="${static_libs}" \
+       "${static_libs}" \
        ../../. # or cmake-gui ../.
 fi
 
