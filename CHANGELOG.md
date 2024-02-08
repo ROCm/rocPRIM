@@ -20,6 +20,8 @@ Documentation for rocPRIM is available at
 * New `rocprim::batch_copy` function added. Similar to `rocprim::batch_memcpy`, but copies by element, not with memcpy.
 * Added more test cases, to better cover supported data types.
 * Updated some tests to work with supported data types.
+* An optional `decomposer` argument for all member functions of `rocprim::block_radix_sort`. To sort keys of an user-defined type,
+  a decomposer functor should be passed. The decomposer should produce a `rocprim::tuple` of references to arithmetic types from the key.
 
 ### Fixes
 
