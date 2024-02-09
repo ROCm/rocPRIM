@@ -27,6 +27,7 @@
 
 #include "rocprim/detail/radix_sort.hpp"
 #include "test_utils_bfloat16.hpp"
+#include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_half.hpp"
 
@@ -57,7 +58,14 @@ Key to_bits(const Key key)
 template<unsigned int StartBit,
          unsigned int EndBit,
          class Key,
-         std::enable_if_t<rocprim::is_floating_point<Key>::value, int> = 0>
+         std::enable_if_t<rocprim::is_floating_point<Key>::value
+                              // custom_float_type is used in testing a hacky way of
+                              // radix sorting custom types. A part of this workaround
+                              // is to specialize rocprim::is_floating_point<custom_float_type>
+                              // that we must counter here.
+                              && !std::is_same<Key, custom_float_type>::value,
+                          int>
+         = 0>
 auto to_bits(const Key key)
 {
     using unsigned_bits_type = typename rocprim::get_unsigned_bits_type<Key>::unsigned_type;
@@ -88,7 +96,14 @@ auto to_bits(const Key key)
 template<unsigned int StartBit,
          unsigned int EndBit,
          class Key,
-         std::enable_if_t<is_custom_test_type<Key>::value, int> = 0>
+         std::enable_if_t<is_custom_test_type<Key>::value
+                              // custom_float_type is used in testing a hacky way of
+                              // radix sorting custom types. A part of this workaround
+                              // is to specialize rocprim::is_custom_test_type<custom_float_type>
+                              // that we must counter here.
+                              && !std::is_same<Key, custom_float_type>::value,
+                          int>
+         = 0>
 auto to_bits(const Key& key)
 {
     using inner_t = typename inner_type<Key>::type;
@@ -105,6 +120,15 @@ auto to_bits(const Key& key)
     const unsigned_bits_type bit_key_lower = to_bits<0, sizeof(key.x) * 8>(key.y);
 
     return to_bits<StartBit, EndBit>(bit_key_upper | bit_key_lower);
+}
+
+template<unsigned int StartBit,
+         unsigned int EndBit,
+         class Key,
+         std::enable_if_t<std::is_same<Key, custom_float_type>::value, int> = 0>
+auto to_bits(const Key key)
+{
+    return to_bits<StartBit, EndBit>(key.x);
 }
 
 } // namespace detail
