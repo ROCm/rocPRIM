@@ -94,6 +94,8 @@ using WarpStoreTestParams = ::testing::Types<
     Params<double, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
     Params<double, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>,
 
+    // half should be supported, but is missing some key operators.
+    // we should uncomment these, as soon as these are implemented and the tests compile and work as intended.
     //Params<rocprim::half, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
     //Params<rocprim::half, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
     //Params<rocprim::half, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,

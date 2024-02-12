@@ -94,6 +94,8 @@ using WarpLoadTestParams = ::testing::Types<
     Params<double, 4U, 1U, ::rocprim::warp_load_method::warp_load_vectorize>,
     Params<double, 4U, 1U, ::rocprim::warp_load_method::warp_load_transpose>,
 
+    // half should be supported, but is missing some key operators.
+    // we should uncomment these, as soon as these are implemented and the tests compile and work as intended.
     //Params<rocprim::half, 4U, 1U, ::rocprim::warp_load_method::warp_load_direct>,
     //Params<rocprim::half, 4U, 1U, ::rocprim::warp_load_method::warp_load_striped>,
     //Params<rocprim::half, 4U, 1U, ::rocprim::warp_load_method::warp_load_vectorize>,

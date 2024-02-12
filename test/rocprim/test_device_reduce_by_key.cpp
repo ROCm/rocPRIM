@@ -96,6 +96,8 @@ typedef ::testing::Types<
     params<custom_double2, custom_int2, rocprim::plus<custom_int2>, 1, 10>,
     params<unsigned long long, float, rocprim::minimum<float>, 1, 30>,
     params<int, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
+    // half should be supported, but is missing some key operators.
+    // we should uncomment these, as soon as these are implemented and the tests compile and work as intended.
     //params<rocprim::half, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
     params<int, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
     params<rocprim::bfloat16, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,

@@ -104,7 +104,6 @@ typedef ::testing::Types<
     DeviceReduceParamsList(int, int, false, 1073741824),
     DeviceReduceParams<int8_t, int8_t>,
     DeviceReduceParams<uint8_t, uint8_t>,
-    // #156 temporarily disable half test due to known issue with converting from double to half
     DeviceReduceParams<rocprim::half, rocprim::half>,
     DeviceReduceParams<rocprim::bfloat16, rocprim::bfloat16>,
     DeviceReduceParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<float>>,
@@ -112,12 +111,10 @@ typedef ::testing::Types<
     DeviceReduceParams<int, int, false, ROCPRIM_GRID_SIZE_LIMIT, bra::default_algorithm, true>>
     RocprimDeviceReduceTestsParams;
 
-typedef ::testing::Types<
-    DeviceReduceParams<double, double>,
-    DeviceReduceParamsList(float, float, false, 2048),
-    // #156 temporarily disable half test due to known issue with converting from double to half
-    // DeviceReduceParams<rocprim::half, rocprim::half>,
-    DeviceReduceParams<rocprim::bfloat16, rocprim::bfloat16>>
+typedef ::testing::Types<DeviceReduceParams<double, double>,
+                         DeviceReduceParamsList(float, float, false, 2048),
+                         DeviceReduceParams<rocprim::half, rocprim::half>,
+                         DeviceReduceParams<rocprim::bfloat16, rocprim::bfloat16>>
     RocprimDeviceReducePrecisionTestsParams;
 
 TYPED_TEST_SUITE(RocprimDeviceReduceTests, RocprimDeviceReduceTestsParams);
