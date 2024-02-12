@@ -111,8 +111,9 @@ auto to_bits(const Key& key)
     using unsigned_bits_type = std::conditional_t<
         sizeof(inner_t) == 8,
         __uint128_t,
-        typename rocprim::get_unsigned_bits_type<void, rocprim::min(8ul, sizeof(inner_t) * 2)>::
-            unsigned_type>;
+        typename rocprim::get_unsigned_bits_type<void,
+                                                 rocprim::min(static_cast<size_t>(8),
+                                                              sizeof(inner_t) * 2)>::unsigned_type>;
 
     const unsigned_bits_type bit_key_upper
         = static_cast<unsigned_bits_type>(to_bits<0, sizeof(key.x) * 8>(key.x))

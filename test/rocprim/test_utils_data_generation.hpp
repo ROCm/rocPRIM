@@ -293,12 +293,22 @@ inline auto generate_random_data_n(OutputIter             it,
         OutputIter>
 {
     using T = it_value_t<OutputIter>;
+    using value_t = typename T::value_type;
 
-    std::uniform_int_distribution<typename T::value_type> distribution(min.x, max.x);
+    using distribution_t
+        = std::conditional_t<is_valid_for_int_distribution<value_t>::value,
+                             value_t,
+                             std::conditional_t<std::is_signed<value_t>::value, int, unsigned int>>;
+
+    std::uniform_int_distribution<distribution_t> distribution(static_cast<distribution_t>(min.x),
+                                                               static_cast<distribution_t>(max.x));
 
     return segmented_generate_n(it,
                                 size,
-                                [&]() { return T(distribution(gen), distribution(gen)); });
+                                [&]() {
+                                    return T(static_cast<value_t>(distribution(gen)),
+                                             static_cast<value_t>(distribution(gen)));
+                                });
 }
 
 template<class OutputIter, class Generator>
