@@ -22,6 +22,11 @@ Documentation for rocPRIM is available at
 * Updated some tests to work with supported data types.
 * An optional `decomposer` argument for all member functions of `rocprim::block_radix_sort`. To sort keys of an user-defined type,
   a decomposer functor should be passed. The decomposer should produce a `rocprim::tuple` of references to arithmetic types from the key.
+* New `rocprim::predicate_iterator` which acts as a proxy for an underlying iterator based on a predicate. 
+  It iterates over proxies that holds the references to the underlying values, but only allow reading and writing if the predicate is `true`.
+  It can be instantiated with:
+  * `rocprim::make_predicate_iterator`
+  * `rocprim::make_mask_iterator`
 
 ### Fixes
 
