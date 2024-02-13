@@ -106,21 +106,34 @@ template<unsigned int StartBit,
          = 0>
 auto to_bits(const Key& key)
 {
-    using inner_t = typename inner_type<Key>::type;
+    using inner_t            = typename inner_type<Key>::type;
+    using unsigned_bits_type = typename ::rocprim::get_unsigned_bits_type<inner_t>::unsigned_type;
     // For two doubles, we need uint128, but that is not part of rocprim::get_unsigned_bits_type
-    using unsigned_bits_type = std::conditional_t<
+    using result_bits_type = std::conditional_t<
         sizeof(inner_t) == 8,
         __uint128_t,
         typename rocprim::get_unsigned_bits_type<void,
                                                  rocprim::min(static_cast<size_t>(8),
                                                               sizeof(inner_t) * 2)>::unsigned_type>;
 
-    const unsigned_bits_type bit_key_upper
-        = static_cast<unsigned_bits_type>(to_bits<0, sizeof(key.x) * 8>(key.x))
-          << (8 * sizeof(inner_t));
-    const unsigned_bits_type bit_key_lower = to_bits<0, sizeof(key.x) * 8>(key.y);
+    auto bit_key_upper = static_cast<unsigned_bits_type>(to_bits<0, sizeof(key.x) * 8>(key.x));
+    auto bit_key_lower = static_cast<unsigned_bits_type>(to_bits<0, sizeof(key.y) * 8>(key.y));
 
-    return to_bits<StartBit, EndBit>(bit_key_upper | bit_key_lower);
+    // Flip sign bit to properly order signed types
+    if(::rocprim::is_signed<inner_t>::value)
+    {
+        constexpr auto sign_bit = static_cast<unsigned_bits_type>(1) << (sizeof(inner_t) * 8 - 1);
+        bit_key_upper ^= sign_bit;
+        bit_key_lower ^= sign_bit;
+    }
+
+    // Create the result containing both parts
+    const auto bit_key
+        = (static_cast<result_bits_type>(bit_key_upper) << (8 * sizeof(unsigned_bits_type)))
+          | bit_key_lower;
+
+    // The last call to to_bits mask the result to the specified bit range
+    return to_bits<StartBit, EndBit>(bit_key);
 }
 
 template<unsigned int StartBit,

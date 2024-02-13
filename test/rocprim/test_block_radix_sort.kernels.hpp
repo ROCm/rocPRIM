@@ -196,12 +196,11 @@ auto test_block_radix_sort()
         }
         else
         {
-            keys_output = test_utils::get_random_data<key_type>(
-                size,
-                std::numeric_limits<key_type>::min(),
-                std::numeric_limits<key_type>::max(),
-                seed_value
-            );
+            keys_output
+                = test_utils::get_random_data<key_type>(size,
+                                                        test_utils::numeric_limits<key_type>::min(),
+                                                        test_utils::numeric_limits<key_type>::max(),
+                                                        seed_value);
         }
 
         // Calculate expected results on host
@@ -298,12 +297,11 @@ auto test_block_radix_sort()
         }
         else
         {
-            keys_output = test_utils::get_random_data<key_type>(
-                size,
-                std::numeric_limits<key_type>::min(),
-                std::numeric_limits<key_type>::max(),
-                seed_value
-            );
+            keys_output
+                = test_utils::get_random_data<key_type>(size,
+                                                        test_utils::numeric_limits<key_type>::min(),
+                                                        test_utils::numeric_limits<key_type>::max(),
+                                                        seed_value);
         }
 
         std::vector<value_type> values_output = test_utils::get_random_data<value_type>(size, 0, 100, seed_value);
