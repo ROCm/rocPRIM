@@ -50,12 +50,12 @@ public:
     /// \brief The type of the value that can be obtained by dereferencing the iterator.
     using value_type = typename std::iterator_traits<DataIterator>::value_type;
 
-    /// \brief A reference type of the type iterated over (\p value_type).
-    /// It's `const` since predicate_iterator is a read-only iterator.
+    /// \brief A reference type of the type iterated over (``value_type``).
+    /// It's ``const`` since predicate_iterator is a read-only iterator.
     using reference = typename std::iterator_traits<DataIterator>::reference;
 
-    /// \brief A pointer type of the type iterated over (\p value_type).
-    /// It's `const` since predicate_iterator is a read-only iterator.
+    /// \brief A pointer type of the type iterated over (``value_type``).
+    /// It's ``const`` since predicate_iterator is a read-only iterator.
     using pointer = typename std::iterator_traits<DataIterator>::pointer;
 
     /// \brief A type used for identify distance between iterators.
@@ -115,12 +115,14 @@ public:
 
     /// \brief Creates a new predicate_iterator.
     ///
-    /// \param iterator input iterator to iterate over and transform.
-    /// \param predicate unary function used to select values obtained
+    /// \param data_iterator The data iterator that will be forwarded whenever the predicate is true.
+    /// \param test_iterator The test iterator that is used to test the predicate on.
+    /// \param predicate Unary function used to select values obtained.
     /// from range pointed by \p iterator.
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
-        predicate_iterator(DataIterator iterator, TestIterator test, predicate_function predicate)
-        : data_it_(iterator), test_it_(test), predicate_(predicate)
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator(DataIterator       data_iterator,
+                                                          TestIterator       test_iterator,
+                                                          predicate_function predicate)
+        : data_it_(data_iterator), test_it_(test_iterator), predicate_(predicate)
     {}
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
