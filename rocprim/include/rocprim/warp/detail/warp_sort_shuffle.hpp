@@ -34,26 +34,22 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-template<class Key, unsigned int WarpSize, class Value, bool UseSwizzle = true>
+template<class Key, unsigned int WarpSize, class Value>
 class warp_sort_shuffle
 {
 private:
     template<int xor_mask, class V>
     ROCPRIM_DEVICE ROCPRIM_INLINE V warp_xor(V& v)
     {
-        if(UseSwizzle)
+        switch(xor_mask)
         {
-            switch(xor_mask)
-            {
-                case 1: return warp_swizzle<V, 0x041F>(v);
-                case 2: return warp_swizzle<V, 0x081F>(v);
-                case 4: return warp_swizzle<V, 0x101F>(v);
-                case 8: return warp_swizzle<V, 0x201F>(v);
-                case 16: return warp_swizzle<V, 0x401F>(v);
-                default: return warp_shuffle_xor(v, xor_mask, WarpSize);
-            }
+            case 1: return warp_swizzle<V, 0x041F>(v);
+            case 2: return warp_swizzle<V, 0x081F>(v);
+            case 4: return warp_swizzle<V, 0x101F>(v);
+            case 8: return warp_swizzle<V, 0x201F>(v);
+            case 16: return warp_swizzle<V, 0x401F>(v);
+            default: return warp_shuffle_xor(v, xor_mask, WarpSize);
         }
-        return warp_shuffle_xor(v, xor_mask, WarpSize);
     }
 
     template<int warp, int xor_mask, class V, class BinaryFunction>
