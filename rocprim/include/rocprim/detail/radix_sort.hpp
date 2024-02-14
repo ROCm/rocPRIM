@@ -313,21 +313,6 @@ struct radix_key_codec_base<float> : radix_key_codec_floating<float, unsigned in
 template<>
 struct radix_key_codec_base<double> : radix_key_codec_floating<double, unsigned long long> { };
 
-template<class Tuple, class Fun, size_t... Indices>
-ROCPRIM_HOST_DEVICE void
-    tuple_for_each_impl(Tuple&& tuple, Fun&& fun, std::index_sequence<Indices...>)
-{
-    (void)std::initializer_list<int>{(fun(::rocprim::get<Indices>(tuple)), 0)...};
-}
-
-template<class Tuple, class Fun>
-ROCPRIM_HOST_DEVICE void tuple_for_each(Tuple&& tuple, Fun&& fun)
-{
-    tuple_for_each_impl(std::forward<Tuple>(tuple),
-                        std::forward<Fun>(fun),
-                        std::make_index_sequence<::rocprim::tuple_size<Tuple>::value>());
-}
-
 template<class T>
 struct is_tuple_of_references
 {
@@ -398,7 +383,7 @@ public:
             using codec_inplace_t = radix_key_codec_inplace<element_type_t, Descending>;
             codec_inplace_t::encode_inplace(tuple_element);
         };
-        tuple_for_each(decomposer(key), per_element_encode);
+        for_each_in_tuple(decomposer(key), per_element_encode);
     }
 
     template<>
@@ -419,7 +404,7 @@ public:
             using codec_inplace_t = radix_key_codec_inplace<element_type_t, Descending>;
             codec_inplace_t::decode_inplace(tuple_element);
         };
-        tuple_for_each(decomposer(key), per_element_decode);
+        for_each_in_tuple(decomposer(key), per_element_decode);
     }
 
     template<>
