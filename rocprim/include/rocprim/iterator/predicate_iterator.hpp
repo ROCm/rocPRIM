@@ -41,9 +41,9 @@ BEGIN_ROCPRIM_NAMESPACE
 ///   Otherwise it will return the default constructed value.
 ///
 /// \tparam DataIterator Type of the data iterator that will be forwarded upon dereference.
-/// \tparam TestIterator Type of the test iterator used to test the predicate function.
-/// \tparam PredicateFunction Type of the predicate function that tests the test.
-template<class DataIterator, class TestIterator, class PredicateFunction>
+/// \tparam PredicateDataIterator Type of the test iterator used to test the predicate function.
+/// \tparam UnaryPredicate Type of the predicate function that tests the test.
+template<class DataIterator, class PredicateDataIterator, class UnaryPredicate>
 class predicate_iterator
 {
 public:
@@ -65,10 +65,11 @@ public:
     using iterator_category = std::random_access_iterator_tag;
 
     /// \brief The type of the test value that can be obtained by dereferencing the iterator.
-    using test_type = typename std::iterator_traits<TestIterator>::value_type;
+    using predicate_data_value_type =
+        typename std::iterator_traits<PredicateDataIterator>::value_type;
 
     /// \brief The type of predicate function used to select input range.
-    using predicate_function = PredicateFunction;
+    using unary_predicate = UnaryPredicate;
 
     /// \brief A struct representing a reference that can be conditionally discarded.
     ///
@@ -116,13 +117,13 @@ public:
     /// \brief Creates a new predicate_iterator.
     ///
     /// \param data_iterator The data iterator that will be forwarded whenever the predicate is true.
-    /// \param test_iterator The test iterator that is used to test the predicate on.
+    /// \param predicate_iterator The test iterator that is used to test the predicate on.
     /// \param predicate Unary function used to select values obtained.
     /// from range pointed by \p iterator.
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator(DataIterator       data_iterator,
-                                                          TestIterator       test_iterator,
-                                                          predicate_function predicate)
-        : data_it_(data_iterator), test_it_(test_iterator), predicate_(predicate)
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator(DataIterator          data_iterator,
+                                                          PredicateDataIterator predicate_iterator,
+                                                          unary_predicate       predicate)
+        : data_it_(data_iterator), predicate_data_it_(predicate_iterator), predicate_(predicate)
     {}
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -136,7 +137,7 @@ public:
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator& operator++()
     {
         data_it_++;
-        test_it_++;
+        predicate_data_it_++;
         return *this;
     }
 
@@ -144,14 +145,14 @@ public:
     {
         predicate_iterator old = *this;
         data_it_++;
-        test_it_++;
+        predicate_data_it_++;
         return old;
     }
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator& operator--()
     {
         data_it_--;
-        test_it_--;
+        predicate_data_it_--;
         return *this;
     }
 
@@ -159,13 +160,13 @@ public:
     {
         predicate_iterator old = *this;
         data_it_--;
-        test_it_--;
+        predicate_data_it_--;
         return old;
     }
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_reference operator*() const
     {
-        return discard_reference(*data_it_, predicate_(*test_it_));
+        return discard_reference(*data_it_, predicate_(*predicate_data_it_));
     }
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_reference operator->() const
@@ -180,25 +181,25 @@ public:
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator operator+(difference_type distance) const
     {
-        return predicate_iterator(data_it_ + distance, test_it_ + distance, predicate_);
+        return predicate_iterator(data_it_ + distance, predicate_data_it_ + distance, predicate_);
     }
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator& operator+=(difference_type distance)
     {
         data_it_ += distance;
-        test_it_ += distance;
+        predicate_data_it_ += distance;
         return *this;
     }
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator operator-(difference_type distance) const
     {
-        return predicate_iterator(data_it_ - distance, test_it_ - distance, predicate_);
+        return predicate_iterator(data_it_ - distance, predicate_data_it_ - distance, predicate_);
     }
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator& operator-=(difference_type distance)
     {
         data_it_ -= distance;
-        test_it_ -= distance;
+        predicate_data_it_ -= distance;
         return *this;
     }
 
@@ -244,40 +245,41 @@ public:
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 private:
-    DataIterator            data_it_;
-    TestIterator            test_it_;
-    const PredicateFunction predicate_;
+    DataIterator          data_it_;
+    PredicateDataIterator predicate_data_it_;
+    const UnaryPredicate  predicate_;
 };
 
 /// \brief Constructs a ``predicate_iterator`` which can discard values assigned to it upon dereference based on a predicate.
 ///
 /// \tparam DataIterator Type of ``data_iterator``.
-/// \tparam TestIterator Type of ``test_iterator``.
-/// \tparam PredicateFunction Type of ``predicate``.
+/// \tparam PredicateDataIterator Type of ``predicate_data_iterator``.
+/// \tparam UnaryPredicate Type of ``predicate``.
 ///
 /// \param data_iterator The data iterator that will be forwarded whenever the predicate is true.
-/// \param test_iterator The test iterator that is used to test the predicate on.
+/// \param predicate_data_iterator The test iterator that is used to test the predicate on.
 /// \param predicate The predicate function.
-template<class DataIterator, class TestIterator, class PredicateFunction>
-auto make_predicate_iterator(DataIterator      data_iterator,
-                             TestIterator      test_iterator,
-                             PredicateFunction predicate)
+template<class DataIterator, class PredicateDataIterator, class UnaryPredicate>
+auto make_predicate_iterator(DataIterator          data_iterator,
+                             PredicateDataIterator predicate_data_iterator,
+                             UnaryPredicate        predicate)
 {
-    return predicate_iterator<DataIterator, TestIterator, PredicateFunction>(data_iterator,
-                                                                             test_iterator,
-                                                                             predicate);
+    return predicate_iterator<DataIterator, PredicateDataIterator, UnaryPredicate>(
+        data_iterator,
+        predicate_data_iterator,
+        predicate);
 }
 
 /// \brief Constructs a ``predicate_iterator`` which can discard values assigned to it upon dereference based on a predicate.
 ///
 /// \tparam DataIterator Type of ``data_iterator``.
-/// \tparam PredicateFunction Type of ``predicate``.
+/// \tparam UnaryPredicate Type of ``predicate``.
 ///
 /// \param data_iterator The data iterator that will be forwarded whenever the predicate is true.
 /// \param predicate The predicate function. It will be tested on ``data_iterator``.
-template<class DataIterator, class PredicateFunction>
-ROCPRIM_HOST_DEVICE inline predicate_iterator<DataIterator, DataIterator, PredicateFunction>
-    make_predicate_iterator(DataIterator data_iterator, PredicateFunction predicate)
+template<class DataIterator, class UnaryPredicate>
+ROCPRIM_HOST_DEVICE inline predicate_iterator<DataIterator, DataIterator, UnaryPredicate>
+    make_predicate_iterator(DataIterator data_iterator, UnaryPredicate predicate)
 {
     return make_predicate_iterator<DataIterator, DataIterator>(data_iterator,
                                                                data_iterator,
@@ -287,15 +289,15 @@ ROCPRIM_HOST_DEVICE inline predicate_iterator<DataIterator, DataIterator, Predic
 /// \brief Constructs a ``predicate_iterator`` which can discard values assigned to it upon dereference based on a predicate.
 ///
 /// \tparam DataIterator Type of ``data_iterator``.
-/// \tparam BoolIterator Type of ``mask_iterator``. Should iterate over boolean values.
+/// \tparam FlagIterator Type of ``flag_iterator``. Its ``value_type`` should be implicitely be convertible to ``bool``.
 ///
-/// \param data_iterator The data iterator that will be forwarded whenever the predicate is true.
-/// \param mask_iterator The test iterator that is used to test the predicate on.
-template<class DataIterator, class BoolIterator>
-auto make_mask_iterator(DataIterator data_iterator, BoolIterator mask_iterator)
+/// \param data_iterator The data iterator that will be forwarded when the corresponding flag is set to ``true``.
+/// \param flag_iterator The flag iterator.
+template<class DataIterator, class FlagIterator>
+auto make_mask_iterator(DataIterator data_iterator, FlagIterator flag_iterator)
 {
     return make_predicate_iterator(data_iterator,
-                                   mask_iterator,
+                                   flag_iterator,
                                    [] ROCPRIM_HOST_DEVICE(bool value) { return value; });
 }
 
