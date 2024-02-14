@@ -250,6 +250,18 @@ private:
     const UnaryPredicate  predicate_;
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+template<class DataIterator, class PredicateDataIterator, class UnaryPredicate>
+ROCPRIM_HOST_DEVICE inline predicate_iterator<DataIterator, PredicateDataIterator, UnaryPredicate>
+    operator+(
+        typename predicate_iterator<DataIterator, PredicateDataIterator, UnaryPredicate>::
+            difference_type                                                            distance,
+        const predicate_iterator<DataIterator, PredicateDataIterator, UnaryPredicate>& iterator)
+{
+    return iterator + distance;
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 /// \brief Constructs a ``predicate_iterator`` which can discard values assigned to it upon dereference based on a predicate.
 ///
 /// \tparam DataIterator Type of ``data_iterator``.
