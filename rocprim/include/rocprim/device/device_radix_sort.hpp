@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -75,13 +75,14 @@ using offset_type_t = std::conditional_t<
     size_t
 >;
 
-template<class Config, bool Descending, class KeysInputIterator, class Offset>
+template<class Config, bool Descending, class KeysInputIterator, class Offset, class Decomposer>
 ROCPRIM_KERNEL
     __launch_bounds__(device_params<Config>().histogram.block_size) void onesweep_histograms_kernel(
         KeysInputIterator  keys_input,
         Offset*            global_digit_counts,
         const Offset       size,
         const Offset       full_blocks,
+        Decomposer         decomposer,
         const unsigned int begin_bit,
         const unsigned int end_bit)
 {
@@ -93,6 +94,7 @@ ROCPRIM_KERNEL
                                     global_digit_counts,
                                     size,
                                     full_blocks,
+                                    decomposer,
                                     begin_bit,
                                     end_bit);
 }
@@ -111,12 +113,14 @@ template<class Config,
          bool Descending,
          class KeysInputIterator,
          class ValuesInputIterator,
-         class Offset>
+         class Offset,
+         class Decomposer>
 inline hipError_t radix_sort_onesweep_global_offsets(KeysInputIterator keys_input,
                                                      ValuesInputIterator,
                                                      Offset*            global_digit_offsets,
                                                      const Offset       size,
                                                      const unsigned int digit_places,
+                                                     Decomposer         decomposer,
                                                      const unsigned     begin_bit,
                                                      const unsigned     end_bit,
                                                      const hipStream_t  stream,
@@ -168,6 +172,7 @@ inline hipError_t radix_sort_onesweep_global_offsets(KeysInputIterator keys_inpu
                        global_digit_offsets,
                        size,
                        full_blocks,
+                       decomposer,
                        begin_bit,
                        end_bit);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("compute_global_digit_histograms", size, start);
@@ -195,7 +200,8 @@ template<class Config,
          class KeysOutputIterator,
          class ValuesInputIterator,
          class ValuesOutputIterator,
-         class Offset>
+         class Offset,
+         class Decomposer>
 ROCPRIM_KERNEL
     __launch_bounds__(device_params<Config>().sort.block_size) void onesweep_iteration_kernel(
         KeysInputIterator        keys_input,
@@ -206,6 +212,7 @@ ROCPRIM_KERNEL
         Offset*                  global_digit_offsets_in,
         Offset*                  global_digit_offsets_out,
         onesweep_lookback_state* lookback_states,
+        Decomposer               decomposer,
         const unsigned int       bit,
         const unsigned int       current_radix_bits,
         const unsigned int       full_blocks)
@@ -223,6 +230,7 @@ ROCPRIM_KERNEL
                                                     global_digit_offsets_in,
                                                     global_digit_offsets_out,
                                                     lookback_states,
+                                                    decomposer,
                                                     bit,
                                                     current_radix_bits,
                                                     full_blocks);
@@ -234,7 +242,8 @@ template<class Config,
          class KeysOutputIterator,
          class ValuesInputIterator,
          class ValuesOutputIterator,
-         class Offset>
+         class Offset,
+         class Decomposer>
 inline hipError_t radix_sort_onesweep_iteration(
     KeysInputIterator                                               keys_input,
     typename std::iterator_traits<KeysInputIterator>::value_type*   keys_tmp,
@@ -248,6 +257,7 @@ inline hipError_t radix_sort_onesweep_iteration(
     onesweep_lookback_state*                                        lookback_states,
     const bool                                                      from_input,
     const bool                                                      to_output,
+    Decomposer                                                      decomposer,
     const unsigned int                                              bit,
     const unsigned int                                              end_bit,
     const hipStream_t                                               stream,
@@ -331,6 +341,7 @@ inline hipError_t radix_sort_onesweep_iteration(
                                global_digit_offsets_in,
                                global_digit_offsets_out,
                                lookback_states,
+                               decomposer,
                                bit,
                                current_radix_bits,
                                full_blocks);
@@ -350,6 +361,7 @@ inline hipError_t radix_sort_onesweep_iteration(
                                global_digit_offsets_in,
                                global_digit_offsets_out,
                                lookback_states,
+                               decomposer,
                                bit,
                                current_radix_bits,
                                full_blocks);
@@ -369,6 +381,7 @@ inline hipError_t radix_sort_onesweep_iteration(
                                global_digit_offsets_in,
                                global_digit_offsets_out,
                                lookback_states,
+                               decomposer,
                                bit,
                                current_radix_bits,
                                full_blocks);
@@ -388,6 +401,7 @@ inline hipError_t radix_sort_onesweep_iteration(
                                global_digit_offsets_in,
                                global_digit_offsets_out,
                                lookback_states,
+                               decomposer,
                                bit,
                                current_radix_bits,
                                full_blocks);
@@ -406,7 +420,8 @@ template<class Config,
          class KeysOutputIterator,
          class ValuesInputIterator,
          class ValuesOutputIterator,
-         class Size>
+         class Size,
+         class Decomposer>
 inline hipError_t radix_sort_onesweep_impl(
     void*                                                           temporary_storage,
     size_t&                                                         storage_size,
@@ -418,6 +433,7 @@ inline hipError_t radix_sort_onesweep_impl(
     ValuesOutputIterator                                            values_output,
     const Size                                                      size,
     bool&                                                           is_result_in_output,
+    Decomposer                                                      decomposer,
     const unsigned int                                              begin_bit,
     const unsigned int                                              end_bit,
     const hipStream_t                                               stream,
@@ -500,6 +516,7 @@ inline hipError_t radix_sort_onesweep_impl(
                                                                      global_digit_offsets,
                                                                      static_cast<offset_type>(size),
                                                                      places,
+                                                                     decomposer,
                                                                      begin_bit,
                                                                      end_bit,
                                                                      stream,
@@ -568,6 +585,7 @@ inline hipError_t radix_sort_onesweep_impl(
             lookback_states,
             from_input,
             to_output,
+            decomposer,
             bit,
             end_bit,
             stream,
@@ -589,7 +607,8 @@ template<class Config,
          class KeysOutputIterator,
          class ValuesInputIterator,
          class ValuesOutputIterator,
-         class Size>
+         class Size,
+         class Decomposer>
 inline hipError_t
     radix_sort_impl(void*                                                         temporary_storage,
                     size_t&                                                       storage_size,
@@ -601,6 +620,7 @@ inline hipError_t
                     ValuesOutputIterator                                            values_output,
                     Size                                                            size,
                     bool&        is_result_in_output,
+                    Decomposer   decomposer,
                     unsigned int begin_bit,
                     unsigned int end_bit,
                     hipStream_t  stream,
@@ -665,6 +685,7 @@ inline hipError_t
                                                                     values_output,
                                                                     static_cast<unsigned int>(size),
                                                                     single_sort_items_per_block,
+                                                                    decomposer,
                                                                     begin_bit,
                                                                     end_bit,
                                                                     stream,
@@ -686,6 +707,7 @@ inline hipError_t
                                                                     values_tmp,
                                                                     values_output,
                                                                     static_cast<unsigned int>(size),
+                                                                    decomposer,
                                                                     begin_bit,
                                                                     end_bit,
                                                                     stream,
@@ -705,6 +727,7 @@ inline hipError_t
                                                                      values_output,
                                                                      size,
                                                                      is_result_in_output,
+                                                                     decomposer,
                                                                      begin_bit,
                                                                      end_bit,
                                                                      stream,
@@ -812,14 +835,21 @@ hipError_t radix_sort_keys(void * temporary_storage,
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     empty_type * values = nullptr;
     bool ignored;
-    return detail::radix_sort_impl<Config, false>(
-        temporary_storage, storage_size,
-        keys_input, nullptr, keys_output,
-        values, nullptr, values,
-        size, ignored,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    return detail::radix_sort_impl<Config, false>(temporary_storage,
+                                                  storage_size,
+                                                  keys_input,
+                                                  nullptr,
+                                                  keys_output,
+                                                  values,
+                                                  nullptr,
+                                                  values,
+                                                  size,
+                                                  ignored,
+                                                  identity_decomposer{},
+                                                  begin_bit,
+                                                  end_bit,
+                                                  stream,
+                                                  debug_synchronous);
 }
 
 /// \brief Parallel descending radix sort primitive for device level.
@@ -918,14 +948,21 @@ hipError_t radix_sort_keys_desc(void * temporary_storage,
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     empty_type * values = nullptr;
     bool ignored;
-    return detail::radix_sort_impl<Config, true>(
-        temporary_storage, storage_size,
-        keys_input, nullptr, keys_output,
-        values, nullptr, values,
-        size, ignored,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    return detail::radix_sort_impl<Config, true>(temporary_storage,
+                                                 storage_size,
+                                                 keys_input,
+                                                 nullptr,
+                                                 keys_output,
+                                                 values,
+                                                 nullptr,
+                                                 values,
+                                                 size,
+                                                 ignored,
+                                                 identity_decomposer{},
+                                                 begin_bit,
+                                                 end_bit,
+                                                 stream,
+                                                 debug_synchronous);
 }
 
 /// \brief Parallel ascending radix sort-by-key primitive for device level.
@@ -1043,14 +1080,21 @@ hipError_t radix_sort_pairs(void * temporary_storage,
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     bool ignored;
-    return detail::radix_sort_impl<Config, false>(
-        temporary_storage, storage_size,
-        keys_input, nullptr, keys_output,
-        values_input, nullptr, values_output,
-        size, ignored,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    return detail::radix_sort_impl<Config, false>(temporary_storage,
+                                                  storage_size,
+                                                  keys_input,
+                                                  nullptr,
+                                                  keys_output,
+                                                  values_input,
+                                                  nullptr,
+                                                  values_output,
+                                                  size,
+                                                  ignored,
+                                                  identity_decomposer{},
+                                                  begin_bit,
+                                                  end_bit,
+                                                  stream,
+                                                  debug_synchronous);
 }
 
 /// \brief Parallel descending radix sort-by-key primitive for device level.
@@ -1164,14 +1208,21 @@ hipError_t radix_sort_pairs_desc(void * temporary_storage,
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     bool ignored;
-    return detail::radix_sort_impl<Config, true>(
-        temporary_storage, storage_size,
-        keys_input, nullptr, keys_output,
-        values_input, nullptr, values_output,
-        size, ignored,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    return detail::radix_sort_impl<Config, true>(temporary_storage,
+                                                 storage_size,
+                                                 keys_input,
+                                                 nullptr,
+                                                 keys_output,
+                                                 values_input,
+                                                 nullptr,
+                                                 values_output,
+                                                 size,
+                                                 ignored,
+                                                 identity_decomposer{},
+                                                 begin_bit,
+                                                 end_bit,
+                                                 stream,
+                                                 debug_synchronous);
 }
 
 /// \brief Parallel ascending radix sort primitive for device level.
@@ -1271,14 +1322,21 @@ hipError_t radix_sort_keys(void * temporary_storage,
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     empty_type * values = nullptr;
     bool         is_result_in_output;
-    hipError_t error = detail::radix_sort_impl<Config, false>(
-        temporary_storage, storage_size,
-        keys.current(), keys.current(), keys.alternate(),
-        values, values, values,
-        size, is_result_in_output,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    hipError_t   error = detail::radix_sort_impl<Config, false>(temporary_storage,
+                                                              storage_size,
+                                                              keys.current(),
+                                                              keys.current(),
+                                                              keys.alternate(),
+                                                              values,
+                                                              values,
+                                                              values,
+                                                              size,
+                                                              is_result_in_output,
+                                                              identity_decomposer{},
+                                                              begin_bit,
+                                                              end_bit,
+                                                              stream,
+                                                              debug_synchronous);
     if(temporary_storage != nullptr && error == hipSuccess && is_result_in_output)
     {
         keys.swap();
@@ -1383,14 +1441,21 @@ hipError_t radix_sort_keys_desc(void * temporary_storage,
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     empty_type * values = nullptr;
     bool         is_result_in_output;
-    hipError_t error = detail::radix_sort_impl<Config, true>(
-        temporary_storage, storage_size,
-        keys.current(), keys.current(), keys.alternate(),
-        values, values, values,
-        size, is_result_in_output,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    hipError_t   error = detail::radix_sort_impl<Config, true>(temporary_storage,
+                                                             storage_size,
+                                                             keys.current(),
+                                                             keys.current(),
+                                                             keys.alternate(),
+                                                             values,
+                                                             values,
+                                                             values,
+                                                             size,
+                                                             is_result_in_output,
+                                                             identity_decomposer{},
+                                                             begin_bit,
+                                                             end_bit,
+                                                             stream,
+                                                             debug_synchronous);
     if(temporary_storage != nullptr && error == hipSuccess && is_result_in_output)
     {
         keys.swap();
@@ -1509,14 +1574,21 @@ hipError_t radix_sort_pairs(void * temporary_storage,
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     bool       is_result_in_output;
-    hipError_t error = detail::radix_sort_impl<Config, false>(
-        temporary_storage, storage_size,
-        keys.current(), keys.current(), keys.alternate(),
-        values.current(), values.current(), values.alternate(),
-        size, is_result_in_output,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    hipError_t error = detail::radix_sort_impl<Config, false>(temporary_storage,
+                                                              storage_size,
+                                                              keys.current(),
+                                                              keys.current(),
+                                                              keys.alternate(),
+                                                              values.current(),
+                                                              values.current(),
+                                                              values.alternate(),
+                                                              size,
+                                                              is_result_in_output,
+                                                              identity_decomposer{},
+                                                              begin_bit,
+                                                              end_bit,
+                                                              stream,
+                                                              debug_synchronous);
     if(temporary_storage != nullptr && error == hipSuccess && is_result_in_output)
     {
         keys.swap();
@@ -1630,14 +1702,21 @@ hipError_t radix_sort_pairs_desc(void * temporary_storage,
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     bool       is_result_in_output;
-    hipError_t error = detail::radix_sort_impl<Config, true>(
-        temporary_storage, storage_size,
-        keys.current(), keys.current(), keys.alternate(),
-        values.current(), values.current(), values.alternate(),
-        size, is_result_in_output,
-        begin_bit, end_bit,
-        stream, debug_synchronous
-    );
+    hipError_t error = detail::radix_sort_impl<Config, true>(temporary_storage,
+                                                             storage_size,
+                                                             keys.current(),
+                                                             keys.current(),
+                                                             keys.alternate(),
+                                                             values.current(),
+                                                             values.current(),
+                                                             values.alternate(),
+                                                             size,
+                                                             is_result_in_output,
+                                                             identity_decomposer{},
+                                                             begin_bit,
+                                                             end_bit,
+                                                             stream,
+                                                             debug_synchronous);
     if(temporary_storage != nullptr && error == hipSuccess && is_result_in_output)
     {
         keys.swap();

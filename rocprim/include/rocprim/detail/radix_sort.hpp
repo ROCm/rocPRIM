@@ -253,8 +253,10 @@ struct radix_key_codec_floating
 template<class Key, class Enable = void>
 struct radix_key_codec_base
 {
-    static_assert(sizeof(Key) == 0,
-                  "Only integral and floating point types supported as radix sort keys");
+    static_assert(
+        sizeof(Key) == 0,
+        "Only integral and floating point types supported as radix sort keys without a decomposer. "
+        "To sort custom types, see the radix_sort overloads with the decomposer argument");
 };
 
 template<class Key>
@@ -467,6 +469,17 @@ public:
         return codec::extract_digit(::rocprim::detail::bit_cast<bit_key_type>(key),
                                     start,
                                     radix_bits);
+    }
+
+    template<class Decomposer>
+    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(Decomposer decomposer);
+
+    template<>
+    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(::rocprim::identity_decomposer)
+    {
+        using codec_t      = radix_key_codec<Key, Descending>;
+        using bit_key_type = typename codec_t::bit_key_type;
+        return codec_t::decode(static_cast<bit_key_type>(-1));
     }
 
 private:

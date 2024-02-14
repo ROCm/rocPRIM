@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 #include "../detail/device_radix_sort.hpp"
 #include "../device_merge_sort.hpp"
 #include "device_radix_block_sort.hpp"
+#include "rocprim/types.hpp"
 
 #include <type_traits>
 
@@ -39,7 +40,8 @@ template<class Config,
          class KeysInputIterator,
          class KeysOutputIterator,
          class ValuesInputIterator,
-         class ValuesOutputIterator>
+         class ValuesOutputIterator,
+         class Decomposer>
 inline hipError_t radix_sort_merge_impl(
     void*                                                           temporary_storage,
     size_t&                                                         storage_size,
@@ -50,6 +52,7 @@ inline hipError_t radix_sort_merge_impl(
     typename std::iterator_traits<ValuesInputIterator>::value_type* values_buffer,
     ValuesOutputIterator                                            values_output,
     unsigned int                                                    size,
+    Decomposer                                                      decomposer,
     unsigned int                                                    bit,
     unsigned int                                                    end_bit,
     hipStream_t                                                     stream,
@@ -128,6 +131,7 @@ inline hipError_t radix_sort_merge_impl(
                                                                           values_output,
                                                                           size,
                                                                           sort_items_per_block,
+                                                                          decomposer,
                                                                           bit,
                                                                           end_bit,
                                                                           stream,
@@ -140,7 +144,8 @@ inline hipError_t radix_sort_merge_impl(
     // ^ sort_items_per_block is now updated
     if(size > sort_items_per_block)
     {
-        if(current_radix_bits == sizeof(key_type) * 8)
+        if(current_radix_bits == sizeof(key_type) * 8
+           && std::is_same<Decomposer, identity_decomposer>::value)
         {
             return merge_sort_block_merge<merge_sort_block_merge_config>(
                 temporary_storage,
@@ -164,7 +169,9 @@ inline hipError_t radix_sort_merge_impl(
                 values_output,
                 size,
                 sort_items_per_block,
-                radix_merge_compare<Descending, true, key_type>(bit, current_radix_bits),
+                radix_merge_compare<Descending, true, key_type, Decomposer>(bit,
+                                                                            current_radix_bits,
+                                                                            decomposer),
                 stream,
                 debug_synchronous,
                 keys_buffer,
