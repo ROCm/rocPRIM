@@ -28,6 +28,10 @@ Documentation for rocPRIM is available at
   * `rocprim::make_predicate_iterator`
   * `rocprim::make_mask_iterator`
 
+### Optimizations
+
+* Improved the performance of `warp_sort_shuffle` and `block_sort_bitonic`.
+
 ### Fixes
 
 * Fixed incorrect results of `warp_exchange::blocked_to_striped_shuffle` and `warp_exchange::striped_to_blocked_shuffle` when the block size is
