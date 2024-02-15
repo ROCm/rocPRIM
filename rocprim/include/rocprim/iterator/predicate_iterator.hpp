@@ -254,11 +254,6 @@ public:
     {
         return data_it_ >= other.data_it_;
     }
-
-    friend std::ostream& operator<<(std::ostream& os, const predicate_iterator& /* iter */)
-    {
-        return os;
-    }
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 private:
