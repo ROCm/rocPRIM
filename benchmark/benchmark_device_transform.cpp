@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -43,21 +43,6 @@
 const size_t DEFAULT_N = 1024 * 1024 * 128;
 #endif
 
-// If defined, benchmark uses 'rocprim::transform_if' with the value set
-// as the comparison value.
-// #define BENCHMARK_PREDICATE_ITERATOR_VALUE 100
-
-#ifdef BENCHMARK_PREDICATE_ITERATOR_VALUE
-template<class T>
-struct predicate
-{
-    __device__ __host__ constexpr bool operator()(const T& a) const
-    {
-        return a < T{BENCHMARK_PREDICATE_ITERATOR_VALUE};
-    }
-};
-#endif
-
 const unsigned int batch_size = 10;
 const unsigned int warmup_size = 5;
 
@@ -80,7 +65,7 @@ void run_benchmark(benchmark::State& state,
                    const hipStream_t stream,
                    BinaryFunction transform_op)
 {
-    std::vector<T> input = get_random_data<T>(size, T(0), T(99));
+    std::vector<T> input = get_random_data<T>(size, T(0), T(1000));
 
     T * d_input;
     T * d_output;
@@ -98,12 +83,12 @@ void run_benchmark(benchmark::State& state,
     // Warm-up
     for(size_t i = 0; i < warmup_size; i++)
     {
-#ifdef BENCHMARK_PREDICATE_ITERATOR_VALUE
-        auto out_it = rocprim::make_predicate_iterator(d_output, d_input, predicate<T>{});
-        HIP_CHECK(rocprim::transform(d_input, out_it, size, transform_op, stream));
-#else
-        HIP_CHECK(rocprim::transform(d_input, d_output, size, transform_op, stream));
-#endif
+        HIP_CHECK(
+            rocprim::transform(
+                d_input, d_output, size,
+                transform_op, stream
+            )
+        );
     }
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -119,12 +104,12 @@ void run_benchmark(benchmark::State& state,
 
         for(size_t i = 0; i < batch_size; i++)
         {
-#ifdef BENCHMARK_PREDICATE_ITERATOR_VALUE
-            auto out_it = rocprim::make_predicate_iterator(d_output, d_input, predicate<T>{});
-            HIP_CHECK(rocprim::transform(d_input, out_it, size, transform_op, stream));
-#else
-            HIP_CHECK(rocprim::transform(d_input, d_output, size, transform_op, stream));
-#endif
+            HIP_CHECK(
+                rocprim::transform(
+                    d_input, d_output, size,
+                    transform_op, stream
+                )
+            );
         }
 
         // Record stop event and wait until it completes
