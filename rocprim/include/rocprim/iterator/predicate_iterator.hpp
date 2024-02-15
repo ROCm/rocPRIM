@@ -24,6 +24,7 @@
 #include "../config.hpp"
 
 #include <iterator>
+#include <type_traits>
 
 /// \addtogroup iteratormodule
 /// @{
@@ -47,15 +48,74 @@ template<class DataIterator, class PredicateDataIterator, class UnaryPredicate>
 class predicate_iterator
 {
 public:
+    static constexpr bool can_capture_reference
+        = std::is_reference<decltype(*std::declval<DataIterator>())>::value;
+
+    /// \brief A struct representing a reference that can be conditionally discarded.
+    ///
+    /// This struct holds a reference and a boolean flag.
+    /// When assigning a value to the reference, it will only be assigned if the flag is set.
+    /// When converted to the underlying value type, it will return the referenced value or the
+    /// default-constructed value of the value type.
+    /// If ``as_reference`` is ``false`` it instead uses a value instead of a reference.
+    ///
+    /// \tparam as_reference Boolean flag that decides whether the value is kept by reference or as value.
+    template<bool as_reference = true>
+    struct discard_underlying
+    {
+    public:
+        /// \brief The type of the value that can be obtained by dereferencing the iterator.
+        using value_type = typename std::iterator_traits<DataIterator>::value_type;
+
+        /// \brief A reference type of the type iterated over (``value_type``).
+        using reference = typename std::iterator_traits<DataIterator>::reference;
+
+        /// \brief The internal type.
+        using proxy = std::conditional_t<as_reference, reference, value_type>;
+
+        /// \brief Constructs a ``discard_underlying`` object with the given reference and keep flag.
+        /// \param ref The reference to be held.
+        /// \param keep Boolean flag that indicates whether to keep the reference.
+        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_underlying(proxy val, const bool keep)
+            : underlying_(val), keep_(keep)
+        {}
+
+        /// \brief Assigns a value to the held reference if the keep flag is ``true``.
+        /// \param value The value to assign to the reference.
+        /// \return A reference to the (possibly) modified ``discard_underlying`` object.
+        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_underlying& operator=(const value_type& value)
+        {
+            if(keep_)
+            {
+                underlying_ = value;
+            }
+            return *this;
+        }
+
+        /// \brief Converts the ``discard_underlying`` to the underlying value type.
+        /// \return The referenced value or the default-constructed value.
+        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE operator value_type() const
+        {
+            return keep_ ? underlying_ : value_type{};
+        }
+
+    private:
+        /// \brief The reference being held.
+        proxy underlying_;
+
+        /// \brief Boolean flag indicating wether to keep the reference or discard it.
+        bool keep_;
+    };
+
+    using proxy = discard_underlying<can_capture_reference>;
+
     /// \brief The type of the value that can be obtained by dereferencing the iterator.
-    using value_type = typename std::iterator_traits<DataIterator>::value_type;
+    using value_type = typename proxy::value_type;
 
     /// \brief A reference type of the type iterated over (``value_type``).
-    /// It's ``const`` since predicate_iterator is a read-only iterator.
-    using reference = typename std::iterator_traits<DataIterator>::reference;
+    using reference = typename proxy::reference;
 
     /// \brief A pointer type of the type iterated over (``value_type``).
-    /// It's ``const`` since predicate_iterator is a read-only iterator.
     using pointer = typename std::iterator_traits<DataIterator>::pointer;
 
     /// \brief A type used for identify distance between iterators.
@@ -70,49 +130,6 @@ public:
 
     /// \brief The type of predicate function used to select input range.
     using unary_predicate = UnaryPredicate;
-
-    /// \brief A struct representing a reference that can be conditionally discarded.
-    ///
-    /// This struct holds a reference and a boolean flag.
-    /// When assigning a value to the reference, it will only be assigned if the flag is set.
-    /// When converted to the underlying value type, it will return the referenced value or the
-    /// default-constructed value of the value type.
-    struct discard_reference
-    {
-    private:
-        /// \brief The reference being held.
-        reference ref_;
-
-        /// \brief Boolean flag indicating wether to keep the reference or discard it.
-        const bool keep_;
-
-    public:
-        /// \brief Constructs a ``discard_reference`` object with the given reference and keep flag.
-        /// \param ref The reference to be held.
-        /// \param keep Boolean flag that indicates whether to keep the reference.
-        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_reference(reference ref, const bool keep)
-            : ref_(ref), keep_(keep)
-        {}
-
-        /// \brief Assigns a value to the held reference if the keep flag is ``true``.
-        /// \param value The value to assign to the reference.
-        /// \return A reference to the (possibly) modified ``discard_reference`` object.
-        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_reference& operator=(const value_type& value)
-        {
-            if(keep_)
-            {
-                ref_ = value;
-            }
-            return *this;
-        }
-
-        /// \brief Converts the ``discard_reference`` to the underlying value type.
-        /// \return The referenced value or the default-constructed value.
-        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE operator value_type() const
-        {
-            return keep_ ? ref_ : value_type{};
-        }
-    };
 
     /// \brief Creates a new predicate_iterator.
     ///
@@ -164,17 +181,17 @@ public:
         return old;
     }
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_reference operator*() const
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator*() const
     {
-        return discard_reference(*data_it_, predicate_(*predicate_data_it_));
+        return proxy(*data_it_, predicate_(*predicate_data_it_));
     }
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_reference operator->() const
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator->() const
     {
         return *(*this);
     }
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_reference operator[](difference_type distance) const
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator[](difference_type distance) const
     {
         return *(*this + distance);
     }

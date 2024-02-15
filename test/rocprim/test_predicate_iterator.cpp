@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "rocprim/iterator/transform_iterator.hpp"
 #include "test_utils_data_generation.hpp"
 
 #include <common_test_header.hpp>
@@ -63,6 +64,15 @@ struct increment_by
     }
 };
 
+template<class T>
+struct identity
+{
+    __device__ __host__ constexpr T operator()(const T& a) const
+    {
+        return a;
+    }
+};
+
 TEST(RocprimPredicateIteratorTests, TypeTraits)
 {
     using value_type = int;
@@ -73,7 +83,7 @@ TEST(RocprimPredicateIteratorTests, TypeTraits)
     auto it = rocprim::make_mask_iterator(data, mask);
 
     using it_t      = decltype(it);
-    using discard_t = it_t::discard_reference;
+    using discard_t = it_t::discard_underlying<true>;
 
     static_assert(std::is_assignable<discard_t, value_type>::value,
                   "discard type is not assignable with underlying type, even though it should be!");
@@ -186,7 +196,7 @@ TEST(RocprimPredicateIteratorTests, HostMaskRead)
 }
 
 // Test if predicate iterator can be used on device
-TEST(RocprimPredicateIteratorTests, DeviceTransformIf)
+TEST(RocprimPredicateIteratorTests, DeviceInplace)
 {
     using T         = int;
     using predicate = is_odd<T>;
@@ -202,10 +212,9 @@ TEST(RocprimPredicateIteratorTests, DeviceTransformIf)
     HIP_CHECK(hipMalloc(&d_data, data_size));
     HIP_CHECK(hipMemcpy(d_data, h_data.data(), data_size, hipMemcpyHostToDevice));
 
-    auto c_it = rocprim::make_counting_iterator(0);
-    auto p_it = rocprim::make_predicate_iterator(d_data, c_it, predicate{});
+    auto w_it = rocprim::make_predicate_iterator(d_data, predicate{});
 
-    HIP_CHECK(rocprim::transform(d_data, p_it, size, transform{}));
+    HIP_CHECK(rocprim::transform(d_data, w_it, size, transform{}));
 
     HIP_CHECK(hipMemcpy(h_data.data(), d_data, data_size, hipMemcpyDeviceToHost));
     HIP_CHECK(hipFree(d_data));
@@ -221,4 +230,46 @@ TEST(RocprimPredicateIteratorTests, DeviceTransformIf)
             ASSERT_EQ(h_data[i], i);
         }
     }
+}
+
+// Test if predicate iterator can be used on device
+TEST(RocprimPredicateIteratorTests, DeviceRead)
+{
+    using T         = int;
+    using predicate = is_odd<T>;
+    using transform = increment_by<5, T>;
+
+    constexpr size_t size      = 100;
+    constexpr size_t data_size = sizeof(T) * size;
+
+    std::vector<T> h_data(size);
+    std::iota(h_data.begin(), h_data.end(), 0);
+
+    T* d_input;
+    T* d_output;
+    HIP_CHECK(hipMalloc(&d_input, data_size));
+    HIP_CHECK(hipMalloc(&d_output, data_size));
+    HIP_CHECK(hipMemcpy(d_input, h_data.data(), data_size, hipMemcpyHostToDevice));
+
+    auto t_it = rocprim::make_transform_iterator(d_input, transform{});
+    auto r_it = rocprim::make_predicate_iterator(t_it, d_input, predicate{});
+
+    HIP_CHECK(rocprim::transform(r_it, d_output, size, identity<T>{}));
+
+    HIP_CHECK(hipMemcpy(h_data.data(), d_output, data_size, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipFree(d_input));
+    HIP_CHECK(hipFree(d_output));
+
+    for(size_t i = 0; i < size; ++i)
+    {
+        if(predicate{}(i))
+        {
+            ASSERT_EQ(h_data[i], transform{}(i));
+        }
+        else
+        {
+            ASSERT_EQ(h_data[i], T{});
+        }
+    }
+    std::cout << std::endl;
 }
