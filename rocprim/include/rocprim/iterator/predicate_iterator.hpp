@@ -103,7 +103,7 @@ public:
         /// \brief The reference being held.
         proxy underlying_;
 
-        /// \brief Boolean flag indicating wether to keep the reference or discard it.
+        /// \brief Boolean flag indicating whether to keep the reference or discard it.
         bool keep_;
     };
 
