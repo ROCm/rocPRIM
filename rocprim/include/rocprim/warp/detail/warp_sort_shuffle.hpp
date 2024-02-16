@@ -38,20 +38,6 @@ template<class Key, unsigned int WarpSize, class Value>
 class warp_sort_shuffle
 {
 private:
-    template<int xor_mask, class V>
-    ROCPRIM_DEVICE ROCPRIM_INLINE V warp_xor(V& v)
-    {
-        switch(xor_mask)
-        {
-            case 1: return warp_swizzle<V, 0x041F>(v);
-            case 2: return warp_swizzle<V, 0x081F>(v);
-            case 4: return warp_swizzle<V, 0x101F>(v);
-            case 8: return warp_swizzle<V, 0x201F>(v);
-            case 16: return warp_swizzle<V, 0x401F>(v);
-            default: return warp_shuffle_xor(v, xor_mask, WarpSize);
-        }
-    }
-
     template<int warp, int xor_mask, class V, class BinaryFunction>
     ROCPRIM_DEVICE ROCPRIM_INLINE typename std::enable_if<!(WarpSize > warp)>::type
         swap(Key& k, V& v, bool dir, BinaryFunction compare_function)
@@ -66,12 +52,12 @@ private:
     ROCPRIM_DEVICE ROCPRIM_INLINE typename std::enable_if<(WarpSize > warp)>::type
         swap(Key& k, V& v, bool dir, BinaryFunction compare_function)
     {
-        Key  k1   = warp_xor<xor_mask>(k);
+        Key  k1   = warp_swizzle_shuffle(k, xor_mask, WarpSize);
         bool swap = compare_function(dir ? k : k1, dir ? k1 : k);
         if(swap)
         {
             k = k1;
-            v = warp_xor<xor_mask>(v);
+            v = warp_swizzle_shuffle(v, xor_mask, WarpSize);
         }
     }
 
@@ -93,12 +79,12 @@ private:
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; item++)
         {
-            k1[item]  = warp_xor<xor_mask>(k[item]);
+            k1[item]  = warp_swizzle_shuffle(k[item], xor_mask, WarpSize);
             bool swap = compare_function(dir ? k[item] : k1[item], dir ? k1[item] : k[item]);
             if(swap)
             {
                 k[item] = k1[item];
-                v[item] = warp_xor<xor_mask>(v[item]);
+                v[item] = warp_swizzle_shuffle(v[item], xor_mask, WarpSize);
             }
         }
     }
@@ -116,7 +102,7 @@ private:
     ROCPRIM_DEVICE ROCPRIM_INLINE typename std::enable_if<(WarpSize > warp)>::type
         swap(Key& k, bool dir, BinaryFunction compare_function)
     {
-        Key  k1   = warp_xor<xor_mask>(k);
+        Key  k1   = warp_swizzle_shuffle(k, xor_mask, WarpSize);
         bool swap = compare_function(dir ? k : k1, dir ? k1 : k);
         if(swap)
         {
@@ -141,7 +127,7 @@ private:
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; item++)
         {
-            k1[item]  = warp_xor<xor_mask>(k[item]);
+            k1[item]  = warp_swizzle_shuffle(k[item], xor_mask, WarpSize);
             bool swap = compare_function(dir ? k[item] : k1[item], dir ? k1[item] : k[item]);
             if(swap)
             {

@@ -203,20 +203,6 @@ public:
     }
 
 private:
-    template<class V>
-    ROCPRIM_DEVICE ROCPRIM_INLINE V warp_xor(V& v, const int mask)
-    {
-        switch(mask)
-        {
-            case 1: return warp_swizzle<V, 0x041F>(v);
-            case 2: return warp_swizzle<V, 0x081F>(v);
-            case 4: return warp_swizzle<V, 0x101F>(v);
-            case 8: return warp_swizzle<V, 0x201F>(v);
-            case 16: return warp_swizzle<V, 0x401F>(v);
-            default: return warp_shuffle_xor(v, mask);
-        }
-    }
-
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         copy_to_shared(Key& k, const unsigned int flat_tid, storage_type& storage)
     {
@@ -480,12 +466,12 @@ private:
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         warp_swap(Key& k, Value& v, int mask, bool dir, BinaryFunction compare_function)
     {
-        Key  k1   = warp_xor(k, mask);
+        Key  k1   = warp_swizzle_shuffle(k, mask);
         bool swap = compare_function(dir ? k : k1, dir ? k1 : k);
         if(swap)
         {
             k = k1;
-            v = warp_xor(v, mask);
+            v = warp_swizzle_shuffle(v, mask);
         }
     }
 
@@ -499,12 +485,12 @@ private:
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item)
         {
-            Key  k1   = warp_xor(k[item], mask);
+            Key  k1   = warp_swizzle_shuffle(k[item], mask);
             bool swap = compare_function(dir ? k[item] : k1, dir ? k1 : k[item]);
             if(swap)
             {
                 k[item] = k1;
-                v[item] = warp_xor(v[item], mask);
+                v[item] = warp_swizzle_shuffle(v[item], mask);
             }
         }
     }
@@ -513,7 +499,7 @@ private:
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         warp_swap(Key& k, int mask, bool dir, BinaryFunction compare_function)
     {
-        Key  k1   = warp_xor(k, mask);
+        Key  k1   = warp_swizzle_shuffle(k, mask);
         bool swap = compare_function(dir ? k : k1, dir ? k1 : k);
         if(swap)
         {
@@ -528,7 +514,7 @@ private:
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item)
         {
-            Key  k1   = warp_xor(k[item], mask);
+            Key  k1   = warp_swizzle_shuffle(k[item], mask);
             bool swap = compare_function(dir ? k[item] : k1, dir ? k1 : k[item]);
             if(swap)
             {

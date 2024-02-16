@@ -230,6 +230,39 @@ T warp_shuffle_xor(const T& input, const int lane_mask, const int width = device
     );
 }
 
+namespace detail
+{
+
+/// \brief Shuffle XOR for any data type.
+///
+/// <tt>i</tt>-th thread in warp obtains \p input from <tt>i^lane_mask</tt>-th
+/// thread in warp. Makes use of of the swizzle instruction for powers of 2 till 16.
+/// Defaults to warp_shuffle_xor.
+///
+/// Note: The optional \p width parameter must be a power of 2; results are
+/// undefined if it is not a power of 2, or it is greater than device_warp_size().
+///
+/// \param input - input to pass to other threads
+/// \param mask - mask used for calculating source lane id
+/// \param width - logical warp width
+template<class V>
+ROCPRIM_DEVICE ROCPRIM_INLINE V warp_swizzle_shuffle(V&        v,
+                                                     const int mask,
+                                                     const int width = device_warp_size())
+{
+    switch(mask)
+    {
+        case 1: return warp_swizzle<V, 0x041F>(v);
+        case 2: return warp_swizzle<V, 0x081F>(v);
+        case 4: return warp_swizzle<V, 0x101F>(v);
+        case 8: return warp_swizzle<V, 0x201F>(v);
+        case 16: return warp_swizzle<V, 0x401F>(v);
+        default: return warp_shuffle_xor(v, mask, width);
+    }
+}
+
+} // namespace detail
+
 /// \brief Permute items across the threads in a warp.
 ///
 /// The value from this thread in the warp is permuted to the <tt>dst_lane</tt>-th
