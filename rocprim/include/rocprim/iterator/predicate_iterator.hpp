@@ -145,12 +145,6 @@ public:
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
-    // Default rule of three, as MSVC thinks the copy assignment operator is implicitly deleted.
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE ~predicate_iterator()                         = default;
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator(const predicate_iterator&) = default;
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator& operator=(const predicate_iterator&)
-        = default;
-
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator& operator++()
     {
         data_it_++;
@@ -259,7 +253,7 @@ public:
 private:
     DataIterator          data_it_;
     PredicateDataIterator predicate_data_it_;
-    const UnaryPredicate  predicate_;
+    UnaryPredicate        predicate_;
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
