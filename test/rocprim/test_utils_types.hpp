@@ -160,7 +160,8 @@ typedef ::testing::Types<
 
 typedef ::testing::Types<block_param_type(int, test_utils::custom_test_type<int>),
                          block_param_type(uint8_t, short),
-                         block_param_type(int8_t, float)
+                         block_param_type(int8_t, float),
+                         block_param_type(bool, rocprim::half)
 #if ROCPRIM_HAS_INT128_SUPPORT
                              ,
                          block_param_type(__uint128_t, short),

@@ -33,6 +33,8 @@
 
 #include <type_traits>
 
+#include <cstring>
+
 namespace test_utils
 {
 namespace detail
@@ -62,9 +64,10 @@ template<unsigned int StartBit,
          std::enable_if_t<std::is_same<Key, bool>::value, int> = 0>
 Key to_bits(const Key key)
 {
-    static_assert(StartBit == 0, "Currently to_bits support bool only for full radix");
-    static_assert(EndBit == 8 * sizeof(bool), "Currently to_bits support bool only for full radix");
-    return key;
+    using unsigned_bits_type = typename rocprim::get_unsigned_bits_type<Key>::unsigned_type;
+    unsigned_bits_type bit_key;
+    std::memcpy(&bit_key, &key, sizeof(bit_key));
+    return to_bits<StartBit, EndBit>(bit_key);
 }
 
 template<unsigned int StartBit,

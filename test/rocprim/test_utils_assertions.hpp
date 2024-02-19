@@ -106,6 +106,22 @@ inline void assert_eq<rocprim::bfloat16>(const rocprim::bfloat16& result, const 
     if(bit_equal(result, expected)) return; // Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
     ASSERT_EQ(bfloat16_to_native(result), bfloat16_to_native(expected));
 }
+
+template<class ResultIt, class ExpectedIt>
+void assert_eq(ResultIt   result_begin,
+               ResultIt   result_end,
+               ExpectedIt expected_begin,
+               ExpectedIt expected_end)
+{
+    ASSERT_EQ(std::distance(result_begin, result_end), std::distance(expected_begin, expected_end));
+    auto result_it   = result_begin;
+    auto expected_it = expected_begin;
+    for(; result_it != result_end; ++result_it, ++expected_it)
+    {
+        assert_eq(static_cast<typename std::iterator_traits<ResultIt>::value_type>(*result_it),
+                  static_cast<typename std::iterator_traits<ExpectedIt>::value_type>(*expected_it));
+    }
+}
 // end assert_eq
 
 // begin assert_near
