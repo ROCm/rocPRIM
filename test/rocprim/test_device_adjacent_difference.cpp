@@ -655,11 +655,6 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
             static constexpr auto left_tag     = rocprim::detail::bool_constant<is_left>{};
             static constexpr auto aliasing_tag = std::integral_constant<api_variant, aliasing>{};
 
-            hipGraph_t graph;
-            hipGraphExec_t graph_instance;
-            if (TestFixture::use_graphs)
-                graph = test_utils::createGraphHelper(stream);
-            
             // Allocate temporary storage
             std::size_t temp_storage_size;
             void*       d_temp_storage = nullptr;
@@ -674,16 +669,19 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    stream,
                                                    debug_synchronous));
 
-            if (TestFixture::use_graphs)
-                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
             ASSERT_GT(temp_storage_size, 0);
 
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
 
-            if (TestFixture::use_graphs)
-                test_utils::resetGraphHelper(graph, graph_instance, stream);
-            
+            hipGraph_t     graph;
+            hipGraphExec_t graph_instance;
+            if(TestFixture::use_graphs)
+                graph = test_utils::createGraphHelper(stream);
+
+            // Capture the memset in the graph so that relaunching will have expected result
+            HIP_CHECK(hipMemsetAsync(d_incorrect_flag, 0, sizeof(*d_incorrect_flag), stream));
+            HIP_CHECK(hipMemsetAsync(d_counter, 0, sizeof(*d_counter), stream));
+
             // Run
             HIP_CHECK(dispatch_adjacent_difference(left_tag,
                                                    aliasing_tag,
