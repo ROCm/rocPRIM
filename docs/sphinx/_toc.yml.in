@@ -30,6 +30,7 @@ subtrees:
           - file: device_ops/adjacent_difference.rst
           - file: device_ops/binary_search.rst
           - file: device_ops/histogram.rst
+          - file: device_ops/device_copy.rst
           - file: device_ops/memcpy.rst
       - file: block_ops/index.rst
         subtrees:
