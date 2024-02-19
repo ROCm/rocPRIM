@@ -352,13 +352,39 @@ public:
     ROCPRIM_DEVICE static bit_key_type encode(Key key)
     {
         bit_key_type bit_key = base_type::encode(key);
-        return (Descending ? ~bit_key : bit_key);
+        return Descending ? ~bit_key : bit_key;
     }
 
     ROCPRIM_DEVICE static Key decode(bit_key_type bit_key)
     {
-        bit_key = (Descending ? ~bit_key : bit_key);
+        bit_key = Descending ? ~bit_key : bit_key;
         return base_type::decode(bit_key);
+    }
+
+    ROCPRIM_DEVICE static unsigned int
+        extract_digit(bit_key_type bit_key, unsigned int start, unsigned int radix_bits)
+    {
+        return base_type::template extract_digit<Descending>(bit_key, start, radix_bits);
+    }
+};
+
+template<bool Descending>
+class radix_key_codec<bool, Descending> : protected radix_key_codec_base<bool>
+{
+    using base_type = radix_key_codec_base<bool>;
+
+public:
+    using bit_key_type = typename base_type::bit_key_type;
+
+    ROCPRIM_DEVICE static bit_key_type encode(bool key)
+    {
+        return Descending != key;
+    }
+
+    ROCPRIM_DEVICE static bool decode(bit_key_type bit_key)
+    {
+        const bool key_value = bit_key;
+        return Descending != key_value;
     }
 
     ROCPRIM_DEVICE static unsigned int
