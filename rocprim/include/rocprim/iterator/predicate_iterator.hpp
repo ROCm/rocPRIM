@@ -48,72 +48,17 @@ template<class DataIterator, class PredicateDataIterator, class UnaryPredicate>
 class predicate_iterator
 {
 public:
+    /// \brief Boolean flag that indicates whether ``DataIterator`` derefences to a reference.
+    /// If ``true``, ``predicate_iterator`` may modify the wrapped ``DataIterator``.
+    /// If ``false``, ``predicate_iterator`` does not modify the wrapped ``DataIterator``.
     static constexpr bool can_capture_reference
         = std::is_reference<decltype(*std::declval<DataIterator>())>::value;
 
-    /// \brief A struct representing a reference that can be conditionally discarded.
-    ///
-    /// This struct holds a reference and a boolean flag.
-    /// When assigning a value to the reference, it will only be assigned if the flag is set.
-    /// When converted to the underlying value type, it will return the referenced value or the
-    /// default-constructed value of the value type.
-    /// If ``as_reference`` is ``false`` it instead uses a value instead of a reference.
-    ///
-    /// \tparam as_reference Boolean flag that decides whether the value is kept by reference or as value.
-    template<bool as_reference = true>
-    struct discard_underlying
-    {
-    public:
-        /// \brief The type of the value that can be obtained by dereferencing the iterator.
-        using value_type = typename std::iterator_traits<DataIterator>::value_type;
-
-        /// \brief A reference type of the type iterated over (``value_type``).
-        using reference = typename std::iterator_traits<DataIterator>::reference;
-
-        /// \brief The internal type.
-        using proxy = std::conditional_t<as_reference, reference, value_type>;
-
-        /// \brief Constructs a ``discard_underlying`` object with the given reference and keep flag.
-        /// \param ref The reference to be held.
-        /// \param keep Boolean flag that indicates whether to keep the reference.
-        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_underlying(proxy val, const bool keep)
-            : underlying_(val), keep_(keep)
-        {}
-
-        /// \brief Assigns a value to the held reference if the keep flag is ``true``.
-        /// \param value The value to assign to the reference.
-        /// \return A reference to the (possibly) modified ``discard_underlying`` object.
-        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE discard_underlying& operator=(const value_type& value)
-        {
-            if(keep_)
-            {
-                underlying_ = value;
-            }
-            return *this;
-        }
-
-        /// \brief Converts the ``discard_underlying`` to the underlying value type.
-        /// \return The referenced value or the default-constructed value.
-        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE operator value_type() const
-        {
-            return keep_ ? underlying_ : value_type{};
-        }
-
-    private:
-        /// \brief The reference being held.
-        proxy underlying_;
-
-        /// \brief Boolean flag indicating whether to keep the reference or discard it.
-        bool keep_;
-    };
-
-    using proxy = discard_underlying<can_capture_reference>;
-
     /// \brief The type of the value that can be obtained by dereferencing the iterator.
-    using value_type = typename proxy::value_type;
+    using value_type = typename std::iterator_traits<DataIterator>::value_type;
 
     /// \brief A reference type of the type iterated over (``value_type``).
-    using reference = typename proxy::reference;
+    using reference = typename std::iterator_traits<DataIterator>::reference;
 
     /// \brief A pointer type of the type iterated over (``value_type``).
     using pointer = typename std::iterator_traits<DataIterator>::pointer;
@@ -124,12 +69,46 @@ public:
     /// \brief The category of the iterator.
     using iterator_category = std::random_access_iterator_tag;
 
-    /// \brief The type of the test value that can be obtained by dereferencing the iterator.
-    using predicate_data_value_type =
-        typename std::iterator_traits<PredicateDataIterator>::value_type;
+    /// \brief Assignable proxy for values in ``DataIterator``.
+    struct proxy
+    {
+    public:
+        /// \brief Either type ``reference`` if ``as_reference`` is ``true``, otherwise ``value_type``.
+        using capture_t = std::conditional_t<can_capture_reference, reference, value_type>;
 
-    /// \brief The type of predicate function used to select input range.
-    using unary_predicate = UnaryPredicate;
+        /// \brief Constructs a ``proxy`` object with the given reference and keep flag.
+        /// \param val The value or reference to be captured.
+        /// \param keep Boolean flag that indicates whether to keep the reference.
+        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy(capture_t val, const bool keep)
+            : underlying_(val), keep_(keep)
+        {}
+
+        /// \brief Assigns a value to the held reference if the keep flag is ``true``.
+        /// \param value The value to assign to the captured value.
+        /// \return A reference to the (possibly) modified ``proxy`` object.
+        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy& operator=(const value_type& value)
+        {
+            if(keep_)
+            {
+                underlying_ = value;
+            }
+            return *this;
+        }
+
+        /// \brief Converts the ``proxy`` to the underlying value type.
+        /// \return The referenced value or the default-constructed value.
+        ROCPRIM_HOST_DEVICE ROCPRIM_INLINE operator value_type() const
+        {
+            return keep_ ? underlying_ : value_type{};
+        }
+
+    private:
+        /// \brief The reference or value being held.
+        capture_t underlying_;
+
+        /// \brief Boolean flag indicating whether to keep the reference or discard it.
+        bool keep_;
+    };
 
     /// \brief Creates a new predicate_iterator.
     ///
@@ -139,7 +118,7 @@ public:
     /// from range pointed by \p iterator.
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE predicate_iterator(DataIterator          data_iterator,
                                                           PredicateDataIterator predicate_iterator,
-                                                          unary_predicate       predicate)
+                                                          UnaryPredicate        predicate)
         : data_it_(data_iterator), predicate_data_it_(predicate_iterator), predicate_(predicate)
     {}
 

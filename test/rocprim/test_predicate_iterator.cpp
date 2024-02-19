@@ -82,10 +82,10 @@ TEST(RocprimPredicateIteratorTests, TypeTraits)
 
     auto it = rocprim::make_mask_iterator(data, mask);
 
-    using it_t      = decltype(it);
-    using discard_t = it_t::discard_underlying<true>;
+    using it_t    = decltype(it);
+    using proxy_t = it_t::proxy;
 
-    static_assert(std::is_assignable<discard_t, value_type>::value,
+    static_assert(std::is_assignable<proxy_t, value_type>::value,
                   "discard type is not assignable with underlying type, even though it should be!");
     static_assert(std::is_assignable<decltype(*it), value_type>::value,
                   "iterator is not assignable with underlying type via dereference, even though it "
