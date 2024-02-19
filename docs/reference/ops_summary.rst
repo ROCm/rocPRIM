@@ -46,7 +46,7 @@ Data Movement
 
 * ``store`` stores the sequence to a continuous memory zone. There are variations to use an optimized path or to specify how to store the sequence to better fit the access patterns of the CUs.
 * ``load`` the complementary operations of the above ones.
-* ``memcpy``` copies bytes between device sources and destinations
+* ``memcpy`` copies bytes between device sources and destinations
 
 Other operations
 ======================
