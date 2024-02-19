@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,10 @@
 
 // Std::memcpy and std::memcmp
 #include <cstring>
+#include <iterator>
+#include <ostream>
+#include <sstream>
+#include <type_traits>
 #include <vector>
 
 namespace test_utils {
@@ -230,96 +234,65 @@ auto assert_near(const custom_test_type<T>& result, const custom_test_type<T>& e
 
 // End assert_near
 
-template<class T>
-void assert_bit_eq(const std::vector<T>& result, const std::vector<T>& expected)
-{
-    ASSERT_EQ(result.size(), expected.size());
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        if(!bit_equal(result[i], expected[i]))
-        {
-            FAIL() << "Expected strict/bitwise equality of these values: " << std::endl
-                   << "     result[i]: " << result[i] << std::endl
-                   << "     expected[i]: " << expected[i] << std::endl
-                   << "where index = " << i;
-        }
-    }
-}
 #if ROCPRIM_HAS_INT128_SUPPORT
-inline void assert_bit_eq(const std::vector<__int128_t>& result,
-                          const std::vector<__int128_t>& expected)
+template<class T>
+auto operator<<(std::ostream& os, const T& value)
+    -> std::enable_if_t<std::is_same<T, __int128_t>::value || std::is_same<T, __uint128_t>::value,
+                        std::ostream&>
 {
-    ASSERT_EQ(result.size(), expected.size());
+    static const char* charmap = "0123456789";
 
-    auto to_string = [](__int128_t value)
+    std::string result;
+    result.reserve(41); // max. 40 digits possible ( uint64_t has 20) plus sign
+    __uint128_t helper = (value < 0) ? -value : value;
+
+    do
     {
-        static const char* charmap = "0123456789";
-
-        std::string result;
-        result.reserve(41); // max. 40 digits possible ( uint64_t has 20) plus sign
-        __uint128_t helper = (value < 0) ? -value : value;
-
-        do
-        {
-            result += charmap[helper % 10];
-            helper /= 10;
-        }
-        while(helper);
-        if(value < 0)
-        {
-            result += "-";
-        }
-        std::reverse(result.begin(), result.end());
-        return result;
-    };
-
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        if(!bit_equal(result[i], expected[i]))
-        {
-            FAIL() << "Expected strict/bitwise equality of these values: " << std::endl
-                   << "     result[i]: " << to_string(result[i]) << std::endl
-                   << "     expected[i]: " << to_string(expected[i]) << std::endl
-                   << "where index = " << i;
-        }
+        result += charmap[helper % 10];
+        helper /= 10;
     }
+    while(helper);
+    if(value < 0)
+    {
+        result += "-";
+    }
+    std::reverse(result.begin(), result.end());
+
+    os << result;
+    return os;
 }
 
-inline void assert_bit_eq(const std::vector<__uint128_t>& result,
-                          const std::vector<__uint128_t>& expected)
-{
-    ASSERT_EQ(result.size(), expected.size());
-
-    auto to_string = [](__uint128_t value)
-    {
-        static const char* charmap = "0123456789";
-
-        std::string result;
-        result.reserve(40); // max. 40 digits possible ( uint64_t has 20)
-        __uint128_t helper = value;
-
-        do
-        {
-            result += charmap[helper % 10];
-            helper /= 10;
-        }
-        while(helper);
-        std::reverse(result.begin(), result.end());
-        return result;
-    };
-
-    for(size_t i = 0; i < result.size(); i++)
-    {
-        if(!bit_equal(result[i], expected[i]))
-        {
-            FAIL() << "Expected strict/bitwise equality of these values: " << std::endl
-                   << "     result[i]: " << to_string(result[i]) << std::endl
-                   << "     expected[i]: " << to_string(expected[i]) << std::endl
-                   << "where index = " << i;
-        }
-    }
-}
 #endif
+
+template<class IterA, class IterB>
+void assert_bit_eq(IterA result_begin, IterA result_end, IterB expected_begin, IterB expected_end)
+{
+    using value_a_t = typename std::iterator_traits<IterA>::value_type;
+    using value_b_t = typename std::iterator_traits<IterB>::value_type;
+
+    ASSERT_EQ(std::distance(result_begin, result_end), std::distance(expected_begin, expected_end));
+    auto result_it   = result_begin;
+    auto expected_it = expected_begin;
+    for(size_t index = 0; result_it != result_end; ++result_it, ++expected_it, ++index)
+    {
+        // The cast is needed, because the argument can be an std::vector<bool> iterator, which's operator*
+        // returns a proxy object that must be converted to bool
+        const auto result   = static_cast<value_a_t>(*result_it);
+        const auto expected = static_cast<value_b_t>(*expected_it);
+
+        if(!bit_equal(result, expected))
+        {
+            std::stringstream result_str;
+            std::stringstream expected_str;
+            result_str << result;
+            expected_str << expected;
+            FAIL() << "Expected strict/bitwise equality of these values: " << std::endl
+                   << "     result[i]: " << result_str.str() << std::endl
+                   << "     expected[i]: " << expected_str.str() << std::endl
+                   << "where index = " << index;
+        }
+    }
+}
 }
 
 #endif //ROCPRIM_TEST_UTILS_ASSERTIONS_HPP

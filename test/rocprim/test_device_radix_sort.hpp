@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -96,29 +96,33 @@ inline void sort_keys()
         for(size_t size : sizes)
         {
             if(size > (1 << 17) && !check_large_sizes)
+            {
                 break;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
+            engine_type rng_engine(seed_value);
             in_place = !in_place;
 
             // Generate data
-            std::vector<key_type> keys_input;
+            auto keys_input = std::make_unique<key_type[]>(size);
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   static_cast<key_type>(-1000),
-                                                                   static_cast<key_type>(+1000),
-                                                                   seed_value);
-                test_utils::add_special_values(keys_input, seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   static_cast<key_type>(-1000),
+                                                   static_cast<key_type>(+1000),
+                                                   rng_engine);
+                test_utils::add_special_values(keys_input.get(), size, rng_engine);
             }
             else
             {
-                keys_input
-                    = test_utils::get_random_data<key_type>(size,
-                                                            std::numeric_limits<key_type>::min(),
-                                                            std::numeric_limits<key_type>::max(),
-                                                            seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   std::numeric_limits<key_type>::min(),
+                                                   std::numeric_limits<key_type>::max(),
+                                                   rng_engine);
             }
 
             key_type* d_keys_input;
@@ -134,12 +138,12 @@ inline void sort_keys()
                     test_common_utils::hipMallocHelper(&d_keys_output, size * sizeof(key_type)));
             }
             HIP_CHECK(hipMemcpy(d_keys_input,
-                                keys_input.data(),
+                                keys_input.get(),
                                 size * sizeof(key_type),
                                 hipMemcpyHostToDevice));
 
             // Calculate expected results on host
-            std::vector<key_type> expected(keys_input);
+            std::vector<key_type> expected(keys_input.get(), keys_input.get() + size);
             std::stable_sort(
                 expected.begin(),
                 expected.end(),
@@ -153,9 +157,11 @@ inline void sort_keys()
 
             hipGraph_t graph;
             hipGraphExec_t graph_instance;
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph = test_utils::createGraphHelper(stream);
-            
+            }
+
             size_t temporary_storage_bytes;
             HIP_CHECK(rocprim::radix_sort_keys<config>(nullptr,
                                                        temporary_storage_bytes,
@@ -165,18 +171,22 @@ inline void sort_keys()
                                                        start_bit,
                                                        end_bit));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
+            }
+
             ASSERT_GT(temporary_storage_bytes, 0);
 
             void* d_temporary_storage;
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::resetGraphHelper(graph, graph_instance, stream);
-            
+            }
+
             if(descending)
             {
                 HIP_CHECK(rocprim::radix_sort_keys_desc<config>(d_temporary_storage,
@@ -202,11 +212,13 @@ inline void sort_keys()
                                                            debug_synchronous));
             }
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
-            std::vector<key_type> keys_output(size);
-            HIP_CHECK(hipMemcpy(keys_output.data(),
+            }
+
+            auto keys_output = std::make_unique<key_type[]>(size);
+            HIP_CHECK(hipMemcpy(keys_output.get(),
                                 d_keys_output,
                                 size * sizeof(key_type),
                                 hipMemcpyDeviceToHost));
@@ -218,15 +230,22 @@ inline void sort_keys()
                 HIP_CHECK(hipFree(d_keys_output));
             }
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::cleanupGraphHelper(graph, graph_instance);
-            
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output, expected));
+            }
+
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output.get(),
+                                                              keys_output.get() + size,
+                                                              expected.begin(),
+                                                              expected.end()));
         }
     }
 
-    if (TestFixture::params::use_graphs)
+    if(TestFixture::params::use_graphs)
+    {
         HIP_CHECK(hipStreamDestroy(stream));
+    }
 }
 
 template<typename TestFixture>
@@ -266,29 +285,33 @@ inline void sort_pairs()
         for(size_t size : sizes)
         {
             if(size > (1 << 17) && !check_large_sizes)
+            {
                 break;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
+            engine_type rng_engine(seed_value);
             in_place = !in_place;
 
             // Generate data
-            std::vector<key_type> keys_input;
+            auto keys_input = std::make_unique<key_type[]>(size);
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   static_cast<key_type>(-1000),
-                                                                   static_cast<key_type>(+1000),
-                                                                   seed_value);
-                test_utils::add_special_values(keys_input, seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   static_cast<key_type>(-1000),
+                                                   static_cast<key_type>(+1000),
+                                                   rng_engine);
+                test_utils::add_special_values(keys_input.get(), size, rng_engine);
             }
             else
             {
-                keys_input
-                    = test_utils::get_random_data<key_type>(size,
-                                                            std::numeric_limits<key_type>::min(),
-                                                            std::numeric_limits<key_type>::max(),
-                                                            seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   std::numeric_limits<key_type>::min(),
+                                                   std::numeric_limits<key_type>::max(),
+                                                   rng_engine);
             }
 
             std::vector<value_type> values_input(size);
@@ -307,7 +330,7 @@ inline void sort_pairs()
                     test_common_utils::hipMallocHelper(&d_keys_output, size * sizeof(key_type)));
             }
             HIP_CHECK(hipMemcpy(d_keys_input,
-                                keys_input.data(),
+                                keys_input.get(),
                                 size * sizeof(key_type),
                                 hipMemcpyHostToDevice));
 
@@ -361,9 +384,11 @@ inline void sort_pairs()
 
             hipGraph_t graph;
             hipGraphExec_t graph_instance;
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph = test_utils::createGraphHelper(stream);
-            
+            }
+
             void*  d_temporary_storage = nullptr;
             size_t temporary_storage_bytes;
             HIP_CHECK(rocprim::radix_sort_pairs<config>(d_temporary_storage,
@@ -376,17 +401,21 @@ inline void sort_pairs()
                                                         start_bit,
                                                         end_bit));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
+            }
+
             ASSERT_GT(temporary_storage_bytes, 0);
 
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::resetGraphHelper(graph, graph_instance, stream);
-            
+            }
+
             if(descending)
             {
                 HIP_CHECK(rocprim::radix_sort_pairs_desc<config>(d_temporary_storage,
@@ -416,11 +445,13 @@ inline void sort_pairs()
                                                             debug_synchronous));
             }
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
-            std::vector<key_type> keys_output(size);
-            HIP_CHECK(hipMemcpy(keys_output.data(),
+            }
+
+            auto keys_output = std::make_unique<key_type[]>(size);
+            HIP_CHECK(hipMemcpy(keys_output.get(),
                                 d_keys_output,
                                 size * sizeof(key_type),
                                 hipMemcpyDeviceToHost));
@@ -440,16 +471,26 @@ inline void sort_pairs()
                 HIP_CHECK(hipFree(d_values_output));
             }
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::cleanupGraphHelper(graph, graph_instance);
+            }
 
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output, keys_expected));
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(values_output, values_expected));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output.get(),
+                                                              keys_output.get() + size,
+                                                              keys_expected.begin(),
+                                                              keys_expected.end()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(values_output.begin(),
+                                                              values_output.end(),
+                                                              values_expected.begin(),
+                                                              values_expected.end()));
         }
     }
 
-    if (TestFixture::params::use_graphs)
+    if(TestFixture::params::use_graphs)
+    {
         HIP_CHECK(hipStreamDestroy(stream));
+    }
 }
 
 template<typename TestFixture>
@@ -486,27 +527,32 @@ inline void sort_keys_double_buffer()
         for(size_t size : sizes)
         {
             if(size > (1 << 17) && !check_large_sizes)
+            {
                 break;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
+            engine_type rng_engine(seed_value);
+
             // Generate data
-            std::vector<key_type> keys_input;
+            auto keys_input = std::make_unique<key_type[]>(size);
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   static_cast<key_type>(-1000),
-                                                                   static_cast<key_type>(+1000),
-                                                                   seed_value);
-                test_utils::add_special_values(keys_input, seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   static_cast<key_type>(-1000),
+                                                   static_cast<key_type>(+1000),
+                                                   rng_engine);
+                test_utils::add_special_values(keys_input.get(), size, rng_engine);
             }
             else
             {
-                keys_input
-                    = test_utils::get_random_data<key_type>(size,
-                                                            std::numeric_limits<key_type>::min(),
-                                                            std::numeric_limits<key_type>::max(),
-                                                            seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   std::numeric_limits<key_type>::min(),
+                                                   std::numeric_limits<key_type>::max(),
+                                                   rng_engine);
             }
 
             key_type* d_keys_input;
@@ -514,12 +560,12 @@ inline void sort_keys_double_buffer()
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input, size * sizeof(key_type)));
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_output, size * sizeof(key_type)));
             HIP_CHECK(hipMemcpy(d_keys_input,
-                                keys_input.data(),
+                                keys_input.get(),
                                 size * sizeof(key_type),
                                 hipMemcpyHostToDevice));
 
             // Calculate expected results on host
-            std::vector<key_type> expected(keys_input);
+            std::vector<key_type> expected(keys_input.get(), keys_input.get() + size);
             std::stable_sort(
                 expected.begin(),
                 expected.end(),
@@ -529,9 +575,11 @@ inline void sort_keys_double_buffer()
 
             hipGraph_t graph;
             hipGraphExec_t graph_instance;
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph = test_utils::createGraphHelper(stream);
-            
+            }
+
             size_t temporary_storage_bytes;
             HIP_CHECK(rocprim::radix_sort_keys(nullptr,
                                                temporary_storage_bytes,
@@ -540,18 +588,22 @@ inline void sort_keys_double_buffer()
                                                start_bit,
                                                end_bit));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
+            }
+
             ASSERT_GT(temporary_storage_bytes, 0);
 
             void* d_temporary_storage;
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::resetGraphHelper(graph, graph_instance, stream);
-            
+            }
+
             if(descending)
             {
                 HIP_CHECK(rocprim::radix_sort_keys_desc(d_temporary_storage,
@@ -575,13 +627,15 @@ inline void sort_keys_double_buffer()
                                                    debug_synchronous));
             }
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
+            }
+
             HIP_CHECK(hipFree(d_temporary_storage));
 
-            std::vector<key_type> keys_output(size);
-            HIP_CHECK(hipMemcpy(keys_output.data(),
+            auto keys_output = std::make_unique<key_type[]>(size);
+            HIP_CHECK(hipMemcpy(keys_output.get(),
                                 d_keys.current(),
                                 size * sizeof(key_type),
                                 hipMemcpyDeviceToHost));
@@ -589,15 +643,22 @@ inline void sort_keys_double_buffer()
             HIP_CHECK(hipFree(d_keys_input));
             HIP_CHECK(hipFree(d_keys_output));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::cleanupGraphHelper(graph, graph_instance);
-            
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output, expected));
+            }
+
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output.get(),
+                                                              keys_output.get() + size,
+                                                              expected.begin(),
+                                                              expected.end()));
         }
     }
 
-    if (TestFixture::params::use_graphs)
+    if(TestFixture::params::use_graphs)
+    {
         HIP_CHECK(hipStreamDestroy(stream));
+    }
 }
 
 template<typename TestFixture>
@@ -635,27 +696,32 @@ inline void sort_pairs_double_buffer()
         for(size_t size : sizes)
         {
             if(size > (1 << 17) && !check_large_sizes)
+            {
                 break;
+            }
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
+            engine_type rng_engine(seed_value);
+
             // Generate data
-            std::vector<key_type> keys_input;
+            auto keys_input = std::make_unique<key_type[]>(size);
             if(rocprim::is_floating_point<key_type>::value)
             {
-                keys_input = test_utils::get_random_data<key_type>(size,
-                                                                   static_cast<key_type>(-1000),
-                                                                   static_cast<key_type>(+1000),
-                                                                   seed_value);
-                test_utils::add_special_values(keys_input, seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   static_cast<key_type>(-1000),
+                                                   static_cast<key_type>(+1000),
+                                                   rng_engine);
+                test_utils::add_special_values(keys_input.get(), size, rng_engine);
             }
             else
             {
-                keys_input
-                    = test_utils::get_random_data<key_type>(size,
-                                                            std::numeric_limits<key_type>::min(),
-                                                            std::numeric_limits<key_type>::max(),
-                                                            seed_value);
+                test_utils::generate_random_data_n(keys_input.get(),
+                                                   size,
+                                                   std::numeric_limits<key_type>::min(),
+                                                   std::numeric_limits<key_type>::max(),
+                                                   rng_engine);
             }
 
             std::vector<value_type> values_input(size);
@@ -666,7 +732,7 @@ inline void sort_pairs_double_buffer()
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input, size * sizeof(key_type)));
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_output, size * sizeof(key_type)));
             HIP_CHECK(hipMemcpy(d_keys_input,
-                                keys_input.data(),
+                                keys_input.get(),
                                 size * sizeof(key_type),
                                 hipMemcpyHostToDevice));
 
@@ -720,17 +786,21 @@ inline void sort_pairs_double_buffer()
                                                 start_bit,
                                                 end_bit));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
+            }
+
             ASSERT_GT(temporary_storage_bytes, 0);
 
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::resetGraphHelper(graph, graph_instance, stream);
-            
+            }
+
             if(descending)
             {
                 HIP_CHECK(rocprim::radix_sort_pairs_desc(d_temporary_storage,
@@ -756,13 +826,15 @@ inline void sort_pairs_double_buffer()
                                                     debug_synchronous));
             }
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
-            
+            }
+
             HIP_CHECK(hipFree(d_temporary_storage));
 
-            std::vector<key_type> keys_output(size);
-            HIP_CHECK(hipMemcpy(keys_output.data(),
+            auto keys_output = std::make_unique<key_type[]>(size);
+            HIP_CHECK(hipMemcpy(keys_output.get(),
                                 d_keys.current(),
                                 size * sizeof(key_type),
                                 hipMemcpyDeviceToHost));
@@ -778,16 +850,26 @@ inline void sort_pairs_double_buffer()
             HIP_CHECK(hipFree(d_values_input));
             HIP_CHECK(hipFree(d_values_output));
 
-            if (TestFixture::params::use_graphs)
+            if(TestFixture::params::use_graphs)
+            {
                 test_utils::cleanupGraphHelper(graph, graph_instance);
-            
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output, keys_expected));
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(values_output, values_expected));
+            }
+
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(keys_output.get(),
+                                                              keys_output.get() + size,
+                                                              keys_expected.begin(),
+                                                              keys_expected.end()));
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(values_output.begin(),
+                                                              values_output.end(),
+                                                              values_expected.begin(),
+                                                              values_expected.end()));
         }
     }
 
-    if (TestFixture::params::use_graphs)
+    if(TestFixture::params::use_graphs)
+    {
         HIP_CHECK(hipStreamDestroy(stream));
+    }
 }
 
 template<bool UseGraphs = false>

@@ -41,7 +41,8 @@ namespace detail
 template<unsigned int StartBit,
          unsigned int EndBit,
          class Key,
-         std::enable_if_t<rocprim::is_integral<Key>::value || std::is_same<Key, __uint128_t>::value
+         std::enable_if_t<(rocprim::is_integral<Key>::value && !std::is_same<Key, bool>::value)
+                              || std::is_same<Key, __uint128_t>::value
                               || std::is_same<Key, __int128_t>::value,
                           int>
          = 0>
@@ -53,6 +54,17 @@ Key to_bits(const Key key)
     static constexpr Key radix_mask        = radix_mask_upper ^ radix_mask_bottom;
 
     return key & radix_mask;
+}
+
+template<unsigned int StartBit,
+         unsigned int EndBit,
+         class Key,
+         std::enable_if_t<std::is_same<Key, bool>::value, int> = 0>
+Key to_bits(const Key key)
+{
+    static_assert(StartBit == 0, "Currently to_bits support bool only for full radix");
+    static_assert(EndBit == 8 * sizeof(bool), "Currently to_bits support bool only for full radix");
+    return key;
 }
 
 template<unsigned int StartBit,
