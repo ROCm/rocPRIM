@@ -26,6 +26,7 @@
 #include <common_test_header.hpp>
 
 #include <rocprim/device/device_transform.hpp>
+#include <rocprim/iterator/constant_iterator.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/predicate_iterator.hpp>
 
@@ -42,7 +43,7 @@ struct is_odd
     // While this can be "constexpr T(const T&) const", we want to verify that
     // it compiles without the constness.
     template<class T>
-    __device__ __host__ T operator()(T& a)
+    __device__ __host__ bool operator()(T& a)
     {
         return a % 2;
     }
@@ -84,19 +85,27 @@ TEST(RocprimPredicateIteratorTests, TypeTraits)
     value_type* data{};
     bool*       mask{};
 
-    auto it = rocprim::make_mask_iterator(data, mask);
+    auto m_it = rocprim::make_mask_iterator(data, mask);
 
-    using it_t    = decltype(it);
-    using proxy_t = it_t::proxy;
+    using m_it_t  = decltype(m_it);
+    using proxy_t = m_it_t::proxy;
 
     static_assert(std::is_assignable<proxy_t, value_type>::value,
                   "discard type is not assignable with underlying type, even though it should be!");
-    static_assert(std::is_assignable<decltype(*it), value_type>::value,
+    static_assert(std::is_assignable<decltype(*m_it), value_type>::value,
                   "iterator is not assignable with underlying type via dereference, even though it "
                   "should be!");
-    static_assert(std::is_assignable<decltype(it[0]), value_type>::value,
+    static_assert(std::is_assignable<decltype(m_it[0]), value_type>::value,
                   "iterator is not assignablle with underlying type via array index, even though "
                   "is should be!");
+
+    // Check if we can apply predicate iterator on a constant iterator
+    auto c_it = rocprim::make_constant_iterator(0);
+    auto p_it = rocprim::make_predicate_iterator(c_it, is_odd{});
+
+    static_assert(
+        std::is_convertible<decltype(*p_it), value_type>::value,
+        "predicate iterator is not convertible to underlying type, even though it should be!");
 }
 
 // Test that we are only writing if predicate holds
