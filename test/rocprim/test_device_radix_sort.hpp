@@ -29,9 +29,13 @@
 #include <rocprim/device/device_radix_sort.hpp>
 
 // required test headers
+#include "test_seed.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_sort_comparator.hpp"
 #include "test_utils_types.hpp"
+
+#include <iterator>
+#include <type_traits>
 
 template<class Key,
          class Value,
@@ -59,6 +63,33 @@ public:
 };
 
 TYPED_TEST_SUITE_P(RocprimDeviceRadixSort);
+
+template<class KeyIter>
+auto generate_key_input(KeyIter keys_input, size_t size, engine_type& rng_engine)
+    -> std::enable_if_t<
+        rocprim::is_floating_point<typename std::iterator_traits<KeyIter>::value_type>::value>
+{
+    using key_type = typename std::iterator_traits<KeyIter>::value_type;
+    test_utils::generate_random_data_n(keys_input,
+                                       size,
+                                       static_cast<key_type>(-1000),
+                                       static_cast<key_type>(+1000),
+                                       rng_engine);
+    test_utils::add_special_values(keys_input, size, rng_engine);
+}
+
+template<class KeyIter>
+auto generate_key_input(KeyIter keys_input, size_t size, engine_type& rng_engine)
+    -> std::enable_if_t<
+        !rocprim::is_floating_point<typename std::iterator_traits<KeyIter>::value_type>::value>
+{
+    using key_type = typename std::iterator_traits<KeyIter>::value_type;
+    test_utils::generate_random_data_n(keys_input,
+                                       size,
+                                       std::numeric_limits<key_type>::min(),
+                                       std::numeric_limits<key_type>::max(),
+                                       rng_engine);
+}
 
 template<typename TestFixture>
 inline void sort_keys()
@@ -107,23 +138,7 @@ inline void sort_keys()
 
             // Generate data
             auto keys_input = std::make_unique<key_type[]>(size);
-            if(rocprim::is_floating_point<key_type>::value)
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   static_cast<key_type>(-1000),
-                                                   static_cast<key_type>(+1000),
-                                                   rng_engine);
-                test_utils::add_special_values(keys_input.get(), size, rng_engine);
-            }
-            else
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   std::numeric_limits<key_type>::min(),
-                                                   std::numeric_limits<key_type>::max(),
-                                                   rng_engine);
-            }
+            generate_key_input(keys_input.get(), size, rng_engine);
 
             key_type* d_keys_input;
             key_type* d_keys_output;
@@ -296,23 +311,7 @@ inline void sort_pairs()
 
             // Generate data
             auto keys_input = std::make_unique<key_type[]>(size);
-            if(rocprim::is_floating_point<key_type>::value)
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   static_cast<key_type>(-1000),
-                                                   static_cast<key_type>(+1000),
-                                                   rng_engine);
-                test_utils::add_special_values(keys_input.get(), size, rng_engine);
-            }
-            else
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   std::numeric_limits<key_type>::min(),
-                                                   std::numeric_limits<key_type>::max(),
-                                                   rng_engine);
-            }
+            generate_key_input(keys_input.get(), size, rng_engine);
 
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);
@@ -537,23 +536,7 @@ inline void sort_keys_double_buffer()
 
             // Generate data
             auto keys_input = std::make_unique<key_type[]>(size);
-            if(rocprim::is_floating_point<key_type>::value)
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   static_cast<key_type>(-1000),
-                                                   static_cast<key_type>(+1000),
-                                                   rng_engine);
-                test_utils::add_special_values(keys_input.get(), size, rng_engine);
-            }
-            else
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   std::numeric_limits<key_type>::min(),
-                                                   std::numeric_limits<key_type>::max(),
-                                                   rng_engine);
-            }
+            generate_key_input(keys_input.get(), size, rng_engine);
 
             key_type* d_keys_input;
             key_type* d_keys_output;
@@ -706,23 +689,7 @@ inline void sort_pairs_double_buffer()
 
             // Generate data
             auto keys_input = std::make_unique<key_type[]>(size);
-            if(rocprim::is_floating_point<key_type>::value)
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   static_cast<key_type>(-1000),
-                                                   static_cast<key_type>(+1000),
-                                                   rng_engine);
-                test_utils::add_special_values(keys_input.get(), size, rng_engine);
-            }
-            else
-            {
-                test_utils::generate_random_data_n(keys_input.get(),
-                                                   size,
-                                                   std::numeric_limits<key_type>::min(),
-                                                   std::numeric_limits<key_type>::max(),
-                                                   rng_engine);
-            }
+            generate_key_input(keys_input.get(), size, rng_engine);
 
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);

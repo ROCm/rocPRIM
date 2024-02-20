@@ -140,20 +140,26 @@ inline auto convert_to_native(const T& value)
 
 // Helper class to generate a vector of special values for any type
 template<class T>
-struct special_values {
+struct special_values
+{
 private:
     // sign_bit_flip needed because host-side operators for __half are missing. (e.g. -__half unary operator or (-1*) __half*__half binary operator
-    static T sign_bit_flip(T value){
+    static T sign_bit_flip(T value)
+    {
         uint8_t* data = reinterpret_cast<uint8_t*>(&value);
-        data[sizeof(T)-1] ^= 0x80;
+        data[sizeof(T) - 1] ^= 0x80;
         return value;
     }
 
 public:
-    static std::vector<T> vector(){
-        if(std::is_integral<T>::value){
+    static std::vector<T> vector()
+    {
+        if(std::is_integral<T>::value)
+        {
             return std::vector<T>();
-        }else {
+        }
+        else
+        {
             std::vector<T> r = {test_utils::numeric_limits<T>::quiet_NaN(),
                                 sign_bit_flip(test_utils::numeric_limits<T>::quiet_NaN()),
                                 // TODO: switch on when signaling_NaN will be supported on NVIDIA
