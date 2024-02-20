@@ -154,17 +154,17 @@ public:
         return old;
     }
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator*() const
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator*()
     {
         return proxy(*data_it_, predicate_(*predicate_data_it_));
     }
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator->() const
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator->()
     {
         return *(*this);
     }
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator[](difference_type distance) const
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE proxy operator[](difference_type distance)
     {
         return *(*this + distance);
     }

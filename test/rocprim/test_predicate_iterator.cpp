@@ -37,36 +37,40 @@
 #include <numeric>
 #include <type_traits>
 
-template<class T>
 struct is_odd
 {
-    __device__ __host__ constexpr T operator()(const T& a) const
+    // While this can be "constexpr T(const T&) const", we want to verify that
+    // it compiles without the constness.
+    template<class T>
+    __device__ __host__ T operator()(T& a)
     {
         return a % 2;
     }
 };
 
-template<int V, class T>
+template<int V>
 struct set_to
 {
+    template<class T>
     __device__ __host__ constexpr T operator()(const T&) const
     {
         return V;
     }
 };
 
-template<int V, class T>
+template<int V>
 struct increment_by
 {
-    __device__ __host__ constexpr T operator()(const T& a) const
+    template<class T>
+    __device__ __host__ T constexpr operator()(const T& a) const
     {
         return a + V;
     }
 };
 
-template<class T>
 struct identity
 {
+    template<class T>
     __device__ __host__ constexpr T operator()(const T& a) const
     {
         return a;
@@ -105,13 +109,13 @@ TEST(RocprimPredicateIteratorTests, HostWrite)
     std::iota(data.begin(), data.end(), 0);
 
     // Make iterator that only writes to odd values
-    auto odd_it = rocprim::make_predicate_iterator(data.begin(), is_odd<T>{});
+    auto odd_it = rocprim::make_predicate_iterator(data.begin(), is_odd{});
 
     // Increment all values in that iterator
     std::transform(data.begin(), data.end(), odd_it, [](auto v) { return v + 1; });
 
     // Such that none of data is odd
-    ASSERT_TRUE(std::none_of(data.begin(), data.end(), is_odd<T>{}));
+    ASSERT_TRUE(std::none_of(data.begin(), data.end(), is_odd{}));
 }
 
 // Test that we are only reading if predicate holds, excluding the required read for the predicate
@@ -126,7 +130,7 @@ TEST(RocprimPredicateIteratorTests, HostRead)
     std::iota(data.begin(), data.end(), 0);
 
     // Make iterator that only reads odd values
-    auto odd_it = rocprim::make_predicate_iterator(data.begin(), is_odd<T>{});
+    auto odd_it = rocprim::make_predicate_iterator(data.begin(), is_odd{});
 
     // Read all values from that iterator
     for(size_t i = 0; i < size; ++i)
@@ -149,8 +153,8 @@ TEST(RocprimPredicateIteratorTests, HostMaskWrite)
     std::iota(data.begin(), data.end(), 0);
     test_utils::get_random_data<bool>(size, false, true, 0);
 
-    auto masked_it = rocprim::make_predicate_iterator(data.begin(), mask.begin(), is_odd<T>{});
-    std::transform(data.begin(), data.end(), masked_it, set_to<-1, T>{});
+    auto masked_it = rocprim::make_predicate_iterator(data.begin(), mask.begin(), identity{});
+    std::transform(data.begin(), data.end(), masked_it, set_to<-1>{});
 
     for(size_t i = 0; i < size; ++i)
     {
@@ -199,8 +203,8 @@ TEST(RocprimPredicateIteratorTests, HostMaskRead)
 TEST(RocprimPredicateIteratorTests, DeviceInplace)
 {
     using T         = int;
-    using predicate = is_odd<T>;
-    using transform = increment_by<5, T>;
+    using predicate = is_odd;
+    using transform = increment_by<5>;
 
     constexpr size_t size      = 100;
     constexpr size_t data_size = sizeof(T) * size;
@@ -219,7 +223,7 @@ TEST(RocprimPredicateIteratorTests, DeviceInplace)
     HIP_CHECK(hipMemcpy(h_data.data(), d_data, data_size, hipMemcpyDeviceToHost));
     HIP_CHECK(hipFree(d_data));
 
-    for(size_t i = 0; i < size; ++i)
+    for(T i = 0; i < T{size}; ++i)
     {
         if(predicate{}(i))
         {
@@ -236,8 +240,8 @@ TEST(RocprimPredicateIteratorTests, DeviceInplace)
 TEST(RocprimPredicateIteratorTests, DeviceRead)
 {
     using T         = int;
-    using predicate = is_odd<T>;
-    using transform = increment_by<5, T>;
+    using predicate = is_odd;
+    using transform = increment_by<5>;
 
     constexpr size_t size      = 100;
     constexpr size_t data_size = sizeof(T) * size;
@@ -254,13 +258,13 @@ TEST(RocprimPredicateIteratorTests, DeviceRead)
     auto t_it = rocprim::make_transform_iterator(d_input, transform{});
     auto r_it = rocprim::make_predicate_iterator(t_it, d_input, predicate{});
 
-    HIP_CHECK(rocprim::transform(r_it, d_output, size, identity<T>{}));
+    HIP_CHECK(rocprim::transform(r_it, d_output, size, identity{}));
 
     HIP_CHECK(hipMemcpy(h_data.data(), d_output, data_size, hipMemcpyDeviceToHost));
     HIP_CHECK(hipFree(d_input));
     HIP_CHECK(hipFree(d_output));
 
-    for(size_t i = 0; i < size; ++i)
+    for(T i = 0; i < T{size}; ++i)
     {
         if(predicate{}(i))
         {
