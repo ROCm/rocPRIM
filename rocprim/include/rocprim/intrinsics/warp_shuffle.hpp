@@ -233,7 +233,7 @@ T warp_shuffle_xor(const T& input, const int lane_mask, const int width = device
 namespace detail
 {
 
-/// \brief Shuffle XOR for any data type.
+/// \brief Shuffle XOR for any data type using warp_swizzle.
 ///
 /// <tt>i</tt>-th thread in warp obtains \p input from <tt>i^lane_mask</tt>-th
 /// thread in warp. Makes use of of the swizzle instruction for powers of 2 till 16.
@@ -242,7 +242,7 @@ namespace detail
 /// Note: The optional \p width parameter must be a power of 2; results are
 /// undefined if it is not a power of 2, or it is greater than device_warp_size().
 ///
-/// \param input - input to pass to other threads
+/// \param v - input to pass to other threads
 /// \param mask - mask used for calculating source lane id
 /// \param width - logical warp width
 template<class V>
