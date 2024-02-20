@@ -48,12 +48,6 @@ template<class DataIterator, class PredicateDataIterator, class UnaryPredicate>
 class predicate_iterator
 {
 public:
-    /// \brief Boolean flag that indicates whether ``DataIterator`` derefences to a reference.
-    /// If ``true``, ``predicate_iterator`` may modify the wrapped ``DataIterator``.
-    /// If ``false``, ``predicate_iterator`` does not modify the wrapped ``DataIterator``.
-    static constexpr bool can_capture_reference
-        = std::is_reference<decltype(*std::declval<DataIterator>())>::value;
-
     /// \brief The type of the value that can be obtained by dereferencing the iterator.
     using value_type = typename std::iterator_traits<DataIterator>::value_type;
 
@@ -73,8 +67,8 @@ public:
     struct proxy
     {
     public:
-        /// \brief Either type ``reference`` if ``as_reference`` is ``true``, otherwise ``value_type``.
-        using capture_t = std::conditional_t<can_capture_reference, reference, value_type>;
+        /// \brief The return type on the dereference operator. This may be different than ``reference``.
+        using capture_t = decltype(*std::declval<DataIterator>());
 
         /// \brief Constructs a ``proxy`` object with the given reference and keep flag.
         /// \param val The value or reference to be captured.
