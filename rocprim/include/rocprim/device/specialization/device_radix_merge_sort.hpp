@@ -24,7 +24,6 @@
 #include "../detail/device_radix_sort.hpp"
 #include "../device_merge_sort.hpp"
 #include "device_radix_block_sort.hpp"
-#include "rocprim/types.hpp"
 
 #include <type_traits>
 

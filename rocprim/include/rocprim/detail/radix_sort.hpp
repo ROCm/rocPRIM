@@ -53,20 +53,18 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
 {
     using bit_key_type = BitKey;
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static bit_key_type encode(Key key)
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key)
     {
         return ::rocprim::detail::bit_cast<bit_key_type>(key);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static Key decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key)
     {
         return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int length)
     {
         unsigned int mask = (1u << length) - 1;
@@ -82,18 +80,18 @@ struct radix_key_codec_integral<
 {
     using bit_key_type = BitKey;
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE static bit_key_type encode(Key key)
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key)
     {
         return ::rocprim::detail::bit_cast<bit_key_type>(key);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE static Key decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key)
     {
         return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int length)
     {
         unsigned int mask = (1u << length) - 1;
@@ -108,22 +106,20 @@ struct radix_key_codec_integral<Key, BitKey, typename std::enable_if<::rocprim::
 
     static constexpr bit_key_type sign_bit = bit_key_type(1) << (sizeof(bit_key_type) * 8 - 1);
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static bit_key_type encode(Key key)
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key)
     {
         const auto bit_key = ::rocprim::detail::bit_cast<bit_key_type>(key);
         return sign_bit ^ bit_key;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static Key decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key)
     {
         bit_key ^= sign_bit;
         return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int length)
     {
         unsigned int mask = (1u << length) - 1;
@@ -140,20 +136,20 @@ struct radix_key_codec_integral<Key,
 
     static constexpr bit_key_type sign_bit = bit_key_type(1) << (sizeof(bit_key_type) * 8 - 1);
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE static bit_key_type encode(Key key)
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key)
     {
         const auto bit_key = ::rocprim::detail::bit_cast<bit_key_type>(key);
         return sign_bit ^ bit_key;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE static Key decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key)
     {
         bit_key ^= sign_bit;
         return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int length)
     {
         unsigned int mask = (1u << length) - 1;
@@ -207,23 +203,21 @@ struct radix_key_codec_floating
 
     static constexpr bit_key_type sign_bit = float_bit_mask<Key>::sign_bit;
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static bit_key_type encode(Key key)
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE static bit_key_type encode(Key key)
     {
         bit_key_type bit_key = ::rocprim::detail::bit_cast<bit_key_type>(key);
         bit_key ^= (sign_bit & bit_key) == 0 ? sign_bit : bit_key_type(-1);
         return bit_key;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static Key decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE static Key decode(bit_key_type bit_key)
     {
         bit_key ^= (sign_bit & bit_key) == 0 ? bit_key_type(-1) : sign_bit;
         return ::rocprim::detail::bit_cast<Key>(bit_key);
     }
 
     template<bool Descending>
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int length)
     {
         unsigned int mask = (1u << length) - 1;
@@ -282,20 +276,18 @@ struct radix_key_codec_base<bool>
 {
     using bit_key_type = unsigned char;
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static bit_key_type encode(bool key)
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(bool key)
     {
         return static_cast<bit_key_type>(key);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    static bool decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE static bool decode(bit_key_type bit_key)
     {
         return static_cast<bool>(bit_key);
     }
 
     template<bool Descending>
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int length)
     {
         unsigned int mask = (1u << length) - 1;
@@ -351,19 +343,19 @@ class radix_key_codec : protected radix_key_codec_base<Key>
 public:
     using bit_key_type = typename base_type::bit_key_type;
 
-    ROCPRIM_DEVICE static bit_key_type encode(Key key)
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key)
     {
         bit_key_type bit_key = base_type::encode(key);
         return Descending ? ~bit_key : bit_key;
     }
 
-    ROCPRIM_DEVICE static Key decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key)
     {
         bit_key = Descending ? ~bit_key : bit_key;
         return base_type::decode(bit_key);
     }
 
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int radix_bits)
     {
         return base_type::template extract_digit<Descending>(bit_key, start, radix_bits);
@@ -378,18 +370,18 @@ class radix_key_codec<bool, Descending> : protected radix_key_codec_base<bool>
 public:
     using bit_key_type = typename base_type::bit_key_type;
 
-    ROCPRIM_DEVICE static bit_key_type encode(bool key)
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(bool key)
     {
         return Descending != key;
     }
 
-    ROCPRIM_DEVICE static bool decode(bit_key_type bit_key)
+    ROCPRIM_HOST_DEVICE static bool decode(bit_key_type bit_key)
     {
         const bool key_value = bit_key;
         return Descending != key_value;
     }
 
-    ROCPRIM_DEVICE static unsigned int
+    ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int radix_bits)
     {
         return base_type::template extract_digit<Descending>(bit_key, start, radix_bits);
@@ -472,7 +464,19 @@ public:
     }
 
     template<class Decomposer>
-    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(Decomposer decomposer);
+    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(Decomposer decomposer)
+    {
+        Key key;
+        for_each_in_tuple(decomposer(key),
+                          [](auto& element)
+                          {
+                              using codec_t
+                                  = radix_key_codec<std::decay_t<decltype(element)>, Descending>;
+                              using bit_key_type = typename codec_t::bit_key_type;
+                              element            = codec_t::decode(static_cast<bit_key_type>(-1));
+                          });
+        return key;
+    }
 
     template<>
     ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(::rocprim::identity_decomposer)
@@ -518,8 +522,12 @@ private:
             const int current_length = current_end_bit - current_start_bit;
 
             // bits extracted from the current tuple element, aligned to LSB
-            const unsigned int current_extract
-                = (element_value >> current_start_bit) & ((1u << current_length) - 1);
+            unsigned int current_extract = (element_value >> current_start_bit);
+
+            if(current_length != 32)
+            {
+                current_extract &= (1u << current_length) - 1;
+            }
 
             digit |= current_extract << bits_extracted_previously;
         }

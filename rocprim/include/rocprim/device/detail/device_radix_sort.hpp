@@ -212,8 +212,6 @@ struct radix_sort_single_helper
     using key_type = Key;
     using value_type = Value;
 
-    using key_codec = radix_key_codec<key_type, Descending>;
-    using bit_key_type = typename key_codec::bit_key_type;
     using sort_type = ::rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread, value_type>;
 
     static constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
@@ -246,8 +244,7 @@ struct radix_sort_single_helper
 
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
-        using key_codec = radix_key_codec<key_type, Descending>;
-        using bit_key_type = typename key_codec::bit_key_type;
+        using key_codec = radix_key_codec_inplace<key_type, Descending>;
 
         key_type keys[ItemsPerThread];
         value_type values[ItemsPerThread];
@@ -261,7 +258,7 @@ struct radix_sort_single_helper
         }
         else
         {
-            const key_type out_of_bounds = key_codec::decode(bit_key_type(-1));
+            const key_type out_of_bounds = key_codec::get_out_of_bounds_key(decomposer);
             block_load_direct_blocked(flat_id,
                                       keys_input + block_offset,
                                       keys,
@@ -560,9 +557,8 @@ auto compare_nan_sensitive(const T& a, const T& b)
 }
 
 template<class T>
-ROCPRIM_DEVICE ROCPRIM_INLINE
-auto compare_nan_sensitive(const T& a, const T& b)
-    -> typename std::enable_if<!rocprim::is_floating_point<T>::value, bool>::type
+ROCPRIM_DEVICE auto compare_nan_sensitive(const T& a, const T& b) ->
+    typename std::enable_if<!rocprim::is_floating_point<T>::value, bool>::type
 {
     return a > b;
 }
@@ -577,8 +573,7 @@ struct radix_merge_compare;
 template<class T>
 struct radix_merge_compare<false, false, T, identity_decomposer>
 {
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const T& a, const T& b) const
+    ROCPRIM_DEVICE bool operator()(const T& a, const T& b) const
     {
         return compare_nan_sensitive<T>(b, a);
     }
@@ -587,15 +582,14 @@ struct radix_merge_compare<false, false, T, identity_decomposer>
 template<class T>
 struct radix_merge_compare<true, false, T, identity_decomposer>
 {
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const T& a, const T& b) const
+    ROCPRIM_DEVICE bool operator()(const T& a, const T& b) const
     {
         return compare_nan_sensitive<T>(a, b);
     }
 };
 
-template<class T>
-struct radix_merge_compare<false,
+template<bool Descending, class T>
+struct radix_merge_compare<Descending,
                            true,
                            T,
                            identity_decomposer,
@@ -603,48 +597,20 @@ struct radix_merge_compare<false,
 {
     T radix_mask;
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE radix_merge_compare(const unsigned int start_bit,
-                                                           const unsigned int current_radix_bits,
-                                                           identity_decomposer)
+    ROCPRIM_HOST_DEVICE radix_merge_compare(const unsigned int start_bit,
+                                            const unsigned int current_radix_bits,
+                                            identity_decomposer)
     {
         T radix_mask_upper  = (T(1) << (current_radix_bits + start_bit)) - 1;
         T radix_mask_bottom = (T(1) << start_bit) - 1;
         radix_mask = radix_mask_upper ^ radix_mask_bottom;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const T& a, const T& b) const
+    ROCPRIM_DEVICE bool operator()(const T& a, const T& b) const
     {
         const T masked_key_a  = a & radix_mask;
         const T masked_key_b  = b & radix_mask;
-        return masked_key_b > masked_key_a;
-    }
-};
-
-template<class T>
-struct radix_merge_compare<true,
-                           true,
-                           T,
-                           identity_decomposer,
-                           typename std::enable_if<rocprim::is_integral<T>::value>::type>
-{
-    T radix_mask;
-
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE radix_merge_compare(const unsigned int start_bit,
-                                                           const unsigned int current_radix_bits,
-                                                           identity_decomposer)
-    {
-        T radix_mask_upper  = (T(1) << (current_radix_bits + start_bit)) - 1;
-        T radix_mask_bottom = (T(1) << start_bit) - 1;
-        radix_mask = (radix_mask_upper ^ radix_mask_bottom);
-    }
-
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const T& a, const T& b) const
-    {
-        const T masked_key_a  = a & radix_mask;
-        const T masked_key_b  = b & radix_mask;
-        return masked_key_a > masked_key_b;
+        return Descending ? masked_key_a > masked_key_b : masked_key_b > masked_key_a;
     }
 };
 
@@ -658,12 +624,14 @@ struct radix_merge_compare<Descending,
     // radix_merge_compare supports masks only for integrals.
     // even though masks are never used for floating point-types,
     // it needs to be able to compile.
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
+    ROCPRIM_HOST_DEVICE
         radix_merge_compare(const unsigned int, const unsigned int, identity_decomposer)
     {}
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    bool operator()(const T&, const T&) const { return false; }
+    ROCPRIM_DEVICE bool operator()(const T&, const T&) const
+    {
+        return false;
+    }
 };
 
 template<bool Descending, class T, class Decomposer>
@@ -673,23 +641,46 @@ struct radix_merge_compare<Descending,
                            Decomposer,
                            std::enable_if_t<!std::is_same<Decomposer, identity_decomposer>::value>>
 {
-    using codec_t = radix_key_codec_inplace<T>;
-
     Decomposer   decomposer_;
     unsigned int start_bit_;
     unsigned int radix_bits_;
 
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE radix_merge_compare(const unsigned int start_bit,
-                                                           const unsigned int current_radix_bits,
-                                                           Decomposer         decomposer)
+    ROCPRIM_HOST_DEVICE radix_merge_compare(const unsigned int start_bit,
+                                            const unsigned int current_radix_bits,
+                                            Decomposer         decomposer)
         : decomposer_(decomposer), start_bit_(start_bit), radix_bits_(current_radix_bits)
     {}
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE bool operator()(const T& a, const T& b) const
+    ROCPRIM_DEVICE bool operator()(T lhs, T rhs)
     {
-        const auto a_bits = codec_t::extract_digit(a, start_bit_, radix_bits_, decomposer_);
-        const auto b_bits = codec_t::extract_digit(b, start_bit_, radix_bits_, decomposer_);
-        return Descending ? (a_bits > b_bits) : (a_bits < b_bits);
+        using codec_t = radix_key_codec_inplace<T, Descending>;
+
+        // Encoding the values considers the ascending / descending nature of the sort
+        codec_t::encode_inplace(lhs, decomposer_);
+        codec_t::encode_inplace(rhs, decomposer_);
+
+        bool result = false;
+        // Digits can be extracted in 32 bit batches, but radix_bits_ can be larger than that
+        for(unsigned int current_start_bit = start_bit_, remaining_radix_bits = radix_bits_;
+            current_start_bit < start_bit_ + radix_bits_;
+            current_start_bit += 32)
+        {
+            const unsigned int current_radix_bits
+                = rocprim::min(remaining_radix_bits, static_cast<unsigned int>(32));
+            remaining_radix_bits -= current_radix_bits;
+
+            const unsigned int lhs_digits
+                = codec_t::extract_digit(lhs, current_start_bit, current_radix_bits, decomposer_);
+            const unsigned int rhs_digits
+                = codec_t::extract_digit(rhs, current_start_bit, current_radix_bits, decomposer_);
+
+            // Since we are moving from LSB to MSB, the later iteration takes precedence (if not equal)
+            if(lhs_digits != rhs_digits)
+            {
+                result = rhs_digits > lhs_digits;
+            }
+        }
+        return result;
     }
 };
 

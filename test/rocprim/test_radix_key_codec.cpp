@@ -25,6 +25,8 @@
 #include <ios>
 #include <ostream>
 #include <rocprim/detail/radix_sort.hpp>
+#include <rocprim/test_utils_custom_test_types.hpp>
+#include <rocprim/test_utils_sort_comparator.hpp>
 #include <rocprim/types/tuple.hpp>
 #include <sstream>
 
@@ -119,4 +121,18 @@ TEST_P(RadixKeyCodecUnusedTest, TestExtractDigitUnused)
                                             custom_key_decomposer_with_unused{});
 
     ASSERT_EQ(digit, GetParam().expected_result);
+}
+
+TEST(RadixKeyCodecTest, ExtractCustomTestType)
+{
+    using T       = test_utils::custom_test_type<int>;
+    using codec_t = rocprim::detail::radix_key_codec_inplace<T, true>;
+
+    T value{12, 34};
+
+    test_utils::custom_test_type_decomposer<T> decomposer;
+    codec_t::encode_inplace(value, decomposer);
+
+    ASSERT_EQ(0x7FFFFFDD, codec_t::extract_digit(value, 0, 32, decomposer));
+    ASSERT_EQ(0x7FFFFFF3, codec_t::extract_digit(value, 32, 32, decomposer));
 }
