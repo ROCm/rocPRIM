@@ -560,8 +560,6 @@ autotune:execute-tuning:
     paths:
       - ${AUTOTUNE_RESULT_DIR}/*.json
   script:
-    # Exclude benchmark that is known to fail on gfx906
-    # On ROCm 5.7 or later, check if this can be removed - the presumption is that the failure is caused by a compiler issue.
     - >
       cd "${CI_PROJECT_DIR}"
     - |
