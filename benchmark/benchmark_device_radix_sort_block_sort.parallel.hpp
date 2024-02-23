@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -112,6 +112,7 @@ struct device_radix_sort_block_sort_benchmark : public config_autotune_interface
                                                                         values_ptr,
                                                                         size,
                                                                         items_per_block,
+                                                                        rp::identity_decomposer{},
                                                                         0,
                                                                         sizeof(key_type) * 8,
                                                                         stream,
@@ -131,16 +132,18 @@ struct device_radix_sort_block_sort_benchmark : public config_autotune_interface
 
             for(size_t i = 0; i < batch_size; i++)
             {
-                HIP_CHECK((rp::detail::radix_sort_block_sort<Config, false>(d_keys_input,
-                                                                            d_keys_output,
-                                                                            values_ptr,
-                                                                            values_ptr,
-                                                                            size,
-                                                                            items_per_block,
-                                                                            0,
-                                                                            sizeof(key_type) * 8,
-                                                                            stream,
-                                                                            false)));
+                HIP_CHECK(
+                    (rp::detail::radix_sort_block_sort<Config, false>(d_keys_input,
+                                                                      d_keys_output,
+                                                                      values_ptr,
+                                                                      values_ptr,
+                                                                      size,
+                                                                      items_per_block,
+                                                                      rp::identity_decomposer{},
+                                                                      0,
+                                                                      sizeof(key_type) * 8,
+                                                                      stream,
+                                                                      false)));
             }
 
             // Record stop event and wait until it completes
@@ -223,6 +226,7 @@ struct device_radix_sort_block_sort_benchmark : public config_autotune_interface
                                                                         d_values_output,
                                                                         size,
                                                                         items_per_block,
+                                                                        rp::identity_decomposer{},
                                                                         0,
                                                                         sizeof(key_type) * 8,
                                                                         stream,
@@ -242,16 +246,18 @@ struct device_radix_sort_block_sort_benchmark : public config_autotune_interface
 
             for(size_t i = 0; i < batch_size; i++)
             {
-                HIP_CHECK((rp::detail::radix_sort_block_sort<Config, false>(d_keys_input,
-                                                                            d_keys_output,
-                                                                            d_values_input,
-                                                                            d_values_output,
-                                                                            size,
-                                                                            items_per_block,
-                                                                            0,
-                                                                            sizeof(key_type) * 8,
-                                                                            stream,
-                                                                            false)));
+                HIP_CHECK(
+                    (rp::detail::radix_sort_block_sort<Config, false>(d_keys_input,
+                                                                      d_keys_output,
+                                                                      d_values_input,
+                                                                      d_values_output,
+                                                                      size,
+                                                                      items_per_block,
+                                                                      rp::identity_decomposer{},
+                                                                      0,
+                                                                      sizeof(key_type) * 8,
+                                                                      stream,
+                                                                      false)));
             }
 
             // Record stop event and wait until it completes

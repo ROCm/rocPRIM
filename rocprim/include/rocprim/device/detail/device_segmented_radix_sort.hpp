@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -422,7 +422,13 @@ public:
         }
 
         ::rocprim::syncthreads();
-        sort_block<Descending>(sort_type(), keys, values, storage.sort, begin_bit, end_bit);
+        sort_block<Descending>(sort_type(),
+                               keys,
+                               values,
+                               storage.sort,
+                               identity_decomposer{},
+                               begin_bit,
+                               end_bit);
 
         ::rocprim::syncthreads();
         keys_store_type().store(keys_output + begin_offset, keys, valid_count, storage.keys_store);

@@ -1352,7 +1352,7 @@ hipError_t radix_sort_keys_desc(void*              temporary_storage,
 {
     static_assert(std::is_integral<Size>::value, "Size must be an integral type.");
     empty_type * values = nullptr;
-    bool ignored;
+    bool         ignored;
     return detail::radix_sort_impl<Config, true>(temporary_storage,
                                                  storage_size,
                                                  keys_input,

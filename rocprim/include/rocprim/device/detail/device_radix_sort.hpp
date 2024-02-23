@@ -418,7 +418,13 @@ struct radix_sort_and_scatter_helper
             }
 
             ::rocprim::syncthreads();
-            sort_block<Descending>(sort_type(), keys, values, storage.sort, bit, bit + current_radix_bits);
+            sort_block<Descending>(sort_type(),
+                                   keys,
+                                   values,
+                                   storage.sort,
+                                   identity_decomposer{},
+                                   bit,
+                                   bit + current_radix_bits);
 
             bit_key_type bit_keys[ItemsPerThread];
             unsigned int digits[ItemsPerThread];
@@ -599,7 +605,7 @@ struct radix_merge_compare<Descending,
 
     ROCPRIM_HOST_DEVICE radix_merge_compare(const unsigned int start_bit,
                                             const unsigned int current_radix_bits,
-                                            identity_decomposer)
+                                            identity_decomposer = {})
     {
         T radix_mask_upper  = (T(1) << (current_radix_bits + start_bit)) - 1;
         T radix_mask_bottom = (T(1) << start_bit) - 1;
@@ -625,7 +631,7 @@ struct radix_merge_compare<Descending,
     // even though masks are never used for floating point-types,
     // it needs to be able to compile.
     ROCPRIM_HOST_DEVICE
-        radix_merge_compare(const unsigned int, const unsigned int, identity_decomposer)
+        radix_merge_compare(const unsigned int, const unsigned int, identity_decomposer = {})
     {}
 
     ROCPRIM_DEVICE bool operator()(const T&, const T&) const

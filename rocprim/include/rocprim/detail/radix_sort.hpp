@@ -466,6 +466,8 @@ public:
     template<class Decomposer>
     ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(Decomposer decomposer)
     {
+        static_assert(std::is_default_constructible<Key>::value,
+                      "The sorted Key type must be default constructible");
         Key key;
         for_each_in_tuple(decomposer(key),
                           [](auto& element)
