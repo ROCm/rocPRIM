@@ -1041,7 +1041,7 @@ hipError_t radix_sort_keys(void*               temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level ascending radix sort is performed on an array of
-/// \p float values.
+/// values of a custom type, using a custom decomposer.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
@@ -1177,7 +1177,7 @@ auto radix_sort_keys(void*              temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level ascending radix sort is performed on an array of
-/// \p float values.
+/// values of a custom type, using a custom decomposer.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
@@ -1521,6 +1521,7 @@ hipError_t radix_sort_keys_desc(void*               temporary_storage,
 /// \param [in,out] storage_size reference to a size (in bytes) of \p temporary_storage.
 /// \param [in] keys_input pointer to the first element in the range to sort.
 /// \param [out] keys_output pointer to the first element in the output range.
+/// \param [in] size number of element in the input range.
 /// \param [in] decomposer decomposer functor that produces a tuple of references from the
 /// input key type.
 /// \param [in] begin_bit [optional] index of the first (least significant) bit used in
@@ -1537,7 +1538,7 @@ hipError_t radix_sort_keys_desc(void*               temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level descending radix sort is performed on an array of
-/// integer values.
+/// values of a custom type, using a custom decomposer.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
@@ -1674,7 +1675,7 @@ auto radix_sort_keys_desc(void*              temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level descending radix sort is performed on an array of
-/// integer values.
+/// values of a custom type, using a custom decomposer.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
@@ -2074,7 +2075,7 @@ hipError_t radix_sort_pairs(void*                 temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level ascending radix sort is performed where input keys are
-/// represented by an array of unsigned integers and input values by an array of <tt>double</tt>s.
+/// represented by an array of a custom type and input values by an array of <tt>double</tt>s.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
@@ -2225,7 +2226,7 @@ auto radix_sort_pairs(void*                temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level ascending radix sort is performed where input keys are
-/// represented by an array of unsigned integers and input values by an array of <tt>double</tt>s.
+/// represented by an array of a custom type and input values by an array of <tt>double</tt>s.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
@@ -2625,7 +2626,7 @@ hipError_t radix_sort_pairs_desc(void*                 temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level descending radix sort is performed where input keys are
-/// represented by an array of integers and input values by an array of <tt>double</tt>s.
+/// represented by an array of a custom type and input values by an array of <tt>double</tt>s.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
@@ -2777,7 +2778,7 @@ auto radix_sort_pairs_desc(void*                temporary_storage,
 /// \par Example
 /// \parblock
 /// In this example a device-level descending radix sort is performed where input keys are
-/// represented by an array of integers and input values by an array of <tt>double</tt>s.
+/// represented by an array of a custom type and input values by an array of <tt>double</tt>s.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
