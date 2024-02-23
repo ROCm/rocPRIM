@@ -25,6 +25,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <numeric>
@@ -100,15 +102,20 @@ inline char* __get_env(const char* name)
         return nullptr;
     }
 #else
-    // strdup to have same behaviour as _dupenv_s
-    char* env_ptr = std::getenv(name);
-    if(env_ptr == nullptr)
-    {
-        return nullptr;
-    }
-    env = strdup(env_ptr);
+    env = std::getenv(name);
 #endif
     return env;
+}
+
+inline void clean_env(char* name)
+{
+#ifdef _MSC_VER
+    if(name != nullptr)
+    {
+        free(name);
+    }
+#endif
+    (void)name;
 }
 
 inline int obtain_device_from_ctest()
@@ -129,17 +136,18 @@ inline int obtain_device_from_ctest()
         std::string reqs(env_reqs);
         device = std::atoi(
             reqs.substr(reqs.find(':') + 1, reqs.find(',') - (reqs.find(':') + 1)).c_str());
-        free(env_reqs);
+        clean_env(env_reqs);
     }
-    free(env);
+    clean_env(env);
     return device;
 }
 
 inline bool use_hmm()
 {
+
     char*      env = __get_env("ROCPRIM_USE_HMM");
     const bool hmm = (env != nullptr) && (strcmp(env, "1") == 0);
-    free(env);
+    clean_env(env);
     return hmm;
 }
 
