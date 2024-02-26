@@ -155,16 +155,31 @@ auto invoke_sort_keys(void*        d_temporary_storage,
                       bool         debug_synchronous)
     -> std::enable_if_t<!Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_keys<Config>(d_temporary_storage,
-                                            temporary_storage_bytes,
-                                            d_keys_input,
-                                            d_keys_output,
-                                            size,
-                                            test_utils::custom_test_type_decomposer<Key>{},
-                                            start_bit,
-                                            end_bit,
-                                            stream,
-                                            debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_keys<Config>(d_temporary_storage,
+                                                temporary_storage_bytes,
+                                                d_keys_input,
+                                                d_keys_output,
+                                                size,
+                                                decomposer_t{},
+                                                stream,
+                                                debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_keys<Config>(d_temporary_storage,
+                                                temporary_storage_bytes,
+                                                d_keys_input,
+                                                d_keys_output,
+                                                size,
+                                                decomposer_t{},
+                                                start_bit,
+                                                end_bit,
+                                                stream,
+                                                debug_synchronous);
+    }
 }
 
 template<class Config, bool Descending, class Key>
@@ -179,16 +194,31 @@ auto invoke_sort_keys(void*        d_temporary_storage,
                       bool         debug_synchronous)
     -> std::enable_if_t<Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_keys_desc<Config>(d_temporary_storage,
-                                                 temporary_storage_bytes,
-                                                 d_keys_input,
-                                                 d_keys_output,
-                                                 size,
-                                                 test_utils::custom_test_type_decomposer<Key>{},
-                                                 start_bit,
-                                                 end_bit,
-                                                 stream,
-                                                 debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_keys_desc<Config>(d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_keys_input,
+                                                     d_keys_output,
+                                                     size,
+                                                     decomposer_t{},
+                                                     stream,
+                                                     debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_keys_desc<Config>(d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_keys_input,
+                                                     d_keys_output,
+                                                     size,
+                                                     decomposer_t{},
+                                                     start_bit,
+                                                     end_bit,
+                                                     stream,
+                                                     debug_synchronous);
+    }
 }
 
 template<typename TestFixture>
@@ -418,18 +448,35 @@ auto invoke_sort_pairs(void*        d_temporary_storage,
                        bool         debug_synchronous)
     -> std::enable_if_t<!Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_pairs<Config>(d_temporary_storage,
-                                             temporary_storage_bytes,
-                                             d_keys_input,
-                                             d_keys_output,
-                                             d_values_input,
-                                             d_values_output,
-                                             size,
-                                             test_utils::custom_test_type_decomposer<Key>{},
-                                             start_bit,
-                                             end_bit,
-                                             stream,
-                                             debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_pairs<Config>(d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_keys_input,
+                                                 d_keys_output,
+                                                 d_values_input,
+                                                 d_values_output,
+                                                 size,
+                                                 decomposer_t{},
+                                                 stream,
+                                                 debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_pairs<Config>(d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_keys_input,
+                                                 d_keys_output,
+                                                 d_values_input,
+                                                 d_values_output,
+                                                 size,
+                                                 decomposer_t{},
+                                                 start_bit,
+                                                 end_bit,
+                                                 stream,
+                                                 debug_synchronous);
+    }
 }
 
 template<class Config, bool Descending, class Key, class Value>
@@ -446,18 +493,35 @@ auto invoke_sort_pairs(void*        d_temporary_storage,
                        bool         debug_synchronous)
     -> std::enable_if_t<Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_pairs_desc<Config>(d_temporary_storage,
-                                                  temporary_storage_bytes,
-                                                  d_keys_input,
-                                                  d_keys_output,
-                                                  d_values_input,
-                                                  d_values_output,
-                                                  size,
-                                                  test_utils::custom_test_type_decomposer<Key>{},
-                                                  start_bit,
-                                                  end_bit,
-                                                  stream,
-                                                  debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_pairs_desc<Config>(d_temporary_storage,
+                                                      temporary_storage_bytes,
+                                                      d_keys_input,
+                                                      d_keys_output,
+                                                      d_values_input,
+                                                      d_values_output,
+                                                      size,
+                                                      decomposer_t{},
+                                                      stream,
+                                                      debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_pairs_desc<Config>(d_temporary_storage,
+                                                      temporary_storage_bytes,
+                                                      d_keys_input,
+                                                      d_keys_output,
+                                                      d_values_input,
+                                                      d_values_output,
+                                                      size,
+                                                      decomposer_t{},
+                                                      start_bit,
+                                                      end_bit,
+                                                      stream,
+                                                      debug_synchronous);
+    }
 }
 
 template<typename TestFixture>
@@ -727,15 +791,29 @@ auto invoke_sort_keys(void*                        d_temporary_storage,
                       bool                         debug_synchronous)
     -> std::enable_if_t<!Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_keys<Config>(d_temporary_storage,
-                                            temporary_storage_bytes,
-                                            d_keys,
-                                            size,
-                                            test_utils::custom_test_type_decomposer<Key>{},
-                                            start_bit,
-                                            end_bit,
-                                            stream,
-                                            debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_keys<Config>(d_temporary_storage,
+                                                temporary_storage_bytes,
+                                                d_keys,
+                                                size,
+                                                decomposer_t{},
+                                                stream,
+                                                debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_keys<Config>(d_temporary_storage,
+                                                temporary_storage_bytes,
+                                                d_keys,
+                                                size,
+                                                decomposer_t{},
+                                                start_bit,
+                                                end_bit,
+                                                stream,
+                                                debug_synchronous);
+    }
 }
 
 template<class Config, bool Descending, class Key>
@@ -749,15 +827,29 @@ auto invoke_sort_keys(void*                        d_temporary_storage,
                       bool                         debug_synchronous)
     -> std::enable_if_t<Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_keys_desc<Config>(d_temporary_storage,
-                                                 temporary_storage_bytes,
-                                                 d_keys,
-                                                 size,
-                                                 test_utils::custom_test_type_decomposer<Key>{},
-                                                 start_bit,
-                                                 end_bit,
-                                                 stream,
-                                                 debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_keys_desc<Config>(d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_keys,
+                                                     size,
+                                                     decomposer_t{},
+                                                     stream,
+                                                     debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_keys_desc<Config>(d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_keys,
+                                                     size,
+                                                     decomposer_t{},
+                                                     start_bit,
+                                                     end_bit,
+                                                     stream,
+                                                     debug_synchronous);
+    }
 }
 
 template<typename TestFixture>
@@ -960,16 +1052,31 @@ auto invoke_sort_pairs(void*                          d_temporary_storage,
                        bool                           debug_synchronous)
     -> std::enable_if_t<!Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_pairs<Config>(d_temporary_storage,
-                                             temporary_storage_bytes,
-                                             d_keys,
-                                             d_values,
-                                             size,
-                                             test_utils::custom_test_type_decomposer<Key>{},
-                                             start_bit,
-                                             end_bit,
-                                             stream,
-                                             debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_pairs<Config>(d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_keys,
+                                                 d_values,
+                                                 size,
+                                                 decomposer_t{},
+                                                 stream,
+                                                 debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_pairs<Config>(d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_keys,
+                                                 d_values,
+                                                 size,
+                                                 decomposer_t{},
+                                                 start_bit,
+                                                 end_bit,
+                                                 stream,
+                                                 debug_synchronous);
+    }
 }
 
 template<class Config, bool Descending, class Key, class Value>
@@ -984,16 +1091,31 @@ auto invoke_sort_pairs(void*                          d_temporary_storage,
                        bool                           debug_synchronous)
     -> std::enable_if_t<Descending && is_custom_not_float_test_type<Key>, hipError_t>
 {
-    return rocprim::radix_sort_pairs_desc<Config>(d_temporary_storage,
-                                                  temporary_storage_bytes,
-                                                  d_keys,
-                                                  d_values,
-                                                  size,
-                                                  test_utils::custom_test_type_decomposer<Key>{},
-                                                  start_bit,
-                                                  end_bit,
-                                                  stream,
-                                                  debug_synchronous);
+    using decomposer_t = test_utils::custom_test_type_decomposer<Key>;
+    if(start_bit == 0 && end_bit == rocprim::detail::decomposer_max_bits<decomposer_t, Key>::value)
+    {
+        return rocprim::radix_sort_pairs_desc<Config>(d_temporary_storage,
+                                                      temporary_storage_bytes,
+                                                      d_keys,
+                                                      d_values,
+                                                      size,
+                                                      decomposer_t{},
+                                                      stream,
+                                                      debug_synchronous);
+    }
+    else
+    {
+        return rocprim::radix_sort_pairs_desc<Config>(d_temporary_storage,
+                                                      temporary_storage_bytes,
+                                                      d_keys,
+                                                      d_values,
+                                                      size,
+                                                      decomposer_t{},
+                                                      start_bit,
+                                                      end_bit,
+                                                      stream,
+                                                      debug_synchronous);
+    }
 }
 
 template<typename TestFixture>
