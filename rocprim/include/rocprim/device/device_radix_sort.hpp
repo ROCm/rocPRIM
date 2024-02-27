@@ -35,6 +35,7 @@
 #include "../functional.hpp"
 #include "../types.hpp"
 
+#include "../type_traits.hpp"
 #include "detail/config/device_radix_sort_onesweep.hpp"
 #include "detail/device_radix_sort.hpp"
 #include "device_transform.hpp"
@@ -686,6 +687,11 @@ hipError_t
                                                         default_block_sort_config,
                                                         typename Config::single_sort_config>::type;
 
+    if(::rocprim::is_floating_point<key_type>::value
+       && ((begin_bit != 0) || (end_bit != sizeof(key_type) * 8)))
+    {
+        return hipErrorInvalidValue;
+    }
     unsigned int single_sort_items_per_block
         = block_sort_config::block_size * block_sort_config::items_per_thread;
     if(size <= single_sort_items_per_block)
