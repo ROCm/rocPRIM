@@ -733,6 +733,11 @@ inline const char* Traits<custom_type<long long, double>>::name()
     return "custom_type<int64_t,double>";
 }
 template<>
+inline const char* Traits<custom_type<float, int16_t>>::name()
+{
+    return "custom_type<float,int16_t>";
+}
+template<>
 inline const char* Traits<rocprim::empty_type>::name()
 {
     return "empty_type";
