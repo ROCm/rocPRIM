@@ -21,6 +21,7 @@
 #ifndef ROCPRIM_DEVICE_SPECIALIZATION_DEVICE_RADIX_MERGE_SORT_HPP_
 #define ROCPRIM_DEVICE_SPECIALIZATION_DEVICE_RADIX_MERGE_SORT_HPP_
 
+#include "../../type_traits.hpp"
 #include "../detail/device_radix_sort.hpp"
 #include "../device_merge_sort.hpp"
 #include "device_radix_block_sort.hpp"
@@ -32,6 +33,133 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+template<class Config, bool Descending, class KeysIterator, class ValuesIterator, class OffsetT>
+auto invoke_merge_sort_block_merge(
+    void*                                                      temporary_storage,
+    size_t&                                                    storage_size,
+    KeysIterator                                               keys_output,
+    ValuesIterator                                             values_output,
+    const OffsetT                                              size,
+    unsigned int                                               sort_items_per_block,
+    identity_decomposer                                        decomposer,
+    unsigned int                                               bit,
+    unsigned int                                               current_radix_bits,
+    const hipStream_t                                          stream,
+    bool                                                       debug_synchronous,
+    typename std::iterator_traits<KeysIterator>::value_type*   keys_buffer,
+    typename std::iterator_traits<ValuesIterator>::value_type* values_buffer)
+    -> std::enable_if_t<
+        !is_floating_point<typename std::iterator_traits<KeysIterator>::value_type>::value,
+        hipError_t>
+{
+    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+    (void)decomposer;
+    if(current_radix_bits == sizeof(key_type) * 8)
+    {
+        return merge_sort_block_merge<Config>(temporary_storage,
+                                              storage_size,
+                                              keys_output,
+                                              values_output,
+                                              size,
+                                              sort_items_per_block,
+                                              radix_merge_compare<Descending, false, key_type>(),
+                                              stream,
+                                              debug_synchronous,
+                                              keys_buffer,
+                                              values_buffer);
+    }
+    else
+    {
+        return merge_sort_block_merge<Config>(
+            temporary_storage,
+            storage_size,
+            keys_output,
+            values_output,
+            size,
+            sort_items_per_block,
+            radix_merge_compare<Descending, true, key_type>(bit, current_radix_bits),
+            stream,
+            debug_synchronous,
+            keys_buffer,
+            values_buffer);
+    }
+}
+
+template<class Config, bool Descending, class KeysIterator, class ValuesIterator, class OffsetT>
+auto invoke_merge_sort_block_merge(
+    void*                                                      temporary_storage,
+    size_t&                                                    storage_size,
+    KeysIterator                                               keys_output,
+    ValuesIterator                                             values_output,
+    const OffsetT                                              size,
+    unsigned int                                               sort_items_per_block,
+    identity_decomposer                                        decomposer,
+    unsigned int                                               bit,
+    unsigned int                                               current_radix_bits,
+    const hipStream_t                                          stream,
+    bool                                                       debug_synchronous,
+    typename std::iterator_traits<KeysIterator>::value_type*   keys_buffer,
+    typename std::iterator_traits<ValuesIterator>::value_type* values_buffer)
+    -> std::enable_if_t<
+        is_floating_point<typename std::iterator_traits<KeysIterator>::value_type>::value,
+        hipError_t>
+{
+    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+    (void)decomposer;
+    (void)bit;
+    (void)current_radix_bits;
+    return merge_sort_block_merge<Config>(temporary_storage,
+                                          storage_size,
+                                          keys_output,
+                                          values_output,
+                                          size,
+                                          sort_items_per_block,
+                                          radix_merge_compare<Descending, false, key_type>(),
+                                          stream,
+                                          debug_synchronous,
+                                          keys_buffer,
+                                          values_buffer);
+}
+
+template<class Config,
+         bool Descending,
+         class KeysIterator,
+         class ValuesIterator,
+         class OffsetT,
+         class Decomposer>
+auto invoke_merge_sort_block_merge(
+    void*                                                      temporary_storage,
+    size_t&                                                    storage_size,
+    KeysIterator                                               keys_output,
+    ValuesIterator                                             values_output,
+    const OffsetT                                              size,
+    unsigned int                                               sort_items_per_block,
+    Decomposer                                                 decomposer,
+    unsigned int                                               bit,
+    unsigned int                                               current_radix_bits,
+    const hipStream_t                                          stream,
+    bool                                                       debug_synchronous,
+    typename std::iterator_traits<KeysIterator>::value_type*   keys_buffer,
+    typename std::iterator_traits<ValuesIterator>::value_type* values_buffer)
+    -> std::enable_if_t<!std::is_same<Decomposer, identity_decomposer>::value, hipError_t>
+{
+    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+    return merge_sort_block_merge<Config>(
+        temporary_storage,
+        storage_size,
+        keys_output,
+        values_output,
+        size,
+        sort_items_per_block,
+        radix_merge_compare<Descending, true, key_type, Decomposer>(bit,
+                                                                    current_radix_bits,
+                                                                    decomposer),
+        stream,
+        debug_synchronous,
+        keys_buffer,
+        values_buffer);
+}
+
 /// In device_radix_sort, we use this device_radix_sort_merge_sort specialization only
 /// for low input sizes (< 1M elements).
 template<class Config,
@@ -41,7 +169,7 @@ template<class Config,
          class ValuesInputIterator,
          class ValuesOutputIterator,
          class Decomposer>
-inline hipError_t radix_sort_merge_impl(
+hipError_t radix_sort_merge_impl(
     void*                                                           temporary_storage,
     size_t&                                                         storage_size,
     KeysInputIterator                                               keys_input,
@@ -104,14 +232,16 @@ inline hipError_t radix_sort_merge_impl(
 
     if(temporary_storage == nullptr)
     {
-        return merge_sort_block_merge<merge_sort_block_merge_config>(
+        return invoke_merge_sort_block_merge<merge_sort_block_merge_config, Descending>(
             temporary_storage,
             storage_size,
             keys_output,
             values_output,
             size,
             sort_items_per_block,
-            radix_merge_compare<Descending, false, key_type>(),
+            decomposer,
+            bit,
+            current_radix_bits,
             stream,
             debug_synchronous,
             keys_buffer,
@@ -143,39 +273,20 @@ inline hipError_t radix_sort_merge_impl(
     // ^ sort_items_per_block is now updated
     if(size > sort_items_per_block)
     {
-        if(current_radix_bits == sizeof(key_type) * 8
-           && std::is_same<Decomposer, identity_decomposer>::value)
-        {
-            return merge_sort_block_merge<merge_sort_block_merge_config>(
-                temporary_storage,
-                storage_size,
-                keys_output,
-                values_output,
-                size,
-                sort_items_per_block,
-                radix_merge_compare<Descending, false, key_type>(),
-                stream,
-                debug_synchronous,
-                keys_buffer,
-                values_buffer);
-        }
-        else
-        {
-            return merge_sort_block_merge<merge_sort_block_merge_config>(
-                temporary_storage,
-                storage_size,
-                keys_output,
-                values_output,
-                size,
-                sort_items_per_block,
-                radix_merge_compare<Descending, true, key_type, Decomposer>(bit,
-                                                                            current_radix_bits,
-                                                                            decomposer),
-                stream,
-                debug_synchronous,
-                keys_buffer,
-                values_buffer);
-        }
+        return invoke_merge_sort_block_merge<merge_sort_block_merge_config, Descending>(
+            temporary_storage,
+            storage_size,
+            keys_output,
+            values_output,
+            size,
+            sort_items_per_block,
+            decomposer,
+            bit,
+            current_radix_bits,
+            stream,
+            debug_synchronous,
+            keys_buffer,
+            values_buffer);
     }
     return hipSuccess;
 }

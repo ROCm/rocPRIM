@@ -569,11 +569,7 @@ ROCPRIM_DEVICE auto compare_nan_sensitive(const T& a, const T& b) ->
     return a > b;
 }
 
-template<bool Descending,
-         bool UseRadixMask,
-         class T,
-         class Decomposer = identity_decomposer,
-         class Enable     = void>
+template<bool Descending, bool UseRadixMask, class T, class Decomposer = identity_decomposer>
 struct radix_merge_compare;
 
 template<class T>
@@ -595,11 +591,7 @@ struct radix_merge_compare<true, false, T, identity_decomposer>
 };
 
 template<bool Descending, class T>
-struct radix_merge_compare<Descending,
-                           true,
-                           T,
-                           identity_decomposer,
-                           typename std::enable_if<rocprim::is_integral<T>::value>::type>
+struct radix_merge_compare<Descending, true, T, identity_decomposer>
 {
     T radix_mask;
 
@@ -620,32 +612,8 @@ struct radix_merge_compare<Descending,
     }
 };
 
-template<bool Descending, class T>
-struct radix_merge_compare<Descending,
-                           true,
-                           T,
-                           identity_decomposer,
-                           typename std::enable_if<!rocprim::is_integral<T>::value>::type>
-{
-    // radix_merge_compare supports masks only for integrals.
-    // even though masks are never used for floating point-types,
-    // it needs to be able to compile.
-    ROCPRIM_HOST_DEVICE
-        radix_merge_compare(const unsigned int, const unsigned int, identity_decomposer = {})
-    {}
-
-    ROCPRIM_DEVICE bool operator()(const T&, const T&) const
-    {
-        return false;
-    }
-};
-
 template<bool Descending, class T, class Decomposer>
-struct radix_merge_compare<Descending,
-                           true,
-                           T,
-                           Decomposer,
-                           std::enable_if_t<!std::is_same<Decomposer, identity_decomposer>::value>>
+struct radix_merge_compare<Descending, true, T, Decomposer>
 {
     Decomposer   decomposer_;
     unsigned int start_bit_;
@@ -657,7 +625,7 @@ struct radix_merge_compare<Descending,
         : decomposer_(decomposer), start_bit_(start_bit), radix_bits_(current_radix_bits)
     {}
 
-    ROCPRIM_DEVICE bool operator()(T lhs, T rhs)
+    ROCPRIM_DEVICE bool operator()(T lhs, T rhs) const
     {
         using codec_t = radix_key_codec_inplace<T, Descending>;
 
