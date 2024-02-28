@@ -22,12 +22,16 @@
 
 #include "../common_test_header.hpp"
 
+#include <gtest/gtest-typed-test.h>
+#include <gtest/internal/gtest-type-util.h>
 #include <ios>
 #include <ostream>
 #include <rocprim/detail/radix_sort.hpp>
+#include <rocprim/device/detail/device_radix_sort.hpp>
 #include <rocprim/test_utils_custom_test_types.hpp>
 #include <rocprim/test_utils_sort_comparator.hpp>
 #include <rocprim/types/tuple.hpp>
+
 #include <sstream>
 
 struct extract_digit_params
@@ -135,4 +139,136 @@ TEST(RadixKeyCodecTest, ExtractCustomTestType)
 
     ASSERT_EQ(0x7FFFFFDD, codec_t::extract_digit(value, 0, 32, decomposer));
     ASSERT_EQ(0x7FFFFFF3, codec_t::extract_digit(value, 32, 32, decomposer));
+}
+
+template<class Params>
+struct RadixMergeCompareTest : public ::testing::Test
+{
+    using params = Params;
+};
+
+template<bool Descending>
+struct RadixMergeCompareTestParams
+{
+    static constexpr bool descending = Descending;
+};
+
+using RadixMergeCompareTestTypes
+    = ::testing::Types<RadixMergeCompareTestParams<false>, RadixMergeCompareTestParams<true>>;
+TYPED_TEST_SUITE(RadixMergeCompareTest, RadixMergeCompareTestTypes);
+
+struct custom_large_key
+{
+    uint16_t a;
+    int64_t  b;
+    uint8_t  c;
+    double   d;
+
+    static constexpr size_t bits = 8 * (sizeof(a) + sizeof(b) + sizeof(c) + sizeof(d));
+};
+
+struct custom_large_key_decomposer
+{
+    auto operator()(custom_large_key& value) const
+    {
+        return ::rocprim::tuple<uint16_t&, int64_t&, uint8_t&, double&>{value.a,
+                                                                        value.b,
+                                                                        value.c,
+                                                                        value.d};
+    }
+};
+
+TYPED_TEST(RadixMergeCompareTest, FullRange)
+{
+    using params              = typename TestFixture::params;
+    constexpr bool descending = params::descending;
+    using merge_compare       = rocprim::detail::
+        radix_merge_compare<descending, true, custom_large_key, custom_large_key_decomposer>;
+
+    const merge_compare comparator(0, custom_large_key::bits, custom_large_key_decomposer{});
+
+    {
+        const custom_large_key lhs{1, 2, 3, 4};
+        const custom_large_key rhs{3, 2, 1, 11};
+        EXPECT_TRUE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{1, 3, 3, 4};
+        const custom_large_key rhs{1, 2, 1, 11};
+        EXPECT_FALSE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{1, 2, 3, 4};
+        const custom_large_key rhs{1, 2, 1, 11};
+        EXPECT_FALSE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{1, 2, 3, 4};
+        const custom_large_key rhs{1, 2, 3, 11};
+        EXPECT_TRUE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{1, 2, 3, 11};
+        const custom_large_key rhs{1, 2, 3, 11};
+        EXPECT_FALSE(comparator(lhs, rhs));
+    }
+}
+
+TYPED_TEST(RadixMergeCompareTest, NotNullStartBit)
+{
+    using params              = typename TestFixture::params;
+    constexpr bool descending = params::descending;
+    using merge_compare       = rocprim::detail::
+        radix_merge_compare<descending, true, custom_large_key, custom_large_key_decomposer>;
+
+    constexpr unsigned int start_bit = 64;
+    const merge_compare    comparator(start_bit,
+                                   custom_large_key::bits - start_bit,
+                                   custom_large_key_decomposer{});
+
+    {
+        const custom_large_key lhs{3, 2, 3, 4};
+        const custom_large_key rhs{3, 2, 1, 11};
+        EXPECT_FALSE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{3, 2, 1, 4};
+        const custom_large_key rhs{3, 2, 3, 11};
+        EXPECT_TRUE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{3, 2, 1, 4};
+        const custom_large_key rhs{3, 2, 1, 11};
+        EXPECT_FALSE(comparator(lhs, rhs));
+    }
+}
+
+TYPED_TEST(RadixMergeCompareTest, MidRange)
+{
+    using params              = typename TestFixture::params;
+    constexpr bool descending = params::descending;
+    using merge_compare       = rocprim::detail::
+        radix_merge_compare<descending, true, custom_large_key, custom_large_key_decomposer>;
+
+    constexpr unsigned int start_bit     = 64;
+    constexpr unsigned int excluded_bits = 16;
+    const merge_compare    comparator(start_bit,
+                                   custom_large_key::bits - start_bit - excluded_bits,
+                                   custom_large_key_decomposer{});
+
+    {
+        const custom_large_key lhs{3, 2, 3, 4};
+        const custom_large_key rhs{4, 2, 1, 11};
+        EXPECT_FALSE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{3, 2, 1, 4};
+        const custom_large_key rhs{4, 2, 3, 11};
+        EXPECT_TRUE(descending != comparator(lhs, rhs));
+    }
+    {
+        const custom_large_key lhs{3, 2, 3, 4};
+        const custom_large_key rhs{4, 2, 3, 11};
+        EXPECT_FALSE(comparator(lhs, rhs));
+    }
 }

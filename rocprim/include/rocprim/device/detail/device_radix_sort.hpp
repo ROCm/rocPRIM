@@ -625,7 +625,7 @@ struct radix_merge_compare<Descending, true, T, Decomposer>
         : decomposer_(decomposer), start_bit_(start_bit), radix_bits_(current_radix_bits)
     {}
 
-    ROCPRIM_DEVICE bool operator()(T lhs, T rhs) const
+    ROCPRIM_HOST_DEVICE bool operator()(T lhs, T rhs) const
     {
         using codec_t = radix_key_codec_inplace<T, Descending>;
 
@@ -633,28 +633,40 @@ struct radix_merge_compare<Descending, true, T, Decomposer>
         codec_t::encode_inplace(lhs, decomposer_);
         codec_t::encode_inplace(rhs, decomposer_);
 
-        bool result = false;
         // Digits can be extracted in 32 bit batches, but radix_bits_ can be larger than that
-        for(unsigned int current_start_bit = start_bit_, remaining_radix_bits = radix_bits_;
-            current_start_bit < start_bit_ + radix_bits_;
-            current_start_bit += 32)
+        static constexpr int digit_batch_size = 32;
+
+        // Moving from MSB to LSB
+        int current_start_bit
+            = rocprim::max(0, static_cast<int>(start_bit_ + radix_bits_) - digit_batch_size);
+        unsigned int remaining_radix_bits = radix_bits_;
+        for(; remaining_radix_bits > 0;)
         {
             const unsigned int current_radix_bits
-                = rocprim::min(remaining_radix_bits, static_cast<unsigned int>(32));
+                = rocprim::min(remaining_radix_bits, static_cast<unsigned int>(digit_batch_size));
             remaining_radix_bits -= current_radix_bits;
 
             const unsigned int lhs_digits
-                = codec_t::extract_digit(lhs, current_start_bit, current_radix_bits, decomposer_);
+                = codec_t::extract_digit(lhs,
+                                         static_cast<unsigned int>(current_start_bit),
+                                         current_radix_bits,
+                                         decomposer_);
             const unsigned int rhs_digits
-                = codec_t::extract_digit(rhs, current_start_bit, current_radix_bits, decomposer_);
+                = codec_t::extract_digit(rhs,
+                                         static_cast<unsigned int>(current_start_bit),
+                                         current_radix_bits,
+                                         decomposer_);
 
-            // Since we are moving from LSB to MSB, the later iteration takes precedence (if not equal)
+            // Since we are moving from MSB to LSB, the earlier iteration implies the relation (if digits are not equal)
             if(lhs_digits != rhs_digits)
             {
-                result = rhs_digits > lhs_digits;
+                return rhs_digits > lhs_digits;
             }
+            current_start_bit
+                = rocprim::max(current_start_bit - static_cast<int>(current_radix_bits),
+                               static_cast<int>(start_bit_));
         }
-        return result;
+        return false;
     }
 };
 
