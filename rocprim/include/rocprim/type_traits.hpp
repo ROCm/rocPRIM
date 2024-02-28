@@ -142,9 +142,10 @@ struct get_unsigned_bits_type<T,8>
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<typename T, typename UnsignedBits>
-ROCPRIM_DEVICE ROCPRIM_INLINE
-auto TwiddleIn(UnsignedBits key)
-    -> typename std::enable_if<is_floating_point<T>::value, UnsignedBits>::type
+[[deprecated("TwiddleIn is deprecated."
+             "Use radix_key_codec instead.")]] ROCPRIM_DEVICE ROCPRIM_INLINE auto
+    TwiddleIn(UnsignedBits key) ->
+    typename std::enable_if<is_floating_point<T>::value, UnsignedBits>::type
 {
   static const UnsignedBits   HIGH_BIT    = UnsignedBits(1) << ((sizeof(UnsignedBits) * 8) - 1);
   UnsignedBits mask = (key & HIGH_BIT) ? UnsignedBits(-1) : HIGH_BIT;
@@ -152,26 +153,29 @@ auto TwiddleIn(UnsignedBits key)
 }
 
 template<typename T, typename UnsignedBits>
-static ROCPRIM_DEVICE ROCPRIM_INLINE
-auto TwiddleIn(UnsignedBits key)
-    -> typename std::enable_if<is_unsigned<T>::value, UnsignedBits>::type
+[[deprecated("TwiddleIn is deprecated."
+             "Use radix_key_codec instead.")]] static ROCPRIM_DEVICE ROCPRIM_INLINE auto
+    TwiddleIn(UnsignedBits key) ->
+    typename std::enable_if<is_unsigned<T>::value, UnsignedBits>::type
 {
     return key ;
 };
 
 template<typename T, typename UnsignedBits>
-static ROCPRIM_DEVICE ROCPRIM_INLINE
-auto TwiddleIn(UnsignedBits key)
-    -> typename std::enable_if<is_integral<T>::value && is_signed<T>::value, UnsignedBits>::type
+[[deprecated("TwiddleIn is deprecated."
+             "Use radix_key_codec instead.")]] static ROCPRIM_DEVICE ROCPRIM_INLINE auto
+    TwiddleIn(UnsignedBits key) ->
+    typename std::enable_if<is_integral<T>::value && is_signed<T>::value, UnsignedBits>::type
 {
     static const UnsignedBits   HIGH_BIT    = UnsignedBits(1) << ((sizeof(UnsignedBits) * 8) - 1);
     return key ^ HIGH_BIT;
 };
 
 template<typename T, typename UnsignedBits>
-ROCPRIM_DEVICE ROCPRIM_INLINE
-auto TwiddleOut(UnsignedBits key)
-    -> typename std::enable_if<is_floating_point<T>::value, UnsignedBits>::type
+[[deprecated("TwiddleOut is deprecated."
+             "Use radix_key_codec instead.")]] ROCPRIM_DEVICE ROCPRIM_INLINE auto
+    TwiddleOut(UnsignedBits key) ->
+    typename std::enable_if<is_floating_point<T>::value, UnsignedBits>::type
 {
     static const UnsignedBits   HIGH_BIT    = UnsignedBits(1) << ((sizeof(UnsignedBits) * 8) - 1);
     UnsignedBits mask = (key & HIGH_BIT) ? HIGH_BIT : UnsignedBits(-1);
@@ -179,17 +183,19 @@ auto TwiddleOut(UnsignedBits key)
 }
 
 template<typename T, typename UnsignedBits>
-static ROCPRIM_DEVICE ROCPRIM_INLINE
-auto TwiddleOut(UnsignedBits key)
-    -> typename std::enable_if<is_unsigned<T>::value, UnsignedBits>::type
+[[deprecated("TwiddleOut is deprecated."
+             "Use radix_key_codec instead.")]] static ROCPRIM_DEVICE ROCPRIM_INLINE auto
+    TwiddleOut(UnsignedBits key) ->
+    typename std::enable_if<is_unsigned<T>::value, UnsignedBits>::type
 {
     return key;
 };
 
 template<typename T, typename UnsignedBits>
-static ROCPRIM_DEVICE ROCPRIM_INLINE
-auto TwiddleOut(UnsignedBits key)
-    -> typename std::enable_if<is_integral<T>::value && is_signed<T>::value, UnsignedBits>::type
+[[deprecated("TwiddleOut is deprecated."
+             "Use radix_key_codec instead.")]] static ROCPRIM_DEVICE ROCPRIM_INLINE auto
+    TwiddleOut(UnsignedBits key) ->
+    typename std::enable_if<is_integral<T>::value && is_signed<T>::value, UnsignedBits>::type
 {
     static const UnsignedBits   HIGH_BIT    = UnsignedBits(1) << ((sizeof(UnsignedBits) * 8) - 1);
     return key ^ HIGH_BIT;
