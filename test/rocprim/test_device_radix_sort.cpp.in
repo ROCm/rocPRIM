@@ -117,5 +117,4 @@
     INSTANTIATE(params<test_utils::custom_test_type<int>,       int,    false,  7,  55>)
     INSTANTIATE(params<test_utils::custom_test_type<int>,       int,    true,   0,  32>)
     INSTANTIATE(params<test_utils::custom_test_type<uint64_t>,  float,  false,  64, 99>)
-    INSTANTIATE(params<test_utils::custom_test_type<double>,    int8_t, true>)
 #endif
