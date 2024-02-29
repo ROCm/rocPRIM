@@ -28,6 +28,10 @@
 #include "../intrinsics/warp_shuffle.hpp"
 #include "../functional.hpp"
 #include "../types.hpp"
+#include <rocprim/intrinsics/thread.hpp>
+
+#include <utility>
+#include <vector>
 
 /// \addtogroup warpmodule
 /// @{
@@ -89,6 +93,155 @@ class warp_exchange
     {
         T buffer[WarpSize * ItemsPerThread];
     };
+
+    // concrete recursion class
+    template<typename OutputT, int IdX, int Size>
+    class CompileTimeArray : protected CompileTimeArray<OutputT, IdX + 1, Size>
+    {
+    protected:
+        T val;
+
+        template<int NumEntries>
+        ROCPRIM_DEVICE ROCPRIM_INLINE void Foreach(const bool xor_bit_set)
+        {
+            const T send_val
+                = (xor_bit_set ? CompileTimeArray<OutputT, IdX, Size>::val
+                               : CompileTimeArray<OutputT, IdX + NumEntries, Size>::val);
+            const T recv_val = ::rocprim::warp_shuffle_xor(send_val, NumEntries, WarpSize);
+            (xor_bit_set ? CompileTimeArray<OutputT, IdX, Size>::val
+                         : CompileTimeArray<OutputT, IdX + NumEntries, Size>::val)
+                = recv_val;
+
+            constexpr int next_idx = IdX + 1 + ((IdX + 1) % NumEntries == 0) * NumEntries;
+            CompileTimeArray<OutputT, next_idx, Size>::template Foreach<NumEntries>(xor_bit_set);
+        }
+
+        // terminate recursion
+        ROCPRIM_DEVICE ROCPRIM_INLINE void TransposeImpl(unsigned int, Int2Type<0>) {}
+
+        template<int NumEntries>
+        ROCPRIM_DEVICE ROCPRIM_INLINE void TransposeImpl(const unsigned int lane_id,
+                                                         Int2Type<NumEntries>)
+        {
+            const bool xor_bit_set = lane_id & NumEntries;
+            Foreach<NumEntries>(xor_bit_set);
+
+            TransposeImpl(lane_id, Int2Type<NumEntries / 2>());
+        }
+
+    public:
+        ROCPRIM_DEVICE ROCPRIM_INLINE CompileTimeArray(const T (&input_items)[ItemsPerThread],
+                                                       OutputT (&output_items)[ItemsPerThread])
+            : CompileTimeArray<OutputT, IdX + 1, Size>{input_items, output_items}
+            , val{input_items[IdX]}
+        {}
+
+        ROCPRIM_DEVICE ROCPRIM_INLINE ~CompileTimeArray()
+        {
+            this->output_items[IdX] = val;
+        }
+
+        ROCPRIM_DEVICE ROCPRIM_INLINE void Transpose(const unsigned int lane_id)
+        {
+            TransposeImpl(lane_id, Int2Type<ItemsPerThread / 2>());
+        }
+    };
+
+    // terminating partial specialization
+    template<typename OutputT, int Size>
+    class CompileTimeArray<OutputT, Size, Size>
+    {
+    protected:
+        // used for dumping back the individual values after transposing
+        T (&output_items)[ItemsPerThread];
+
+        template<int>
+        ROCPRIM_DEVICE ROCPRIM_INLINE void Foreach(bool)
+        {}
+
+    public:
+        ROCPRIM_DEVICE ROCPRIM_INLINE CompileTimeArray(const T (&)[ItemsPerThread],
+                                                       OutputT (&output_items)[ItemsPerThread])
+            : output_items{output_items}
+        {}
+    };
+
+    template<class U>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        blocked_striped_shuffle_efficient_impl(const T (&input)[ItemsPerThread],
+                                               U       (&output)[ItemsPerThread])
+    {
+        static constexpr bool IS_ARCH_WARP = WarpSize == ::rocprim::device_warp_size();
+        const unsigned int    flat_lane_id = ::rocprim::detail::logical_lane_id<WarpSize>();
+        const unsigned int    lane_id = IS_ARCH_WARP ? flat_lane_id : (flat_lane_id % WarpSize);
+
+        CompileTimeArray<U, 0, ItemsPerThread> arr{input, output};
+        arr.Transpose(lane_id);
+    }
+
+    template<class U>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        blocked_to_striped_shuffle_impl(const T (&input)[ItemsPerThread],
+                                        U       (&output)[ItemsPerThread])
+    {
+        const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
+        U                  work_array[ItemsPerThread];
+
+        ROCPRIM_UNROLL
+        for(unsigned int dst_idx = 0; dst_idx < ItemsPerThread; dst_idx++)
+        {
+            ROCPRIM_UNROLL
+            for(unsigned int src_idx = 0; src_idx < ItemsPerThread; src_idx++)
+            {
+                const auto value = ::rocprim::warp_shuffle(
+                    input[src_idx],
+                    flat_id / ItemsPerThread + dst_idx * (WarpSize / ItemsPerThread),
+                    WarpSize);
+                if(src_idx == flat_id % ItemsPerThread)
+                {
+                    work_array[dst_idx] = value;
+                }
+            }
+        }
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            output[i] = work_array[i];
+        }
+    }
+
+    template<class U>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        striped_to_blocked_shuffle_impl(const T (&input)[ItemsPerThread],
+                                        U       (&output)[ItemsPerThread])
+    {
+        const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
+        U                  work_array[ItemsPerThread];
+
+        ROCPRIM_UNROLL
+        for(unsigned int dst_idx = 0; dst_idx < ItemsPerThread; dst_idx++)
+        {
+            ROCPRIM_UNROLL
+            for(unsigned int src_idx = 0; src_idx < ItemsPerThread; src_idx++)
+            {
+                const auto value
+                    = ::rocprim::warp_shuffle(input[src_idx],
+                                              (ItemsPerThread * flat_id + dst_idx) % WarpSize,
+                                              WarpSize);
+                if(flat_id / (WarpSize / ItemsPerThread) == src_idx)
+                {
+                    work_array[dst_idx] = value;
+                }
+            }
+        }
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            output[i] = work_array[i];
+        }
+    }
 
 public:
 
@@ -193,36 +346,19 @@ public:
     /// }
     /// \endcode
     template<class U>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void blocked_to_striped_shuffle(const T (&input)[ItemsPerThread],
-                                    U (&output)[ItemsPerThread])
+    ROCPRIM_DEVICE ROCPRIM_INLINE void blocked_to_striped_shuffle(const T (&input)[ItemsPerThread],
+                                                                  U       (&output)[ItemsPerThread])
     {
-        static_assert(WarpSize % ItemsPerThread == 0,
-                      "ItemsPerThread must be a divisor of WarpSize to use blocked_to_striped_shuffle");
-        const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
-        U work_array[ItemsPerThread];
-
-        ROCPRIM_UNROLL
-        for(unsigned int dst_idx = 0; dst_idx < ItemsPerThread; dst_idx++)
+        static_assert(
+            WarpSize % ItemsPerThread == 0,
+            "ItemsPerThread must be a divisor of WarpSize to use blocked_to_striped_shuffle");
+        if(WarpSize == ItemsPerThread)
         {
-            ROCPRIM_UNROLL
-            for(unsigned int src_idx = 0; src_idx < ItemsPerThread; src_idx++)
-            {
-                const auto value = ::rocprim::warp_shuffle(
-                    input[src_idx],
-                    flat_id / ItemsPerThread + dst_idx * (WarpSize / ItemsPerThread),
-                    WarpSize);
-                if(src_idx == flat_id % ItemsPerThread)
-                {
-                    work_array[dst_idx] = value;
-                }
-            }
+            blocked_striped_shuffle_efficient_impl(input, output);
         }
-
-        ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        else
         {
-            output[i] = work_array[i];
+            blocked_to_striped_shuffle_impl(input, output);
         }
     }
 
@@ -313,36 +449,20 @@ public:
     /// }
     /// \endcode
     template<class U>
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void striped_to_blocked_shuffle(const T (&input)[ItemsPerThread],
-                                    U (&output)[ItemsPerThread])
+    ROCPRIM_DEVICE ROCPRIM_INLINE void striped_to_blocked_shuffle(const T (&input)[ItemsPerThread],
+                                                                  U       (&output)[ItemsPerThread])
     {
-        static_assert(WarpSize % ItemsPerThread == 0,
-                      "ItemsPerThread must be a divisor of WarpSize to use striped_to_blocked_shuffle");
-        const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
-        U work_array[ItemsPerThread];
+        static_assert(
+            WarpSize % ItemsPerThread == 0,
+            "ItemsPerThread must be a divisor of WarpSize to use striped_to_blocked_shuffle");
 
-        ROCPRIM_UNROLL
-        for(unsigned int dst_idx = 0; dst_idx < ItemsPerThread; dst_idx++)
+        if(WarpSize == ItemsPerThread)
         {
-            ROCPRIM_UNROLL
-            for(unsigned int src_idx = 0; src_idx < ItemsPerThread; src_idx++)
-            {
-                const auto value
-                    = ::rocprim::warp_shuffle(input[src_idx],
-                                              (ItemsPerThread * flat_id + dst_idx) % WarpSize,
-                                              WarpSize);
-                if(flat_id / (WarpSize / ItemsPerThread) == src_idx)
-                {
-                    work_array[dst_idx] = value;
-                }
-            }
+            blocked_striped_shuffle_efficient_impl(input, output);
         }
-
-        ROCPRIM_UNROLL
-        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        else
         {
-            output[i] = work_array[i];
+            striped_to_blocked_shuffle_impl(input, output);
         }
     }
 
