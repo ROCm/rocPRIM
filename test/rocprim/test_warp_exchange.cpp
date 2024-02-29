@@ -151,6 +151,15 @@ using WarpExchangeTestParams = ::testing::Types<
     //Params<rocprim::half, 4U,  8U, BlockedToStripedShuffleOp>,
     Params<rocprim::bfloat16, 4U, 8U, BlockedToStripedShuffleOp>,
 
+    Params<int, 8U, 8U, BlockedToStripedShuffleOp>,
+    Params<int8_t, 16U, 16U, BlockedToStripedShuffleOp>,
+    Params<int16_t, 32U, 32U, BlockedToStripedShuffleOp>,
+    Params<int64_t, 8U, 8U, BlockedToStripedShuffleOp>,
+    Params<float, 32U, 32U, BlockedToStripedShuffleOp>,
+    Params<double, 64U, 64U, BlockedToStripedShuffleOp>,
+    //Params<rocprim::half, 8U,  8U, BlockedToStripedShuffleOp>,
+    Params<rocprim::bfloat16, 8U, 8U, BlockedToStripedShuffleOp>,
+
     Params<int, 4U, 8U, StripedToBlockedOp>,
     Params<int8_t, 4U, 16U, StripedToBlockedOp>,
     Params<int16_t, 2U, 32U, StripedToBlockedOp>,
@@ -167,7 +176,16 @@ using WarpExchangeTestParams = ::testing::Types<
     Params<float, 4U, 32U, StripedToBlockedShuffleOp>,
     Params<double, 4U, 64U, StripedToBlockedShuffleOp>,
     //Params<rocprim::half, 4U,  8U, StripedToBlockedShuffleOp>,
-    Params<rocprim::bfloat16, 4U, 8U, StripedToBlockedShuffleOp>>;
+    Params<rocprim::bfloat16, 4U, 8U, StripedToBlockedShuffleOp>,
+
+    Params<int, 8U, 8U, StripedToBlockedShuffleOp>,
+    Params<int8_t, 16U, 16U, StripedToBlockedShuffleOp>,
+    Params<int16_t, 32U, 32U, StripedToBlockedShuffleOp>,
+    Params<int64_t, 8U, 8U, StripedToBlockedShuffleOp>,
+    Params<float, 32U, 32U, StripedToBlockedShuffleOp>,
+    Params<double, 64U, 64U, StripedToBlockedShuffleOp>,
+    //Params<rocprim::half, 8U,  8U, StripedToBlockedShuffleOp>,
+    Params<rocprim::bfloat16, 8U, 8U, StripedToBlockedShuffleOp>>;
 
 template<unsigned int ItemsPerThread, unsigned int LogicalWarpSize, class Op, class T>
 __device__ auto warp_exchange_test(T* d_input, T* d_output)
