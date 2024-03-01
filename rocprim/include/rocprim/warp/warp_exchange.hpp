@@ -24,10 +24,11 @@
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
+#include "../functional.hpp"
 #include "../intrinsics.hpp"
 #include "../intrinsics/warp_shuffle.hpp"
-#include "../functional.hpp"
 #include "../types.hpp"
+#include <rocprim/functional.hpp>
 #include <rocprim/intrinsics/thread.hpp>
 
 #include <utility>
@@ -94,95 +95,72 @@ class warp_exchange
         T buffer[WarpSize * ItemsPerThread];
     };
 
-    // concrete recursion class
-    template<typename OutputT, int IdX, int Size>
-    class CompileTimeArray : protected CompileTimeArray<OutputT, IdX + 1, Size>
+    template<int NumEntries, int IdX, class U>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void Foreach(const T (&input)[ItemsPerThread],
+                                               U (&output)[ItemsPerThread],
+                                               const int xor_bit_set)
     {
-    protected:
-        T val;
-
-        template<int NumEntries>
-        ROCPRIM_DEVICE ROCPRIM_INLINE void Foreach(const bool xor_bit_set)
+        if(NumEntries != 0 && (IdX / NumEntries) % 2 == 0)
         {
-            const T send_val
-                = (xor_bit_set ? CompileTimeArray<OutputT, IdX, Size>::val
-                               : CompileTimeArray<OutputT, IdX + NumEntries, Size>::val);
+            const T send_val = (xor_bit_set ? input[IdX] : input[IdX + NumEntries]);
             const T recv_val = ::rocprim::warp_shuffle_xor(send_val, NumEntries, WarpSize);
-            (xor_bit_set ? CompileTimeArray<OutputT, IdX, Size>::val
-                         : CompileTimeArray<OutputT, IdX + NumEntries, Size>::val)
-                = recv_val;
-
-            constexpr int next_idx = IdX + 1 + ((IdX + 1) % NumEntries == 0) * NumEntries;
-            CompileTimeArray<OutputT, next_idx, Size>::template Foreach<NumEntries>(xor_bit_set);
+            (xor_bit_set ? output[IdX] : output[IdX + NumEntries]) = recv_val;
         }
+    }
 
-        // terminate recursion
-        ROCPRIM_DEVICE ROCPRIM_INLINE void TransposeImpl(unsigned int, Int2Type<0>) {}
-
-        template<int NumEntries>
-        ROCPRIM_DEVICE ROCPRIM_INLINE void TransposeImpl(const unsigned int lane_id,
-                                                         Int2Type<NumEntries>)
-        {
-            const bool xor_bit_set = lane_id & NumEntries;
-            Foreach<NumEntries>(xor_bit_set);
-
-            TransposeImpl(lane_id, Int2Type<NumEntries / 2>());
-        }
-
-    public:
-        ROCPRIM_DEVICE ROCPRIM_INLINE CompileTimeArray(const T (&input_items)[ItemsPerThread],
-                                                       OutputT (&output_items)[ItemsPerThread])
-            : CompileTimeArray<OutputT, IdX + 1, Size>{input_items, output_items}
-            , val{input_items[IdX]}
-        {}
-
-        ROCPRIM_DEVICE ROCPRIM_INLINE ~CompileTimeArray()
-        {
-            this->output_items[IdX] = val;
-        }
-
-        ROCPRIM_DEVICE ROCPRIM_INLINE void Transpose(const unsigned int lane_id)
-        {
-            TransposeImpl(lane_id, Int2Type<ItemsPerThread / 2>());
-        }
-    };
-
-    // terminating partial specialization
-    template<typename OutputT, int Size>
-    class CompileTimeArray<OutputT, Size, Size>
+    template<int NumEntries, class U, int... Ids>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void Foreach(const T (&input)[ItemsPerThread],
+                                               U (&output)[ItemsPerThread],
+                                               const std::integer_sequence<int, Ids...>,
+                                               const bool xor_bit_set)
     {
-    protected:
-        // used for dumping back the individual values after transposing
-        T (&output_items)[ItemsPerThread];
+        int ignored[] = {((Foreach<NumEntries, Ids>(input, output, xor_bit_set)), 0)...};
+        (void)ignored;
+    }
 
-        template<int>
-        ROCPRIM_DEVICE ROCPRIM_INLINE void Foreach(bool)
-        {}
+    template<unsigned int MaxIter, class U, int... Iter>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void TransposeImpl(const T (&input)[ItemsPerThread],
+                                                     U (&output)[ItemsPerThread],
+                                                     const unsigned int lane_id,
+                                                     const std::integer_sequence<int, Iter...>)
+    {
+        int ignored[]
+            = {(Foreach<(1 << (MaxIter - Iter))>(input,
+                                                 output,
+                                                 std::make_integer_sequence<int, ItemsPerThread>{},
+                                                 lane_id & (1 << (MaxIter - Iter))),
+                0)...};
+        (void)ignored;
+    }
 
-    public:
-        ROCPRIM_DEVICE ROCPRIM_INLINE CompileTimeArray(const T (&)[ItemsPerThread],
-                                                       OutputT (&output_items)[ItemsPerThread])
-            : output_items{output_items}
-        {}
-    };
+    template<class U>
+    ROCPRIM_DEVICE ROCPRIM_INLINE void Transpose(const T (&input)[ItemsPerThread],
+                                                 U (&output)[ItemsPerThread],
+                                                 const unsigned int lane_id)
+    {
+        constexpr unsigned int n_iter = rocprim::Log2<ItemsPerThread>::VALUE;
+        TransposeImpl<n_iter - 1>(input,
+                                  output,
+                                  lane_id,
+                                  std::make_integer_sequence<int, n_iter>{});
+    }
 
     template<class U>
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         blocked_striped_shuffle_efficient_impl(const T (&input)[ItemsPerThread],
-                                               U       (&output)[ItemsPerThread])
+                                               U (&output)[ItemsPerThread])
     {
         static constexpr bool IS_ARCH_WARP = WarpSize == ::rocprim::device_warp_size();
         const unsigned int    flat_lane_id = ::rocprim::detail::logical_lane_id<WarpSize>();
         const unsigned int    lane_id = IS_ARCH_WARP ? flat_lane_id : (flat_lane_id % WarpSize);
 
-        CompileTimeArray<U, 0, ItemsPerThread> arr{input, output};
-        arr.Transpose(lane_id);
+        Transpose(input, output, lane_id);
     }
 
     template<class U>
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         blocked_to_striped_shuffle_impl(const T (&input)[ItemsPerThread],
-                                        U       (&output)[ItemsPerThread])
+                                        U (&output)[ItemsPerThread])
     {
         const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
         U                  work_array[ItemsPerThread];
@@ -214,7 +192,7 @@ class warp_exchange
     template<class U>
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         striped_to_blocked_shuffle_impl(const T (&input)[ItemsPerThread],
-                                        U       (&output)[ItemsPerThread])
+                                        U (&output)[ItemsPerThread])
     {
         const unsigned int flat_id = ::rocprim::detail::logical_lane_id<WarpSize>();
         U                  work_array[ItemsPerThread];
@@ -347,7 +325,7 @@ public:
     /// \endcode
     template<class U>
     ROCPRIM_DEVICE ROCPRIM_INLINE void blocked_to_striped_shuffle(const T (&input)[ItemsPerThread],
-                                                                  U       (&output)[ItemsPerThread])
+                                                                  U (&output)[ItemsPerThread])
     {
         static_assert(
             WarpSize % ItemsPerThread == 0,
@@ -450,7 +428,7 @@ public:
     /// \endcode
     template<class U>
     ROCPRIM_DEVICE ROCPRIM_INLINE void striped_to_blocked_shuffle(const T (&input)[ItemsPerThread],
-                                                                  U       (&output)[ItemsPerThread])
+                                                                  U (&output)[ItemsPerThread])
     {
         static_assert(
             WarpSize % ItemsPerThread == 0,
