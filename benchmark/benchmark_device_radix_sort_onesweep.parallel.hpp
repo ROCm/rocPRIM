@@ -381,7 +381,8 @@ struct device_radix_sort_onesweep_benchmark_generator
                                                            ItemsPerThread,
                                                            RadixBits,
                                                            false,
-                                                           RadixRankAlgorithm>::storage_type;
+                                                           RadixRankAlgorithm,
+                                                           rp::identity_decomposer>::storage_type;
         return sizeof(sharedmem_storage) < TUNING_SHARED_MEMORY_MAX;
     }
 
