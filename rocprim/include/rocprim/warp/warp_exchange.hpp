@@ -21,6 +21,8 @@
 #ifndef ROCPRIM_WARP_WARP_EXCHANGE_HPP_
 #define ROCPRIM_WARP_WARP_EXCHANGE_HPP_
 
+#include <utility>
+
 #include "../config.hpp"
 #include "../detail/various.hpp"
 
@@ -30,9 +32,6 @@
 #include "../types.hpp"
 #include <rocprim/functional.hpp>
 #include <rocprim/intrinsics/thread.hpp>
-
-#include <utility>
-#include <vector>
 
 /// \addtogroup warpmodule
 /// @{
@@ -103,7 +102,8 @@ class warp_exchange
         if(NumEntries != 0 && (IdX / NumEntries) % 2 == 0)
         {
             const T send_val = (xor_bit_set ? input[IdX] : input[IdX + NumEntries]);
-            const T recv_val = ::rocprim::warp_shuffle_xor(send_val, NumEntries, WarpSize);
+            const T recv_val
+                = ::rocprim::detail::warp_swizzle_shuffle(send_val, NumEntries, WarpSize);
             (xor_bit_set ? output[IdX] : output[IdX + NumEntries]) = recv_val;
         }
     }
@@ -153,8 +153,18 @@ class warp_exchange
         static constexpr bool IS_ARCH_WARP = WarpSize == ::rocprim::device_warp_size();
         const unsigned int    flat_lane_id = ::rocprim::detail::logical_lane_id<WarpSize>();
         const unsigned int    lane_id = IS_ARCH_WARP ? flat_lane_id : (flat_lane_id % WarpSize);
-
-        Transpose(input, output, lane_id);
+        T                     temp[ItemsPerThread];
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            temp[i] = input[i];
+        }
+        Transpose(temp, temp, lane_id);
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            output[i] = temp[i];
+        }
     }
 
     template<class U>
