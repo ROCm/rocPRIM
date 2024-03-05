@@ -309,67 +309,73 @@ int main(int argc, char *argv[])
 
     // Add benchmarks
     std::vector<benchmark::internal::Benchmark*> benchmarks{
-        CREATE_BENCHMARK(int, 256,  1, 16, BlockedToStripedOp),
-        CREATE_BENCHMARK(int, 256,  1, 32, BlockedToStripedOp),
-        CREATE_BENCHMARK(int, 256,  4, 16, BlockedToStripedOp),
-        CREATE_BENCHMARK(int, 256,  4, 32, BlockedToStripedOp),
+        CREATE_BENCHMARK(int, 256, 1, 16, BlockedToStripedOp),
+        CREATE_BENCHMARK(int, 256, 1, 32, BlockedToStripedOp),
+        CREATE_BENCHMARK(int, 256, 4, 16, BlockedToStripedOp),
+        CREATE_BENCHMARK(int, 256, 4, 32, BlockedToStripedOp),
         CREATE_BENCHMARK(int, 256, 16, 16, BlockedToStripedOp),
         CREATE_BENCHMARK(int, 256, 16, 32, BlockedToStripedOp),
+        CREATE_BENCHMARK(int, 256, 32, 32, BlockedToStripedOp),
 
-        CREATE_BENCHMARK(int, 256,  1, 16, StripedToBlockedOp),
-        CREATE_BENCHMARK(int, 256,  1, 32, StripedToBlockedOp),
-        CREATE_BENCHMARK(int, 256,  4, 16, StripedToBlockedOp),
-        CREATE_BENCHMARK(int, 256,  4, 32, StripedToBlockedOp),
+        CREATE_BENCHMARK(int, 256, 1, 16, StripedToBlockedOp),
+        CREATE_BENCHMARK(int, 256, 1, 32, StripedToBlockedOp),
+        CREATE_BENCHMARK(int, 256, 4, 16, StripedToBlockedOp),
+        CREATE_BENCHMARK(int, 256, 4, 32, StripedToBlockedOp),
         CREATE_BENCHMARK(int, 256, 16, 16, StripedToBlockedOp),
         CREATE_BENCHMARK(int, 256, 16, 32, StripedToBlockedOp),
+        CREATE_BENCHMARK(int, 256, 32, 32, StripedToBlockedOp),
 
-        CREATE_BENCHMARK(int, 256,  1, 16, BlockedToStripedShuffleOp),
-        CREATE_BENCHMARK(int, 256,  1, 32, BlockedToStripedShuffleOp),
-        CREATE_BENCHMARK(int, 256,  4, 16, BlockedToStripedShuffleOp),
-        CREATE_BENCHMARK(int, 256,  4, 32, BlockedToStripedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 1, 16, BlockedToStripedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 1, 32, BlockedToStripedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 4, 16, BlockedToStripedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 4, 32, BlockedToStripedShuffleOp),
         CREATE_BENCHMARK(int, 256, 16, 16, BlockedToStripedShuffleOp),
         CREATE_BENCHMARK(int, 256, 16, 32, BlockedToStripedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 32, 32, BlockedToStripedShuffleOp),
 
-        CREATE_BENCHMARK(int, 256,  1, 16, StripedToBlockedShuffleOp),
-        CREATE_BENCHMARK(int, 256,  1, 32, StripedToBlockedShuffleOp),
-        CREATE_BENCHMARK(int, 256,  4, 16, StripedToBlockedShuffleOp),
-        CREATE_BENCHMARK(int, 256,  4, 32, StripedToBlockedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 1, 16, StripedToBlockedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 1, 32, StripedToBlockedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 4, 16, StripedToBlockedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 4, 32, StripedToBlockedShuffleOp),
         CREATE_BENCHMARK(int, 256, 16, 16, StripedToBlockedShuffleOp),
         CREATE_BENCHMARK(int, 256, 16, 32, StripedToBlockedShuffleOp),
+        CREATE_BENCHMARK(int, 256, 32, 32, StripedToBlockedShuffleOp),
 
-        CREATE_BENCHMARK(int, 256,  1, 16, ScatterToStripedOp),
-        CREATE_BENCHMARK(int, 256,  1, 32, ScatterToStripedOp),
-        CREATE_BENCHMARK(int, 256,  4, 16, ScatterToStripedOp),
-        CREATE_BENCHMARK(int, 256,  4, 32, ScatterToStripedOp),
+        CREATE_BENCHMARK(int, 256, 1, 16, ScatterToStripedOp),
+        CREATE_BENCHMARK(int, 256, 1, 32, ScatterToStripedOp),
+        CREATE_BENCHMARK(int, 256, 4, 16, ScatterToStripedOp),
+        CREATE_BENCHMARK(int, 256, 4, 32, ScatterToStripedOp),
         CREATE_BENCHMARK(int, 256, 16, 16, ScatterToStripedOp),
-        CREATE_BENCHMARK(int, 256, 16, 32, ScatterToStripedOp)
-    };
+        CREATE_BENCHMARK(int, 256, 16, 32, ScatterToStripedOp)};
 
     int hip_device = 0;
     HIP_CHECK(::rocprim::detail::get_device_from_stream(stream, hip_device));
     if(is_warp_size_supported(64, hip_device))
     {
         std::vector<benchmark::internal::Benchmark*> additional_benchmarks{
-            CREATE_BENCHMARK(int, 256,  1, 64, BlockedToStripedOp),
-            CREATE_BENCHMARK(int, 256,  4, 64, BlockedToStripedOp),
+            CREATE_BENCHMARK(int, 256, 1, 64, BlockedToStripedOp),
+            CREATE_BENCHMARK(int, 256, 4, 64, BlockedToStripedOp),
             CREATE_BENCHMARK(int, 256, 16, 64, BlockedToStripedOp),
+            CREATE_BENCHMARK(int, 256, 64, 64, BlockedToStripedOp),
 
-            CREATE_BENCHMARK(int, 256,  1, 64, StripedToBlockedOp),
-            CREATE_BENCHMARK(int, 256,  4, 64, StripedToBlockedOp),
+            CREATE_BENCHMARK(int, 256, 1, 64, StripedToBlockedOp),
+            CREATE_BENCHMARK(int, 256, 4, 64, StripedToBlockedOp),
             CREATE_BENCHMARK(int, 256, 16, 64, StripedToBlockedOp),
+            CREATE_BENCHMARK(int, 256, 64, 64, StripedToBlockedOp),
 
-            CREATE_BENCHMARK(int, 256,  1, 64, BlockedToStripedShuffleOp),
-            CREATE_BENCHMARK(int, 256,  4, 64, BlockedToStripedShuffleOp),
+            CREATE_BENCHMARK(int, 256, 1, 64, BlockedToStripedShuffleOp),
+            CREATE_BENCHMARK(int, 256, 4, 64, BlockedToStripedShuffleOp),
             CREATE_BENCHMARK(int, 256, 16, 64, BlockedToStripedShuffleOp),
+            CREATE_BENCHMARK(int, 256, 64, 64, BlockedToStripedShuffleOp),
 
-            CREATE_BENCHMARK(int, 256,  1, 64, StripedToBlockedShuffleOp),
-            CREATE_BENCHMARK(int, 256,  4, 64, StripedToBlockedShuffleOp),
+            CREATE_BENCHMARK(int, 256, 1, 64, StripedToBlockedShuffleOp),
+            CREATE_BENCHMARK(int, 256, 4, 64, StripedToBlockedShuffleOp),
             CREATE_BENCHMARK(int, 256, 16, 64, StripedToBlockedShuffleOp),
+            CREATE_BENCHMARK(int, 256, 64, 64, StripedToBlockedShuffleOp),
 
-            CREATE_BENCHMARK(int, 256,  1, 64, ScatterToStripedOp),
-            CREATE_BENCHMARK(int, 256,  4, 64, ScatterToStripedOp),
-            CREATE_BENCHMARK(int, 256, 16, 64, ScatterToStripedOp)
-        };
+            CREATE_BENCHMARK(int, 256, 1, 64, ScatterToStripedOp),
+            CREATE_BENCHMARK(int, 256, 4, 64, ScatterToStripedOp),
+            CREATE_BENCHMARK(int, 256, 16, 64, ScatterToStripedOp)};
         benchmarks.insert(
             benchmarks.end(),
             additional_benchmarks.begin(),
