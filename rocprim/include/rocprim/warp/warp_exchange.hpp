@@ -306,6 +306,7 @@ public:
 
     /// \brief Transposes a blocked arrangement of items to a striped arrangement
     /// across the warp, using warp shuffle operations.
+    /// Uses an optimized implementation for when WarpSize is equal to ItemsPerThread.
     /// Caution: this API is experimental. Performance might not be consistent.
     /// ItemsPerThread must be a divisor of WarpSize.
     ///
@@ -409,6 +410,7 @@ public:
 
     /// \brief Transposes a striped arrangement of items to a blocked arrangement
     /// across the warp, using warp shuffle operations.
+    /// Uses an optimized implementation for when WarpSize is equal to ItemsPerThread.
     /// Caution: this API is experimental. Performance might not be consistent.
     /// ItemsPerThread must be a divisor of WarpSize.
     ///
