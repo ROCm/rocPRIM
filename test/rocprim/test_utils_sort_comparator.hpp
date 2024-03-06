@@ -25,15 +25,13 @@
 
 #include <rocprim/type_traits.hpp>
 
-#include "rocprim/detail/radix_sort.hpp"
 #include "test_utils_bfloat16.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_half.hpp"
 
-#include <type_traits>
-
 #include <cstring>
+#include <type_traits>
 
 namespace test_utils
 {

@@ -157,51 +157,12 @@ struct radix_key_codec_integral<Key,
     }
 };
 
-template<class Key>
-struct float_bit_mask;
-
-template<>
-struct float_bit_mask<float>
-{
-    static constexpr uint32_t sign_bit = 0x80000000;
-    static constexpr uint32_t exponent = 0x7F800000;
-    static constexpr uint32_t mantissa = 0x007FFFFF;
-    using bit_type = uint32_t;
-};
-
-template<>
-struct float_bit_mask<double>
-{
-    static constexpr uint64_t sign_bit = 0x8000000000000000;
-    static constexpr uint64_t exponent = 0x7FF0000000000000;
-    static constexpr uint64_t mantissa = 0x000FFFFFFFFFFFFF;
-    using bit_type = uint64_t;
-};
-
-template<>
-struct float_bit_mask<rocprim::bfloat16>
-{
-    static constexpr uint16_t sign_bit = 0x8000;
-    static constexpr uint16_t exponent = 0x7F80;
-    static constexpr uint16_t mantissa = 0x007F;
-    using bit_type = uint16_t;
-};
-
-template<>
-struct float_bit_mask<rocprim::half>
-{
-    static constexpr uint16_t sign_bit = 0x8000;
-    static constexpr uint16_t exponent = 0x7C00;
-    static constexpr uint16_t mantissa = 0x03FF;
-    using bit_type = uint16_t;
-};
-
 template<class Key, class BitKey>
 struct radix_key_codec_floating
 {
     using bit_key_type = BitKey;
 
-    static constexpr bit_key_type sign_bit = float_bit_mask<Key>::sign_bit;
+    static constexpr bit_key_type sign_bit = ::rocprim::detail::float_bit_mask<Key>::sign_bit;
 
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE static bit_key_type encode(Key key)
     {
@@ -247,10 +208,8 @@ struct radix_key_codec_floating
 template<class Key, class Enable = void>
 struct radix_key_codec_base
 {
-    static_assert(
-        sizeof(Key) == 0,
-        "Only integral and floating point types supported as radix sort keys without a decomposer. "
-        "To sort custom types, see the radix_sort overloads with the decomposer argument");
+    // Non-fundamental keys (custom keys) will not use any specialization and thus they do not
+    // have any of the struct members that fundamental types have.
 };
 
 template<class Key>
@@ -307,35 +266,24 @@ struct radix_key_codec_base<float> : radix_key_codec_floating<float, unsigned in
 template<>
 struct radix_key_codec_base<double> : radix_key_codec_floating<double, unsigned long long> { };
 
+template<class T, class = void>
+struct radix_key_fundamental
+{
+    static constexpr bool value = false;
+};
+
 template<class T>
-struct is_tuple_of_references
+struct radix_key_fundamental<
+    T,
+    ::rocprim::detail::void_t<typename radix_key_codec_base<T>::bit_key_type>>
 {
-    static_assert(sizeof(T) == 0, "is_tuple_of_references is only implemented for rocprim::tuple");
+    static constexpr bool value = true;
 };
 
-template<class... Args>
-struct is_tuple_of_references<::rocprim::tuple<Args...>>
-{
-private:
-    template<size_t Index>
-    ROCPRIM_HOST_DEVICE static constexpr bool is_tuple_of_references_impl()
-    {
-        using tuple_t   = ::rocprim::tuple<Args...>;
-        using element_t = ::rocprim::tuple_element_t<Index, tuple_t>;
-        return std::is_reference<element_t>::value && is_tuple_of_references_impl<Index + 1>();
-    }
-
-    template<>
-    ROCPRIM_HOST_DEVICE static constexpr bool is_tuple_of_references_impl<sizeof...(Args)>()
-    {
-        return true;
-    }
-
-public:
-    static constexpr bool value = is_tuple_of_references_impl<0>();
-};
-
-template<class Key, bool Descending = false>
+// Fundamental types
+template<class Key,
+         bool Descending     = false,
+         bool is_fundamental = radix_key_fundamental<Key>::value>
 class radix_key_codec : protected radix_key_codec_base<Key>
 {
     using base_type = radix_key_codec_base<Key>;
@@ -343,16 +291,38 @@ class radix_key_codec : protected radix_key_codec_base<Key>
 public:
     using bit_key_type = typename base_type::bit_key_type;
 
-    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key)
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key, Decomposer decomposer = {})
     {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
         bit_key_type bit_key = base_type::encode(key);
         return Descending ? ~bit_key : bit_key;
     }
 
-    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key)
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, Decomposer decomposer = {})
     {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        key = ::rocprim::detail::bit_cast<Key>(encode(key));
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key, Decomposer decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
         bit_key = Descending ? ~bit_key : bit_key;
         return base_type::decode(bit_key);
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, Decomposer decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        key = decode(::rocprim::detail::bit_cast<bit_key_type>(key));
     }
 
     ROCPRIM_HOST_DEVICE static unsigned int
@@ -360,8 +330,28 @@ public:
     {
         return base_type::template extract_digit<Descending>(bit_key, start, radix_bits);
     }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static unsigned int extract_digit(Key          key,
+                                                          unsigned int start,
+                                                          unsigned int radix_bits,
+                                                          Decomposer   decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        return extract_digit(::rocprim::detail::bit_cast<bit_key_type>(key), start, radix_bits);
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(Decomposer decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        return decode(static_cast<bit_key_type>(-1));
+    }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specializations
 template<bool Descending>
 class radix_key_codec<bool, Descending> : protected radix_key_codec_base<bool>
 {
@@ -370,21 +360,255 @@ class radix_key_codec<bool, Descending> : protected radix_key_codec_base<bool>
 public:
     using bit_key_type = typename base_type::bit_key_type;
 
-    ROCPRIM_HOST_DEVICE static bit_key_type encode(bool key)
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(bool key, Decomposer decomposer = {})
     {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
         return Descending != key;
     }
 
-    ROCPRIM_HOST_DEVICE static bool decode(bit_key_type bit_key)
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static void encode_inplace(bool& key, Decomposer decomposer = {})
     {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        key = ::rocprim::detail::bit_cast<bool>(encode(key));
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static bool decode(bit_key_type bit_key, Decomposer decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
         const bool key_value = bit_key;
         return Descending != key_value;
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static void decode_inplace(bool& key, Decomposer decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        key = decode(::rocprim::detail::bit_cast<bit_key_type>(key));
     }
 
     ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(bit_key_type bit_key, unsigned int start, unsigned int radix_bits)
     {
         return base_type::template extract_digit<Descending>(bit_key, start, radix_bits);
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static unsigned int extract_digit(bool         key,
+                                                          unsigned int start,
+                                                          unsigned int radix_bits,
+                                                          Decomposer   decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        return extract_digit(::rocprim::detail::bit_cast<bit_key_type>(key), start, radix_bits);
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static bool get_out_of_bounds_key(Decomposer decomposer = {})
+    {
+        static_assert(std::is_same<decltype(decomposer), ::rocprim::identity_decomposer>::value,
+                      "Fundamental types don't use custom decomposer.");
+        return decode(static_cast<bit_key_type>(-1));
+    }
+};
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
+// Non-fundamental types (custom)
+template<class Key, bool Descending>
+class radix_key_codec<Key, Descending, false /*radix_key_fundamental*/>
+{
+public:
+    using bit_key_type = Key;
+
+    template<class Decomposer>
+    ROCPRIM_HOST_DEVICE static bit_key_type encode(Key key, Decomposer decomposer = {})
+    {
+        encode_inplace(key, decomposer);
+        return static_cast<bit_key_type>(key);
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, Decomposer decomposer = {})
+    {
+        static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
+                      "The decomposer must return a tuple of references.");
+        const auto per_element_encode = [](auto& tuple_element)
+        {
+            using element_type_t = std::decay_t<decltype(tuple_element)>;
+            using codec_t        = radix_key_codec<element_type_t, Descending>;
+            codec_t::encode_inplace(tuple_element);
+        };
+        for_each_in_tuple(decomposer(key), per_element_encode);
+    }
+
+    template<>
+    ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, ::rocprim::identity_decomposer)
+    {
+        using codec               = radix_key_codec<Key, Descending>;
+        key                       = ::rocprim::detail::bit_cast<Key>(codec::encode(key));
+    }
+
+    template<class Decomposer>
+    ROCPRIM_HOST_DEVICE static Key decode(bit_key_type bit_key, Decomposer decomposer = {})
+    {
+        decode_inplace(bit_key, decomposer);
+        return static_cast<Key>(bit_key);
+    }
+
+    template<class Decomposer = ::rocprim::identity_decomposer>
+    ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, Decomposer decomposer = {})
+    {
+        static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
+                      "The decomposer must return a tuple of references.");
+        const auto per_element_decode = [](auto& tuple_element)
+        {
+            using element_type_t = std::decay_t<decltype(tuple_element)>;
+            using codec_t        = radix_key_codec<element_type_t, Descending>;
+            codec_t::decode_inplace(tuple_element);
+        };
+        for_each_in_tuple(decomposer(key), per_element_decode);
+    }
+
+    template<>
+    ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, ::rocprim::identity_decomposer)
+    {
+        using codec               = radix_key_codec<Key, Descending>;
+        using bit_key_type        = typename codec::bit_key_type;
+        key                       = codec::decode(::rocprim::detail::bit_cast<bit_key_type>(key));
+    }
+
+    ROCPRIM_HOST_DEVICE static unsigned int
+        extract_digit(bit_key_type bit_key, unsigned int start, unsigned int radix_bits)
+    {
+        static_assert(
+            sizeof(bit_key_type) == 0,
+            "Only fundamental types (integral and floating point) are supported as radix sort"
+            "keys without a decomposer. "
+            "For custom key types, use the extract_digit overloads with the decomposer argument");
+    }
+
+    template<class Decomposer>
+    ROCPRIM_HOST_DEVICE static unsigned int
+        extract_digit(Key key, unsigned int start, unsigned int radix_bits, Decomposer decomposer)
+    {
+        static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
+                      "The decomposer must return a tuple of references.");
+        constexpr size_t tuple_size
+            = ::rocprim::tuple_size<std::decay_t<decltype(decomposer(key))>>::value;
+        return extract_digit_from_key_impl<tuple_size - 1>(0u,
+                                                           decomposer(key),
+                                                           static_cast<int>(start),
+                                                           static_cast<int>(start + radix_bits),
+                                                           0);
+    }
+
+    template<>
+    ROCPRIM_HOST_DEVICE static unsigned int extract_digit(Key          key,
+                                                          unsigned int start,
+                                                          unsigned int radix_bits,
+                                                          ::rocprim::identity_decomposer)
+    {
+        using codec        = radix_key_codec<Key, Descending>;
+        using bit_key_type = typename codec::bit_key_type;
+        return codec::extract_digit(::rocprim::detail::bit_cast<bit_key_type>(key),
+                                    start,
+                                    radix_bits);
+    }
+
+    template<class Decomposer>
+    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(Decomposer decomposer)
+    {
+        static_assert(std::is_default_constructible<Key>::value,
+                      "The sorted Key type must be default constructible");
+        Key key;
+        for_each_in_tuple(decomposer(key),
+                          [](auto& element)
+                          {
+                              using element_t = std::decay_t<decltype(element)>;
+                              using codec_t      = radix_key_codec<element_t, Descending>;
+                              using bit_key_type = typename codec_t::bit_key_type;
+                              element            = codec_t::decode(static_cast<bit_key_type>(-1));
+                          });
+        return key;
+    }
+
+    template<>
+    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(::rocprim::identity_decomposer)
+    {
+        using codec_t      = radix_key_codec<Key, Descending>;
+        using bit_key_type = typename codec_t::bit_key_type;
+        return codec_t::decode(static_cast<bit_key_type>(-1));
+    }
+
+private:
+    template<int ElementIndex, class... Args>
+    ROCPRIM_HOST_DEVICE static auto
+        extract_digit_from_key_impl(unsigned int                     digit,
+                                    const ::rocprim::tuple<Args...>& key_tuple,
+                                    const int                        start,
+                                    const int                        end,
+                                    const int                        previous_bits)
+            -> std::enable_if_t<(ElementIndex >= 0), unsigned int>
+    {
+        using T = std::decay_t<::rocprim::tuple_element_t<ElementIndex, ::rocprim::tuple<Args...>>>;
+        using bit_key_type                 = typename radix_key_codec<T, Descending>::bit_key_type;
+        constexpr int current_element_bits = 8 * sizeof(T);
+
+        const int total_extracted_bits    = end - start;
+        const int current_element_end_bit = previous_bits + current_element_bits;
+        if(start < current_element_end_bit && end > previous_bits)
+        {
+            // unsigned integral representation of the current tuple element
+            const auto element_value = ::rocprim::detail::bit_cast<bit_key_type>(
+                ::rocprim::get<ElementIndex>(key_tuple));
+
+            const int bits_extracted_previously = ::rocprim::max(0, previous_bits - start);
+
+            // start of the bit range copied from the current tuple element
+            const int current_start_bit = ::rocprim::max(0, start - previous_bits);
+
+            // end of the bit range copied from the current tuple element
+            const int current_end_bit = ::rocprim::min(current_element_bits,
+                                                       current_start_bit + total_extracted_bits
+                                                           - bits_extracted_previously);
+
+            // number of bits extracted from the current tuple element
+            const int current_length = current_end_bit - current_start_bit;
+
+            // bits extracted from the current tuple element, aligned to LSB
+            unsigned int current_extract = (element_value >> current_start_bit);
+
+            if(current_length != 32)
+            {
+                current_extract &= (1u << current_length) - 1;
+            }
+
+            digit |= current_extract << bits_extracted_previously;
+        }
+        return extract_digit_from_key_impl<ElementIndex - 1>(digit,
+                                                             key_tuple,
+                                                             start,
+                                                             end,
+                                                             previous_bits + current_element_bits);
+    }
+
+    template<int ElementIndex, class... Args>
+    ROCPRIM_HOST_DEVICE static auto
+        extract_digit_from_key_impl(unsigned int digit,
+                                    const ::rocprim::tuple<Args...>& /*key_tuple*/,
+                                    const int /*start*/,
+                                    const int /*end*/,
+                                    const int /*previous_bits*/)
+            -> std::enable_if_t<(ElementIndex < 0), unsigned int>
+    {
+        return digit;
     }
 };
 
@@ -395,7 +619,7 @@ public:
     template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, Decomposer decomposer = {})
     {
-        static_assert(is_tuple_of_references<decltype(decomposer(key))>::value,
+        static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
         const auto per_element_encode = [](auto& tuple_element)
         {
@@ -416,7 +640,7 @@ public:
     template<class Decomposer = ::rocprim::identity_decomposer>
     ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, Decomposer decomposer = {})
     {
-        static_assert(is_tuple_of_references<decltype(decomposer(key))>::value,
+        static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
         const auto per_element_decode = [](auto& tuple_element)
         {
@@ -439,7 +663,7 @@ public:
     ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(Key key, unsigned int start, unsigned int radix_bits, Decomposer decomposer)
     {
-        static_assert(is_tuple_of_references<decltype(decomposer(key))>::value,
+        static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
         constexpr size_t tuple_size
             = ::rocprim::tuple_size<std::decay_t<decltype(decomposer(key))>>::value;

@@ -27,7 +27,6 @@
 #include <utility>
 
 #include "../config.hpp"
-#include "../detail/radix_sort.hpp"
 #include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 
