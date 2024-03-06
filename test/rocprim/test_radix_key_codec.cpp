@@ -24,14 +24,14 @@
 
 #include <gtest/gtest-typed-test.h>
 #include <gtest/internal/gtest-type-util.h>
-#include <ios>
-#include <ostream>
 #include <rocprim/detail/radix_sort.hpp>
 #include <rocprim/device/detail/device_radix_sort.hpp>
 #include <rocprim/test_utils_custom_test_types.hpp>
 #include <rocprim/test_utils_sort_comparator.hpp>
 #include <rocprim/types/tuple.hpp>
 
+#include <ios>
+#include <ostream>
 #include <sstream>
 
 struct extract_digit_params
@@ -84,7 +84,7 @@ struct custom_key_decomposer
 
 TEST_P(RadixKeyCodecTest, TestExtractDigit)
 {
-    using codec = rocprim::detail::radix_key_codec_inplace<custom_key>;
+    using codec = rocprim::detail::radix_key_codec<custom_key>;
 
     const custom_key key{0xab, 0xcdef, 0x01};
     const auto       digit = codec::extract_digit(key,
@@ -116,7 +116,7 @@ struct custom_key_decomposer_with_unused
 
 TEST_P(RadixKeyCodecUnusedTest, TestExtractDigitUnused)
 {
-    using codec = rocprim::detail::radix_key_codec_inplace<custom_key>;
+    using codec = rocprim::detail::radix_key_codec<custom_key>;
 
     const custom_key key{0xab, 0xcdef, 0x01};
     const auto       digit = codec::extract_digit(key,
@@ -130,7 +130,7 @@ TEST_P(RadixKeyCodecUnusedTest, TestExtractDigitUnused)
 TEST(RadixKeyCodecTest, ExtractCustomTestType)
 {
     using T       = test_utils::custom_test_type<int>;
-    using codec_t = rocprim::detail::radix_key_codec_inplace<T, true>;
+    using codec_t = rocprim::detail::radix_key_codec<T, true>;
 
     T value{12, 34};
 

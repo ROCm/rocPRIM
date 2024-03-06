@@ -877,7 +877,7 @@ private:
                                                  unsigned int  end_bit,
                                                  Decomposer    decomposer)
     {
-        using key_codec = ::rocprim::detail::radix_key_codec_inplace<Key, Descending>;
+        using key_codec = ::rocprim::detail::radix_key_codec<Key, Descending>;
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)

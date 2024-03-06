@@ -28,8 +28,8 @@
 #include "../../detail/various.hpp"
 #include "../../detail/radix_sort.hpp"
 
-#include "../../intrinsics.hpp"
 #include "../../functional.hpp"
+#include "../../intrinsics.hpp"
 #include "../../types.hpp"
 
 #include "../../block/block_discontinuity.hpp"
@@ -135,7 +135,7 @@ struct radix_digit_count_helper
 
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
-        using key_codec = radix_key_codec<key_type, Descending>;
+        using key_codec    = ::rocprim::detail::radix_key_codec<key_type, Descending>;
         using bit_key_type = typename key_codec::bit_key_type;
 
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
@@ -244,7 +244,7 @@ struct radix_sort_single_helper
 
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
-        using key_codec = radix_key_codec_inplace<key_type, Descending>;
+        using key_codec = radix_key_codec<key_type, Descending>;
 
         key_type keys[ItemsPerThread];
         value_type values[ItemsPerThread];
@@ -324,7 +324,7 @@ struct radix_sort_and_scatter_helper
     using key_type = Key;
     using value_type = Value;
 
-    using key_codec = radix_key_codec<key_type, Descending>;
+    using key_codec      = ::rocprim::detail::radix_key_codec<key_type, Descending>;
     using bit_key_type = typename key_codec::bit_key_type;
     using keys_load_type = ::rocprim::block_load<
         key_type, BlockSize, ItemsPerThread,
@@ -627,7 +627,7 @@ struct radix_merge_compare<Descending, true, T, Decomposer>
 
     ROCPRIM_HOST_DEVICE bool operator()(T lhs, T rhs) const
     {
-        using codec_t = radix_key_codec_inplace<T, Descending>;
+        using codec_t = radix_key_codec<T, Descending>;
 
         // Encoding the values considers the ascending / descending nature of the sort
         codec_t::encode_inplace(lhs, decomposer_);
@@ -691,7 +691,7 @@ struct onesweep_histograms_helper
         = radix_size * max_digit_places * atomic_stripes;
 
     using counter_type = uint32_t;
-    using key_codec    = radix_key_codec_inplace<KeyType, Descending>;
+    using key_codec    = radix_key_codec<KeyType, Descending>;
 
     struct storage_type
     {
@@ -948,7 +948,7 @@ struct onesweep_iteration_helper
     static constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
     static constexpr bool         with_values = !std::is_same<Value, rocprim::empty_type>::value;
 
-    using key_codec       = radix_key_codec_inplace<Key, Descending>;
+    using key_codec       = radix_key_codec<Key, Descending>;
     using radix_rank_type = ::rocprim::block_radix_rank<BlockSize, RadixBits, RadixRankAlgorithm>;
 
     static constexpr bool load_warp_striped
