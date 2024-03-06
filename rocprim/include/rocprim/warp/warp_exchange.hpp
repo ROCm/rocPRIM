@@ -99,6 +99,7 @@ class warp_exchange
                                                U (&output)[ItemsPerThread],
                                                const int xor_bit_set)
     {
+        // To prevent double work for IdX and IdX + NumEntries
         if(NumEntries != 0 && (IdX / NumEntries) % 2 == 0)
         {
             const T send_val = (xor_bit_set ? input[IdX] : input[IdX + NumEntries]);
@@ -114,6 +115,8 @@ class warp_exchange
                                                const std::integer_sequence<int, Ids...>,
                                                const bool xor_bit_set)
     {
+        // To create a static inner loop that executes the code with
+        // the values [0, 1, ..., ItemsPerThread-1, ItemsPerThread] as IdX
         int ignored[] = {((Foreach<NumEntries, Ids>(input, output, xor_bit_set)), 0)...};
         (void)ignored;
     }
@@ -124,6 +127,8 @@ class warp_exchange
                                                      const unsigned int lane_id,
                                                      const std::integer_sequence<int, Iter...>)
     {
+        // To create a static outer loop that executes the code with
+        // the values [ItemsPerThread/2, ItemsPerThread/4, ..., 1, 0] as NumEntries
         int ignored[]
             = {(Foreach<(1 << (MaxIter - Iter))>(input,
                                                  output,
