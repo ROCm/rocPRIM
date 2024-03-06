@@ -49,6 +49,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \tparam ItemsPerThread - the number of items contributed by each thread.
 /// \tparam Value - the value type. Default type empty_type indicates
 /// a keys-only sort.
+/// \tparam RadixBitsPerPass - amount of bits to sort per pass. The Default is 4.
 ///
 /// \par Overview
 /// * \p Key type must be an arithmetic type (that is, an integral type or a floating-point
@@ -86,22 +87,20 @@ BEGIN_ROCPRIM_NAMESPACE
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class Key,
-    unsigned int BlockSizeX,
-    unsigned int ItemsPerThread,
-    class Value = empty_type,
-    unsigned int BlockSizeY = 1,
-    unsigned int BlockSizeZ = 1
->
+template<class Key,
+         unsigned int BlockSizeX,
+         unsigned int ItemsPerThread,
+         class Value                   = empty_type,
+         unsigned int BlockSizeY       = 1,
+         unsigned int BlockSizeZ       = 1,
+         unsigned int RadixBitsPerPass = 4>
 class block_radix_sort
 {
     static constexpr unsigned int BlockSize           = BlockSizeX * BlockSizeY * BlockSizeZ;
     static constexpr bool         with_values         = !std::is_same<Value, empty_type>::value;
-    static constexpr unsigned int radix_bits_per_pass = 4;
 
     using block_rank_type = ::rocprim::block_radix_rank<BlockSizeX,
-                                                        radix_bits_per_pass,
+                                                        RadixBitsPerPass,
                                                         block_radix_rank_algorithm::basic_memoize,
                                                         BlockSizeY,
                                                         BlockSizeZ>;
@@ -884,7 +883,7 @@ private:
 
         while(true)
         {
-            const int pass_bits = min(radix_bits_per_pass, end_bit - begin_bit);
+            const int pass_bits = min(RadixBitsPerPass, end_bit - begin_bit);
 
             unsigned int ranks[ItemsPerThread];
             block_rank_type().rank_keys(
@@ -893,7 +892,7 @@ private:
                 storage.get().rank,
                 [begin_bit, pass_bits, decomposer](const Key& key) mutable
                 { return key_codec::extract_digit(key, begin_bit, pass_bits, decomposer); });
-            begin_bit += radix_bits_per_pass;
+            begin_bit += RadixBitsPerPass;
 
             exchange_keys(storage, keys, ranks);
             exchange_values(storage, values, ranks);
@@ -976,18 +975,6 @@ private:
         (void) values;
     }
 };
-
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-template<class Key,
-         unsigned int BlockSizeX,
-         unsigned int ItemsPerThread,
-         class Value,
-         unsigned int BlockSizeY,
-         unsigned int BlockSizeZ>
-constexpr unsigned int
-    block_radix_sort<Key, BlockSizeX, ItemsPerThread, Value, BlockSizeY, BlockSizeZ>::
-        radix_bits_per_pass;
-#endif
 
 END_ROCPRIM_NAMESPACE
 
