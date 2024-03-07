@@ -28,6 +28,7 @@ Documentation for rocPRIM is available at
   It can be instantiated with:
   * `rocprim::make_predicate_iterator`
   * `rocprim::make_mask_iterator`
+* Added custom radix sizes as the last parameter for `block_radix_sort`. The default value is 4, it can be a number between 0 and 32.
 
 ### Optimizations
 
