@@ -40,19 +40,17 @@ static constexpr unsigned int end_radix[n_sizes] = {
     0, 0, 0, 10, 11, 12, 0, 0, 0, 10, 11, 12
 };
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class key_type
->
-__global__
-__launch_bounds__(BlockSize)
-void sort_key_kernel(
-    key_type* device_keys_output,
-    bool to_striped,
-    bool descending,
-    unsigned int start_bit,
-    unsigned int end_bit)
+static constexpr unsigned int bits_per_pass_radix[n_sizes] = {4, 3, 1, 1, 3, 4, 4, 3, 1, 1, 3, 4};
+
+template<unsigned int BlockSize,
+         unsigned int ItemsPerThread,
+         unsigned int RadixBitsPerPass,
+         class key_type>
+__global__ __launch_bounds__(BlockSize) void sort_key_kernel(key_type*    device_keys_output,
+                                                             bool         to_striped,
+                                                             bool         descending,
+                                                             unsigned int start_bit,
+                                                             unsigned int end_bit)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
     const unsigned int lid = threadIdx.x;
@@ -61,7 +59,14 @@ void sort_key_kernel(
     key_type keys[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_keys_output + block_offset, keys);
 
-    rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread> bsort;
+    rocprim::block_radix_sort<key_type,
+                              BlockSize,
+                              ItemsPerThread,
+                              rocprim::empty_type,
+                              1,
+                              1,
+                              RadixBitsPerPass>
+        bsort;
 
     test_utils::select_decomposer_t<key_type> decomposer{};
 
@@ -93,21 +98,17 @@ void sort_key_kernel(
     }
 }
 
-template<
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    class key_type,
-    class value_type
->
-__global__
-__launch_bounds__(BlockSize)
-void sort_key_value_kernel(
-    key_type* device_keys_output,
-    value_type* device_values_output,
-    bool to_striped,
-    bool descending,
-    unsigned int start_bit,
-    unsigned int end_bit)
+template<unsigned int BlockSize,
+         unsigned int ItemsPerThread,
+         unsigned int RadixBitsPerPass,
+         class key_type,
+         class value_type>
+__global__ __launch_bounds__(BlockSize) void sort_key_value_kernel(key_type*   device_keys_output,
+                                                                   value_type* device_values_output,
+                                                                   bool        to_striped,
+                                                                   bool        descending,
+                                                                   unsigned int start_bit,
+                                                                   unsigned int end_bit)
 {
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
     const unsigned int lid = threadIdx.x;
@@ -118,7 +119,9 @@ void sort_key_value_kernel(
     rocprim::block_load_direct_blocked(lid, device_keys_output + block_offset, keys);
     rocprim::block_load_direct_blocked(lid, device_values_output + block_offset, values);
 
-    rocprim::block_radix_sort<key_type, BlockSize, ItemsPerThread, value_type> bsort;
+    rocprim::
+        block_radix_sort<key_type, BlockSize, ItemsPerThread, value_type, 1, 1, RadixBitsPerPass>
+                                                                               bsort;
     test_utils::select_decomposer_t<key_type>                                  decomposer{};
     if(to_striped)
     {
@@ -151,28 +154,27 @@ void sort_key_value_kernel(
 }
 
 // Test for radix sort
-template<
-    class Key,
-    class Value,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    bool Descending = false,
-    bool ToStriped = false,
-    unsigned int StartBit = 0,
-    unsigned int EndBit = sizeof(Key) * 8
->
-auto test_block_radix_sort()
--> typename std::enable_if<Method == 0>::type
+template<class Key,
+         class Value,
+         unsigned int Method,
+         unsigned int BlockSize,
+         unsigned int ItemsPerThread,
+         unsigned int RadixBitsPerPass,
+         bool         Descending = false,
+         bool         ToStriped  = false,
+         unsigned int StartBit   = 0,
+         unsigned int EndBit     = sizeof(Key) * 8>
+auto test_block_radix_sort() -> typename std::enable_if<Method == 0>::type
 {
-    using key_type = Key;
-    static constexpr size_t block_size = BlockSize;
-    static constexpr size_t items_per_thread = ItemsPerThread;
-    static constexpr bool descending = Descending;
-    static constexpr bool to_striped = ToStriped;
-    static constexpr unsigned int start_bit        = StartBit;
-    static constexpr unsigned int end_bit          = EndBit;
-    static constexpr size_t items_per_block = block_size * items_per_thread;
+    using key_type                                    = Key;
+    static constexpr size_t       block_size          = BlockSize;
+    static constexpr size_t       items_per_thread    = ItemsPerThread;
+    static constexpr unsigned     radix_bits_per_pass = RadixBitsPerPass;
+    static constexpr bool         descending          = Descending;
+    static constexpr bool         to_striped          = ToStriped;
+    static constexpr unsigned int start_bit           = StartBit;
+    static constexpr unsigned int end_bit             = EndBit;
+    static constexpr size_t       items_per_block     = block_size * items_per_thread;
 
     // Given block size not supported
     if(block_size > test_utils::get_max_block_size())
@@ -225,7 +227,7 @@ auto test_block_radix_sort()
                             size * sizeof(keys_output[0]),
                             hipMemcpyHostToDevice));
 
-        sort_key_kernel<block_size, items_per_thread, key_type>
+        sort_key_kernel<block_size, items_per_thread, radix_bits_per_pass, key_type>
             <<<dim3(grid_size), dim3(block_size), 0, 0>>>(device_keys_output,
                                                           to_striped,
                                                           descending,
@@ -250,28 +252,29 @@ auto test_block_radix_sort()
 
 }
 
-template<
-    class Key,
-    class Value,
-    unsigned int Method,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    bool Descending = false,
-    bool ToStriped = false,
-    unsigned int StartBit = 0,
-    unsigned int EndBit = sizeof(Key) * 8
->
-auto test_block_radix_sort()
--> typename std::enable_if<Method == 1>::type
+template<class Key,
+         class Value,
+         unsigned int Method,
+         unsigned int BlockSize,
+         unsigned int ItemsPerThread,
+         unsigned int RadixBitsPerPass,
+         bool         Descending = false,
+         bool         ToStriped  = false,
+         unsigned int StartBit   = 0,
+         unsigned int EndBit     = sizeof(Key) * 8>
+auto test_block_radix_sort() -> typename std::enable_if<Method == 1>::type
 {
-    using key_type = Key;
-    using value_type = Value;
-    static constexpr size_t block_size = BlockSize;
-    static constexpr size_t items_per_thread = ItemsPerThread;
-    static constexpr bool descending = Descending;
-    static constexpr bool to_striped = ToStriped;
-    static constexpr unsigned int start_bit = (rocprim::is_unsigned<Key>::value == false) ? 0 : StartBit;
-    static constexpr unsigned int end_bit = (rocprim::is_unsigned<Key>::value == false) ? sizeof(Key) * 8 : EndBit;
+    using key_type                                    = Key;
+    using value_type                                  = Value;
+    static constexpr size_t       block_size          = BlockSize;
+    static constexpr size_t       items_per_thread    = ItemsPerThread;
+    static constexpr unsigned     radix_bits_per_pass = RadixBitsPerPass;
+    static constexpr bool         descending          = Descending;
+    static constexpr bool         to_striped          = ToStriped;
+    static constexpr unsigned int start_bit
+        = (rocprim::is_unsigned<Key>::value == false) ? 0 : StartBit;
+    static constexpr unsigned int end_bit
+        = (rocprim::is_unsigned<Key>::value == false) ? sizeof(Key) * 8 : EndBit;
     static constexpr size_t items_per_block = block_size * items_per_thread;
 
     // Given block size not supported
@@ -352,7 +355,11 @@ auto test_block_radix_sort()
         );
 
         // Running kernel
-        sort_key_value_kernel<block_size, items_per_thread, key_type, value_type>
+        sort_key_value_kernel<block_size,
+                              items_per_thread,
+                              radix_bits_per_pass,
+                              key_type,
+                              value_type>
             <<<dim3(grid_size), dim3(block_size), 0, 0>>>(device_keys_output,
                                                           device_values_output,
                                                           to_striped,
@@ -402,7 +409,16 @@ struct static_for
 
     static void run()
     {
-        test_block_radix_sort<T, U, Method, BlockSize, items_radix[First], desc_radix[First], striped_radix[First], start_radix[First], end>();
+        test_block_radix_sort<T,
+                              U,
+                              Method,
+                              BlockSize,
+                              items_radix[First],
+                              bits_per_pass_radix[First],
+                              desc_radix[First],
+                              striped_radix[First],
+                              start_radix[First],
+                              end>();
         static_for<First + 1, Last, T, U, Method, BlockSize>::run();
     }
 };
