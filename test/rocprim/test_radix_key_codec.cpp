@@ -22,8 +22,12 @@
 
 #include "../common_test_header.hpp"
 
+#include <rocprim/detail/various.hpp>
 #include <rocprim/device/detail/device_radix_sort.hpp>
+#include <rocprim/test_utils.hpp>
+#include <rocprim/test_utils_assertions.hpp>
 #include <rocprim/test_utils_custom_test_types.hpp>
+#include <rocprim/test_utils_data_generation.hpp>
 #include <rocprim/test_utils_sort_comparator.hpp>
 #include <rocprim/thread/radix_key_codec.hpp>
 #include <rocprim/types/tuple.hpp>
@@ -31,6 +35,7 @@
 #include <gtest/gtest-typed-test.h>
 #include <gtest/internal/gtest-type-util.h>
 
+#include <algorithm>
 #include <ios>
 #include <ostream>
 #include <sstream>
@@ -271,5 +276,176 @@ TYPED_TEST(RadixMergeCompareTest, MidRange)
         const custom_large_key lhs{3, 2, 3, 4};
         const custom_large_key rhs{4, 2, 3, 11};
         EXPECT_FALSE(comparator(lhs, rhs));
+    }
+}
+
+template<class Params>
+struct TypedRadixKeyCodecTest : public ::testing::Test
+{
+    using params = Params;
+};
+
+template<class KeyType, unsigned int StartBit = 0, unsigned int RadixBits = 8>
+struct TypedRadixKeyCodecTestParams
+{
+    using Key                                = KeyType;
+    static constexpr unsigned int start_bit  = StartBit;
+    static constexpr unsigned int radix_bits = RadixBits;
+};
+
+template<class T>
+struct custom_test_type_decomposer
+{
+    auto operator()(test_utils::custom_test_type<T>& value) const
+    {
+        return ::rocprim::tuple<T&, T&>{value.x, value.y};
+    }
+};
+
+using TypedRadixKeyCodecTestTypes
+    = ::testing::Types<TypedRadixKeyCodecTestParams<int8_t>,
+                       TypedRadixKeyCodecTestParams<uint8_t>,
+                       TypedRadixKeyCodecTestParams<char>,
+                       TypedRadixKeyCodecTestParams<signed char>,
+                       TypedRadixKeyCodecTestParams<int16_t>,
+                       TypedRadixKeyCodecTestParams<uint16_t>,
+                       TypedRadixKeyCodecTestParams<short>,
+                       TypedRadixKeyCodecTestParams<unsigned short>,
+                       TypedRadixKeyCodecTestParams<int>,
+                       TypedRadixKeyCodecTestParams<unsigned int>,
+                       TypedRadixKeyCodecTestParams<long long>,
+                       TypedRadixKeyCodecTestParams<rocprim::half>,
+                       TypedRadixKeyCodecTestParams<rocprim::bfloat16>,
+                       TypedRadixKeyCodecTestParams<float>,
+                       TypedRadixKeyCodecTestParams<double>>;
+
+TYPED_TEST_SUITE(TypedRadixKeyCodecTest, TypedRadixKeyCodecTestTypes);
+
+template<bool Descending, class Key, class Decomposer>
+void encode_then_decode_test(Key key, Decomposer decomposer)
+{
+    using codec_t = ::rocprim::radix_key_codec<Key, Descending>;
+    using BitKey  = typename codec_t::bit_key_type;
+
+    BitKey bit_key = codec_t::encode(key, decomposer);
+    codec_t::encode_inplace(key, decomposer);
+
+    Key decoded_key = codec_t::decode(bit_key, decomposer);
+    codec_t::decode_inplace(key, decomposer);
+
+    test_utils::assert_eq(decoded_key, key);
+}
+
+template<class Key, class Decomposer = ::rocprim::identity_decomposer>
+void encode_then_decode_test(Key key, Decomposer decomposer = {})
+{
+    encode_then_decode_test<true>(key, decomposer); /*decreasing sort*/
+    encode_then_decode_test<false>(key, decomposer); /*increasing sort*/
+}
+
+template<bool Descending, class Key, class Decomposer>
+void encode_then_extract_test(Key                key,
+                              const unsigned int start_bit,
+                              const unsigned int radix_bits,
+                              Decomposer         decomposer)
+{
+    using codec_t = ::rocprim::radix_key_codec<Key, Descending>;
+    using BitKey  = typename codec_t::bit_key_type;
+
+    BitKey bit_key = codec_t::encode(key, decomposer);
+    codec_t::encode_inplace(key, decomposer);
+
+    const unsigned int bits = codec_t::extract_digit(bit_key, start_bit, radix_bits);
+    const unsigned int inplace_bits
+        = codec_t::extract_digit(key, start_bit, radix_bits, decomposer);
+
+    test_utils::assert_eq(bits, inplace_bits);
+}
+
+template<class Key, class Decomposer = ::rocprim::identity_decomposer>
+void encode_then_extract_test(Key                key,
+                              const unsigned int start_bit,
+                              const unsigned int radix_bits,
+                              Decomposer         decomposer = {})
+{
+    encode_then_extract_test<true>(key, start_bit, radix_bits, decomposer); /*decreasing sort*/
+    encode_then_extract_test<false>(key, start_bit, radix_bits, decomposer); /*increasing sort*/
+}
+
+template<bool Descending, class Key, class Decomposer>
+void encode_then_extract_test_custom(Key                key,
+                                     const unsigned int start_bit,
+                                     const unsigned int radix_bits,
+                                     Decomposer         decomposer)
+{
+    using codec_t = ::rocprim::radix_key_codec<Key, Descending>;
+    using BitKey  = typename codec_t::bit_key_type;
+
+    BitKey bit_key = codec_t::encode(key, decomposer);
+    codec_t::encode_inplace(key, decomposer);
+
+    const unsigned int bits = codec_t::extract_digit(bit_key, start_bit, radix_bits, decomposer);
+    const unsigned int inplace_bits
+        = codec_t::extract_digit(key, start_bit, radix_bits, decomposer);
+
+    test_utils::assert_eq(bits, inplace_bits);
+}
+
+template<class Key, class Decomposer = ::rocprim::identity_decomposer>
+void encode_then_extract_test_custom(Key                key,
+                                     const unsigned int start_bit,
+                                     const unsigned int radix_bits,
+                                     Decomposer         decomposer = {})
+{
+    encode_then_extract_test_custom<true>(key,
+                                          start_bit,
+                                          radix_bits,
+                                          decomposer); /*decreasing sort*/
+    encode_then_extract_test_custom<false>(key,
+                                           start_bit,
+                                           radix_bits,
+                                           decomposer); /*increasing sort*/
+}
+
+TYPED_TEST(TypedRadixKeyCodecTest, EncodeDecodeExtract)
+{
+    using params                      = typename TestFixture::params;
+    using Key                         = typename params::Key;
+    using CustomKey                   = typename test_utils::custom_test_type<Key>;
+    using CustomDecomposer            = custom_test_type_decomposer<Key>;
+    constexpr unsigned int start_bit  = params::start_bit;
+    constexpr unsigned int radix_bits = params::radix_bits;
+
+    CustomDecomposer custom_decomposer{};
+
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    {
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
+
+        const size_t     size = (1 << 20) + 123;
+        std::vector<Key> input_keys
+            = test_utils::get_random_data<Key>(size,
+                                               test_utils::numeric_limits<Key>::min(),
+                                               test_utils::numeric_limits<Key>::max(),
+                                               seed_value);
+
+        for(size_t i = 0; i < size; ++i)
+        {
+            SCOPED_TRACE(testing::Message() << "with index = " << i);
+
+            encode_then_decode_test(input_keys[i]);
+
+            encode_then_extract_test(input_keys[i], start_bit, radix_bits);
+
+            // With custom types
+            encode_then_decode_test(CustomKey(input_keys[i]), custom_decomposer);
+
+            encode_then_extract_test_custom(CustomKey(input_keys[i]),
+                                            start_bit,
+                                            radix_bits,
+                                            custom_decomposer);
+        }
     }
 }
