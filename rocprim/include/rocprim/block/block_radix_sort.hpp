@@ -96,6 +96,10 @@ template<class Key,
          unsigned int RadixBitsPerPass = 4>
 class block_radix_sort
 {
+    static_assert(RadixBitsPerPass > 0 && RadixBitsPerPass < 32,
+                  "The RadixBitsPerPass should be larger than 0 and smaller than the size "
+                  "of an unsigned int");
+
     static constexpr unsigned int BlockSize           = BlockSizeX * BlockSizeY * BlockSizeZ;
     static constexpr bool         with_values         = !std::is_same<Value, empty_type>::value;
 
