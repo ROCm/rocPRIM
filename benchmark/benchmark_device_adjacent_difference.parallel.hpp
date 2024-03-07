@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2019-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -65,10 +65,12 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
     {
 
         using namespace std::string_literals;
-        return bench_naming::format_name("{lvl:device,algo:adjacent_difference"
-                                         + (Left ? ""s : "_right"s) + (InPlace ? "_inplace"s : ""s)
-                                         + ",value_type:" + std::string(Traits<T>::name())
-                                         + ",cfg:" + config_name<Config>() + "}");
+        bench_naming adj_diff_bench_naming;
+        adj_diff_bench_naming.set_format("json");
+        return adj_diff_bench_naming.format_name(
+            "{lvl:device,algo:adjacent_difference" + (Left ? ""s : "_right"s)
+            + (InPlace ? "_inplace"s : ""s) + ",value_type:" + std::string(Traits<T>::name())
+            + ",cfg:" + config_name<Config>() + "}");
     }
 
     static constexpr unsigned int batch_size  = 10;
@@ -234,28 +236,38 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
 template<typename T, unsigned int BlockSize, bool Left, bool InPlace>
 struct device_adjacent_difference_benchmark_generator
 {
+    static constexpr unsigned int min_items_per_thread = 0;
+    static constexpr unsigned int max_items_per_thread_arg
+        = TUNING_SHARED_MEMORY_MAX / (BlockSize * sizeof(T) * 2 + sizeof(T));
 
-    template<unsigned int ItemsPerThread>
+    template<unsigned int IptValueIndex>
     struct create_ipt
     {
-        using generated_config
-            = rocprim::adjacent_difference_config<BlockSize, 1 << ItemsPerThread>;
+        // Device Adjacent difference uses block_load/store_transpose to coalesc memory transaction to global memory
+        // However it accesses shared memory with a stride of items per thread, which leads to reduced performance if power
+        // of two is used for small types. Experiments shown that primes are the best choice for performance.
+        static constexpr int  primes[] = {1,  2,  3,  5,  7,  11, 13, 17, 19, 23, 29, 31, 37,
+                                          41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
+        static constexpr uint ipt_num  = primes[IptValueIndex];
+        using generated_config         = rocprim::adjacent_difference_config<BlockSize, ipt_num>;
 
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
         {
-            storage.emplace_back(
-                std::make_unique<
-                    device_adjacent_difference_benchmark<T, Left, InPlace, generated_config>>());
+            if(ipt_num < max_items_per_thread_arg)
+            {
+                storage.emplace_back(
+                    std::make_unique<device_adjacent_difference_benchmark<T,
+                                                                          Left,
+                                                                          InPlace,
+                                                                          generated_config>>());
+            }
         }
     };
 
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
-        static constexpr unsigned int min_items_per_thread = 1;
-        static constexpr unsigned int max_items_per_thread_arg
-            = TUNING_SHARED_MEMORY_MAX / (BlockSize * sizeof(T) * 2 + sizeof(T));
         static constexpr unsigned int max_items_per_thread
-            = rocprim::Log2<max_items_per_thread_arg>::VALUE - 1;
+            = rocprim::Log2<max_items_per_thread_arg>::VALUE;
         static_for_each<make_index_range<unsigned int, min_items_per_thread, max_items_per_thread>,
                         create_ipt>(storage);
     }

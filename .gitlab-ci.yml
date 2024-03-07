@@ -254,7 +254,7 @@ build:benchmark:
       -D BUILD_EXAMPLE=OFF
       -D BUILD_BENCHMARK=ON
       -D GPU_TARGETS=$GPU_TARGETS
-    - cmake --build .
+    - cmake --build . -t benchmark_device_adjacent_difference
   artifacts:
     paths:
       - $BUILD_DIR/benchmark/*
