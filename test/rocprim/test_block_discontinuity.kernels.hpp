@@ -75,17 +75,18 @@ void flag_heads_kernel(Type* device_input, long long* device_heads)
     Type input[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_input + block_offset, input);
 
-    rocprim::block_discontinuity<Type, BlockSize> bdiscontinuity;
+    rocprim::block_discontinuity<Type, BlockSize>              bdiscontinuity;
+    __shared__ typename decltype(bdiscontinuity)::storage_type storage;
 
     FlagType head_flags[ItemsPerThread];
     if(blockIdx.x % 2 == 1)
     {
         const Type tile_predecessor_item = device_input[block_offset - 1];
-        bdiscontinuity.flag_heads(head_flags, tile_predecessor_item, input, FlagOpType());
+        bdiscontinuity.flag_heads(head_flags, tile_predecessor_item, input, FlagOpType(), storage);
     }
     else
     {
-        bdiscontinuity.flag_heads(head_flags, input, FlagOpType());
+        bdiscontinuity.flag_heads(head_flags, input, FlagOpType(), storage);
     }
 
     rocprim::block_store_direct_blocked(lid, device_heads + block_offset, head_flags);
@@ -109,17 +110,18 @@ void flag_tails_kernel(Type* device_input, long long* device_tails)
     Type input[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_input + block_offset, input);
 
-    rocprim::block_discontinuity<Type, BlockSize> bdiscontinuity;
+    rocprim::block_discontinuity<Type, BlockSize>              bdiscontinuity;
+    __shared__ typename decltype(bdiscontinuity)::storage_type storage;
 
     FlagType tail_flags[ItemsPerThread];
     if(blockIdx.x % 2 == 0)
     {
         const Type tile_successor_item = device_input[block_offset + items_per_block];
-        bdiscontinuity.flag_tails(tail_flags, tile_successor_item, input, FlagOpType());
+        bdiscontinuity.flag_tails(tail_flags, tile_successor_item, input, FlagOpType(), storage);
     }
     else
     {
-        bdiscontinuity.flag_tails(tail_flags, input, FlagOpType());
+        bdiscontinuity.flag_tails(tail_flags, input, FlagOpType(), storage);
     }
 
     rocprim::block_store_direct_blocked(lid, device_tails + block_offset, tail_flags);
@@ -143,29 +145,46 @@ void flag_heads_and_tails_kernel(Type* device_input, long long* device_heads, lo
     Type input[ItemsPerThread];
     rocprim::block_load_direct_blocked(lid, device_input + block_offset, input);
 
-    rocprim::block_discontinuity<Type, BlockSize> bdiscontinuity;
+    rocprim::block_discontinuity<Type, BlockSize>              bdiscontinuity;
+    __shared__ typename decltype(bdiscontinuity)::storage_type storage;
 
     FlagType head_flags[ItemsPerThread];
     FlagType tail_flags[ItemsPerThread];
     if(blockIdx.x % 4 == 0)
     {
         const Type tile_successor_item = device_input[block_offset + items_per_block];
-        bdiscontinuity.flag_heads_and_tails(head_flags, tail_flags, tile_successor_item, input, FlagOpType());
+        bdiscontinuity.flag_heads_and_tails(head_flags,
+                                            tail_flags,
+                                            tile_successor_item,
+                                            input,
+                                            FlagOpType(),
+                                            storage);
     }
     else if(blockIdx.x % 4 == 1)
     {
         const Type tile_predecessor_item = device_input[block_offset - 1];
-        const Type tile_successor_item = device_input[block_offset + items_per_block];
-        bdiscontinuity.flag_heads_and_tails(head_flags, tile_predecessor_item, tail_flags, tile_successor_item, input, FlagOpType());
+        const Type tile_successor_item   = device_input[block_offset + items_per_block];
+        bdiscontinuity.flag_heads_and_tails(head_flags,
+                                            tile_predecessor_item,
+                                            tail_flags,
+                                            tile_successor_item,
+                                            input,
+                                            FlagOpType(),
+                                            storage);
     }
     else if(blockIdx.x % 4 == 2)
     {
         const Type tile_predecessor_item = device_input[block_offset - 1];
-        bdiscontinuity.flag_heads_and_tails(head_flags, tile_predecessor_item, tail_flags, input, FlagOpType());
+        bdiscontinuity.flag_heads_and_tails(head_flags,
+                                            tile_predecessor_item,
+                                            tail_flags,
+                                            input,
+                                            FlagOpType(),
+                                            storage);
     }
     else if(blockIdx.x % 4 == 3)
     {
-        bdiscontinuity.flag_heads_and_tails(head_flags, tail_flags, input, FlagOpType());
+        bdiscontinuity.flag_heads_and_tails(head_flags, tail_flags, input, FlagOpType(), storage);
     }
 
     rocprim::block_store_direct_blocked(lid, device_heads + block_offset, head_flags);
