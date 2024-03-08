@@ -184,13 +184,14 @@ typedef ::testing::Types<
     block_param_type(int8_t, bool)
 > BlockDiscParamsIntegral;
 
-typedef ::testing::Types<block_param_type(float, long),
-                         block_param_type(double, unsigned int),
-                         block_param_type(rocprim::half, int),
+typedef ::testing::Types<block_param_type(float, long), block_param_type(double, unsigned int)>
+    BlockDiscParamsFloating;
+
+typedef ::testing::Types<block_param_type(rocprim::half, int),
                          block_param_type(rocprim::half, rocprim::half),
                          block_param_type(rocprim::bfloat16, int),
                          block_param_type(rocprim::bfloat16, rocprim::bfloat16)>
-    BlockDiscParamsFloating;
+    BlockDiscParamsFloatingHalf;
 
 typedef ::testing::Types<block_param_type(unsigned int, unsigned int),
                          block_param_type(int8_t, unsigned int),

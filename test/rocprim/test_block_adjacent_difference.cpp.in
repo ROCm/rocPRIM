@@ -53,6 +53,13 @@ struct Floating;
 #define warp_params BlockDiscParamsFloating
 #define name_suffix Floating
 
+#elif ROCPRIM_TEST_SLICE == 2
+
+struct FloatingHalf;
+#define suite_name RocprimBlockAdjacentDifference
+#define warp_params BlockDiscParamsFloatingHalf
+#define name_suffix FloatingHalf
+
 #endif
 
 #include "test_block_adjacent_difference.hpp"

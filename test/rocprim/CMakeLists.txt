@@ -227,7 +227,7 @@ add_rocprim_test("rocprim.basic_test" "test_basic.cpp;detail/get_rocprim_version
 add_rocprim_test("rocprim.arg_index_iterator" test_arg_index_iterator.cpp)
 add_rocprim_test("rocprim.temporary_storage_partitioning" test_temporary_storage_partitioning.cpp)
 add_rocprim_test_parallel("rocprim.block_adjacent_difference" test_block_adjacent_difference.cpp.in)
-add_rocprim_test("rocprim.block_discontinuity" test_block_discontinuity.cpp)
+add_rocprim_test_parallel("rocprim.block_discontinuity" test_block_discontinuity.cpp.in)
 add_rocprim_test("rocprim.block_exchange" test_block_exchange.cpp)
 add_rocprim_test("rocprim.block_histogram" test_block_histogram.cpp)
 add_rocprim_test("rocprim.block_load_store" test_block_load_store.cpp)

@@ -37,20 +37,29 @@
 // Start stamping out tests
 struct RocprimBlockDiscontinuity;
 
+#cmakedefine ROCPRIM_TEST_SLICE @ROCPRIM_TEST_SLICE@
+
+#if   ROCPRIM_TEST_SLICE == 0
+
 struct Integral;
 #define suite_name RocprimBlockDiscontinuity
 #define warp_params BlockDiscParamsIntegral
 #define name_suffix Integral
 
-#include "test_block_discontinuity.hpp"
-
-#undef suite_name
-#undef warp_params
-#undef name_suffix
+#elif ROCPRIM_TEST_SLICE == 1
 
 struct Floating;
 #define suite_name RocprimBlockDiscontinuity
 #define warp_params BlockDiscParamsFloating
 #define name_suffix Floating
+
+#elif ROCPRIM_TEST_SLICE == 2
+
+struct FloatingHalf;
+#define suite_name RocprimBlockDiscontinuity
+#define warp_params BlockDiscParamsFloatingHalf
+#define name_suffix FloatingHalf
+
+#endif
 
 #include "test_block_discontinuity.hpp"
