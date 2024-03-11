@@ -140,27 +140,21 @@ template<typename T>
 struct select_plus_operator_host
 {
     typedef ::rocprim::plus<T> type;
-    typedef T acc_type;
-    // #156 temporarily disable half test due to known issue with converting from double to half
-    //      cast_type is the type that should be used to cast acc_type to T.
-    //      overload needed temporarily due to compiler bug in half conversions
-    typedef T cast_type;
+    typedef T                  acc_type;
 };
 
 template<>
 struct select_plus_operator_host<::rocprim::half>
 {
     typedef ::rocprim::plus<double> type;
-    typedef double acc_type;
-    typedef float                   cast_type;
+    typedef double                  acc_type;
 };
 
 template<>
 struct select_plus_operator_host<::rocprim::bfloat16>
 {
     typedef ::rocprim::plus<double> type;
-    typedef double acc_type;
-    typedef ::rocprim::bfloat16     cast_type;
+    typedef double                  acc_type;
 };
 
 template<class InputIt, class T,
