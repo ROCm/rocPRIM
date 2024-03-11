@@ -237,9 +237,6 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
     using custom_int_type = custom_type<int, int>;
 
     std::vector<benchmark::internal::Benchmark*> bs = {
-        BENCHMARK_TYPE(int, 64, 1),
-        BENCHMARK_TYPE(int, 512, 1),
-
         BENCHMARK_TYPE(int, 64, 3),
         BENCHMARK_TYPE(int, 512, 3),
 
@@ -249,9 +246,6 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         BENCHMARK_TYPE(int, 256, 4),
         BENCHMARK_TYPE(int, 320, 4),
         BENCHMARK_TYPE(int, 512, 4),
-
-        BENCHMARK_TYPE(int8_t, 64, 1),
-        BENCHMARK_TYPE(int8_t, 512, 1),
 
         BENCHMARK_TYPE(int8_t, 64, 3),
         BENCHMARK_TYPE(int8_t, 512, 3),
@@ -263,9 +257,6 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         BENCHMARK_TYPE(int8_t, 320, 4),
         BENCHMARK_TYPE(int8_t, 512, 4),
 
-        BENCHMARK_TYPE(uint8_t, 64, 1),
-        BENCHMARK_TYPE(uint8_t, 512, 1),
-
         BENCHMARK_TYPE(uint8_t, 64, 3),
         BENCHMARK_TYPE(uint8_t, 512, 3),
 
@@ -275,9 +266,6 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         BENCHMARK_TYPE(uint8_t, 256, 4),
         BENCHMARK_TYPE(uint8_t, 320, 4),
         BENCHMARK_TYPE(uint8_t, 512, 4),
-
-        BENCHMARK_TYPE(rocprim::half, 64, 1),
-        BENCHMARK_TYPE(rocprim::half, 512, 1),
 
         BENCHMARK_TYPE(rocprim::half, 64, 3),
         BENCHMARK_TYPE(rocprim::half, 512, 3),
@@ -289,9 +277,6 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         BENCHMARK_TYPE(rocprim::half, 320, 4),
         BENCHMARK_TYPE(rocprim::half, 512, 4),
 
-        BENCHMARK_TYPE(long long, 64, 1),
-        BENCHMARK_TYPE(long long, 512, 1),
-
         BENCHMARK_TYPE(long long, 64, 3),
         BENCHMARK_TYPE(long long, 512, 3),
 
@@ -301,9 +286,6 @@ void add_benchmarks(benchmark_kinds benchmark_kind,
         BENCHMARK_TYPE(long long, 256, 4),
         BENCHMARK_TYPE(long long, 320, 4),
         BENCHMARK_TYPE(long long, 512, 4),
-
-        BENCHMARK_TYPE(custom_int_type, 64, 1),
-        BENCHMARK_TYPE(custom_int_type, 512, 1),
 
         BENCHMARK_TYPE(custom_int_type, 64, 3),
         BENCHMARK_TYPE(custom_int_type, 512, 3),
