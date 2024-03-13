@@ -169,7 +169,7 @@ build:cmake-minimum-apt:
       -G Ninja
       -D CMAKE_CXX_COMPILER="$AMDCLANG"
       -D CMAKE_CXX_FLAGS="-Wall -Wextra -Werror"
-      -D CMAKE_BUILD_TYPE=Release
+      -D CMAKE_BUILD_TYPE=$BUILD_TYPE
       -D BUILD_TEST=ON
       -D BUILD_EXAMPLE=ON
       -D BUILD_BENCHMARK=OFF
@@ -190,19 +190,38 @@ build:cmake-minimum-apt:
       - $BUILD_DIR/CTestTestfile.cmake
     expire_in: 2 weeks
 
+.build:common-debug:
+  extends:
+    - .build:common
+  variables:
+    BUILD_TYPE: "Debug"
+
+.build:common-release:
+  extends:
+    - .build:common
+  variables:
+    BUILD_TYPE: "Release"
+
 build:cmake-latest:
   stage: build
   needs: []
   extends:
     - .cmake-latest
-    - .build:common
+    - .build:common-release
 
-build:cmake-minimum:
+build:cmake-minimum-debug:
   stage: build
   needs: []
   extends:
     - .cmake-minimum
-    - .build:common
+    - .build:common-debug
+
+build:cmake-minimum-release:
+  stage: build
+  needs: []
+  extends:
+    - .cmake-minimum
+    - .build:common-release
 
 build:package:
   stage: build
@@ -360,7 +379,7 @@ test:
     - .rules:test
     - .gpus:rocm
   needs:
-    - build:cmake-minimum
+    - build:cmake-minimum-release
   script:
     - cd $BUILD_DIR
     - cmake
