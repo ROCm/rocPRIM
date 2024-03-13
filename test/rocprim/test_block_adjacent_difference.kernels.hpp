@@ -270,11 +270,15 @@ void flag_tails_kernel(Type* device_input, long long* device_tails)
     if(blockIdx.x % 2 == 0)
     {
         const Type tile_successor_item = device_input[block_offset + items_per_block];
-        adjacent_difference.flag_tails(tail_flags, tile_successor_item, input, FlagOpType());
+        adjacent_difference.flag_tails(tail_flags,
+                                       tile_successor_item,
+                                       input,
+                                       FlagOpType(),
+                                       storage);
     }
     else
     {
-        adjacent_difference.flag_tails(tail_flags, input, FlagOpType());
+        adjacent_difference.flag_tails(tail_flags, input, FlagOpType(), storage);
     }
     ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 
