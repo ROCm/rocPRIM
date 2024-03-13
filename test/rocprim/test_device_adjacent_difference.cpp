@@ -256,6 +256,10 @@ using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
                                    false,
                                    api_variant::alias,
                                    true>,
+    // Tests for void value_type
+    DeviceAdjacentDifferenceParams<float, float, true, api_variant::in_place, true>,
+    DeviceAdjacentDifferenceParams<float, float, true, api_variant::no_alias, true>,
+    DeviceAdjacentDifferenceParams<float, float, true, api_variant::alias, true>,
     // Tests for supported config structs
     DeviceAdjacentDifferenceParams<rocprim::bfloat16,
                                    float,
