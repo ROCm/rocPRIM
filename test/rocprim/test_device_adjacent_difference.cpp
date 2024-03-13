@@ -251,13 +251,11 @@ using RocprimDeviceAdjacentDifferenceTestsParams = ::testing::Types<
                                    true,
                                    api_variant::in_place,
                                    false>,
-    // this is changed to not use identity iterator
-    // because the function doesn't work with it, should be changed back, when fixed
     DeviceAdjacentDifferenceParams<custom_int64_array,
                                    custom_int64_array,
                                    false,
                                    api_variant::alias,
-                                   false>,
+                                   true>,
     // Tests for supported config structs
     DeviceAdjacentDifferenceParams<rocprim::bfloat16,
                                    float,
