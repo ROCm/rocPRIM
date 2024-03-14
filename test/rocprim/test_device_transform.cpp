@@ -159,10 +159,11 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
             std::transform(input.begin(), input.end(), expected.begin(), transform<U>());
 
             hipGraph_t graph;
-            hipGraphExec_t graph_instance;
-            if (TestFixture::use_graphs)
+            if(TestFixture::use_graphs)
+            {
                 graph = test_utils::createGraphHelper(stream);
-            
+            }
+
             // Run
             HIP_CHECK(
                 rocprim::transform<Config>(
@@ -172,9 +173,12 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
                 )
             );
 
-            if (TestFixture::use_graphs)
+            hipGraphExec_t graph_instance;
+            if(TestFixture::use_graphs)
+            {
                 graph_instance = graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
-            
+            }
+
             HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
@@ -278,9 +282,10 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
             );
 
             hipGraph_t graph;
-            hipGraphExec_t graph_instance;
-            if (TestFixture::use_graphs)
+            if(TestFixture::use_graphs)
+            {
                 graph = test_utils::createGraphHelper(stream);
+            }
 
             // Run
             HIP_CHECK(
@@ -291,9 +296,12 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
                 )
             );
 
-            if (TestFixture::use_graphs)
+            hipGraphExec_t graph_instance;
+            if(TestFixture::use_graphs)
+            {
                 graph_instance = graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
-            
+            }
+
             HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
 
@@ -383,16 +391,20 @@ void testLargeIndices()
             };
 
             hipGraph_t graph;
-            hipGraphExec_t graph_instance;
-            if (UseGraphs)
+            if(UseGraphs)
+            {
                 graph = test_utils::createGraphHelper(stream);
+            }
 
             // Run
             HIP_CHECK(
                 rocprim::transform(input, output, size, flag_expected, stream, debug_synchronous));
 
-            if (UseGraphs)
+            hipGraphExec_t graph_instance;
+            if(UseGraphs)
+            {
                 graph_instance = graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+            }
 
             HIP_CHECK(hipGetLastError());
             HIP_CHECK(hipDeviceSynchronize());
@@ -411,8 +423,10 @@ void testLargeIndices()
         }
     }
 
-    if (UseGraphs)
-        HIP_CHECK(hipStreamDestroy(stream));    
+    if(UseGraphs)
+    {
+        HIP_CHECK(hipStreamDestroy(stream));
+    }
 }
 
 TEST(RocprimDeviceTransformTests, LargeIndices)
