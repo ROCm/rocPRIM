@@ -200,7 +200,9 @@ typedef ::testing::Types<block_param_type(unsigned int, unsigned int),
 
 typedef ::testing::Types<block_param_type(float, long),
                          block_param_type(double, test_utils::custom_test_type<double>),
+                         block_param_type(double, int8_t),
                          block_param_type(rocprim::half, rocprim::half),
+                         block_param_type(rocprim::half, int16_t),
                          block_param_type(rocprim::bfloat16, rocprim::bfloat16)>
     BlockExchParamsFloating;
 
