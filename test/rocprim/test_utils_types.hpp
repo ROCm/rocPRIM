@@ -215,12 +215,13 @@ typedef ::testing::Types<block_param_type(float, float),
                          block_param_type(rocprim::bfloat16, unsigned long long)>
     BlockHistAtomicParamsFloating;
 
-typedef ::testing::Types<
-    block_param_type(int, uint8_t),
-    block_param_type(uint8_t, uint8_t),
-    block_param_type(short, uint8_t),
-    block_param_type(int, int8_t)
-> BlockHistSortParamsIntegral;
+typedef ::testing::Types<block_param_type(int, uint8_t),
+                         block_param_type(short, uint8_t),
+                         block_param_type(uint8_t, uint8_t),
+                         block_param_type(int, int8_t),
+                         block_param_type(short, int8_t),
+                         block_param_type(int8_t, int8_t)>
+    BlockHistSortParamsIntegral;
 
 typedef ::testing::Types<block_param_type(float, unsigned short),
                          block_param_type(float, unsigned int),
