@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,8 @@
 // CmdParser
 #include "cmdparser.hpp"
 // rocPRIM
-#include <rocprim/rocprim.hpp>
+#include <rocprim/block/block_load.hpp>
+#include <rocprim/block/block_store.hpp>
 
 #include "benchmark_utils.hpp"
 

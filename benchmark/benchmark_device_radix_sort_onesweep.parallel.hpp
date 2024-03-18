@@ -34,7 +34,7 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
-#include <rocprim/rocprim.hpp>
+#include <rocprim/device/device_radix_sort.hpp>
 
 #include "benchmark_utils.hpp"
 

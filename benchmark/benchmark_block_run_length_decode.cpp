@@ -24,9 +24,9 @@
 #include "benchmark_utils.hpp"
 #include "cmdparser.hpp"
 
-#include "rocprim/block/block_load.hpp"
-#include "rocprim/block/block_run_length_decode.hpp"
-#include "rocprim/block/block_store.hpp"
+#include <rocprim/block/block_load_func.hpp>
+#include <rocprim/block/block_run_length_decode.hpp>
+#include <rocprim/block/block_store_func.hpp>
 
 #include <random>
 #include <vector>

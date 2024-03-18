@@ -35,7 +35,7 @@
 // HIP API
 #include <hip/hip_runtime.h>
 // rocPRIM
-#include <rocprim/rocprim.hpp>
+#include <rocprim/warp/warp_scan.hpp>
 
 #include "benchmark_utils.hpp"
 

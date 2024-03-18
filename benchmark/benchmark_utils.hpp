@@ -34,7 +34,11 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
-#include <rocprim/rocprim.hpp>
+
+// rocPRIM
+#include <rocprim/block/block_scan.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/types.hpp>
 
 #define HIP_CHECK(condition)                                                                \
     {                                                                                       \

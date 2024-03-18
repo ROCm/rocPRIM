@@ -24,9 +24,10 @@
 #include "../common_test_header.hpp"
 
 // required rocprim headers
-#include <rocprim/rocprim.hpp>
 #include "../rocprim/test_seed.hpp"
 #include "../rocprim/test_utils.hpp"
+#include <rocprim/device/device_binary_search.hpp>
+#include <rocprim/device/device_merge_sort.hpp>
 
 // required STL headers
 #include <algorithm>

@@ -29,9 +29,6 @@
 // HIP API
 #include <hip/hip_runtime.h>
 
-// rocPRIM
-#include <rocprim/rocprim.hpp>
-
 // CmdParser
 #include "cmdparser.hpp"
 

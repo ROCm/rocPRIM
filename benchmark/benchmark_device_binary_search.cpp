@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2019-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,16 +30,15 @@
 // Google Benchmark
 #include "benchmark/benchmark.h"
 // CmdParser
-#include "cmdparser.hpp"
 #include "benchmark_utils.hpp"
+#include "cmdparser.hpp"
 
 // HIP API
 #include <hip/hip_runtime.h>
 
-// rocPRIM
-#include <rocprim/rocprim.hpp>
-
 #include "benchmark_device_binary_search.parallel.hpp"
+
+// rocPRIM
 #include "rocprim/device/config_types.hpp"
 
 #ifndef DEFAULT_N

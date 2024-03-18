@@ -24,8 +24,6 @@
 #include "benchmark_utils.hpp"
 #include "cmdparser.hpp"
 
-#include <rocprim/rocprim.hpp>
-
 #include <hip/hip_runtime.h>
 
 #include <iostream>
@@ -34,6 +32,11 @@
 #include <stdint.h>
 #include <utility>
 #include <vector>
+
+// rocPRIM
+#include <rocprim/device/device_copy.hpp>
+#include <rocprim/device/device_memcpy.hpp>
+#include <rocprim/device/device_memcpy_config.hpp>
 
 constexpr uint32_t warmup_size   = 5;
 constexpr int32_t  max_size      = 1024 * 1024;

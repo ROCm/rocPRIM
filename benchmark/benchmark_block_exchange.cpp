@@ -37,7 +37,9 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
-#include <rocprim/rocprim.hpp>
+#include <rocprim/block/block_exchange.hpp>
+#include <rocprim/block/block_load_func.hpp>
+#include <rocprim/block/block_store_func.hpp>
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 32;

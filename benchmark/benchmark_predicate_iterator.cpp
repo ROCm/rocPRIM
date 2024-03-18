@@ -23,12 +23,14 @@
 #include "benchmark/benchmark.h"
 #include "benchmark_utils.hpp"
 #include "cmdparser.hpp"
-#include "rocprim/iterator/predicate_iterator.hpp"
-#include "rocprim/iterator/transform_iterator.hpp"
+
 
 #include <hip/hip_runtime.h>
 
-#include <rocprim/rocprim.hpp>
+// rocPRIM
+#include <rocprim/device/device_transform.hpp>
+#include <rocprim/iterator/predicate_iterator.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
 
 #include <cstdio>
 #include <cstdlib>

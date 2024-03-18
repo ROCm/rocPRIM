@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2019-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,9 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
+#include <rocprim/block/block_load_func.hpp>
+#include <rocprim/block/block_sort.hpp>
+#include <rocprim/block/block_store_func.hpp>
 #include <rocprim/detail/various.hpp>
 
 #include "benchmark_utils.hpp"
