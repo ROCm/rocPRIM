@@ -21,7 +21,8 @@
 #ifndef ROCPRIM_DETAIL_RADIX_SORT_HPP_
 #define ROCPRIM_DETAIL_RADIX_SORT_HPP_
 
-// Moved to rocprim/thread/radix_key_codec.hpp
+ROCPRIM_PRAGMA_MESSAGE("Functionality from rocprim/detail/radix_sort.hpp has been moved to "
+                       "rocprim/thread/radix_key_codec.hpp.")
 #include "../thread/radix_key_codec.hpp"
 
 #endif // ROCPRIM_DETAIL_RADIX_SORT_HPP_
