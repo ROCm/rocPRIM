@@ -20,26 +20,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cstdio>
-#include <cstdlib>
+#include "benchmark_device_binary_search.parallel.hpp"
+
+#include "benchmark_utils.hpp"
+// CmdParser
+#include "cmdparser.hpp"
+
+// Google Benchmark
+#include <benchmark/benchmark.h>
+
+// HIP API
+#include <hip/hip_runtime.h>
+
+// rocPRIM
+#include <rocprim/device/config_types.hpp>
+
 #include <iostream>
 #include <limits>
 #include <string>
 #include <vector>
 
-// Google Benchmark
-#include "benchmark/benchmark.h"
-// CmdParser
-#include "benchmark_utils.hpp"
-#include "cmdparser.hpp"
-
-// HIP API
-#include <hip/hip_runtime.h>
-
-#include "benchmark_device_binary_search.parallel.hpp"
-
-// rocPRIM
-#include "rocprim/device/config_types.hpp"
+#include <cstdio>
+#include <cstdlib>
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 32;

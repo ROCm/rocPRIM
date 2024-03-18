@@ -20,15 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Google Benchmark
-#include "benchmark/benchmark.h"
-
-// CmdParser
 #include "benchmark_utils.hpp"
+// CmdParser
 #include "cmdparser.hpp"
+
+// Google Benchmark
+#include <benchmark/benchmark.h>
 
 // HIP API
 #include <hip/hip_runtime.h>
+
+// rocPRIM
+#include <rocprim/block/block_adjacent_difference.hpp>
+#include <rocprim/block/block_load_func.hpp>
+#include <rocprim/block/block_store_func.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -38,11 +43,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-
-// rocPRIM
-#include <rocprim/block/block_adjacent_difference.hpp>
-#include <rocprim/block/block_load_func.hpp>
-#include <rocprim/block/block_store_func.hpp>
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 128;

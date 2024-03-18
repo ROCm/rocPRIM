@@ -23,9 +23,7 @@
 #ifndef ROCPRIM_BENCHMARK_DEVICE_ADJACENT_DIFFERENCE_PARALLEL_HPP_
 #define ROCPRIM_BENCHMARK_DEVICE_ADJACENT_DIFFERENCE_PARALLEL_HPP_
 
-#include <cstddef>
-#include <string>
-#include <vector>
+#include "benchmark_utils.hpp"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -37,7 +35,10 @@
 #include <rocprim/detail/various.hpp>
 #include <rocprim/device/device_adjacent_difference.hpp>
 
-#include "benchmark_utils.hpp"
+#include <string>
+#include <vector>
+
+#include <cstddef>
 
 template<typename Config>
 std::string config_name()

@@ -23,9 +23,7 @@
 #ifndef ROCPRIM_BENCHMARK_DEVICE_REDUCE_PARALLEL_HPP_
 #define ROCPRIM_BENCHMARK_DEVICE_REDUCE_PARALLEL_HPP_
 
-#include <cstddef>
-#include <string>
-#include <vector>
+#include "benchmark_utils.hpp"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -36,7 +34,10 @@
 // rocPRIM HIP API
 #include <rocprim/device/device_reduce.hpp>
 
-#include "benchmark_utils.hpp"
+#include <string>
+#include <vector>
+
+#include <cstddef>
 
 constexpr const char* get_reduce_method_name(rocprim::block_reduce_algorithm alg)
 {

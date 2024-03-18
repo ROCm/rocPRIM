@@ -20,23 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <iostream>
-
-#include <vector>
-#include <limits>
-#include <string>
-#include <cstdio>
-#include <cstdlib>
-
-// Google Benchmark
-#include "benchmark/benchmark.h"
+#include "benchmark_utils.hpp"
 // CmdParser
 #include "cmdparser.hpp"
-#include "benchmark_utils.hpp"
+
+// Google Benchmark
+#include <benchmark/benchmark.h>
 
 // HIP API
 #include <hip/hip_runtime.h>
 #include <rocprim/warp/warp_exchange.hpp>
+
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
+
+#include <cstdio>
+#include <cstdlib>
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 32;

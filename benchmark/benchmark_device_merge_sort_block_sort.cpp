@@ -20,8 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cstddef>
-#include <string>
+#include "benchmark_device_merge_sort_block_sort.parallel.hpp"
+#include "benchmark_utils.hpp"
+
+// CmdParser
+#include "cmdparser.hpp"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -29,11 +32,9 @@
 // HIP API
 #include <hip/hip_runtime.h>
 
-// CmdParser
-#include "cmdparser.hpp"
+#include <string>
 
-#include "benchmark_device_merge_sort_block_sort.parallel.hpp"
-#include "benchmark_utils.hpp"
+#include <cstddef>
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 32;

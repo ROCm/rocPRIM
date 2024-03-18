@@ -20,9 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "benchmark/benchmark.h"
 #include "benchmark_utils.hpp"
 #include "cmdparser.hpp"
+
+#include <benchmark/benchmark.h>
 
 #include <rocprim/block/block_load_func.hpp>
 #include <rocprim/block/block_run_length_decode.hpp>

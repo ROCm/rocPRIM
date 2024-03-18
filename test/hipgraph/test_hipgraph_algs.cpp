@@ -26,6 +26,7 @@
 // required rocprim headers
 #include "../rocprim/test_seed.hpp"
 #include "../rocprim/test_utils.hpp"
+
 #include <rocprim/device/device_binary_search.hpp>
 #include <rocprim/device/device_merge_sort.hpp>
 

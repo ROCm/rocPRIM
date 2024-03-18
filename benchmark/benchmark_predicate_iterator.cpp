@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "benchmark/benchmark.h"
 #include "benchmark_utils.hpp"
 #include "cmdparser.hpp"
 
+#include <benchmark/benchmark.h>
 
 #include <hip/hip_runtime.h>
 
@@ -32,12 +32,13 @@
 #include <rocprim/iterator/predicate_iterator.hpp>
 #include <rocprim/iterator/transform_iterator.hpp>
 
-#include <cstdio>
-#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <string>
 #include <vector>
+
+#include <cstdio>
+#include <cstdlib>
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 128;

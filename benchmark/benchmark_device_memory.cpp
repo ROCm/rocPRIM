@@ -20,20 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <string>
-
-// Google Benchmark
-#include "benchmark/benchmark.h"
+#include "benchmark_utils.hpp"
 // CmdParser
 #include "cmdparser.hpp"
+
+// Google Benchmark
+#include <benchmark/benchmark.h>
 // rocPRIM
 #include <rocprim/block/block_load.hpp>
 #include <rocprim/block/block_store.hpp>
 
-#include "benchmark_utils.hpp"
+#include <iostream>
+#include <string>
+
+#include <cstdio>
+#include <cstdlib>
 
 enum memory_operation_method
 {

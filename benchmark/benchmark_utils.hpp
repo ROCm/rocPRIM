@@ -21,6 +21,13 @@
 #ifndef ROCPRIM_BENCHMARK_UTILS_HPP_
 #define ROCPRIM_BENCHMARK_UTILS_HPP_
 
+#include <benchmark/benchmark.h>
+
+// rocPRIM
+#include <rocprim/block/block_scan.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/types.hpp>
+
 #include <algorithm>
 #include <iostream>
 #include <iterator>
@@ -32,13 +39,6 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#include "benchmark/benchmark.h"
-
-// rocPRIM
-#include <rocprim/block/block_scan.hpp>
-#include <rocprim/device/config_types.hpp>
-#include <rocprim/types.hpp>
 
 #define HIP_CHECK(condition)                                                                \
     {                                                                                       \

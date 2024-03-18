@@ -23,9 +23,7 @@
 #ifndef ROCPRIM_BENCHMARK_BLOCK_SORT_PARALLEL_HPP_
 #define ROCPRIM_BENCHMARK_BLOCK_SORT_PARALLEL_HPP_
 
-#include <cstddef>
-#include <string>
-#include <vector>
+#include "benchmark_utils.hpp"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -39,7 +37,10 @@
 #include <rocprim/block/block_store_func.hpp>
 #include <rocprim/detail/various.hpp>
 
-#include "benchmark_utils.hpp"
+#include <string>
+#include <vector>
+
+#include <cstddef>
 
 template<class KeyType,
          class ValueType,
