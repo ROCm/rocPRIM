@@ -500,9 +500,10 @@ public:
 
     /// \brief Encodes a key of type \p Key into \p bit_key_type.
     ///
-    /// \tparam Decomposer Decomposer functor type.
+    /// \tparam Decomposer Decomposer functor type. Being \p Key a custom key type, the decomposer
+    /// type must be other than the \p identity_decomposer.
     /// \param [in] key Key to encode.
-    /// \param [in] decomposer [optional] \p Key is not a fundamental type, so a custom decomposer
+    /// \param [in] decomposer [optional] \p Key is a custom key type, so a custom decomposer
     /// functor that returns a \p ::rocprim::tuple of references to fundamental types from a
     /// \p Key key is needed.
     /// \return A \p bit_key_type encoded key.
@@ -515,14 +516,17 @@ public:
 
     /// \brief Encodes in-place a key of type \p Key.
     ///
-    /// \tparam Decomposer Decomposer functor type. By default is \p identity_decomposer.
+    /// \tparam Decomposer Decomposer functor type. Being \p Key a custom key type, the decomposer
+    /// type must be other than the \p identity_decomposer.
     /// \param [in, out] key Key to encode.
-    /// \param [in] decomposer [optional] \p Key is not a fundamental type, so a custom decomposer
+    /// \param [in] decomposer [optional] \p Key is a custom key type, so a custom decomposer
     /// functor that returns a \p ::rocprim::tuple of references to fundamental types from a
     /// \p Key key is needed.
-    template<class Decomposer = ::rocprim::identity_decomposer>
+    template<class Decomposer>
     ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, Decomposer decomposer = {})
     {
+        static_assert(!std::is_same<Decomposer, ::rocprim::identity_decomposer>::value,
+                      "The decomposer of a custom-type key cannot be the identity decomposer.");
         static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
         const auto per_element_encode = [](auto& tuple_element)
@@ -534,21 +538,12 @@ public:
         ::rocprim::detail::for_each_in_tuple(decomposer(key), per_element_encode);
     }
 
-    /// \brief Encodes in-place a key of type \p Key.
-    ///
-    /// \param [in, out] key Key to encode.
-    template<>
-    ROCPRIM_HOST_DEVICE static void encode_inplace(Key& key, ::rocprim::identity_decomposer)
-    {
-        using codec = radix_key_codec<Key, Descending>;
-        key         = ::rocprim::detail::bit_cast<Key>(codec::encode(key));
-    }
-
     /// \brief Decodes an encoded key of type \p bit_key_type back into \p Key.
     ///
-    /// \tparam Decomposer Decomposer functor type.
+    /// \tparam Decomposer Decomposer functor type. Being \p Key a custom key type, the decomposer
+    /// type must be other than the \p identity_decomposer.
     /// \param [in] bit_key Key to decode.
-    /// \param [in] decomposer [optional] \p Key is not a fundamental type, so a custom decomposer
+    /// \param [in] decomposer [optional] \p Key is a custom key type, so a custom decomposer
     /// functor that returns a \p ::rocprim::tuple of references to fundamental types from a
     /// \p Key key is needed.
     /// \return A \p Key decoded key.
@@ -561,12 +556,15 @@ public:
 
     /// \brief Decodes in-place an encoded key of type \p Key.
     ///
-    /// \tparam Decomposer Decomposer functor type. By default is \p identity_decomposer.
+    /// \tparam Decomposer Decomposer functor type. Being \p Key a custom key type, the decomposer
+    /// type must be other than the \p identity_decomposer.
     /// \param [in, out] key Key to decode.
     /// \param [in] decomposer [optional] Decomposer functor.
-    template<class Decomposer = ::rocprim::identity_decomposer>
+    template<class Decomposer>
     ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, Decomposer decomposer = {})
     {
+        static_assert(!std::is_same<Decomposer, ::rocprim::identity_decomposer>::value,
+                      "The decomposer of a custom-type key cannot be the identity decomposer.");
         static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
         const auto per_element_decode = [](auto& tuple_element)
@@ -576,17 +574,6 @@ public:
             codec_t::decode_inplace(tuple_element);
         };
         ::rocprim::detail::for_each_in_tuple(decomposer(key), per_element_decode);
-    }
-
-    /// \brief Decodes in-place an encoded key of type \p Key.
-    ///
-    /// \param [in, out] key Key to decode.
-    template<>
-    ROCPRIM_HOST_DEVICE static void decode_inplace(Key& key, ::rocprim::identity_decomposer)
-    {
-        using codec        = radix_key_codec<Key, Descending>;
-        using bit_key_type = typename codec::bit_key_type;
-        key                = codec::decode(::rocprim::detail::bit_cast<bit_key_type>(key));
     }
 
     /// \brief Extracts the specified bits from a given encoded key.
@@ -603,11 +590,12 @@ public:
 
     /// \brief Extracts the specified bits from a given in-place encoded key.
     ///
-    /// \tparam Decomposer Decomposer functor type.
+    /// \tparam Decomposer Decomposer functor type. Being \p Key a custom key type, the decomposer
+    /// type must be other than the \p identity_decomposer.
     /// \param [in] key Key.
     /// \param [in] start Start bit of the sequence of bits to extract.
     /// \param [in] radix_bits How many bits to extract.
-    /// \param [in] decomposer \p Key is not a fundamental type, so a custom decomposer
+    /// \param [in] decomposer \p Key is a custom key type, so a custom decomposer
     /// functor that returns a \p ::rocprim::tuple of references to fundamental types from a
     /// \p Key key is needed.
     /// \return Requested bits from the key.
@@ -615,6 +603,8 @@ public:
     ROCPRIM_HOST_DEVICE static unsigned int
         extract_digit(Key key, unsigned int start, unsigned int radix_bits, Decomposer decomposer)
     {
+        static_assert(!std::is_same<Decomposer, ::rocprim::identity_decomposer>::value,
+                      "The decomposer of a custom-type key cannot be the identity decomposer.");
         static_assert(::rocprim::detail::is_tuple_of_references<decltype(decomposer(key))>::value,
                       "The decomposer must return a tuple of references.");
         constexpr size_t tuple_size
@@ -626,35 +616,19 @@ public:
                                                            0);
     }
 
-    /// \brief Extracts the specified bits from a given in-place encoded key.
-    ///
-    /// \param [in] key Key.
-    /// \param [in] start Start bit of the sequence of bits to extract.
-    /// \param [in] radix_bits How many bits to extract.
-    /// \return Requested bits from the key.
-    template<>
-    ROCPRIM_HOST_DEVICE static unsigned int extract_digit(Key          key,
-                                                          unsigned int start,
-                                                          unsigned int radix_bits,
-                                                          ::rocprim::identity_decomposer)
-    {
-        using codec        = radix_key_codec<Key, Descending>;
-        using bit_key_type = typename codec::bit_key_type;
-        return codec::extract_digit(::rocprim::detail::bit_cast<bit_key_type>(key),
-                                    start,
-                                    radix_bits);
-    }
-
     /// \brief Gives the default value for out-of-bound keys of type \p Key.
     ///
-    /// \tparam Decomposer Decomposer functor type.
-    /// \param [in] decomposer \p Key is not a fundamental type, so a custom decomposer
+    /// \tparam Decomposer Decomposer functor type. Being \p Key a custom key type, the decomposer
+    /// type must be other than the \p identity_decomposer.
+    /// \param [in] decomposer \p Key is a custom key type, so a custom decomposer
     /// functor that returns a \p ::rocprim::tuple of references to fundamental types from a
     /// \p Key key is needed.
     /// \return Out-of-bound keys' value.
     template<class Decomposer>
     ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(Decomposer decomposer)
     {
+        static_assert(!std::is_same<Decomposer, ::rocprim::identity_decomposer>::value,
+                      "The decomposer of a custom-type key cannot be the identity decomposer.");
         static_assert(std::is_default_constructible<Key>::value,
                       "The sorted Key type must be default constructible");
         Key key;
@@ -668,16 +642,6 @@ public:
                 element            = codec_t::decode(static_cast<bit_key_type>(-1));
             });
         return key;
-    }
-
-    /// \brief Gives the default value for out-of-bound keys of type \p Key.
-    /// \return Out-of-bound keys' value.
-    template<>
-    ROCPRIM_HOST_DEVICE static Key get_out_of_bounds_key(::rocprim::identity_decomposer)
-    {
-        using codec_t      = radix_key_codec<Key, Descending>;
-        using bit_key_type = typename codec_t::bit_key_type;
-        return codec_t::decode(static_cast<bit_key_type>(-1));
     }
 
 private:
