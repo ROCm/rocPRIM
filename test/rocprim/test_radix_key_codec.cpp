@@ -22,13 +22,14 @@
 
 #include "../common_test_header.hpp"
 
-#include <gtest/gtest-typed-test.h>
-#include <gtest/internal/gtest-type-util.h>
-#include <rocprim/detail/radix_sort.hpp>
 #include <rocprim/device/detail/device_radix_sort.hpp>
 #include <rocprim/test_utils_custom_test_types.hpp>
 #include <rocprim/test_utils_sort_comparator.hpp>
+#include <rocprim/thread/radix_key_codec.hpp>
 #include <rocprim/types/tuple.hpp>
+
+#include <gtest/gtest-typed-test.h>
+#include <gtest/internal/gtest-type-util.h>
 
 #include <ios>
 #include <ostream>
@@ -82,7 +83,7 @@ struct custom_key_decomposer
     }
 };
 
-TEST_P(RadixKeyCodecTest, TestExtractDigit)
+TEST_P(RadixKeyCodecTest, ExtractDigit)
 {
     using codec = rocprim::detail::radix_key_codec<custom_key>;
 
@@ -114,7 +115,7 @@ struct custom_key_decomposer_with_unused
     }
 };
 
-TEST_P(RadixKeyCodecUnusedTest, TestExtractDigitUnused)
+TEST_P(RadixKeyCodecUnusedTest, ExtractDigitUnused)
 {
     using codec = rocprim::detail::radix_key_codec<custom_key>;
 

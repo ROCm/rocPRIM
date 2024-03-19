@@ -36,6 +36,8 @@
 #include "type_traits.hpp"
 #include "iterator.hpp"
 
+#include "thread/radix_key_codec.hpp"
+
 #include "warp/warp_reduce.hpp"
 #include "warp/warp_scan.hpp"
 #include "warp/warp_sort.hpp"

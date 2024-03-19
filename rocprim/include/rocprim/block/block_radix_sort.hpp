@@ -25,7 +25,7 @@
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
-#include "../detail/radix_sort.hpp"
+#include "../thread/radix_key_codec.hpp"
 #include "../warp/detail/warp_scan_crosslane.hpp"
 
 #include "../intrinsics.hpp"
@@ -877,7 +877,7 @@ private:
                                                  unsigned int  end_bit,
                                                  Decomposer    decomposer)
     {
-        using key_codec = ::rocprim::detail::radix_key_codec<Key, Descending>;
+        using key_codec = ::rocprim::radix_key_codec<Key, Descending>;
 
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; i++)

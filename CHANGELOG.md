@@ -29,6 +29,7 @@ Documentation for rocPRIM is available at
   * `rocprim::make_predicate_iterator`
   * `rocprim::make_mask_iterator`
 * Added custom radix sizes as the last parameter for `block_radix_sort`. The default value is 4, it can be a number between 0 and 32.
+* New `rocprim::radix_key_codec`, which allows the encoding/decoding of keys for radix-based sorts. For user-defined key types, a decomposer functor should be passed.
 
 ### Optimizations
 
@@ -48,6 +49,7 @@ Documentation for rocPRIM is available at
 
 * The internal header `detail/match_result_type.hpp` has been deprecated.
 * `TwiddleIn` and `TwiddleOut` have been deprecated in favor of `radix_key_codec`.
+* The internal `::rocprim::detail::radix_key_codec` has been deprecated in favor of the new public utility with the same name.
 
 ## Unreleased rocPRIM-3.1.0 for ROCm 6.1.0
 

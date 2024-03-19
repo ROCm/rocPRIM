@@ -26,7 +26,6 @@
 
 #include "../../config.hpp"
 #include "../../detail/various.hpp"
-#include "../../detail/radix_sort.hpp"
 
 #include "../../functional.hpp"
 #include "../../intrinsics.hpp"
@@ -40,6 +39,7 @@
 #include "../../block/block_radix_sort.hpp"
 #include "../../block/block_scan.hpp"
 #include "../../block/block_store_func.hpp"
+#include "../../thread/radix_key_codec.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -135,7 +135,7 @@ struct radix_digit_count_helper
 
         using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
 
-        using key_codec    = ::rocprim::detail::radix_key_codec<key_type, Descending>;
+        using key_codec    = ::rocprim::radix_key_codec<key_type, Descending>;
         using bit_key_type = typename key_codec::bit_key_type;
 
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
@@ -324,7 +324,7 @@ struct radix_sort_and_scatter_helper
     using key_type = Key;
     using value_type = Value;
 
-    using key_codec      = ::rocprim::detail::radix_key_codec<key_type, Descending>;
+    using key_codec      = ::rocprim::radix_key_codec<key_type, Descending>;
     using bit_key_type = typename key_codec::bit_key_type;
     using keys_load_type = ::rocprim::block_load<
         key_type, BlockSize, ItemsPerThread,
