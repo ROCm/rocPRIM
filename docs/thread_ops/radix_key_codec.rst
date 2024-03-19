@@ -2,22 +2,11 @@
   :description: rocPRIM documentation and API reference library
   :keywords: rocPRIM, ROCm, API, documentation
 
-.. _blk-sort:
+.. _radix-key-codec:
 
 ********************************************************************
- Sort
+ Radix Key Encoder/Decoder
 ********************************************************************
 
-Generic Block Sort
-==================
-
-.. doxygenclass:: rocprim::block_sort
-   :members:
-
-.. doxygenenum:: rocprim::block_sort_algorithm
-
-Radix sort
-===========
-
-.. doxygenclass:: rocprim::block_radix_sort
+.. doxygenclass:: rocprim::radix_key_codec
    :members:
