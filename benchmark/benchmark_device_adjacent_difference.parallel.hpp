@@ -65,12 +65,10 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
     {
 
         using namespace std::string_literals;
-        bench_naming adj_diff_bench_naming;
-        adj_diff_bench_naming.set_format("json");
-        return adj_diff_bench_naming.format_name(
-            "{lvl:device,algo:adjacent_difference" + (Left ? ""s : "_right"s)
-            + (InPlace ? "_inplace"s : ""s) + ",value_type:" + std::string(Traits<T>::name())
-            + ",cfg:" + config_name<Config>() + "}");
+        return bench_naming::format_name("{lvl:device,algo:adjacent_difference"
+                                         + (Left ? ""s : "_right"s) + (InPlace ? "_inplace"s : ""s)
+                                         + ",value_type:" + std::string(Traits<T>::name())
+                                         + ",cfg:" + config_name<Config>() + "}");
     }
 
     static constexpr unsigned int batch_size  = 10;
