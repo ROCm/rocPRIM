@@ -29,6 +29,7 @@
 
 // HIP API
 #include <hip/hip_runtime.h>
+#include <rocprim/device/config_types.hpp>
 #include <rocprim/warp/warp_exchange.hpp>
 
 #include <iostream>

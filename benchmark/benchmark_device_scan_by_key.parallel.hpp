@@ -32,6 +32,7 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
+#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_scan_by_key.hpp>
 
 #include <string>

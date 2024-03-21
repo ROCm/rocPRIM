@@ -26,7 +26,6 @@
 #include "benchmark_utils.hpp"
 
 #include <rocprim/device/config_types.hpp>
-#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_binary_search.hpp>
 
 #include <benchmark/benchmark.h>

@@ -32,6 +32,7 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM HIP API
+#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_reduce.hpp>
 
 #include <string>

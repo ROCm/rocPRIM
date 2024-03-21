@@ -30,7 +30,6 @@
 #include <hip/hip_runtime_api.h>
 
 // rocPRIM
-#include <rocprim/detail/various.hpp>
 #include <rocprim/device/device_adjacent_difference.hpp>
 
 // CmdParser

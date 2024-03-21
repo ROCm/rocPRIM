@@ -27,6 +27,7 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
+#include <rocprim/detail/various.hpp>
 #include <rocprim/device/device_copy.hpp>
 #include <rocprim/device/device_memcpy.hpp>
 #include <rocprim/device/device_memcpy_config.hpp>

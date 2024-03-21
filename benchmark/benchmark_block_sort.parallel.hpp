@@ -35,7 +35,7 @@
 #include <rocprim/block/block_load_func.hpp>
 #include <rocprim/block/block_sort.hpp>
 #include <rocprim/block/block_store_func.hpp>
-#include <rocprim/detail/various.hpp>
+#include <rocprim/type_traits.hpp>
 
 #include <string>
 #include <vector>
