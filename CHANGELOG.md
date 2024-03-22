@@ -44,6 +44,7 @@ Documentation for rocPRIM is available at
 * Fixed incorrect output type used in `device_adjacent_difference`.
 * Hotfix for incorrect results on the GFX10 (Navi 10/RDNA1, Navi 20/RDNA2) ISA and GFX11 ISA (Navi 30 GPUs) on device scan algorithms `rocprim::inclusive_scan(_by_key)` and `rocprim::exclusive_scan(_by_key)` with large input types.
 * `device_adjacent_difference` now considers both the input and the output type for selecting the appropriate kernel launch config. Previously only the input type was considered, which could result in compilation errors due to excessive shared memory usage.
+* Fixed incorrect data being loaded with `rocprim::thread_load` when compiling with `-O0`.
 
 ### Deprecations
 
