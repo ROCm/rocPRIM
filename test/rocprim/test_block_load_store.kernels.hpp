@@ -23,11 +23,14 @@
 #ifndef TEST_BLOCK_LOAD_STORE_KERNELS_HPP_
 #define TEST_BLOCK_LOAD_STORE_KERNELS_HPP_
 
+#include "rocprim/block/block_load.hpp"
+#include "rocprim/block/block_store.hpp"
 #include "test_utils_types.hpp"
 
 #include <gtest/gtest.h>
 
 #include <rocprim/rocprim.hpp>
+#include <type_traits>
 
 typedef ::testing::Types<
     // block_load_direct
@@ -403,6 +406,18 @@ typedef ::testing::Types<
                  rocprim::block_load_method::block_load_striped,
                  rocprim::block_store_method::block_store_striped,
                  256U,
+                 4>,
+
+    // warp transpose
+    class_params<int,
+                 rocprim::block_load_method::block_load_warp_transpose,
+                 rocprim::block_store_method::block_store_warp_transpose,
+                 32U,
+                 4>,
+    class_params<int,
+                 rocprim::block_load_method::block_load_warp_transpose,
+                 rocprim::block_store_method::block_store_warp_transpose,
+                 64U,
                  4>
 
     >
@@ -458,21 +473,70 @@ typedef ::testing::Types<vector_params<int, int, 3, false>,
                          vector_params<char4, rocprim::detail::int4, 16, true>>
     VectorParams;
 
-template<
-    class Type,
-    rocprim::block_load_method LoadMethod,
-    rocprim::block_store_method StoreMethod,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread
->
-__global__
-__launch_bounds__(BlockSize)
-void load_store_kernel(Type* device_input, Type* device_output)
+template<rocprim::block_load_method  LoadMethod,
+         rocprim::block_store_method StoreMethod,
+         unsigned int                BlockSize>
+struct enable_block_load_store_test
+{
+    static constexpr bool value
+        = (LoadMethod != rocprim::block_load_method::block_load_warp_transpose
+           && StoreMethod != rocprim::block_store_method::block_store_warp_transpose)
+          || BlockSize % ROCPRIM_WAVEFRONT_SIZE == 0;
+};
+
+struct dummy_load_store
+{
+    template<typename... Args>
+    __device__ void load(Args...)
+    {}
+
+    template<typename... Args>
+    __device__ void store(Args...)
+    {}
+};
+
+template<class Type,
+         rocprim::block_load_method  LoadMethod,
+         rocprim::block_store_method StoreMethod,
+         unsigned int                BlockSize,
+         unsigned int                ItemsPerThread,
+         typename Enable = void>
+struct get_block_load_store
+{
+    using block_load  = dummy_load_store;
+    using block_store = dummy_load_store;
+};
+
+template<class Type,
+         rocprim::block_load_method  LoadMethod,
+         rocprim::block_store_method StoreMethod,
+         unsigned int                BlockSize,
+         unsigned int                ItemsPerThread>
+struct get_block_load_store<
+    Type,
+    LoadMethod,
+    StoreMethod,
+    BlockSize,
+    ItemsPerThread,
+    std::enable_if_t<enable_block_load_store_test<LoadMethod, StoreMethod, BlockSize>::value>>
+{
+    using block_load  = rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod>;
+    using block_store = rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod>;
+};
+
+template<class Type,
+         rocprim::block_load_method  LoadMethod,
+         rocprim::block_store_method StoreMethod,
+         unsigned int                BlockSize,
+         unsigned int                ItemsPerThread>
+__global__ __launch_bounds__(BlockSize) void load_store_kernel(Type* device_input,
+                                                               Type* device_output)
 {
     Type _items[ItemsPerThread];
     auto offset = blockIdx.x * BlockSize * ItemsPerThread;
-    rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
-    rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
+    using impl  = get_block_load_store<Type, LoadMethod, StoreMethod, BlockSize, ItemsPerThread>;
+    typename impl::block_load  load;
+    typename impl::block_store store;
     load.load(device_input + offset, _items);
     store.store(device_output + offset, _items);
 }
@@ -490,8 +554,9 @@ void load_store_valid_kernel(Type* device_input, Type* device_output, size_t val
 {
     Type _items[ItemsPerThread];
     auto offset = blockIdx.x * BlockSize * ItemsPerThread;
-    rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
-    rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
+    using impl  = get_block_load_store<Type, LoadMethod, StoreMethod, BlockSize, ItemsPerThread>;
+    typename impl::block_load  load;
+    typename impl::block_store store;
     load.load(device_input + offset, _items, (unsigned int)valid);
     store.store(device_output + offset, _items, (unsigned int)valid);
 }
@@ -510,8 +575,9 @@ void load_store_valid_default_kernel(Type* device_input, Type* device_output, si
 {
     Type _items[ItemsPerThread];
     auto offset = blockIdx.x * BlockSize * ItemsPerThread;
-    rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod> load;
-    rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod> store;
+    using impl  = get_block_load_store<Type, LoadMethod, StoreMethod, BlockSize, ItemsPerThread>;
+    typename impl::block_load  load;
+    typename impl::block_store store;
     load.load(device_input + offset, _items, (unsigned int)valid, _default);
     store.store(device_output + offset, _items);
 }
