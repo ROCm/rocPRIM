@@ -500,7 +500,8 @@ template<class Type,
          rocprim::block_store_method StoreMethod,
          unsigned int                BlockSize,
          unsigned int                ItemsPerThread,
-         typename Enable = void>
+         bool                        Enable
+         = enable_block_load_store_test<LoadMethod, StoreMethod, BlockSize>::value /* false */>
 struct get_block_load_store
 {
     using block_load  = dummy_load_store;
@@ -512,13 +513,7 @@ template<class Type,
          rocprim::block_store_method StoreMethod,
          unsigned int                BlockSize,
          unsigned int                ItemsPerThread>
-struct get_block_load_store<
-    Type,
-    LoadMethod,
-    StoreMethod,
-    BlockSize,
-    ItemsPerThread,
-    std::enable_if_t<enable_block_load_store_test<LoadMethod, StoreMethod, BlockSize>::value>>
+struct get_block_load_store<Type, LoadMethod, StoreMethod, BlockSize, ItemsPerThread, true>
 {
     using block_load  = rocprim::block_load<Type, BlockSize, ItemsPerThread, LoadMethod>;
     using block_store = rocprim::block_store<Type, BlockSize, ItemsPerThread, StoreMethod>;
