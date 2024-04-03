@@ -45,15 +45,13 @@ typed_test_def(suite_name, name_suffix, LoadStoreClass)
     if(load_method == rocprim::block_load_method::block_load_warp_transpose
        || store_method == rocprim::block_store_method::block_store_warp_transpose)
     {
+        unsigned int host_warp_size;
+        HIP_CHECK(::rocprim::host_warp_size(device_id, host_warp_size));
+        if(block_size % host_warp_size != 0)
         {
-            unsigned int host_warp_size;
-            HIP_CHECK(::rocprim::host_warp_size(device_id, host_warp_size));
-            if(block_size % host_warp_size != 0)
-            {
-                GTEST_SKIP() << "Cannot run test of block size " << block_size
-                             << " on a device with warp size " << host_warp_size;
-            }
-        };
+            GTEST_SKIP() << "Cannot run test of block size " << block_size
+                         << " on a device with warp size " << host_warp_size;
+        }
     }
 
     // Given block size not supported
@@ -145,6 +143,18 @@ typed_test_def(suite_name, name_suffix, LoadStoreClassValid)
     if(block_size > test_utils::get_max_block_size() || (block_size & (block_size - 1)) != 0)
     {
         return;
+    }
+
+    if(load_method == rocprim::block_load_method::block_load_warp_transpose
+       || store_method == rocprim::block_store_method::block_store_warp_transpose)
+    {
+        unsigned int host_warp_size;
+        HIP_CHECK(::rocprim::host_warp_size(device_id, host_warp_size));
+        if(block_size % host_warp_size != 0)
+        {
+            GTEST_SKIP() << "Cannot run test of block size " << block_size
+                         << " on a device with warp size " << host_warp_size;
+        }
     }
 
     const size_t valid = items_per_block - 32;
@@ -244,6 +254,18 @@ typed_test_def(suite_name, name_suffix, LoadStoreClassDefault)
     if(block_size > test_utils::get_max_block_size() || (block_size & (block_size - 1)) != 0)
     {
         return;
+    }
+
+    if(load_method == rocprim::block_load_method::block_load_warp_transpose
+       || store_method == rocprim::block_store_method::block_store_warp_transpose)
+    {
+        unsigned int host_warp_size;
+        HIP_CHECK(::rocprim::host_warp_size(device_id, host_warp_size));
+        if(block_size % host_warp_size != 0)
+        {
+            GTEST_SKIP() << "Cannot run test of block size " << block_size
+                         << " on a device with warp size " << host_warp_size;
+        }
     }
 
     const size_t valid = items_per_thread + 1;
