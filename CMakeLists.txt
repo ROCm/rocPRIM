@@ -166,7 +166,7 @@ if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
     set(DEPENDS_HIP_RUNTIME "hip-runtime-amd" )
   endif()
 
-  rocm_package_add_dependencies(DEPENDS "${DEPENDS_HIP_RUNTIME} >= 3.5.0")
+  rocm_package_add_dependencies(DEPENDS "${DEPENDS_HIP_RUNTIME} >= 4.5.0")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
   set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
