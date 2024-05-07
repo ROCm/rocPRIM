@@ -159,14 +159,18 @@ endif()
 
 # Package
 if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
-  set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
+  # add dependency on HIP runtime
+  set(HIP_RUNTIME_MINIMUM 4.5.0)
   if(BUILD_ADDRESS_SANITIZER)
     set(DEPENDS_HIP_RUNTIME "hip-runtime-amd-asan" )
   else()
     set(DEPENDS_HIP_RUNTIME "hip-runtime-amd" )
   endif()
 
-  rocm_package_add_dependencies(DEPENDS "${DEPENDS_HIP_RUNTIME} >= 4.5.0")
+  rocm_package_add_dependencies(SHARED_DEPENDS "${DEPENDS_HIP_RUNTIME} >= ${HIP_RUNTIME_MINIMUM}")
+  rocm_package_add_deb_dependencies(STATIC_DEPENDS "hip-static-dev >= ${HIP_RUNTIME_MINIMUM}")
+  rocm_package_add_deb_dependencies(STATIC_DEPENDS "hip-static-devel >= ${HIP_RUNTIME_MINIMUM}")
+
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
   set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
