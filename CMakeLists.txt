@@ -72,6 +72,11 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(DEFINED BUILD_SHARED_LIBS)
+  set(PKG_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+else()
+  set(PKG_BUILD_SHARED_LIBS ON)
+endif()
 set(BUILD_SHARED_LIBS OFF) # don't build client dependencies as shared
 if(NOT USE_HIP_CPU)
   # Get dependencies (required here to get rocm-cmake)
@@ -157,6 +162,8 @@ if(BUILD_EXAMPLE AND NOT ONLY_INSTALL)
   add_subdirectory(example)
 endif()
 
+# set BUILD_SHARED_LIBS for packaging
+set(BUILD_SHARED_LIBS ${PKG_BUILD_SHARED_LIBS})
 # Package
 if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
   # add dependency on HIP runtime
