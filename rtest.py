@@ -211,7 +211,9 @@ def batch(script, xml):
     else:
         if args.debug: build_type = "debug"
         else: build_type = "release"
-        test_dir = f"{args.install_dir}//{build_type}//test"
+        # deal with windows pathing
+        install_dir = '//'.join(args.install_dir.split('\\'))
+        test_dir = f"{install_dir}//{build_type}//test"
     fail = False
     for i in range(len(script)):
         cmdline = script[i]
