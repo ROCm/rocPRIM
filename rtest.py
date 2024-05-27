@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Copyright 2021 Advanced Micro Devices, Inc.
+"""Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 Run tests on build"""
 
 import re
