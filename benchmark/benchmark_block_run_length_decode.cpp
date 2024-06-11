@@ -180,32 +180,37 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
 //                                  stream,                                                      \
 //                                  size)
 
-#define CREATE_BENCHMARK(IT, OT, MINRL, MAXRL, BS, RPT, DIPT)   
-    benchmark::RegisterBenchmark(("{lvl:block,algo:run_length_decode"
-                                    ",item_type:" #IT
-                                    ",offset_type:" #OT
-                                    ",min_run_length:" #MINRL
-                                    ",max_run_length": #MAXRL
-                                    ",cfg:{block_size:" #BS
-                                    ",run_per_thread:" #RPT
-                                    "decoded_items_per_thread:," #DIPT
-                                    "}}"
-                                ).c_str(),                      \
-                                 &run_benchmark<IT, OT, MINRL, MAXRL, BS, RPT, DIPT>,         \
-                                 stream,                                                      \
-                                 size)
+#define CREATE_BENCHMARK(IT, OT, MINRL, MAXRL, BS, RPT, DIPT)                                   \
+    benchmark::RegisterBenchmark(bench_naming::format_name("{lvl:block,algo:run_length_decode"  \
+                                    ",item_type:" #IT                                           \
+                                    ",offset_type:" #OT                                         \
+                                    ",min_run_length:" #MINRL                                   \
+                                    ",max_run_length:" #MAXRL                                   \
+                                    ",cfg:{block_size:" #BS                                     \
+                                    ",run_per_thread:" #RPT                                     \
+                                    ",decoded_items_per_thread:" #DIPT                          \
+                                    "}}"                                                        \
+                                ).c_str(),                                                      \
+                                 &run_benchmark<IT, OT, MINRL, MAXRL, BS, RPT, DIPT>,           \
+                                 stream,                                                        \
+                                 size)                                                          
 
 int main(int argc, char* argv[])
 {
     cli::Parser parser(argc, argv);
     parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
     parser.set_optional<int>("trials", "trials", -1, "number of iterations");
+    parser.set_optional<std::string>("name_format",
+                                    "name_format",
+                                    "human",
+                                    "either: json,human,txt");
     parser.run_and_exit_if_error();
 
     // Parse argv
     benchmark::Initialize(&argc, argv);
     const size_t size   = parser.get<size_t>("size");
     const int    trials = parser.get<int>("trials");
+    bench_naming::set_format(parser.get<std::string>("name_format"));
 
     std::cout << "benchmark_block_run_length_decode" << std::endl;
 
