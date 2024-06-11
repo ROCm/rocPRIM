@@ -171,12 +171,26 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
     HIP_CHECK(hipFree(d_output));
 }
 
-// TAKE A LOOK AT IF THIS IS GENERATED
-#define CREATE_BENCHMARK(IT, OT, MINRL, MAXRL, BS, RPT, DIPT)                                 \
-    benchmark::RegisterBenchmark("block_run_length_decode<Item Type:" #IT ",Offset Type:" #OT \
-                                 ",Min RunLength:" #MINRL ",Max RunLength:" #MAXRL            \
-                                 ",BlockSize: " #BS ",Runs Per Thread:" #RPT                  \
-                                 ",Decoded Items Per Thread:" #DIPT ">",                      \
+// #define CREATE_BENCHMARK(IT, OT, MINRL, MAXRL, BS, RPT, DIPT)                                 \
+//     benchmark::RegisterBenchmark("block_run_length_decode<Item Type:" #IT ",Offset Type:" #OT \
+//                                  ",Min RunLength:" #MINRL ",Max RunLength:" #MAXRL            \
+//                                  ",BlockSize: " #BS ",Runs Per Thread:" #RPT                  \
+//                                  ",Decoded Items Per Thread:" #DIPT ">",                      \
+//                                  &run_benchmark<IT, OT, MINRL, MAXRL, BS, RPT, DIPT>,         \
+//                                  stream,                                                      \
+//                                  size)
+
+#define CREATE_BENCHMARK(IT, OT, MINRL, MAXRL, BS, RPT, DIPT)   
+    benchmark::RegisterBenchmark(("{lvl:block,algo:run_length_decode"
+                                    ",item_type:" #IT
+                                    ",offset_type:" #OT
+                                    ",min_run_length:" #MINRL
+                                    ",max_run_length": #MAXRL
+                                    ",cfg:{block_size:" #BS
+                                    ",run_per_thread:" #RPT
+                                    "decoded_items_per_thread:," #DIPT
+                                    "}}"
+                                ).c_str(),                      \
                                  &run_benchmark<IT, OT, MINRL, MAXRL, BS, RPT, DIPT>,         \
                                  stream,                                                      \
                                  size)
