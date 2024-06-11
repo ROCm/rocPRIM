@@ -171,6 +171,7 @@ void run_benchmark(benchmark::State& state, hipStream_t stream, size_t N)
     HIP_CHECK(hipFree(d_output));
 }
 
+// TAKE A LOOK AT IF THIS IS GENERATED
 #define CREATE_BENCHMARK(IT, OT, MINRL, MAXRL, BS, RPT, DIPT)                                 \
     benchmark::RegisterBenchmark("block_run_length_decode<Item Type:" #IT ",Offset Type:" #OT \
                                  ",Min RunLength:" #MINRL ",Max RunLength:" #MAXRL            \
