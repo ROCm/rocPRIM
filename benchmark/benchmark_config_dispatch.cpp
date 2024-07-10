@@ -95,15 +95,13 @@ int main(int argc, char** argv)
     const int    trials = parser.get<int>("trials");
     bench_naming::set_format(parser.get<std::string>("name_format"));
 
-    std::cout << "benchmark_config_dispatch" << std::endl;
 
     // HIP
-    hipStream_t     stream = 0; // default
-    hipDeviceProp_t devProp;
-    int             device_id = 0;
-    HIP_CHECK(hipGetDevice(&device_id));
-    HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
-    std::cout << "[HIP] Device name: " << devProp.name << std::endl;
+    // hipStream_t     stream = 0; // default
+    // hipDeviceProp_t devProp;
+    // int             device_id = 0;
+    // HIP_CHECK(hipGetDevice(&device_id));
+    // HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
 
     std::vector<benchmark::internal::Benchmark*> benchmarks{
         CREATE_BENCHMARK(default_stream, stream_kind::default_stream),
