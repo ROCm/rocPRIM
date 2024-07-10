@@ -25,6 +25,7 @@
 
 #include "../config.hpp"
 
+#include <cassert>
 #include <iterator>
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -83,108 +84,99 @@ ROCPRIM_HOST_DEVICE ROCPRIM_INLINE OffsetT merge_path(KeysInputIterator1 keys_in
     return begin;
 }
 
-template<class KeyType, unsigned int ItemsPerThread, class BinaryFunction>
-ROCPRIM_DEVICE ROCPRIM_INLINE void serial_merge(KeyType* keys_shared,
-                                                KeyType (&outputs)[ItemsPerThread],
-                                                unsigned int (&index)[ItemsPerThread],
-                                                range_t        range,
-                                                BinaryFunction compare_function)
+template<unsigned int ItemsPerThread, class KeyType, class BinaryFunction, class OutputFunction>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
+void serial_merge(KeyType*       keys_shared,
+                  range_t        range,
+                  BinaryFunction compare_function,
+                  OutputFunction output_function)
 {
-    KeyType a = keys_shared[range.begin1];
-    KeyType b = keys_shared[range.begin2];
+    // pre-loaded keys so we don't have to re-fetch multiple times from memory
+    KeyType key_a = keys_shared[range.begin1];
+    KeyType key_b = keys_shared[range.begin2];
 
     ROCPRIM_UNROLL
     for(unsigned int i = 0; i < ItemsPerThread; ++i)
     {
-        bool compare = (range.begin2 >= range.end2)
-                       || ((range.begin1 < range.end1) && !compare_function(b, a));
-        unsigned int x = compare ? range.begin1 : range.begin2;
+        // if we read outside the latter half of the range, it will loop back into the earlier half
+        const bool compare = (range.begin2 >= range.end2)
+                             || ((range.begin1 < range.end1) && !compare_function(key_b, key_a));
 
-        outputs[i] = compare ? a : b;
-        index[i]   = x;
+        // get the index of the item we want to write away
+        const unsigned int read_index = compare ? range.begin1 : range.begin2;
 
-        KeyType c = keys_shared[++x];
+        // output results: we don't care how it's done and not every value needs to be used
+        output_function(i, compare ? key_a : key_b, read_index);
+
+        // we're done writing, time to load in the next value
+        const unsigned int next_index = read_index + 1;
+
+        // we shouldn't read more than we need to.
+        assert(next_index < range.end2);
+
+        // update ranges and cached keys
+        const KeyType c = keys_shared[next_index];
         if(compare)
         {
-            a            = c;
-            range.begin1 = x;
+            key_a        = c;
+            range.begin1 = next_index;
         }
         else
         {
-            b            = c;
-            range.begin2 = x;
+            key_b        = c;
+            range.begin2 = next_index;
         }
     }
-    ::rocprim::syncthreads();
 }
 
 template<class KeyType, unsigned int ItemsPerThread, class BinaryFunction>
-ROCPRIM_DEVICE ROCPRIM_INLINE void serial_merge(KeyType* keys_shared,
-                                                KeyType (&outputs)[ItemsPerThread],
-                                                range_t        range,
-                                                BinaryFunction compare_function)
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void serial_merge(KeyType* keys_shared,
+                  KeyType (&outputs)[ItemsPerThread],
+                  unsigned int (&indices)[ItemsPerThread],
+                  range_t        range,
+                  BinaryFunction compare_function)
 {
-    KeyType a = keys_shared[range.begin1];
-    KeyType b = keys_shared[range.begin2];
+    serial_merge<ItemsPerThread>(keys_shared,
+                                 range,
+                                 compare_function,
+                                 [&](unsigned i, KeyType key, unsigned int index)
+                                 {
+                                     outputs[i] = key;
+                                     indices[i] = index;
+                                 });
+}
 
-    ROCPRIM_UNROLL
-    for(unsigned int i = 0; i < ItemsPerThread; ++i)
-    {
-        bool compare = (range.begin2 >= range.end2)
-                       || ((range.begin1 < range.end1) && !compare_function(b, a));
-        unsigned int x = compare ? range.begin1 : range.begin2;
-
-        outputs[i] = compare ? a : b;
-
-        KeyType c = keys_shared[++x];
-        if(compare)
-        {
-            a            = c;
-            range.begin1 = x;
-        }
-        else
-        {
-            b            = c;
-            range.begin2 = x;
-        }
-    }
-    ::rocprim::syncthreads();
+template<class KeyType, unsigned int ItemsPerThread, class BinaryFunction>
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void serial_merge(KeyType* keys_shared,
+                  KeyType (&outputs)[ItemsPerThread],
+                  range_t        range,
+                  BinaryFunction compare_function)
+{
+    serial_merge<ItemsPerThread>(keys_shared,
+                                 range,
+                                 compare_function,
+                                 [&](unsigned i, KeyType key, unsigned int) { outputs[i] = key; });
 }
 
 template<class KeyType, class ValueType, unsigned int ItemsPerThread, class BinaryFunction>
-ROCPRIM_DEVICE ROCPRIM_INLINE void serial_merge(KeyType* keys_shared,
-                                                KeyType (&outputs)[ItemsPerThread],
-                                                ValueType* values_shared,
-                                                ValueType (&values)[ItemsPerThread],
-                                                range_t        range,
-                                                BinaryFunction compare_function)
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void serial_merge(KeyType* keys_shared,
+                  KeyType (&outputs)[ItemsPerThread],
+                  ValueType* values_shared,
+                  ValueType (&values)[ItemsPerThread],
+                  range_t        range,
+                  BinaryFunction compare_function)
 {
-    KeyType a = keys_shared[range.begin1];
-    KeyType b = keys_shared[range.begin2];
-
-    ROCPRIM_UNROLL
-    for(unsigned int i = 0; i < ItemsPerThread; ++i)
-    {
-        bool compare = (range.begin2 >= range.end2)
-                       || ((range.begin1 < range.end1) && !compare_function(b, a));
-        unsigned int x = compare ? range.begin1 : range.begin2;
-
-        outputs[i] = compare ? a : b;
-        values[i]  = values_shared[x];
-
-        KeyType c = keys_shared[++x];
-        if(compare)
-        {
-            a            = c;
-            range.begin1 = x;
-        }
-        else
-        {
-            b            = c;
-            range.begin2 = x;
-        }
-    }
-    ::rocprim::syncthreads();
+    serial_merge<ItemsPerThread>(keys_shared,
+                                 range,
+                                 compare_function,
+                                 [&](unsigned i, KeyType key, unsigned int index)
+                                 {
+                                     outputs[i] = key;
+                                     values[i]  = values_shared[index];
+                                 });
 }
 
 } // end namespace detail
