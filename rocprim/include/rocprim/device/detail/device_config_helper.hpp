@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,6 @@ namespace detail
 struct merge_sort_block_sort_config_params
 {
     kernel_config_params block_sort_config = {0, 0};
-    block_sort_algorithm block_sort_method = block_sort_algorithm::stable_merge_sort;
 };
 
 // Necessary to construct a parameterized type of `merge_sort_block_sort_config_params`.
@@ -57,7 +56,7 @@ struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_con
 {
     using sort_config = kernel_config<BlockSize, ItemsPerThread>;
     constexpr merge_sort_block_sort_config()
-        : rocprim::detail::merge_sort_block_sort_config_params{sort_config(), Algo} {};
+        : rocprim::detail::merge_sort_block_sort_config_params{sort_config()} {};
 };
 
 constexpr unsigned int merge_sort_items_per_thread(const unsigned int item_scale)
@@ -206,6 +205,9 @@ struct radix_sort_onesweep_config : detail::radix_sort_onesweep_config_params
 namespace detail
 {
 
+struct reduce_config_tag
+{};
+
 // Calculate kernel configurations, such that it will not exceed shared memory maximum
 template<class Key, class Value>
 struct radix_sort_onesweep_config_base
@@ -240,6 +242,8 @@ template<unsigned int                      BlockSize      = 256,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct reduce_config : rocprim::detail::reduce_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::reduce_config_tag;
     constexpr reduce_config()
         : rocprim::detail::reduce_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -251,7 +255,7 @@ namespace detail
 {
 
 template<class Value>
-struct default_reduce_config_base_helper
+struct default_reduce_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
@@ -261,8 +265,7 @@ struct default_reduce_config_base_helper
                                ::rocprim::block_reduce_algorithm::using_warp_reduce>;
 };
 
-template<class Value>
-struct default_reduce_config_base : default_reduce_config_base_helper<Value>::type
+struct scan_config_tag
 {};
 
 /// \brief Provides the kernel parameters for exclusive_scan and inclusive_scan based
@@ -291,8 +294,10 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_config_v2 : ::rocprim::detail::scan_config_params
+struct scan_config : ::rocprim::detail::scan_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::scan_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
@@ -311,54 +316,6 @@ struct scan_config_v2 : ::rocprim::detail::scan_config_params
     /// \brief Limit on the number of items for a single scan kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
-    constexpr scan_config_v2()
-        : ::rocprim::detail::scan_config_params{
-            {BlockSize, ItemsPerThread, SizeLimit},
-            BlockLoadMethod,
-            BlockStoreMethod,
-            BlockScanMethod
-    } {};
-#endif
-};
-
-/// \brief Deprecated: Configuration of device-level scan primitives.
-///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam UseLookback - deprecated, scan always uses lookback scan.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
-template<unsigned int                    BlockSize,
-         unsigned int                    ItemsPerThread,
-         bool                            UseLookback,
-         ::rocprim::block_load_method    BlockLoadMethod,
-         ::rocprim::block_store_method   BlockStoreMethod,
-         ::rocprim::block_scan_algorithm BlockScanMethod,
-         unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // Doxygen seems to have trouble with the syntax used in this definition
-[[deprecated("The UseLookback switch has been removed, as scan now only supports the "
-                    "lookback-scan implementation. Use scan_config_v2 instead.")]] 
-#endif
-scan_config : ::rocprim::detail::scan_config_params
-{
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
-    static constexpr bool use_lookback = UseLookback;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
-
     constexpr scan_config()
         : ::rocprim::detail::scan_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -366,27 +323,27 @@ scan_config : ::rocprim::detail::scan_config_params
             BlockStoreMethod,
             BlockScanMethod
     } {};
+#endif
 };
 
 namespace detail
 {
 
+struct scan_by_key_config_tag
+{};
+
 template<class Value>
-struct default_scan_config_base_helper
+struct default_scan_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
 
-    using type = scan_config_v2<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
-                                ::rocprim::max(1u, 16u / item_scale),
-                                ::rocprim::block_load_method::block_load_transpose,
-                                ::rocprim::block_store_method::block_store_transpose,
-                                ::rocprim::block_scan_algorithm::using_warp_scan>;
+    using type = scan_config<limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
+                             ::rocprim::max(1u, 16u / item_scale),
+                             ::rocprim::block_load_method::block_load_transpose,
+                             ::rocprim::block_store_method::block_store_transpose,
+                             ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
-
-template<class Value>
-struct default_scan_config_base : default_scan_config_base_helper<Value>::type
-{};
 
 /// \brief Provides the kernel parameters for exclusive_scan_by_key and inclusive_scan_by_key based
 ///        on autotuned configurations or user-provided configurations.
@@ -414,8 +371,10 @@ template<unsigned int                    BlockSize,
          ::rocprim::block_store_method   BlockStoreMethod,
          ::rocprim::block_scan_algorithm BlockScanMethod,
          unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
+struct scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::scan_by_key_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     // Requirement dictated by init_lookback_scan_state_kernel.
     static_assert(BlockSize <= ROCPRIM_DEFAULT_MAX_BLOCK_SIZE,
@@ -434,55 +393,6 @@ struct scan_by_key_config_v2 : ::rocprim::detail::scan_by_key_config_params
     /// \brief Limit on the number of items for a single scan kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
-    constexpr scan_by_key_config_v2()
-        : ::rocprim::detail::scan_by_key_config_params{
-            {BlockSize, ItemsPerThread, SizeLimit},
-            BlockLoadMethod,
-            BlockStoreMethod,
-            BlockScanMethod
-    } {};
-#endif
-};
-
-/// \brief Deprecated: Configuration of device-level scan-by-key operation.
-///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam UseLookback - deprecated, scan always uses lookback scan.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
-template<unsigned int                    BlockSize,
-         unsigned int                    ItemsPerThread,
-         bool                            UseLookback,
-         ::rocprim::block_load_method    BlockLoadMethod,
-         ::rocprim::block_store_method   BlockStoreMethod,
-         ::rocprim::block_scan_algorithm BlockScanMethod,
-         unsigned int                    SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct
-#ifndef DOXYGEN_SHOULD_SKIP_THIS // Doxygen seems to have trouble with the syntax used in this definition
-[[deprecated(
-    "The UseLookback switch has been removed, as scan now only supports the lookback-scan "
-    "implementation. Use scan_by_key_config_v2 instead.")]]
-#endif
-scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
-{
-    /// \brief Number of threads in a block.
-    static constexpr unsigned int block_size = BlockSize;
-    /// \brief Number of items processed by each thread.
-    static constexpr unsigned int items_per_thread = ItemsPerThread;
-    /// \brief Whether to use lookback scan or reduce-then-scan algorithm.
-    static constexpr bool use_lookback = UseLookback;
-    /// \brief Method for loading input values.
-    static constexpr ::rocprim::block_load_method block_load_method = BlockLoadMethod;
-    /// \brief Method for storing values.
-    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
-    /// \brief Algorithm for block scan.
-    static constexpr ::rocprim::block_scan_algorithm block_scan_method = BlockScanMethod;
-    /// \brief Limit on the number of items for a single scan kernel launch.
-    static constexpr unsigned int size_limit = SizeLimit;
-
     constexpr scan_by_key_config()
         : ::rocprim::detail::scan_by_key_config_params{
             {BlockSize, ItemsPerThread, SizeLimit},
@@ -490,18 +400,19 @@ scan_by_key_config : ::rocprim::detail::scan_by_key_config_params
             BlockStoreMethod,
             BlockScanMethod
     } {};
+#endif
 };
 
 namespace detail
 {
 
 template<class Key, class Value>
-struct default_scan_by_key_config_base_helper
+struct default_scan_by_key_config_base
 {
     static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
         sizeof(Key) + sizeof(Value), 2 * sizeof(int));
 
-    using type = scan_by_key_config_v2<
+    using type = scan_by_key_config<
         limit_block_size<256U, sizeof(Key) + sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
         ::rocprim::max(1u, 16u / item_scale),
         ::rocprim::block_load_method::block_load_transpose,
@@ -509,13 +420,215 @@ struct default_scan_by_key_config_base_helper
         ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
 
-template<class Key, class Value>
-struct default_scan_by_key_config_base : default_scan_by_key_config_base_helper<Key, Value>::type
+struct transform_config_tag
 {};
 
 struct transform_config_params
 {
     kernel_config_params kernel_config{};
+};
+
+} // namespace detail
+
+namespace detail
+{
+struct segmented_radix_sort_config_tag
+{};
+
+struct warp_sort_config_params
+{
+    /// \brief Allow the partitioning of batches by size for processing via size-optimized kernels.
+    bool partitioning_allowed = false;
+    /// \brief The number of threads in the logical warp in the small segment processing kernel.
+    unsigned int logical_warp_size_small = 0;
+    /// \brief The number of items processed by a thread in the small segment processing kernel.
+    unsigned int items_per_thread_small = 0;
+    /// \brief The number of threads per block in the small segment processing kernel.
+    unsigned int block_size_small = 0;
+    /// \brief If the number of segments is at least \p partitioning_threshold, then the segments are partitioned into
+    /// small and large segment groups, and each group is handled by a different, specialized kernel.
+    unsigned int partitioning_threshold = 0;
+    /// \brief The number of threads in the logical warp in the medium segment processing kernel.
+    unsigned int logical_warp_size_medium = 0;
+    /// \brief The number of items processed by a thread in the medium segment processing kernel.
+    unsigned int items_per_thread_medium = 0;
+    /// \brief The number of threads per block in the medium segment processing kernel.
+    unsigned int block_size_medium = 0;
+};
+
+struct segmented_radix_sort_config_params
+{
+    /// \brief Kernel start parameters.
+    kernel_config_params kernel_config{};
+    /// \brief Number of bits in long iterations.
+    unsigned int long_radix_bits = 0;
+    /// \brief Number of bits in short iterations.
+    unsigned int short_radix_bits = 0;
+    /// \brief If set to \p true, warp sort can be used to sort the small segments, even if no partitioning happens.
+    bool enable_unpartitioned_warp_sort = true;
+    /// \brief Warp sort config params
+    warp_sort_config_params warp_sort_config{};
+};
+
+} // namespace detail
+
+/// \brief Configuration of the warp sort part of the device segmented radix sort operation.
+/// Short enough segments are processed on warp level.
+///
+/// \tparam LogicalWarpSizeSmall - number of threads in the logical warp of the kernel
+/// that processes small segments.
+/// \tparam ItemsPerThreadSmall - number of items processed by a thread in the kernel that processes
+/// small segments.
+/// \tparam BlockSizeSmall - number of threads per block in the kernel which processes the small segments.
+/// \tparam PartitioningThreshold - if the number of segments is at least this threshold, the
+/// segments are partitioned to a small, a medium and a large segment collection. Both collections
+/// are sorted by different kernels. Otherwise, all segments are sorted by a single kernel.
+/// \tparam EnableUnpartitionedWarpSort - If set to \p true, warp sort can be used to sort
+/// the small segments, even if the total number of segments is below \p PartitioningThreshold.
+/// \tparam LogicalWarpSizeMedium - number of threads in the logical warp of the kernel
+/// that processes medium segments.
+/// \tparam ItemsPerThreadMedium - number of items processed by a thread in the kernel that processes
+/// medium segments.
+/// \tparam BlockSizeMedium - number of threads per block in the kernel which processes the medium segments.
+template<unsigned int LogicalWarpSizeSmall,
+         unsigned int ItemsPerThreadSmall,
+         unsigned int BlockSizeSmall        = 256,
+         unsigned int PartitioningThreshold = 3000,
+         unsigned int LogicalWarpSizeMedium = std::max(32u, LogicalWarpSizeSmall),
+         unsigned int ItemsPerThreadMedium  = std::max(4u, ItemsPerThreadSmall),
+         unsigned int BlockSizeMedium       = 256>
+struct WarpSortConfig
+{
+    static_assert(LogicalWarpSizeSmall * ItemsPerThreadSmall
+                      <= LogicalWarpSizeMedium * ItemsPerThreadMedium,
+                  "The number of items processed by a small warp cannot be larger than the number "
+                  "of items processed by a medium warp");
+
+    /// \brief Allow the partitioning of batches by size for processing via size-optimized kernels.
+    static constexpr bool partitioning_allowed = true;
+    /// \brief The number of threads in the logical warp in the small segment processing kernel.
+    static constexpr unsigned int logical_warp_size_small = LogicalWarpSizeSmall;
+    /// \brief The number of items processed by a thread in the small segment processing kernel.
+    static constexpr unsigned int items_per_thread_small = ItemsPerThreadSmall;
+    /// \brief The number of threads per block in the small segment processing kernel.
+    static constexpr unsigned int block_size_small = BlockSizeSmall;
+    /// \brief If the number of segments is at least \p partitioning_threshold, then the segments are partitioned into
+    /// small and large segment groups, and each group is handled by a different, specialized kernel.
+    static constexpr unsigned int partitioning_threshold = PartitioningThreshold;
+    /// \brief The number of threads in the logical warp in the medium segment processing kernel.
+    static constexpr unsigned int logical_warp_size_medium = LogicalWarpSizeMedium;
+    /// \brief The number of items processed by a thread in the medium segment processing kernel.
+    static constexpr unsigned int items_per_thread_medium = ItemsPerThreadMedium;
+    /// \brief The number of threads per block in the medium segment processing kernel.
+    static constexpr unsigned int block_size_medium = BlockSizeMedium;
+};
+
+/// \brief Indicates if the warp level sorting is disabled in the
+/// device segmented radix sort configuration.
+struct DisabledWarpSortConfig
+{
+    /// \brief Allow the partitioning of batches by size for processing via size-optimized kernels.
+    static constexpr bool partitioning_allowed = false;
+    /// \brief The number of threads in the logical warp in the small segment processing kernel.
+    static constexpr unsigned int logical_warp_size_small = 1;
+    /// \brief The number of items processed by a thread in the small segment processing kernel.
+    static constexpr unsigned int items_per_thread_small = 1;
+    /// \brief The number of threads per block in the small segment processing kernel.
+    static constexpr unsigned int block_size_small = 1;
+    /// \brief If the number of segments is at least \p partitioning_threshold, then the segments are partitioned into
+    /// small and large segment groups, and each group is handled by a different, specialized kernel.
+    static constexpr unsigned int partitioning_threshold = 0;
+    /// \brief The number of threads in the logical warp in the medium segment processing kernel.
+    static constexpr unsigned int logical_warp_size_medium = 1;
+    /// \brief The number of items processed by a thread in the medium segment processing kernel.
+    static constexpr unsigned int items_per_thread_medium = 1;
+    /// \brief The number of threads per block in the medium segment processing kernel.
+    static constexpr unsigned int block_size_medium = 1;
+};
+
+//// \brief Configuration of device-level segmented radix sort operation.
+///
+/// Radix sort is excecuted in a few iterations (passes) depending on total number of bits to be sorted
+/// (`begin_bit` and `end_bit`), each iteration sorts either `LongRadixBits` or `ShortRadixBits` bits
+/// chosen to cover whole bit range in optimal way.
+///
+/// For example, if `LongRadixBits` is 7, `ShortRadixBits` is 6, `begin_bit` is 0 and `end_bit` is 32
+/// there will be 5 iterations: 7 + 7 + 6 + 6 + 6 = 32 bits.
+///
+/// If a segment's element count is low ( <= warp_sort_config::items_per_thread * warp_sort_config::logical_warp_size ),
+/// it is sorted by a special warp-level sorting method.
+///
+/// \tparam LongRadixBits - number of bits in long iterations.
+/// \tparam ShortRadixBits - number of bits in short iterations, must be equal to or less than `LongRadixBits`.
+/// \tparam SortConfig - configuration of radix sort kernel. Must be `kernel_config`.
+/// \tparam WarpSortConfig - configuration of the warp sort that is used on the short segments.
+template<unsigned int LongRadixBits,
+         unsigned int ShortRadixBits,
+         class SortConfig,
+         class WarpSortConfig             = DisabledWarpSortConfig,
+         bool EnableUnpartitionedWarpSort = true>
+struct segmented_radix_sort_config : public detail::segmented_radix_sort_config_params
+{
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::segmented_radix_sort_config_tag;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+    /// \brief Number of bits in long iterations.
+    static constexpr unsigned int long_radix_bits = LongRadixBits;
+
+    /// \brief Number of bits in short iterations.
+    static constexpr unsigned int short_radix_bits = ShortRadixBits;
+
+    /// \brief Number of threads in a block.
+    static constexpr unsigned int block_size = SortConfig::block_size;
+
+    /// \brief Number of items processed by each thread.
+    static constexpr unsigned int items_per_thread = SortConfig::items_per_thread;
+
+    /// \brief If set to \p true, warp sort can be used to sort the small segments, even if no partitioning happens.
+    static constexpr bool enable_unpartitioned_warp_sort = EnableUnpartitionedWarpSort;
+
+    /// \brief Limit on the number of items for a single kernel launch.
+    static constexpr unsigned int size_limit = SortConfig::size_limit;
+
+    using warp_sort_config = WarpSortConfig;
+
+    constexpr segmented_radix_sort_config()
+        : detail::segmented_radix_sort_config_params{
+            SortConfig(),
+            LongRadixBits,
+            ShortRadixBits,
+            EnableUnpartitionedWarpSort,
+            {warp_sort_config::partitioning_allowed,
+              warp_sort_config::logical_warp_size_small,
+              warp_sort_config::items_per_thread_small,
+              warp_sort_config::block_size_small,
+              warp_sort_config::partitioning_threshold,
+              warp_sort_config::logical_warp_size_medium,
+              warp_sort_config::items_per_thread_medium,
+              warp_sort_config::block_size_medium}
+    }
+    {}
+#endif
+};
+
+namespace detail
+{
+/// \brief Default segmented_radix_sort kernel configurations, such that the maximum shared memory is not exceeded.
+///
+/// \tparam LongRadixBits - Long bits used during the sorting.
+/// \tparam ShortRadixBits - Short bits used during the sorting.
+/// \tparam ItemsPerThread - Items per thread when type Key has size 1.
+template<unsigned int LongRadixBits, unsigned int ShortRadixBits>
+struct default_segmented_radix_sort_config_base
+{
+    static constexpr unsigned int item_scale = ::rocprim::detail::ceiling_div<unsigned int>(
+        sizeof(unsigned int) + sizeof(unsigned int), sizeof(int));
+    using type = segmented_radix_sort_config<LongRadixBits,
+                                             ShortRadixBits,
+                                             kernel_config<128, 17u>,
+                                             WarpSortConfig<32, 4, 256, 3000, 32, 4, 256>,
+                                             true>;
 };
 
 } // namespace detail
@@ -527,8 +640,10 @@ struct transform_config_params
 template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
-struct transform_config
+struct transform_config : public detail::transform_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::transform_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
     /// \brief Number of threads in a block.
@@ -540,6 +655,11 @@ struct transform_config
     /// \brief Limit on the number of items for a single kernel launch.
     static constexpr unsigned int size_limit = SizeLimit;
 
+    constexpr transform_config()
+        : detail::transform_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit}
+    }
+    {}
 #endif
 };
 
@@ -547,7 +667,7 @@ namespace detail
 {
 
 template<class Value>
-struct default_transform_config_base_helper
+struct default_transform_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
@@ -555,8 +675,11 @@ struct default_transform_config_base_helper
     using type = transform_config<256, ::rocprim::max(1u, 16u / item_scale)>;
 };
 
-template<class Value>
-struct default_transform_config_base : default_transform_config_base_helper<Value>::type
+struct binary_search_config_tag : public transform_config_tag
+{};
+struct upper_bound_config_tag : public transform_config_tag
+{};
+struct lower_bound_config_tag : public transform_config_tag
 {};
 
 } // namespace detail
@@ -569,7 +692,10 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct binary_search_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::binary_search_config_tag;
+};
 
 /// \brief Configuration for the device-level upper bound operation.
 /// \tparam BlockSize Number of threads in a block.
@@ -579,7 +705,10 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct upper_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::upper_bound_config_tag;
+};
 
 /// \brief Configuration for the device-level lower bound operation.
 /// \tparam BlockSize Number of threads in a block.
@@ -589,10 +718,16 @@ template<unsigned int BlockSize,
          unsigned int ItemsPerThread,
          unsigned int SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct lower_bound_config : transform_config<BlockSize, ItemsPerThread, SizeLimit>
-{};
+{
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::lower_bound_config_tag;
+};
 
 namespace detail
 {
+
+struct histogram_config_tag
+{};
 
 template<class Value, class Output>
 struct default_binary_search_config_base
@@ -630,6 +765,8 @@ template<class HistogramConfig,
          unsigned int SharedImplHistograms = 3>
 struct histogram_config : detail::histogram_config_params
 {
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::histogram_config_tag;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     using histogram = HistogramConfig;
 
@@ -647,7 +784,7 @@ namespace detail
 {
 
 template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
-struct default_histogram_config_base_helper
+struct default_histogram_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div(sizeof(Sample), sizeof(int));
@@ -656,10 +793,63 @@ struct default_histogram_config_base_helper
         = histogram_config<kernel_config<256, ::rocprim::max(8u / Channels / item_scale, 1u)>>;
 };
 
-template<class Sample, unsigned int Channels, unsigned int ActiveChannels>
-struct default_histogram_config_base
-    : default_histogram_config_base_helper<Sample, Channels, ActiveChannels>::type
+struct adjacent_difference_config_tag
 {};
+
+struct adjacent_difference_config_params
+{
+    kernel_config_params          adjacent_difference_kernel_config;
+    ::rocprim::block_load_method  block_load_method;
+    ::rocprim::block_store_method block_store_method;
+};
+} // namespace detail
+
+/// \brief Configuration of device-level adjacent difference primitives.
+///
+/// \tparam BlockSize - number of threads in a block.
+/// \tparam ItemsPerThread - number of items processed by each thread.
+/// \tparam BlockLoadMethod - method for loading input values.
+/// \tparam BlockStoreMethod - method for storing values.
+/// \tparam SizeLimit - limit on the number of items for a single adjacent difference kernel launch.
+template<unsigned int       BlockSize,
+         unsigned int       ItemsPerThread,
+         block_load_method  BlockLoadMethod  = block_load_method::block_load_transpose,
+         block_store_method BlockStoreMethod = block_store_method::block_store_transpose,
+         unsigned int       SizeLimit        = ROCPRIM_GRID_SIZE_LIMIT>
+struct adjacent_difference_config : public detail::adjacent_difference_config_params
+{
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::adjacent_difference_config_tag;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    static constexpr ::rocprim::block_load_method  block_load_method  = BlockLoadMethod;
+    static constexpr ::rocprim::block_store_method block_store_method = BlockStoreMethod;
+    static constexpr unsigned int                  block_size         = BlockSize;
+    static constexpr unsigned int                  items_per_thread   = ItemsPerThread;
+    static constexpr unsigned int                  size_limit         = SizeLimit;
+
+    constexpr adjacent_difference_config()
+        : detail::adjacent_difference_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit},
+            BlockLoadMethod, BlockStoreMethod
+    } {};
+#endif
+};
+
+namespace detail
+{
+
+template<class Value>
+struct default_adjacent_difference_config_base
+{
+    static constexpr unsigned int item_scale
+        = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+
+    using type = adjacent_difference_config<
+        limit_block_size<256U, sizeof(Value), ROCPRIM_WARP_SIZE_64>::value,
+        ::rocprim::max(1u, 16u / item_scale),
+        ::rocprim::block_load_method::block_load_transpose,
+        ::rocprim::block_store_method::block_store_transpose>;
+};
 
 } // namespace detail
 

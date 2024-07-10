@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,7 @@
 #ifndef ROCPRIM_BENCHMARK_DEVICE_ADJACENT_DIFFERENCE_PARALLEL_HPP_
 #define ROCPRIM_BENCHMARK_DEVICE_ADJACENT_DIFFERENCE_PARALLEL_HPP_
 
-#include <cstddef>
-#include <string>
-#include <vector>
+#include "benchmark_utils.hpp"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -34,26 +32,44 @@
 #include <hip/hip_runtime_api.h>
 
 // rocPRIM
-#include <rocprim/detail/various.hpp>
 #include <rocprim/device/device_adjacent_difference.hpp>
+#include <rocprim/type_traits.hpp>
 
-#include "benchmark_utils.hpp"
+#include <string>
+#include <vector>
 
-template<typename T    = int,
-         bool left     = false,
-         bool in_place = false,
-         typename Config
-         = rocprim::detail::default_adjacent_difference_config<ROCPRIM_TARGET_ARCH, T>>
+#include <cstddef>
+
+template<typename Config>
+std::string config_name()
+{
+    //const rocprim::adjacent_difference_config = Config();
+    auto config = Config();
+    return "{bs:" + std::to_string(config.block_size)
+           + ",ipt:" + std::to_string(config.items_per_thread) + "}";
+}
+
+template<>
+inline std::string config_name<rocprim::default_config>()
+{
+    return "default_config";
+}
+
+template<typename T      = int,
+         bool Left       = false,
+         bool InPlace    = false,
+         typename Config = rocprim::default_config>
 struct device_adjacent_difference_benchmark : public config_autotune_interface
 {
+
     std::string name() const override
     {
+
         using namespace std::string_literals;
-        return bench_naming::format_name(
-            "{lvl:device,algo:adjacent_difference" + (left ? ""s : "_right"s)
-            + (in_place ? "_inplace"s : ""s) + ",key_type:" + std::string(Traits<T>::name())
-            + ",cfg:{bs:" + std::to_string(Config::block_size)
-            + ",ipt:" + std::to_string(Config::items_per_thread) + "}}");
+        return bench_naming::format_name("{lvl:device,algo:adjacent_difference"
+                                         + (Left ? ""s : "_right"s) + (InPlace ? "_inplace"s : ""s)
+                                         + ",value_type:" + std::string(Traits<T>::name())
+                                         + ",cfg:" + config_name<Config>() + "}");
     }
 
     static constexpr unsigned int batch_size  = 10;
@@ -84,11 +100,11 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
                                       const OutputIt output,
                                       Args&&... args) const
     {
-        return ::rocprim::adjacent_difference_right(temporary_storage,
-                                                    storage_size,
-                                                    input,
-                                                    output,
-                                                    std::forward<Args>(args)...);
+        return ::rocprim::adjacent_difference_right<Config>(temporary_storage,
+                                                            storage_size,
+                                                            input,
+                                                            output,
+                                                            std::forward<Args>(args)...);
     }
 
     template<typename InputIt, typename OutputIt, typename... Args>
@@ -140,13 +156,13 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
                             input.size() * sizeof(input[0]),
                             hipMemcpyHostToDevice));
 
-        if(!in_place)
+        if(!InPlace)
         {
             HIP_CHECK(hipMalloc(&d_output, size * sizeof(output_type)));
         }
 
-        static constexpr auto left_tag     = rocprim::detail::bool_constant<left>{};
-        static constexpr auto in_place_tag = rocprim::detail::bool_constant<in_place>{};
+        static constexpr auto left_tag     = rocprim::detail::bool_constant<Left>{};
+        static constexpr auto in_place_tag = rocprim::detail::bool_constant<InPlace>{};
 
         // Allocate temporary storage
         std::size_t temp_storage_size;
@@ -208,11 +224,51 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
         state.SetItemsProcessed(state.iterations() * batch_size * size);
 
         hipFree(d_input);
-        if(!in_place)
+        if(!InPlace)
         {
             hipFree(d_output);
         }
         hipFree(d_temp_storage);
+    }
+};
+
+template<typename T, unsigned int BlockSize, bool Left, bool InPlace>
+struct device_adjacent_difference_benchmark_generator
+{
+    static constexpr unsigned int min_items_per_thread = 0;
+    static constexpr unsigned int max_items_per_thread_arg
+        = TUNING_SHARED_MEMORY_MAX / (BlockSize * sizeof(T) * 2 + sizeof(T));
+
+    template<unsigned int IptValueIndex>
+    struct create_ipt
+    {
+        // Device Adjacent difference uses block_load/store_transpose to coalesc memory transaction to global memory
+        // However it accesses shared memory with a stride of items per thread, which leads to reduced performance if power
+        // of two is used for small types. Experiments shown that primes are the best choice for performance.
+        static constexpr int  primes[] = {1,  2,  3,  5,  7,  11, 13, 17, 19, 23, 29, 31, 37,
+                                          41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
+        static constexpr uint ipt_num  = primes[IptValueIndex];
+        using generated_config         = rocprim::adjacent_difference_config<BlockSize, ipt_num>;
+
+        void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
+        {
+            if(ipt_num < max_items_per_thread_arg)
+            {
+                storage.emplace_back(
+                    std::make_unique<device_adjacent_difference_benchmark<T,
+                                                                          Left,
+                                                                          InPlace,
+                                                                          generated_config>>());
+            }
+        }
+    };
+
+    static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
+    {
+        static constexpr unsigned int max_items_per_thread
+            = rocprim::Log2<max_items_per_thread_arg>::VALUE;
+        static_for_each<make_index_range<unsigned int, min_items_per_thread, max_items_per_thread>,
+                        create_ipt>(storage);
     }
 };
 

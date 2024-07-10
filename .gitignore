@@ -1,5 +1,8 @@
 ### Build dirs ###
-build/
+build*/
+
+### clangd. ### 
+/.cache
 
 # Created by https://www.gitignore.io/api/c++,cmake
 

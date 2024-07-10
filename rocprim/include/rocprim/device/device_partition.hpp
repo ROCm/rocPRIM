@@ -149,14 +149,17 @@ hipError_t partition_impl(void * temporary_storage,
     using key_type = typename std::iterator_traits<KeyIterator>::value_type;
     using value_type = typename std::iterator_traits<ValueIterator>::value_type;
 
+    using offset_scan_state_type = detail::lookback_scan_state<offset_type>;
+    using offset_scan_state_with_sleep_type = detail::lookback_scan_state<offset_type, true>;
+
     // Get default config if Config is default_config
     using config = default_or_custom_config<
         Config,
-        default_select_config<ROCPRIM_TARGET_ARCH, key_type, value_type>
+        // Note: the partition algorithm requires some extra shared memory space for an instance of 
+        // offset_scan_state_type. Pass it's size to default_select_config here so that it can select
+        // an appropriate block size (one that ensures that we don't run out of shared memory).
+        default_select_config<ROCPRIM_TARGET_ARCH, key_type, value_type, sizeof(offset_scan_state_type)>
     >;
-
-    using offset_scan_state_type = detail::lookback_scan_state<offset_type>;
-    using offset_scan_state_with_sleep_type = detail::lookback_scan_state<offset_type, true>;
 
     static constexpr unsigned int block_size = config::block_size;
     static constexpr unsigned int items_per_thread = config::items_per_thread;
@@ -178,14 +181,20 @@ hipError_t partition_impl(void * temporary_storage,
     size_t*                         selected_count;
     size_t*                         prev_selected_count;
 
+    detail::temp_storage::layout layout{};
+    const hipError_t             layout_result
+        = offset_scan_state_type::get_temp_storage_layout(number_of_blocks, stream, layout);
+    if(layout_result != hipSuccess)
+    {
+        return layout_result;
+    }
+
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
         detail::temp_storage::make_linear_partition(
             // This is valid even with offset_scan_state_with_sleep_type
-            detail::temp_storage::make_partition(
-                &offset_scan_state_storage,
-                offset_scan_state_type::get_temp_storage_layout(number_of_blocks)),
+            detail::temp_storage::make_partition(&offset_scan_state_storage, layout),
             // Note: the following two are to be allocated continuously, so that they can be initialized
             // simultaneously.
             // They have the same base type, so there is no padding between the types.
@@ -200,10 +209,21 @@ hipError_t partition_impl(void * temporary_storage,
     std::chrono::high_resolution_clock::time_point start;
 
     // Create and initialize lookback_scan_state obj
-    auto offset_scan_state
-        = offset_scan_state_type::create(offset_scan_state_storage, number_of_blocks);
-    auto offset_scan_state_with_sleep
-        = offset_scan_state_with_sleep_type::create(offset_scan_state_storage, number_of_blocks);
+    offset_scan_state_type            offset_scan_state{};
+    hipError_t                        result = offset_scan_state_type::create(offset_scan_state,
+                                                       offset_scan_state_storage,
+                                                       number_of_blocks,
+                                                       stream);
+    offset_scan_state_with_sleep_type offset_scan_state_with_sleep{};
+    result = offset_scan_state_with_sleep_type::create(offset_scan_state_with_sleep,
+                                                       offset_scan_state_storage,
+                                                       number_of_blocks,
+                                                       stream);
+
+    if(result != hipSuccess)
+    {
+        return result;
+    }
 
     hipError_t error;
 
@@ -365,8 +385,7 @@ hipError_t partition_impl(void * temporary_storage,
 /// * Range specified by \p selected_count_output must have at least 1 element.
 /// * Relative order is preserved.
 ///
-/// \tparam Config - [optional] configuration of the primitive. If provided it should be \p
-/// default_config or an instance of \p select_config
+/// \tparam Config - [optional] configuration of the primitive. If has to be an instance of \p select_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be a simple
 /// pointer type.
 /// \tparam SelectedOutputIterator - random-access iterator type of the selected output range. It
@@ -512,8 +531,7 @@ inline hipError_t partition_two_way(void*                       temporary_storag
 /// * Values of \p flag range should be implicitly convertible to `bool` type.
 /// * The relative order of elements in both output ranges matches the input range.
 ///
-/// \tparam Config - [optional] configuration of the primitive. If provided it should be \p
-/// default_config or an instance of \p select_config
+/// \tparam Config - [optional] configuration of the primitive. If has to be an instance of \p select_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam FlagIterator - random-access iterator type of the flag range. It can be
@@ -647,8 +665,7 @@ inline hipError_t partition_two_way(void*                       temporary_storag
 /// * Relative order is preserved for the elements for which the corresponding values from \p flags
 /// are \p true. Other elements are copied in reverse order.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p select_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam FlagIterator - random-access iterator type of the flag range. It can be
@@ -769,8 +786,7 @@ hipError_t partition(void * temporary_storage,
 /// * Relative order is preserved for the elements for which the \p predicate returns \p true. Other
 /// elements are copied in reverse order.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p select_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. It can be
@@ -914,8 +930,7 @@ hipError_t partition(void * temporary_storage,
 /// minus the number of elements written to \p output_first_part minus the number of elements written
 /// to \p output_second_part.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p select_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam FirstOutputIterator - random-access iterator type of the first output range. It can be

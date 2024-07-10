@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "benchmark_utils.hpp"
+// CmdParser
+#include "cmdparser.hpp"
+
+// Google Benchmark
+#include "benchmark/benchmark.h"
+
+// HIP API
+#include <hip/hip_runtime.h>
+
+// rocPRIM
+#include <rocprim/device/device_select.hpp>
+
 #include <codecvt>
-#include <cstdio>
-#include <cstdlib>
 #include <iostream>
 #include <locale>
 #include <string>
 #include <vector>
 
-// Google Benchmark
-#include "benchmark/benchmark.h"
-// CmdParser
-#include "cmdparser.hpp"
-#include "benchmark_utils.hpp"
-
-// HIP API
-#include <hip/hip_runtime.h>
-
-#include <rocprim/rocprim.hpp>
+#include <cstdio>
+#include <cstdlib>
 
 #ifndef DEFAULT_N
 const size_t DEFAULT_N = 1024 * 1024 * 32;
@@ -51,7 +54,6 @@ void run_flagged_benchmark(benchmark::State& state,
 {
     std::vector<T> input;
     std::vector<FlagType> flags = get_random_data01<FlagType>(size, true_probability);
-    std::vector<unsigned int> selected_count_output(1);
     if(std::is_floating_point<T>::value)
     {
         input = get_random_data<T>(size, T(-1000), T(1000));
@@ -181,7 +183,6 @@ void run_selectop_benchmark(benchmark::State& state,
                             float true_probability)
 {
     std::vector<T> input = get_random_data<T>(size, T(0), T(1000));
-    std::vector<unsigned int> selected_count_output(1);
 
     auto select_op = [true_probability] __device__ (const T& value) -> bool
     {
@@ -308,7 +309,6 @@ void run_unique_benchmark(benchmark::State& state,
             input[i] = op(acc, input01[i]);
         }
     }
-    std::vector<unsigned int> selected_count_output(1);
     auto equality_op = rocprim::equal_to<T>();
 
     T * d_input;

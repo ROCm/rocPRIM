@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,7 @@
 #ifndef ROCPRIM_BENCHMARK_DEVICE_HISTOGRAM_PARALLEL_HPP_
 #define ROCPRIM_BENCHMARK_DEVICE_HISTOGRAM_PARALLEL_HPP_
 
-#include <chrono>
-#include <cstddef>
-#include <string>
-#include <thread>
-#include <vector>
+#include "benchmark_utils.hpp"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -36,10 +32,15 @@
 #include <hip/hip_runtime_api.h>
 
 // rocPRIM
-#include <rocprim/detail/various.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_histogram.hpp>
 
-#include "benchmark_utils.hpp"
+#include <string>
+#include <thread>
+#include <vector>
+
+#include <chrono>
+#include <cstddef>
 
 template<class T>
 std::vector<T> generate(size_t size, int entropy_reduction, int lower_level, int upper_level)
@@ -358,8 +359,8 @@ struct device_histogram_benchmark_generator
             template<unsigned int Channels,
                      unsigned int ActiveChannels,
                      unsigned int items_per_thread = ItemsPerThread>
-            auto create(std::vector<std::unique_ptr<config_autotune_interface>>& storage,
-                        const std::vector<unsigned int>&                         cases) ->
+            auto create(std::vector<std::unique_ptr<config_autotune_interface>>& /*storage*/,
+                        const std::vector<unsigned int>& /*cases*/) ->
                 typename std::enable_if<!(items_per_thread * Channels <= max_items_per_thread),
                                         void>::type
             {}

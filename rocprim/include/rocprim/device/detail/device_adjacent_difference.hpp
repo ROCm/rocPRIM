@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,8 @@
 #include "../../detail/various.hpp"
 
 #include "../../config.hpp"
+#include "../../type_traits.hpp"
+#include "device_config_helper.hpp"
 
 #include <hip/hip_runtime.h>
 
@@ -178,20 +180,23 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void adjacent_difference_kernel_impl(
     const std::size_t                                         starting_block)
 {
     using input_type  = typename std::iterator_traits<InputIt>::value_type;
-    using output_type = typename std::iterator_traits<OutputIt>::value_type;
+    using output_type = rocprim::invoke_result_binary_op_t<input_type, BinaryFunction>;
 
-    static constexpr unsigned int block_size       = Config::block_size;
-    static constexpr unsigned int items_per_thread = Config::items_per_thread;
+    static constexpr adjacent_difference_config_params params = device_params<Config>();
+
+    static constexpr unsigned int block_size = params.adjacent_difference_kernel_config.block_size;
+    static constexpr unsigned int items_per_thread
+        = params.adjacent_difference_kernel_config.items_per_thread;
     static constexpr unsigned int items_per_block  = block_size * items_per_thread;
 
     using block_load_type
-        = ::rocprim::block_load<input_type, block_size, items_per_thread, Config::load_method>;
-    using block_store_type
-        = ::rocprim::block_store<output_type, block_size, items_per_thread, Config::store_method>;
+        = ::rocprim::block_load<input_type, block_size, items_per_thread, params.block_load_method>;
+    using block_store_type = ::rocprim::
+        block_store<output_type, block_size, items_per_thread, params.block_store_method>;
 
     using adjacent_helper = adjacent_diff_helper<input_type, block_size>;
 
-    ROCPRIM_SHARED_MEMORY struct
+    ROCPRIM_SHARED_MEMORY union
     {
         typename block_load_type::storage_type  load;
         typename adjacent_helper::storage_type  adjacent_diff;

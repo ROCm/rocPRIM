@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,6 @@
 #include "config_types.hpp"
 
 #include "../config.hpp"
-#include "../detail/match_result_type.hpp"
 #include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 
@@ -112,9 +111,8 @@ hipError_t reduce_impl(void * temporary_storage,
                        bool debug_synchronous)
 {
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::match_result_type<
-        input_type, BinaryFunction
-    >::type;
+    using result_type =
+        typename ::rocprim::invoke_result_binary_op<input_type, BinaryFunction>::type;
 
     using config = wrapped_reduce_config<Config, result_type>;
 
@@ -256,8 +254,7 @@ hipError_t reduce_impl(void * temporary_storage,
 /// * By default, the input type is used for accumulation. A custom type
 /// can be specified using <tt>rocprim::transform_iterator</tt>, see the example below.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p reduce_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p reduce_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. Must meet the
@@ -404,8 +401,7 @@ hipError_t reduce(void * temporary_storage,
 /// * By default, the input type is used for accumulation. A custom type
 /// can be specified using <tt>rocprim::transform_iterator</tt>, see the example below.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p reduce_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p reduce_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. Must meet the

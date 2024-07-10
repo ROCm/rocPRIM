@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,17 +28,16 @@
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
-#include "../detail/match_result_type.hpp"
-#include "../types/tuple.hpp"
 #include "../iterator/zip_iterator.hpp"
+#include "../types/tuple.hpp"
 
 #include "device_transform_config.hpp"
 #include "detail/device_transform.hpp"
 
-BEGIN_ROCPRIM_NAMESPACE
-
 /// \addtogroup devicemodule
 /// @{
+
+BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
@@ -82,8 +81,7 @@ ROCPRIM_KERNEL
 /// \par Overview
 /// * Ranges specified by \p input and \p output must have at least \p size elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p transform_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p transform_config or a class derived from it.
 /// \tparam InputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. Must meet the
@@ -143,7 +141,7 @@ inline hipError_t transform(InputIterator     input,
         return hipSuccess;
 
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
-    using result_type = typename ::rocprim::detail::invoke_result<UnaryFunction, input_type>::type;
+    using result_type = typename ::rocprim::invoke_result<UnaryFunction, input_type>::type;
 
     using config = detail::wrapped_transform_config<Config, result_type>;
 
@@ -208,8 +206,7 @@ inline hipError_t transform(InputIterator     input,
 /// \par Overview
 /// * Ranges specified by \p input1, \p input2, and \p output must have at least \p size elements.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It can be \p transform_config or
-/// a custom class with the same members.
+/// \tparam Config - [optional] configuration of the primitive. It has to be \p transform_config or a class derived from it.
 /// \tparam InputIterator1 - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam InputIterator2 - random-access iterator type of the input range. Must meet the
@@ -285,9 +282,9 @@ hipError_t transform(InputIterator1 input1,
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
 
+END_ROCPRIM_NAMESPACE
+
 /// @}
 // end of group devicemodule
-
-END_ROCPRIM_NAMESPACE
 
 #endif // ROCPRIM_DEVICE_DEVICE_TRANSFORM_HPP_

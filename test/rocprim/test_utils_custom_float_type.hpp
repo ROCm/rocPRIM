@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 #include "test_utils_custom_test_types.hpp"
 
 // For radix_key_codec
-#include <rocprim/detail/radix_sort.hpp>
+#include <rocprim/thread/radix_key_codec.hpp>
 
 #include <ostream>
 #include <type_traits>
@@ -110,10 +110,6 @@ struct inner_type<custom_float_type>
 namespace rocprim
 {
 
-template<>
-struct is_floating_point<test_utils::custom_float_type> : std::true_type
-{};
-
 namespace detail
 {
 
@@ -130,6 +126,10 @@ template<>
 struct radix_key_codec_base<test_utils::custom_float_type>
     : radix_key_codec_floating<test_utils::custom_float_type, unsigned int>
 {};
+
+static_assert(!is_floating_point<test_utils::custom_float_type>::value,
+              "custom_float_type must not be rocprim::is_floating_point, "
+              "since that is how downstream libraries use it.");
 
 } // namespace detail
 } // namespace rocprim

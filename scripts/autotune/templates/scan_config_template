@@ -5,12 +5,12 @@ ROCPRIM_DEVICE_DETAIL_CONFIG_DEVICE_SCAN_HPP_
 {%- endmacro %}
 
 {% macro kernel_configuration(measurement) -%}
-scan_config_v2<{{ measurement['cfg']['bs'] }}, {{ measurement['cfg']['ipt'] }}, ::rocprim::block_load_method::block_load_transpose, ::rocprim::block_store_method::block_store_transpose, {{ measurement['cfg']['method'] }}> { };
+scan_config<{{ measurement['cfg']['bs'] }}, {{ measurement['cfg']['ipt'] }}, ::rocprim::block_load_method::block_load_transpose, ::rocprim::block_store_method::block_store_transpose, {{ measurement['cfg']['method'] }}> { };
 {%- endmacro %}
 
 {% macro general_case() -%}
 template<unsigned int arch, class value_type, class enable = void> struct default_scan_config :
-default_scan_config_base<value_type> { };
+default_scan_config_base<value_type>::type { };
 {%- endmacro %}
 
 {% macro configuration_fallback(benchmark_of_architecture, based_on_type, fallback_selection_criteria) -%}

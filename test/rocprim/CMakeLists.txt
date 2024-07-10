@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,9 @@ endfunction()
 
 function(add_rocprim_test_internal TEST_NAME TEST_SOURCES TEST_TARGET)
   add_executable(${TEST_TARGET} ${TEST_SOURCES})
-  rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
+  if (ROCPRIM_INSTALL)
+    rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
+  endif()
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
@@ -225,21 +227,23 @@ add_rocprim_test("rocprim.basic_test" "test_basic.cpp;detail/get_rocprim_version
 add_rocprim_test("rocprim.arg_index_iterator" test_arg_index_iterator.cpp)
 add_rocprim_test("rocprim.temporary_storage_partitioning" test_temporary_storage_partitioning.cpp)
 add_rocprim_test_parallel("rocprim.block_adjacent_difference" test_block_adjacent_difference.cpp.in)
-add_rocprim_test("rocprim.block_discontinuity" test_block_discontinuity.cpp)
+add_rocprim_test_parallel("rocprim.block_discontinuity" test_block_discontinuity.cpp.in)
 add_rocprim_test("rocprim.block_exchange" test_block_exchange.cpp)
 add_rocprim_test("rocprim.block_histogram" test_block_histogram.cpp)
 add_rocprim_test("rocprim.block_load_store" test_block_load_store.cpp)
 add_rocprim_test("rocprim.block_sort_merge" test_block_sort_merge.cpp)
 add_rocprim_test("rocprim.block_sort_merge_stable" test_block_sort_merge_stable.cpp)
 add_rocprim_test_parallel("rocprim.block_radix_rank" test_block_radix_rank.cpp.in)
-add_rocprim_test("rocprim.block_radix_sort" test_block_radix_sort.cpp)
+add_rocprim_test_parallel("rocprim.block_radix_sort" test_block_radix_sort.cpp.in)
 add_rocprim_test("rocprim.block_reduce" test_block_reduce.cpp)
+add_rocprim_test("rocprim.block_run_length_decode" test_block_run_length_decode.cpp)
 add_rocprim_test_parallel("rocprim.block_scan" test_block_scan.cpp.in)
 add_rocprim_test("rocprim.block_shuffle" test_block_shuffle.cpp)
 add_rocprim_test("rocprim.block_sort_bitonic" test_block_sort_bitonic.cpp)
 add_rocprim_test("rocprim.config_dispatch" test_config_dispatch.cpp)
 add_rocprim_test("rocprim.constant_iterator" test_constant_iterator.cpp)
 add_rocprim_test("rocprim.counting_iterator" test_counting_iterator.cpp)
+add_rocprim_test("rocprim.device_batch_memcpy" test_device_batch_memcpy.cpp)
 add_rocprim_test("rocprim.device_binary_search" test_device_binary_search.cpp)
 add_rocprim_test("rocprim.device_adjacent_difference" test_device_adjacent_difference.cpp)
 add_rocprim_test("rocprim.device_histogram" test_device_histogram.cpp)
@@ -257,15 +261,18 @@ add_rocprim_test("rocprim.device_segmented_scan" test_device_segmented_scan.cpp)
 add_rocprim_test("rocprim.device_select" test_device_select.cpp)
 add_rocprim_test("rocprim.device_transform" test_device_transform.cpp)
 add_rocprim_test("rocprim.discard_iterator" test_discard_iterator.cpp)
+add_rocprim_test("rocprim.radix_key_codec" test_radix_key_codec.cpp)
+add_rocprim_test("rocprim.predicate_iterator" test_predicate_iterator.cpp)
 add_rocprim_test("rocprim.reverse_iterator" test_reverse_iterator.cpp)
 if(NOT USE_HIP_CPU)
-  add_rocprim_test("rocprim.texture_cache_iterator" test_texture_cache_iterator.cpp)
+add_rocprim_test("rocprim.texture_cache_iterator" test_texture_cache_iterator.cpp)
 endif()
 add_rocprim_test("rocprim.thread" test_thread.cpp)
 add_rocprim_test("rocprim.thread_algos" test_thread_algos.cpp)
 add_rocprim_test("rocprim.transform_iterator" test_transform_iterator.cpp)
 add_rocprim_test("rocprim.no_half_operators" test_no_half_operators.cpp)
 add_rocprim_test("rocprim.intrinsics" test_intrinsics.cpp)
+add_rocprim_test("rocprim.invoke_result" test_invoke_result.cpp)
 add_rocprim_test("rocprim.warp_exchange" test_warp_exchange.cpp)
 add_rocprim_test("rocprim.warp_load" test_warp_load.cpp)
 add_rocprim_test("rocprim.warp_reduce" test_warp_reduce.cpp)

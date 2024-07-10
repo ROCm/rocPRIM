@@ -16,7 +16,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
                 cd ${project.paths.project_build_prefix}
                 mkdir -p build/${buildTypeDir} && cd build/${buildTypeDir}
                 ${auxiliary.gfxTargetParser()}
-                ${cmake} -DCMAKE_CXX_COMPILER=/opt/rocm/bin/hipcc ${buildTypeArg} ${amdgpuTargets} -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON ../..
+                ${cmake} --toolchain=toolchain-linux.cmake ${buildTypeArg} ${amdgpuTargets} -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON ../..
                 make -j\$(nproc)
                 """
 
@@ -29,9 +29,9 @@ def runTestCommand (platform, project)
     String sudo = auxiliary.sudo(platform.jenkinsLabel)
 
     def testCommand = "ctest --output-on-failure "
-    def testCommandExcludeRegex = /(rocprim.device_reduce_by_key|rocprim.device_radix_sort)/
+    def testCommandExcludeRegex = ''
     def testCommandExclude = "--exclude-regex \"${testCommandExcludeRegex}\""
-    def hmmExcludeRegex = /(rocprim.device_scan|rocprim.device_reduce_by_key|rocprim.block_sort_bitonic|rocprim.device_merge|rocprim.device_merge_sort|rocprim.device_partition|rocprim.device_segmented_radix_sort|rocprim.device_segmented_scan)/
+    def hmmExcludeRegex = ''
     def hmmTestCommandExclude = "--exclude-regex \"${hmmExcludeRegex}\""
     def hmmTestCommand = ''
     if (platform.jenkinsLabel.contains('gfx90a'))
@@ -74,4 +74,3 @@ def runPackageCommand(platform, project)
 }
 
 return this
-

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,28 +39,19 @@ namespace detail
 
 // device transform does not have config tuning
 template<unsigned int arch, class value_type>
-struct default_transform_config : default_transform_config_base<value_type>
+struct default_transform_config : default_transform_config_base<value_type>::type
 {};
-
-template<typename TransformConfig>
-constexpr transform_config_params wrap_transform_config()
-{
-    return transform_config_params{
-        {
-         TransformConfig::block_size,
-         TransformConfig::items_per_thread,
-         TransformConfig::size_limit,
-         }
-    };
-}
 
 template<typename TransformConfig, typename>
 struct wrapped_transform_config
 {
+    static_assert(std::is_base_of<transform_config_tag, typename TransformConfig::tag>::value,
+                  "Config must be a specialization of struct template transform_config");
+
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr transform_config_params params = wrap_transform_config<TransformConfig>();
+        static constexpr transform_config_params params = TransformConfig{};
     };
 };
 
@@ -70,8 +61,8 @@ struct wrapped_transform_config<default_config, Value>
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr transform_config_params params = wrap_transform_config<
-            default_transform_config<static_cast<unsigned int>(Arch), Value>>();
+        static constexpr transform_config_params params
+            = default_transform_config<static_cast<unsigned int>(Arch), Value>{};
     };
 };
 

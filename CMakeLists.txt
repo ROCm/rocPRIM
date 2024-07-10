@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,12 @@ set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended 
 # rocPRIM project
 project(rocprim LANGUAGES CXX)
 
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  set(ROCPRIM_PROJECT_IS_TOP_LEVEL TRUE)
+else()
+  set(ROCPRIM_PROJECT_IS_TOP_LEVEL FALSE)
+endif()
+
 #Adding CMAKE_PREFIX_PATH
 if(WIN32)
   set(ROCM_ROOT "$ENV{HIP_PATH}" CACHE PATH "Root directory of the ROCm installation")
@@ -45,6 +51,7 @@ option(USE_HIP_CPU "Prefer HIP-CPU runtime instead of HW acceleration" OFF)
 # Disables building tests, benchmarks, examples
 option(ONLY_INSTALL "Only install" OFF)
 option(BUILD_CODE_COVERAGE "Build with code coverage enabled" OFF)
+option(ROCPRIM_INSTALL "Enable installation of rocPRIM (projects embedding rocPRIM may want to turn this OFF)" ON)
 
 # CMake modules
 list(APPEND CMAKE_MODULE_PATH
@@ -79,9 +86,17 @@ if(NOT USE_HIP_CPU)
   set_property(CACHE GPU_TARGETS PROPERTY STRINGS "all")
 
   if(GPU_TARGETS STREQUAL "all")
-    rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
-      TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx940;gfx941;gfx942;gfx1030;gfx1100;gfx1101;gfx1102"
-    )
+    if(BUILD_ADDRESS_SANITIZER)
+      # ASAN builds require xnack
+      rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
+        TARGETS "gfx908:xnack+;gfx90a:xnack+;gfx940:xnack+;gfx941:xnack+;gfx942:xnack+"
+      )
+    else()
+      rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
+        TARGETS "gfx803;gfx900:xnack-;gfx906:xnack-;gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx940;gfx941;gfx942;gfx1030;gfx1100;gfx1101;gfx1102;gfx1200;gfx1201"
+      )
+    endif()
+    
     set(GPU_TARGETS "${DEFAULT_AMDGPU_TARGETS}" CACHE STRING "GPU architectures to compile for" FORCE)
   endif()
 
@@ -95,7 +110,7 @@ endif()
 
 # FOR HANDLING ENABLE/DISABLE OPTIONAL BACKWARD COMPATIBILITY for FILE/FOLDER REORG
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" OFF)
-if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
+if(ROCPRIM_INSTALL AND BUILD_FILE_REORG_BACKWARD_COMPATIBILITY AND NOT WIN32)
   rocm_wrap_header_dir(
     "${PROJECT_SOURCE_DIR}/rocprim/include/rocprim"
     WRAPPER_LOCATIONS rocprim/include/rocprim
@@ -115,7 +130,7 @@ if(USE_HIP_CPU)
 endif()
 
 # Setup VERSION
-set(VERSION_STRING "2.13.1")
+set(VERSION_STRING "3.2.0")
 rocm_setup_version(VERSION ${VERSION_STRING})
 
 # Print configuration summary
@@ -125,20 +140,24 @@ print_configuration_summary()
 # rocPRIM library
 add_subdirectory(rocprim)
 
-if(NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
+if(ROCPRIM_PROJECT_IS_TOP_LEVEL AND NOT ONLY_INSTALL AND (BUILD_TEST OR BUILD_BENCHMARK))
   rocm_package_setup_component(clients)
 endif()
 
 # Tests
 if(BUILD_TEST AND NOT ONLY_INSTALL)
-  rocm_package_setup_client_component(tests)
+  if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
+    rocm_package_setup_client_component(tests)
+  endif()
   enable_testing()
   add_subdirectory(test)
 endif()
 
 # Benchmarks
 if(BUILD_BENCHMARK AND NOT ONLY_INSTALL)
-  rocm_package_setup_client_component(benchmarks)
+  if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
+    rocm_package_setup_client_component(benchmarks)
+  endif()
   add_subdirectory(benchmark)
 endif()
 
@@ -153,20 +172,27 @@ if(BUILD_DOCS AND NOT ONLY_INSTALL)
 endif()
 
 # Package
-set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
-rocm_package_add_dependencies(DEPENDS "hip-rocclr >= 3.5.0")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
+  set(BUILD_SHARED_LIBS ON) # Build as though shared library for naming
+  if(BUILD_ADDRESS_SANITIZER)
+    set(DEPENDS_HIP_RUNTIME "hip-runtime-amd-asan" )
+  else()
+    set(DEPENDS_HIP_RUNTIME "hip-runtime-amd" )
+  endif()
 
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
+  rocm_package_add_dependencies(DEPENDS "${DEPENDS_HIP_RUNTIME} >= 4.5.0")
+  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+  set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
-rocm_create_package(
-  NAME rocprim
-  DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
-  MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
-  HEADER_ONLY
-)
+  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "\${CPACK_PACKAGING_INSTALL_PREFIX}" )
 
+  rocm_create_package(
+    NAME rocprim
+    DESCRIPTION "Radeon Open Compute Parallel Primitives Library"
+    MAINTAINER "rocPRIM Maintainer <rocprim-maintainer@amd.com>"
+    HEADER_ONLY
+  )
+endif()
 
 #
 # ADDITIONAL TARGETS FOR CODE COVERAGE

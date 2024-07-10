@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,7 @@
 #ifndef ROCPRIM_BENCHMARK_DETAIL_BENCHMARK_DEVICE_MERGE_SORT_BLOCK_SORT_PARALLEL_HPP_
 #define ROCPRIM_BENCHMARK_DETAIL_BENCHMARK_DEVICE_MERGE_SORT_BLOCK_SORT_PARALLEL_HPP_
 
-#include <cstddef>
-#include <string>
-#include <vector>
+#include "benchmark_utils.hpp"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -34,9 +32,12 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
-#include <rocprim/rocprim.hpp>
+#include <rocprim/device/device_merge_sort.hpp>
 
-#include "benchmark_utils.hpp"
+#include <string>
+#include <vector>
+
+#include <cstddef>
 
 namespace rp = rocprim;
 
@@ -59,8 +60,7 @@ std::string config_name()
 {
     const rocprim::detail::merge_sort_block_sort_config_params config = Config();
     return "{bs:" + std::to_string(config.block_sort_config.block_size)
-           + ",ipt:" + std::to_string(config.block_sort_config.items_per_thread)
-           + ",method:" + std::string(get_block_sort_method_name(config.block_sort_method)) + "}";
+           + ",ipt:" + std::to_string(config.block_sort_config.items_per_thread) + "}";
 }
 
 template<>

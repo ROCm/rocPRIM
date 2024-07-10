@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -172,15 +172,12 @@ void scatter_to_striped_kernel(Type* device_input, OutputType* device_output, un
 }
 
 // Test for exchange
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 0>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 0>::type
 {
     using type = T;
     using output_type = U;
@@ -201,7 +198,11 @@ auto test_block_exchange()
 
     // Calculate input and expected results on host
     std::vector<type> values(size);
-    std::iota(values.begin(), values.end(), 0);
+    test_utils::iota_modulo(values.begin(),
+                            values.end(),
+                            0,
+                            std::min<size_t>(test_utils::numeric_limits<type>::max(),
+                                             test_utils::numeric_limits<output_type>::max()));
     for(size_t bi = 0; bi < size / items_per_block; bi++)
     {
         for(size_t ti = 0; ti < block_size; ti++)
@@ -212,7 +213,7 @@ auto test_block_exchange()
                 const size_t i0 = offset + ti * items_per_thread + ii;
                 const size_t i1 = offset + ii * block_size + ti;
                 input[i1] = values[i1];
-                expected[i0] = static_cast<output_type>(values[i1]);
+                expected[i0]        = values[i1];
             }
         }
     }
@@ -256,15 +257,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 1>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 1>::type
 {
     using type = T;
     using output_type = U;
@@ -285,7 +283,11 @@ auto test_block_exchange()
 
     // Calculate input and expected results on host
     std::vector<type> values(size);
-    std::iota(values.begin(), values.end(), 0);
+    test_utils::iota_modulo(values.begin(),
+                            values.end(),
+                            0,
+                            std::min<size_t>(test_utils::numeric_limits<type>::max(),
+                                             test_utils::numeric_limits<output_type>::max()));
     for(size_t bi = 0; bi < size / items_per_block; bi++)
     {
         for(size_t ti = 0; ti < block_size; ti++)
@@ -340,15 +342,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 2>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 2>::type
 {
     using type = T;
     using output_type = U;
@@ -367,13 +366,20 @@ auto test_block_exchange()
     std::vector<output_type> expected(size);
     std::vector<output_type> output(size, output_type(0));
 
-    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size()));
-    const size_t warps_no = (block_size + warp_size - 1) / warp_size;
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
+
+    const size_t warp_size      = std::min(block_size, size_t(current_device_warp_size));
+    const size_t warps_no       = (block_size + warp_size - 1) / warp_size;
     const size_t items_per_warp = warp_size * items_per_thread;
 
     // Calculate input and expected results on host
     std::vector<type> values(size);
-    std::iota(values.begin(), values.end(), 0);
+    test_utils::iota_modulo(values.begin(),
+                            values.end(),
+                            0,
+                            std::min<size_t>(test_utils::numeric_limits<type>::max(),
+                                             test_utils::numeric_limits<output_type>::max()));
     for(size_t bi = 0; bi < size / items_per_block; bi++)
     {
         for(size_t wi = 0; wi < warps_no; wi++)
@@ -436,15 +442,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 3>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 3>::type
 {
     using type = T;
     using output_type = U;
@@ -463,13 +466,20 @@ auto test_block_exchange()
     std::vector<output_type> expected(size);
     std::vector<output_type> output(size, output_type(0));
 
-    const size_t warp_size = std::min(block_size, size_t(::rocprim::host_warp_size()));
-    const size_t warps_no = (block_size + warp_size - 1) / warp_size;
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
+
+    const size_t warp_size      = std::min(block_size, size_t(current_device_warp_size));
+    const size_t warps_no       = (block_size + warp_size - 1) / warp_size;
     const size_t items_per_warp = warp_size * items_per_thread;
 
     // Calculate input and expected results on host
     std::vector<type> values(size);
-    std::iota(values.begin(), values.end(), 0);
+    test_utils::iota_modulo(values.begin(),
+                            values.end(),
+                            0,
+                            std::min<size_t>(test_utils::numeric_limits<type>::max(),
+                                             test_utils::numeric_limits<output_type>::max()));
     for(size_t bi = 0; bi < size / items_per_block; bi++)
     {
         for(size_t wi = 0; wi < warps_no; wi++)
@@ -530,15 +540,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_output));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 4>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 4>::type
 {
     using type = T;
     using output_type = U;
@@ -566,7 +573,11 @@ auto test_block_exchange()
         std::shuffle(block_ranks, block_ranks + items_per_block, std::mt19937{std::random_device{}()});
     }
     std::vector<type> values(size);
-    std::iota(values.begin(), values.end(), 0);
+    test_utils::iota_modulo(values.begin(),
+                            values.end(),
+                            0,
+                            std::min<size_t>(test_utils::numeric_limits<type>::max(),
+                                             test_utils::numeric_limits<output_type>::max()));
     for(size_t bi = 0; bi < size / items_per_block; bi++)
     {
         for(size_t ti = 0; ti < block_size; ti++)
@@ -632,15 +643,12 @@ auto test_block_exchange()
     HIP_CHECK(hipFree(device_ranks));
 }
 
-template<
-    class T,
-    class U,
-    int Method,
-    unsigned int BlockSize = 256U,
-    unsigned int ItemsPerThread = 1U
->
-auto test_block_exchange()
--> typename std::enable_if<Method == 5>::type
+template<class T,
+         class U,
+         int          Method,
+         unsigned int BlockSize      = 256U,
+         unsigned int ItemsPerThread = 1U>
+auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method == 5>::type
 {
     using type = T;
     using output_type = U;
@@ -668,7 +676,11 @@ auto test_block_exchange()
         std::shuffle(block_ranks, block_ranks + items_per_block, std::mt19937{std::random_device{}()});
     }
     std::vector<type> values(size);
-    std::iota(values.begin(), values.end(), 0);
+    test_utils::iota_modulo(values.begin(),
+                            values.end(),
+                            0,
+                            std::min<size_t>(test_utils::numeric_limits<type>::max(),
+                                             test_utils::numeric_limits<output_type>::max()));
     for(size_t bi = 0; bi < size / items_per_block; bi++)
     {
         for(size_t ti = 0; ti < block_size; ti++)
@@ -753,7 +765,7 @@ struct static_for
         SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
         HIP_CHECK(hipSetDevice(device_id));
 
-        test_block_exchange<T, U, Method, BlockSize, items[First]>();
+        test_block_exchange<T, U, Method, BlockSize, items[First]>(device_id);
         static_for<First + 1, Last, T, U, Method, BlockSize>::run();
     }
 };

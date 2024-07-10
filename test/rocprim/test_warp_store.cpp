@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,9 +21,11 @@
 // SOFTWARE.
 
 #include "../common_test_header.hpp"
+#include "rocprim/types.hpp"
 #include "test_utils.hpp"
 
 #include <rocprim/warp/warp_store.hpp>
+#include <type_traits>
 
 template<
     class T,
@@ -47,11 +49,6 @@ public:
 };
 
 using WarpStoreTestParams = ::testing::Types<
-    Params<int, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
-    Params<int, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
-    Params<int, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
-    Params<int, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>,
-
     Params<int, 4U, 8U, ::rocprim::warp_store_method::warp_store_direct>,
     Params<int, 4U, 8U, ::rocprim::warp_store_method::warp_store_striped>,
     Params<int, 4U, 8U, ::rocprim::warp_store_method::warp_store_vectorize>,
@@ -75,69 +72,100 @@ using WarpStoreTestParams = ::testing::Types<
     Params<float2, 4U, 32U, ::rocprim::warp_store_method::warp_store_direct>,
     Params<float2, 4U, 32U, ::rocprim::warp_store_method::warp_store_striped>,
     Params<float2, 4U, 32U, ::rocprim::warp_store_method::warp_store_vectorize>,
-    Params<float2, 4U, 32U, ::rocprim::warp_store_method::warp_store_transpose>
->;
+    Params<float2, 4U, 32U, ::rocprim::warp_store_method::warp_store_transpose>,
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    unsigned int LogicalWarpSize,
-    ::rocprim::warp_store_method Method
->
-__global__
-__launch_bounds__(BlockSize)
-void warp_store_kernel(T* d_input,
-                       T* d_output)
+    Params<int8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
+    Params<int8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
+    Params<int8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
+    Params<int8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>,
+
+    Params<uint8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
+    Params<uint8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
+    Params<uint8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
+    Params<uint8_t, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>,
+
+    Params<float, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
+    Params<float, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
+    Params<float, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
+    Params<float, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>,
+
+    Params<double, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
+    Params<double, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
+    Params<double, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
+    Params<double, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>,
+
+    // half should be supported, but is missing some key operators.
+    // we should uncomment these, as soon as these are implemented and the tests compile and work as intended.
+    //Params<rocprim::half, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
+    //Params<rocprim::half, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
+    //Params<rocprim::half, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
+    //Params<rocprim::half, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>,
+
+    Params<rocprim::bfloat16, 4U, 1U, ::rocprim::warp_store_method::warp_store_direct>,
+    Params<rocprim::bfloat16, 4U, 1U, ::rocprim::warp_store_method::warp_store_striped>,
+    Params<rocprim::bfloat16, 4U, 1U, ::rocprim::warp_store_method::warp_store_vectorize>,
+    Params<rocprim::bfloat16, 4U, 1U, ::rocprim::warp_store_method::warp_store_transpose>>;
+
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         unsigned int                 LogicalWarpSize,
+         ::rocprim::warp_store_method Method,
+         class T>
+__device__ auto warp_store_test(T* d_input, T* d_output)
+    -> std::enable_if_t<test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
 {
-    using warp_store_type = ::rocprim::warp_store<
-        T,
-        ItemsPerThread,
-        test_utils::DeviceSelectWarpSize<LogicalWarpSize>::value,
-        Method
-    >;
+    using warp_store_type = ::rocprim::warp_store<T, ItemsPerThread, LogicalWarpSize, Method>;
     constexpr unsigned int tile_size = ItemsPerThread * LogicalWarpSize;
     constexpr unsigned int num_warps = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = hipThreadIdx_x / LogicalWarpSize;
+    const unsigned int     warp_id   = threadIdx.x / LogicalWarpSize;
 
     ROCPRIM_SHARED_MEMORY typename warp_store_type::storage_type storage[num_warps];
     T thread_data[ItemsPerThread];
     for(unsigned int i = 0; i < ItemsPerThread; ++i)
     {
-        thread_data[i] = d_input[hipThreadIdx_x * ItemsPerThread + i];
+        thread_data[i] = d_input[threadIdx.x * ItemsPerThread + i];
     }
 
     warp_store_type().store(d_output + warp_id * tile_size, thread_data, storage[warp_id]);
 }
 
-template<
-    class T,
-    unsigned int BlockSize,
-    unsigned int ItemsPerThread,
-    unsigned int LogicalWarpSize,
-    ::rocprim::warp_store_method Method
->
-__global__
-__launch_bounds__(BlockSize)
-void warp_store_guarded_kernel(T* d_input,
-                               T* d_output,
-                               int valid_items)
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         unsigned int                 LogicalWarpSize,
+         ::rocprim::warp_store_method Method,
+         class T>
+__device__ auto warp_store_test(T* /*d_input*/, T* /*d_output*/)
+    -> std::enable_if_t<!test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
+{}
+
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         unsigned int                 LogicalWarpSize,
+         ::rocprim::warp_store_method Method,
+         class T>
+__global__ __launch_bounds__(BlockSize) void warp_store_kernel(T* d_input, T* d_output)
 {
-    using warp_store_type = ::rocprim::warp_store<
-        T,
-        ItemsPerThread,
-        test_utils::DeviceSelectWarpSize<LogicalWarpSize>::value,
-        Method
-    >;
+    warp_store_test<BlockSize, ItemsPerThread, LogicalWarpSize, Method>(d_input, d_output);
+}
+
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         unsigned int                 LogicalWarpSize,
+         ::rocprim::warp_store_method Method,
+         class T>
+__device__ auto warp_store_guarded_test(T* d_input, T* d_output, int valid_items)
+    -> std::enable_if_t<test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
+{
+    using warp_store_type = ::rocprim::warp_store<T, ItemsPerThread, LogicalWarpSize, Method>;
     constexpr unsigned int tile_size = ItemsPerThread * LogicalWarpSize;
     constexpr unsigned int num_warps = BlockSize / LogicalWarpSize;
-    const unsigned int warp_id = hipThreadIdx_x / LogicalWarpSize;
+    const unsigned int     warp_id   = threadIdx.x / LogicalWarpSize;
 
     ROCPRIM_SHARED_MEMORY typename warp_store_type::storage_type storage[num_warps];
     T thread_data[ItemsPerThread];
     for(unsigned int i = 0; i < ItemsPerThread; ++i)
     {
-        thread_data[i] = d_input[hipThreadIdx_x * ItemsPerThread + i];
+        thread_data[i] = d_input[threadIdx.x * ItemsPerThread + i];
     }
 
     warp_store_type().store(d_output + warp_id * tile_size,
@@ -145,6 +173,29 @@ void warp_store_guarded_kernel(T* d_input,
                             valid_items,
                             storage[warp_id]
     );
+}
+
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         unsigned int                 LogicalWarpSize,
+         ::rocprim::warp_store_method Method,
+         class T>
+__device__ auto warp_store_guarded_test(T* /*d_input*/, T* /*d_output*/, int /*valid_items*/)
+    -> std::enable_if_t<!test_utils::device_test_enabled_for_warp_size_v<LogicalWarpSize>>
+{}
+
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         unsigned int                 LogicalWarpSize,
+         ::rocprim::warp_store_method Method,
+         class T>
+__global__ __launch_bounds__(BlockSize) void warp_store_guarded_kernel(T*  d_input,
+                                                                       T*  d_output,
+                                                                       int valid_items)
+{
+    warp_store_guarded_test<BlockSize, ItemsPerThread, LogicalWarpSize, Method>(d_input,
+                                                                                d_output,
+                                                                                valid_items);
 }
 
 template<class T>
@@ -175,7 +226,8 @@ TYPED_TEST(WarpStoreTest, WarpLoad)
     constexpr unsigned int block_size = 1024;
     constexpr unsigned int items_count = items_per_thread * block_size;
 
-    SKIP_IF_UNSUPPORTED_WARP_SIZE(warp_size);
+    int device_id = test_common_utils::obtain_device_from_ctest();
+    SKIP_IF_UNSUPPORTED_WARP_SIZE(warp_size, device_id);
 
     std::vector<T> input(items_count);
     std::iota(input.begin(), input.end(), static_cast<T>(0));
@@ -186,19 +238,8 @@ TYPED_TEST(WarpStoreTest, WarpLoad)
     T* d_output{};
     HIP_CHECK(hipMalloc(&d_output, items_count * sizeof(T)));
 
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(
-            warp_store_kernel<
-                T,
-                block_size,
-                items_per_thread,
-                warp_size,
-                method
-            >
-        ),
-        dim3(1), dim3(block_size), 0, 0,
-        d_input, d_output
-    );
+    warp_store_kernel<block_size, items_per_thread, warp_size, method>
+        <<<dim3(1), dim3(block_size), 0, 0>>>(d_input, d_output);
     HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipDeviceSynchronize());
 
@@ -227,7 +268,8 @@ TYPED_TEST(WarpStoreTest, WarpStoreGuarded)
     constexpr unsigned items_count = items_per_thread * block_size;
     constexpr int valid_items = warp_size / 4;
 
-    SKIP_IF_UNSUPPORTED_WARP_SIZE(warp_size);
+    int device_id = test_common_utils::obtain_device_from_ctest();
+    SKIP_IF_UNSUPPORTED_WARP_SIZE(warp_size, device_id);
 
     std::vector<T> input(items_count);
     std::iota(input.begin(), input.end(), static_cast<T>(0));
@@ -239,19 +281,8 @@ TYPED_TEST(WarpStoreTest, WarpStoreGuarded)
     HIP_CHECK(hipMalloc(&d_output, items_count * sizeof(T)));
     HIP_CHECK(hipMemset(d_output, 0, items_count * sizeof(T)));
 
-    hipLaunchKernelGGL(
-        HIP_KERNEL_NAME(
-            warp_store_guarded_kernel<
-                T,
-                block_size,
-                items_per_thread,
-                warp_size,
-                method
-            >
-        ),
-        dim3(1), dim3(block_size), 0, 0,
-        d_input, d_output, valid_items
-    );
+    warp_store_guarded_kernel<block_size, items_per_thread, warp_size, method>
+        <<<dim3(1), dim3(block_size), 0, 0>>>(d_input, d_output, valid_items);
     HIP_CHECK(hipGetLastError());
     HIP_CHECK(hipDeviceSynchronize());
 

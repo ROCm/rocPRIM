@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@
 #include <rocprim/iterator/transform_iterator.hpp>
 
 // required test headers
+#include "rocprim/types.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_types.hpp"
 
@@ -42,7 +43,8 @@ template<
     class Aggregate = Value,
     class KeyCompareFunction = ::rocprim::equal_to<Key>,
     // Tests output iterator with void value_type (OutputIterator concept)
-    bool UseIdentityIterator = false
+    bool UseIdentityIterator = false,
+    bool UseGraphs = false
 >
 struct params
 {
@@ -54,6 +56,7 @@ struct params
     using aggregate_type = Aggregate;
     using key_compare_op = KeyCompareFunction;
     static constexpr bool use_identity_iterator = UseIdentityIterator;
+    static constexpr bool use_graphs = UseGraphs;
 };
 
 template<class Params>
@@ -93,7 +96,11 @@ typedef ::testing::Types<
     params<custom_double2, custom_int2, rocprim::plus<custom_int2>, 1, 10>,
     params<unsigned long long, float, rocprim::minimum<float>, 1, 30>,
     params<int, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
+    // half should be supported, but is missing some key operators.
+    // we should uncomment these, as soon as these are implemented and the tests compile and work as intended.
+    //params<rocprim::half, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
     params<int, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
+    params<rocprim::bfloat16, rocprim::bfloat16, rocprim::minimum<rocprim::bfloat16>, 15, 100>,
     params<int, unsigned int, rocprim::maximum<unsigned int>, 20, 100>,
     params<float, long long, rocprim::maximum<unsigned long long>, 100, 400, long long, custom_key_compare_op1<float>>,
     params<unsigned int, unsigned char, rocprim::plus<unsigned char>, 200, 600>,
@@ -107,7 +114,8 @@ typedef ::testing::Types<
     params<long long, short, rocprim::plus<long long>, 1000, 10000, long long>,
     params<unsigned int, double, rocprim::minimum<double>, 1000, 50000>,
     params<unsigned long long, unsigned long long, rocprim::plus<unsigned long long>, 100000, 100000>,
-    params<test_utils::custom_test_array_type<double, 8>, unsigned long, rocprim::plus<>, 69, 420>
+    params<test_utils::custom_test_array_type<double, 8>, unsigned long, rocprim::plus<>, 69, 420>,
+    params<int, int, rocprim::plus<int>, 1, 10, int, ::rocprim::equal_to<int>, false, true>    
 > Params;
 // clang-format on
 
@@ -131,12 +139,10 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
         typename std::conditional<
             test_utils::is_valid_for_int_distribution<key_inner_type>::value,
             std::uniform_int_distribution<key_inner_type>,
-            typename std::conditional<std::is_signed<key_inner_type>::value,
-                std::uniform_int_distribution<int>,
-                std::uniform_int_distribution<unsigned int>
-            >::type
-        >::type
-    >::type;
+            typename std::conditional<rocprim::is_signed<key_inner_type>::value,
+                                      std::uniform_int_distribution<int>,
+                                      std::uniform_int_distribution<unsigned int>>::type>::type>::
+        type;
 
     constexpr bool use_identity_iterator = TestFixture::params::use_identity_iterator;
     const bool debug_synchronous = false;
@@ -158,6 +164,11 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             hipStream_t stream = 0; // default
+            if (TestFixture::params::use_graphs)
+            {
+                // Default stream does not support hipGraph stream capture, so create one
+                HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+            }
 
             const bool use_unique_keys = bool(test_utils::get_random_value<int>(0, 1, seed_value));
 
@@ -175,8 +186,8 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
             std::vector<value_type> values_input = test_utils::get_random_data<value_type>(size, 0, 100, seed_value);
 
             size_t offset = 0;
-            key_type prev_key = key_distribution_type(0, 100)(gen);
-            key_type current_key = prev_key + key_delta_dis(gen);
+            key_type prev_key    = static_cast<key_type>(key_distribution_type(0, 100)(gen));
+            key_type current_key = static_cast<key_type>(prev_key + key_delta_dis(gen));
             while(offset < size)
             {
                 const size_t key_count = key_count_dis(gen);
@@ -248,22 +259,30 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
 
             size_t temporary_storage_bytes;
 
-            HIP_CHECK(
-                rocprim::reduce_by_key(
-                    nullptr, temporary_storage_bytes,
-                    d_keys_input, d_values_input, size,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unique_output),
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_aggregates_output),
-                    d_unique_count_output,
-                    reduce_op, key_compare_op,
-                    stream, debug_synchronous
-                )
-            );
+            HIP_CHECK(rocprim::reduce_by_key(
+                nullptr,
+                temporary_storage_bytes,
+                d_keys_input,
+                d_values_input,
+                size,
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_unique_output),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_aggregates_output),
+                d_unique_count_output,
+                reduce_op,
+                key_compare_op,
+                stream,
+                debug_synchronous));
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
             void * d_temporary_storage;
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
+
+            hipGraph_t graph;
+            if(TestFixture::params::use_graphs)
+            {
+                graph = test_utils::createGraphHelper(stream);
+            }
 
             HIP_CHECK(
                 rocprim::reduce_by_key(
@@ -275,6 +294,12 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
                     stream, debug_synchronous
                 )
             );
+
+            hipGraphExec_t graph_instance;
+            if(TestFixture::params::use_graphs)
+            {
+                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            }
 
             HIP_CHECK(hipFree(d_temporary_storage));
 
@@ -309,16 +334,21 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
             HIP_CHECK(hipFree(d_aggregates_output));
             HIP_CHECK(hipFree(d_unique_count_output));
 
+            if (TestFixture::params::use_graphs)
+            {
+                test_utils::cleanupGraphHelper(graph, graph_instance);
+                HIP_CHECK(hipStreamDestroy(stream));
+            }
+            
             ASSERT_EQ(unique_count_output[0], unique_count_expected);
 
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(unique_output, unique_expected));
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(aggregates_output, aggregates_expected));
         }
     }
-
 }
 
-template<typename value_type>
+template<typename value_type, bool use_graphs = false>
 void large_indices_reduce_by_key()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -334,6 +364,11 @@ void large_indices_reduce_by_key()
     ::rocprim::equal_to<key_type> key_compare_op;
 
     hipStream_t stream = 0; // default
+    if (use_graphs)
+    {
+        // Default stream does not support hipGraph stream capture, so create one
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     for(size_t size : test_utils::get_large_sizes(42))
     {
@@ -388,6 +423,12 @@ void large_indices_reduce_by_key()
         HIP_CHECK(
             test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
+        hipGraph_t graph;
+        if(use_graphs)
+        {
+            graph = test_utils::createGraphHelper(stream);
+        }
+
         HIP_CHECK(rocprim::reduce_by_key(d_temporary_storage,
                                          temporary_storage_bytes,
                                          d_keys_input,
@@ -400,6 +441,12 @@ void large_indices_reduce_by_key()
                                          key_compare_op,
                                          stream,
                                          debug_synchronous));
+
+        hipGraphExec_t graph_instance;
+        if(use_graphs)
+        {
+            graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+        }
 
         HIP_CHECK(hipFree(d_temporary_storage));
 
@@ -423,6 +470,11 @@ void large_indices_reduce_by_key()
         HIP_CHECK(hipFree(d_aggregates_output));
         HIP_CHECK(hipFree(d_unique_count_output));
 
+        if(use_graphs)
+        {
+            test_utils::cleanupGraphHelper(graph, graph_instance);
+        }
+
         ASSERT_EQ(unique_count_output[0], unique_count_expected);
 
         size_t total_size = 0;
@@ -438,6 +490,11 @@ void large_indices_reduce_by_key()
         ASSERT_EQ(last_idx, unique_output[last_idx]);
         ASSERT_EQ(value_type(size - total_size), aggregates_output[last_idx]);
     }
+
+    if(use_graphs)
+    {
+        HIP_CHECK(hipStreamDestroy(stream));
+    }
 }
 
 TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeySmallValueType)
@@ -451,7 +508,13 @@ TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyLargeValueType)
     large_indices_reduce_by_key<test_utils::custom_test_type<size_t>>();
 }
 
-template<typename value_type>
+TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyLargeValueTypeWithGraphs)
+{
+    // large value type to test TilesPerBlock > 1
+    large_indices_reduce_by_key<test_utils::custom_test_type<size_t>, true>();
+}
+
+template<typename value_type, bool use_graphs = false>
 void large_segment_count_reduce_by_key()
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -466,6 +529,11 @@ void large_segment_count_reduce_by_key()
     ::rocprim::equal_to<key_type> key_compare_op;
 
     hipStream_t stream = 0; // default
+    if (use_graphs)
+    {
+        // Default stream does not support hipGraphs
+        HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    }
 
     for(size_t size : test_utils::get_large_sizes(42))
     {
@@ -486,7 +554,6 @@ void large_segment_count_reduce_by_key()
                                                      sizeof(*d_unique_count_output)));
 
         size_t temporary_storage_bytes;
-
         HIP_CHECK(rocprim::reduce_by_key(nullptr,
                                          temporary_storage_bytes,
                                          d_keys_input,
@@ -506,6 +573,12 @@ void large_segment_count_reduce_by_key()
         HIP_CHECK(
             test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
 
+        hipGraph_t graph;
+        if(use_graphs)
+        {
+            graph = test_utils::createGraphHelper(stream);
+        }
+
         HIP_CHECK(rocprim::reduce_by_key(d_temporary_storage,
                                          temporary_storage_bytes,
                                          d_keys_input,
@@ -519,6 +592,12 @@ void large_segment_count_reduce_by_key()
                                          stream,
                                          debug_synchronous));
 
+        hipGraphExec_t graph_instance;
+        if(use_graphs)
+        {
+            graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+        }
+
         HIP_CHECK(hipFree(d_temporary_storage));
 
         size_t unique_count_output;
@@ -530,7 +609,13 @@ void large_segment_count_reduce_by_key()
         HIP_CHECK(hipFree(d_unique_count_output));
 
         ASSERT_EQ(unique_count_output, unique_count_expected);
+
+        if (use_graphs)
+            test_utils::cleanupGraphHelper(graph, graph_instance);
     }
+
+    if (use_graphs)
+        HIP_CHECK(hipStreamDestroy(stream));
 }
 
 TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeySmallValueType)
@@ -542,4 +627,101 @@ TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeyLargeValueType)
 {
     // large value type to test TilesPerBlock > 1
     large_segment_count_reduce_by_key<test_utils::custom_test_type<size_t>>();
+}
+
+TEST(RocprimDeviceReduceByKey, GraphReduceByKey)
+{
+    large_segment_count_reduce_by_key<unsigned int, true>();
+}
+
+TEST(RocprimDeviceReduceByKey, ReduceByNonEqualKeys)
+{
+    int device_id = test_common_utils::obtain_device_from_ctest();
+    SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
+    HIP_CHECK(hipSetDevice(device_id));
+
+    using key_type   = size_t;
+    using value_type = unsigned int;
+
+    const bool debug_synchronous = false;
+
+    ::rocprim::plus<value_type> reduce_op;
+    auto                        key_compare_op = [](const auto&, const auto&) { return false; };
+
+    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    {
+        unsigned int seed_value
+            = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
+        SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
+
+        for(size_t block_size_multiple : test_utils::get_block_size_multiples(seed_value, 256))
+        {
+            const size_t size = block_size_multiple + 1;
+
+            SCOPED_TRACE(testing::Message() << "with size = " << size);
+
+            hipStream_t stream = 0; // default
+
+            // Using segments of size 1.
+            auto d_keys_input = rocprim::make_counting_iterator(key_type(0));
+
+            // Setting all values to 1, so the reduction will contain the size of the input array.
+            auto d_values_input = rocprim::constant_iterator<value_type>(1);
+
+            size_t unique_count_expected = size;
+
+            // Discard all output
+            auto d_unique_output     = rocprim::make_discard_iterator();
+            auto d_aggregates_output = rocprim::make_discard_iterator();
+
+            size_t* d_unique_count_output;
+            HIP_CHECK(test_common_utils::hipMallocHelper(&d_unique_count_output, sizeof(size_t)));
+
+            size_t temporary_storage_bytes;
+
+            HIP_CHECK(rocprim::reduce_by_key(nullptr,
+                                             temporary_storage_bytes,
+                                             d_keys_input,
+                                             d_values_input,
+                                             size,
+                                             d_unique_output,
+                                             d_aggregates_output,
+                                             d_unique_count_output,
+                                             reduce_op,
+                                             key_compare_op,
+                                             stream,
+                                             debug_synchronous));
+
+            ASSERT_GT(temporary_storage_bytes, 0);
+
+            void* d_temporary_storage;
+            HIP_CHECK(
+                test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_bytes));
+
+            HIP_CHECK(rocprim::reduce_by_key(d_temporary_storage,
+                                             temporary_storage_bytes,
+                                             d_keys_input,
+                                             d_values_input,
+                                             size,
+                                             d_unique_output,
+                                             d_aggregates_output,
+                                             d_unique_count_output,
+                                             reduce_op,
+                                             key_compare_op,
+                                             stream,
+                                             debug_synchronous));
+
+            HIP_CHECK(hipFree(d_temporary_storage));
+
+            size_t unique_count_output;
+            HIP_CHECK(hipMemcpy(&unique_count_output,
+                                d_unique_count_output,
+                                sizeof(unique_count_output),
+                                hipMemcpyDeviceToHost));
+
+            HIP_CHECK(hipFree(d_unique_count_output));
+
+            ASSERT_EQ(unique_count_output, unique_count_expected);
+        }
+    }
 }

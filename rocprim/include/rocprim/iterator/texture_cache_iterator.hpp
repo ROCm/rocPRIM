@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -221,9 +221,9 @@ public:
         #else
         texture_type words[multiple];
 
-        #if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__)
-        #pragma message "Texture cache iterator is not supported on gfx94x as the texture fetch functions in HIP are not available."
-        ROCPRIM_PRINT_ERROR_ONCE("WARNING: Usage of texture_cache_iterator on gfx94x device is not supported and will not produce valid results.")
+        #if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__) || defined(__gfx1200__) || defined(__gfx1201__)
+        #pragma message "Texture cache iterator is not supported on gfx94x or gfx120x as the texture fetch functions in HIP are not available."
+        ROCPRIM_PRINT_ERROR_ONCE("WARNING: Usage of texture_cache_iterator on gfx94x or gfx120x devices is not supported and will not produce valid results.")
         #else
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < multiple; i++)
@@ -330,7 +330,8 @@ public:
         return (ptr - other.ptr) <= 0;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const texture_cache_iterator& /* iter */)
+    [[deprecated]] friend std::ostream& operator<<(std::ostream& os,
+                                                   const texture_cache_iterator& /* iter */)
     {
         return os;
     }

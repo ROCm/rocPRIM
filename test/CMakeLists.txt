@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,9 @@ function(add_hip_test TEST_NAME TEST_SOURCES)
   get_filename_component(TEST_TARGET ${TEST_MAIN_SOURCE} NAME_WE)
 
   add_executable(${TEST_TARGET} ${TEST_SOURCES})
-  rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
+  if (ROCPRIM_INSTALL)
+    rocm_install(TARGETS ${TEST_TARGET} COMPONENT tests)
+  endif()
 
   target_include_directories(${TEST_TARGET} SYSTEM BEFORE
     PUBLIC
@@ -126,9 +128,15 @@ add_hip_test("hip.async_copy" hip/test_hip_async_copy.cpp)
 # rocPRIM test
 add_subdirectory(rocprim)
 
-rocm_install(
-    FILES "${INSTALL_TEST_FILE}"
-    DESTINATION "${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}"
-    COMPONENT tests
-    RENAME "CTestTestfile.cmake"
-)
+# hipGraph tests
+add_hip_test("hipgraph.basic" hipgraph/test_hipgraph_basic.cpp)
+add_hip_test("hipgraph.algs" hipgraph/test_hipgraph_algs.cpp)
+
+if (ROCPRIM_INSTALL)
+  rocm_install(
+      FILES "${INSTALL_TEST_FILE}"
+      DESTINATION "${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}"
+      COMPONENT tests
+      RENAME "CTestTestfile.cmake"
+  )
+endif()
