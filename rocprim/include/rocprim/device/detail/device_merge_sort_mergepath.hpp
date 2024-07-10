@@ -41,21 +41,21 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 // Load items from input1 and input2 from global memory
-template<unsigned int ItemsPerThread, class KeyT, class InputIterator>
+template<unsigned int BlockSize, unsigned int ItemsPerThread, class KeyT, class InputIterator>
 ROCPRIM_DEVICE ROCPRIM_INLINE
 void gmem_to_reg(KeyT (&output)[ItemsPerThread],
                  InputIterator input1,
                  InputIterator input2,
                  unsigned int  count1,
                  unsigned int  count2,
-                 bool          IsLastTile)
+                 bool          is_incomplete_tile)
 {
-    if(IsLastTile)
+    if(is_incomplete_tile)
     {
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item)
         {
-            unsigned int idx = rocprim::flat_block_size() * item + threadIdx.x;
+            unsigned int idx = BlockSize * item + threadIdx.x;
             if(idx < count1 + count2)
             {
                 output[item] = (idx < count1) ? input1[idx] : input2[idx - count1];
@@ -67,7 +67,7 @@ void gmem_to_reg(KeyT (&output)[ItemsPerThread],
         ROCPRIM_UNROLL
         for(unsigned int item = 0; item < ItemsPerThread; ++item)
         {
-            unsigned int idx = rocprim::flat_block_size() * item + threadIdx.x;
+            unsigned int idx = BlockSize * item + threadIdx.x;
             output[item]     = (idx < count1) ? input1[idx] : input2[idx - count1];
         }
     }
@@ -171,24 +171,24 @@ auto block_merge_process_tile(KeysInputIterator    keys_input,
     const unsigned int num_keys2 = static_cast<unsigned int>(keys2_end - keys2_beg);
     // Load keys1 & keys2
     key_type keys[ItemsPerThread];
-    gmem_to_reg<ItemsPerThread>(keys,
-                                keys_input + keys1_beg,
-                                keys_input + keys2_beg,
-                                num_keys1,
-                                num_keys2,
-                                is_incomplete_tile);
+    gmem_to_reg<BlockSize, ItemsPerThread>(keys,
+                                           keys_input + keys1_beg,
+                                           keys_input + keys2_beg,
+                                           num_keys1,
+                                           num_keys2,
+                                           is_incomplete_tile);
     // Load keys into shared memory
     reg_to_shared<BlockSize, ItemsPerThread>(keys_shared, keys);
 
     value_type values[ItemsPerThread];
     if ROCPRIM_IF_CONSTEXPR(with_values)
     {
-        gmem_to_reg<ItemsPerThread>(values,
-                                    values_input + keys1_beg,
-                                    values_input + keys2_beg,
-                                    num_keys1,
-                                    num_keys2,
-                                    is_incomplete_tile);
+        gmem_to_reg<BlockSize, ItemsPerThread>(values,
+                                               values_input + keys1_beg,
+                                               values_input + keys2_beg,
+                                               num_keys1,
+                                               num_keys2,
+                                               is_incomplete_tile);
     }
     rocprim::syncthreads();
 
@@ -328,12 +328,12 @@ auto block_merge_process_tile(KeysInputIterator    keys_input,
     const unsigned int num_keys2 = static_cast<unsigned int>(keys2_end - keys2_beg);
     // Load keys1 & keys2
     key_type keys[ItemsPerThread];
-    gmem_to_reg<ItemsPerThread>(keys,
-                                keys_input + keys1_beg,
-                                keys_input + keys2_beg,
-                                num_keys1,
-                                num_keys2,
-                                is_incomplete_tile);
+    gmem_to_reg<BlockSize, ItemsPerThread>(keys,
+                                           keys_input + keys1_beg,
+                                           keys_input + keys2_beg,
+                                           num_keys1,
+                                           num_keys2,
+                                           is_incomplete_tile);
     // Load keys into shared memory
     reg_to_shared<BlockSize, ItemsPerThread>(keys_shared, keys);
 
