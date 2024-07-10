@@ -494,14 +494,15 @@ std::vector<size_t> get_sizes(T seed_value)
 template<class T>
 std::vector<size_t> get_large_sizes(T seed_value)
 {
-    // clang-format off
     std::vector<size_t> sizes = {
-        (size_t{1} << 30) - 1, size_t{1} << 30,
-        (size_t{1} << 32) - 1, size_t{1} << 32,
+        (size_t{1} << 30) - 1,
+        size_t{1} << 31,
+        (size_t{1} << 32) - 15,
+        (size_t{1} << 33) + (size_t{1} << 32) - 876543,
+        (size_t{1} << 34) - 12346,
         (size_t{1} << 35) + 1,
         (size_t{1} << 37) - 1,
     };
-    // clang-format on
     const std::vector<size_t> random_sizes
         = test_utils::get_random_data<size_t>(2,
                                               (size_t{1} << 30) + 1,
