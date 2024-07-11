@@ -154,7 +154,7 @@ private:
             const auto keys1_merge_begin = keys1_begin + partition;
             const auto keys2_merge_begin = keys2_begin + diag - partition;
 
-            const range_t range = {
+            const range_t<> range = {
                 keys1_merge_begin,
                 keys1_end,
                 keys2_merge_begin,
@@ -215,7 +215,7 @@ private:
             const auto keys1_merge_begin = keys1_begin + partition;
             const auto keys2_merge_begin = keys2_begin + diag - partition;
 
-            const range_t range = {
+            const range_t<> range = {
                 keys1_merge_begin,
                 keys1_end,
                 keys2_merge_begin,

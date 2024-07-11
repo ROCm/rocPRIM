@@ -10,7 +10,7 @@
 
 template<int IPT, class T, class Op>
 __global__
-void merge_kernel(T* shared, rocprim::detail::range_t range, Op compare_function)
+void merge_kernel(T* shared, rocprim::detail::range_t<> range, Op compare_function)
 {
     T outputs[IPT];
 
@@ -34,7 +34,7 @@ void serial_merge(std::vector<T>& input,
     HIP_CHECK(hipMemcpy(device_data, input.data(), num_bytes, hipMemcpyHostToDevice));
 
     merge_kernel<IPT>
-        <<<1, 1>>>(device_data, rocprim::detail::range_t{0, mid, mid, N}, compare_function);
+        <<<1, 1>>>(device_data, rocprim::detail::range_t<>{0, mid, mid, N}, compare_function);
     HIP_CHECK(hipGetLastError());
 
     HIP_CHECK(hipMemcpy(output.data(), device_data, num_bytes, hipMemcpyDeviceToHost));

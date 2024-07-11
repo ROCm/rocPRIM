@@ -25,7 +25,6 @@
 #include "../../detail/merge_path.hpp"
 #include "../../detail/various.hpp"
 #include "../../warp/detail/warp_sort_stable.hpp"
-#include "../../warp/warp_sort.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -385,7 +384,7 @@ private:
                                                             diag0_local,
                                                             compare_function);
             const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
-            range_t            range_local
+            range_t<>          range_local
                 = {keys1_beg_local + keys1_beg, keys1_end, keys2_beg_local + keys1_end, keys2_end};
 
             serial_merge(keys_shared, thread_keys, range_local, compare_function);
@@ -426,7 +425,7 @@ private:
                                                             diag0_local,
                                                             compare_function);
             const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
-            range_t            range_local
+            range_t<>          range_local
                 = {keys1_beg_local + keys1_beg, keys1_end, keys2_beg_local + keys1_end, keys2_end};
 
             serial_merge(keys_shared,
