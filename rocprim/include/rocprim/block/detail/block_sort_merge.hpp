@@ -388,6 +388,7 @@ private:
                 = {keys1_beg_local + keys1_beg, keys1_end, keys2_beg_local + keys1_end, keys2_end};
 
             serial_merge(keys_shared, thread_keys, range_local, compare_function);
+            ::rocprim::syncthreads();
         }
     }
 
@@ -434,6 +435,7 @@ private:
                          thread_values,
                          range_local,
                          compare_function);
+            ::rocprim::syncthreads();
         }
     }
 };

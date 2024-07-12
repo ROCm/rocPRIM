@@ -104,9 +104,13 @@ void serial_merge(KeyType*       keys_shared,
 
     // Only load valid keys, otherwise might be out of bounds!
     if(num_a > 0)
+    {
         key_a = keys_shared[range.begin1];
+    }
     if(num_b > 0)
+    {
         key_b = keys_shared[range.begin2];
+    }
 
     ROCPRIM_UNROLL
     for(OffsetT i = 0; i < ItemsPerThread; ++i)
@@ -156,6 +160,9 @@ void serial_merge(KeyType*       keys_shared,
             num_b        = next_num;
         }
     }
+
+    // We don't finish with a block sync since this may be used on thread or
+    // warp granularity!
 }
 
 template<class KeyType, unsigned int ItemsPerThread, class BinaryFunction, class OffsetT>
