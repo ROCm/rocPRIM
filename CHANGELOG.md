@@ -6,9 +6,8 @@ Documentation for rocPRIM is available at
 ## Unreleased rocPRIM-3.3.0 for ROCm 6.3.0
 
 ### Fixes
-* Fixed an issue where while running rtest.py on windows and passing in an absolute path to --install_dir 
-  causes FileNotFound error
 
+* Fixed an issue where while running rtest.py on windows and passing in an absolute path to `--install_dir` causes a `FileNotFound` error.
 
 ## Unreleased rocPRIM-3.2.0 for ROCm 6.2.0
 
