@@ -97,11 +97,6 @@ int main(int argc, char** argv)
 
 
     // HIP
-    // hipStream_t     stream = 0; // default
-    // hipDeviceProp_t devProp;
-    // int             device_id = 0;
-    // HIP_CHECK(hipGetDevice(&device_id));
-    // HIP_CHECK(hipGetDeviceProperties(&devProp, device_id));
 
     std::vector<benchmark::internal::Benchmark*> benchmarks{
         CREATE_BENCHMARK(default_stream, stream_kind::default_stream),
