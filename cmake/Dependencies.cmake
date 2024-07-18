@@ -190,7 +190,7 @@ if(NOT ROCM_FOUND)
   FetchContent_Declare(
     rocm-cmake
     GIT_REPOSITORY https://github.com/ROCm/rocm-cmake.git
-    GIT_TAG        rocm-6.1.2
+    GIT_TAG        rocm-6.0.2
     ${SOURCE_SUBDIR_ARG}
   )
   FetchContent_MakeAvailable(rocm-cmake)
