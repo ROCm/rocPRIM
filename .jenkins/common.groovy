@@ -68,7 +68,7 @@ def runTestCommand (platform, project)
 
 def runCodecovTestCommand(platform, project)
 {
-    String gfilter = "*pre_checkin*"
+    String gfilter = "*"
     String dirmode = "release"
 
     def testCommand = """#!/usr/bin/env bash
@@ -77,7 +77,7 @@ def runCodecovTestCommand(platform, project)
                 ls
                 cat Makefile
                 export LD_LIBRARY_PATH=/opt/rocm/lib/
-                GTEST_LISTENER=NO_PASS_LINE_IN_LOG make coverage_cleanup coverage GTEST_FILTER=${gfilter}-*known_bug*
+                GTEST_LISTENER=NO_PASS_LINE_IN_LOG make coverage_cleanup coverage GTEST_FILTER=${gfilter}
             """
 
     platform.runCommand(this, testCommand)
