@@ -66,7 +66,7 @@ def runTestCommand (platform, project)
     platform.runCommand(this, command)
 }
 
-def runCodecovTestCommand()
+def runCodecovTestCommand(platform, project)
 {
     String gfilter = "*pre_checkin*"
     String dirmode = "release"
