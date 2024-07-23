@@ -9,7 +9,7 @@ def runCI =
     nodeDetails, jobName->
 
     def prj = new rocProject('rocPRIM', 'codecov')
-    prj.paths.build_command = './install -kc --codecoverage'
+    prj.paths.build_command = './install -gc --codecoverage'
     prj.timeout.compile = 600
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
@@ -23,7 +23,7 @@ def runCI =
         platform, project->
 
         commonGroovy = load "${project.paths.project_src_prefix}/.jenkins/common.groovy"
-        commonGroovy.runCompileCommand(platform, project, jobName, debug=false, isCodeCovOn=true)
+        commonGroovy.runCompileCommand(platform, project, jobName, debug=true, isCodeCovOn=true)
     }
 
     def packageCommand =
