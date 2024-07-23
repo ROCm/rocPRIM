@@ -1,12 +1,11 @@
 // This file is for internal AMD use.
 // If you are interested in running your own Jenkins, please raise a github issue for assistance.
 
-def runCompileCommand(platform, project, jobName, boolean debug=false, boolean isCodeCovOn=false)
+def runCompileCommand(platform, project, jobName, boolean debug=false, String buildTypeDir="release", boolean isCodeCovOn=false)
 {
     project.paths.construct_build_prefix()
 
     String buildTypeArg = debug ? '-DCMAKE_BUILD_TYPE=Debug' : '-DCMAKE_BUILD_TYPE=Release'
-    String buildTypeDir = debug ? 'debug' : 'release'
     String codeCovArg = isCodeCovOn ? '-DBUILD_CODE_COVERAGE=ON' : ''
     String cmake = platform.jenkinsLabel.contains('centos') ? 'cmake3' : 'cmake'
     //Set CI node's gfx arch as target if PR, otherwise use default targets of the library
@@ -68,7 +67,7 @@ def runTestCommand (platform, project)
 
 def runCodecovTestCommand(platform, project)
 {
-    String dirmode = "release-debug"
+    String dirmode = "debug"
 
     def testCommand = """#!/usr/bin/env bash
                 set -x
@@ -106,9 +105,9 @@ def runCodecovTestCommand(platform, project)
     }
 }
 
-def runPackageCommand(platform, project)
+def runPackageCommand(platform, project, String buildTypeDir="release")
 {
-    def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/release")
+    def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/${buildTypeDir}")
 
     platform.runCommand(this, packageHelper[0])
         platform.archiveArtifacts(this, packageHelper[1])
