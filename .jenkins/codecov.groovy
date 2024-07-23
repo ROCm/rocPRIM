@@ -30,7 +30,7 @@ def runCI =
     {
         platform, project->
 
-        commonGroovy.runPackageCommand(platform, project)
+        commonGroovy.runPackageCommand(platform, project, buildTypeDir="debug")
     }
 
     def testCommand =
