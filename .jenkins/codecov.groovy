@@ -9,7 +9,7 @@ def runCI =
     nodeDetails, jobName->
 
     def prj = new rocProject('rocPRIM', 'codecov')
-    prj.paths.build_command = './install -c'
+    prj.paths.build_command = './install -kc --codecoverage'
     prj.timeout.compile = 600
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
