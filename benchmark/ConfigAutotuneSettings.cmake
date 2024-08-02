@@ -96,7 +96,7 @@ KeyType;ValueType;BlockSize;ItemsPerThread;PartitionAllowed" PARENT_SCOPE)
   elseif(file STREQUAL "benchmark_device_transform")
     set(list_across_names "\
 DataType;BlockSize;" PARENT_SCOPE)
-    set(list_across "${TUNING_TYPES};256" PARENT_SCOPE)
+    set(list_across "${TUNING_TYPES};64 128 256 512 1024" PARENT_SCOPE)
     set(output_pattern_suffix "\
 @DataType@_@BlockSize@" PARENT_SCOPE)
   endif()
