@@ -250,8 +250,10 @@ struct device_select_predicate_benchmark : public config_autotune_interface
              hipStream_t         stream) const override
     {
         // all data types can represent [0, 127], -1 so a predicate can select all
-        std::vector<DataType> input
-            = get_random_data<DataType>(size, DataType(0), DataType(126), seed.get_0());
+        std::vector<DataType> input = get_random_data<DataType>(size,
+                                                                static_cast<DataType>(0),
+                                                                static_cast<DataType>(126),
+                                                                seed.get_0());
 
         DataType* d_input;
         HIP_CHECK(hipMalloc(&d_input, size * sizeof(*d_input)));
@@ -525,7 +527,12 @@ struct device_select_unique_by_key_benchmark : public config_autotune_interface
                 = get_unique_input<KeyType>(size, get_probability(Probability), seed.get_0());
         }
 
-        const auto input_values = get_random_data<ValueType>(size, -1000, 1000, seed.get_1());
+        const auto random_range = limit_random_range<ValueType>(-1000, 1000);
+
+        const auto input_values = get_random_data<ValueType>(size,
+                                                             random_range.first,
+                                                             random_range.second,
+                                                             seed.get_1());
 
         KeyType* d_keys_input_0{};
         KeyType* d_keys_input_1{};

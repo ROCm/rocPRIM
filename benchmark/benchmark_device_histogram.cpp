@@ -292,7 +292,9 @@ void run_range_benchmark(
         typename std::conditional_t<std::is_integral<T>::value && sizeof(T) < sizeof(int), int, T>;
 
     // Generate data
-    std::vector<T> input = get_random_data<T>(size, 0, bins, seed.get_0());
+    const auto     random_range = limit_random_range<T>(0, bins);
+    std::vector<T> input
+        = get_random_data<T>(size, random_range.first, random_range.second, seed.get_0());
 
     std::vector<level_type> levels(bins + 1);
     for(size_t i = 0; i < levels.size(); i++)
@@ -407,7 +409,11 @@ void run_multi_range_benchmark(
     }
 
     // Generate data
-    std::vector<T> input = get_random_data<T>(size * Channels, 0, bins, seed.get_0());
+    const auto     random_range = limit_random_range<T>(0, bins);
+    std::vector<T> input        = get_random_data<T>(size * Channels,
+                                              random_range.first,
+                                              random_range.second,
+                                              seed.get_0());
 
     T*            d_input;
     level_type*   d_levels[ActiveChannels];

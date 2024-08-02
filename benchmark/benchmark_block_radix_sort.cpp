@@ -139,7 +139,7 @@ void run_benchmark(benchmark::State&   state,
     std::vector<T> input;
     if(std::is_floating_point<T>::value)
     {
-        input = get_random_data<T>(size, (T)-1000, (T) + 1000, seed.get_0());
+        input = get_random_data<T>(size, static_cast<T>(-1000), static_cast<T>(1000), seed.get_0());
     }
     else
     {

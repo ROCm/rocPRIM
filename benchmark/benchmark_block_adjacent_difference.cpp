@@ -237,7 +237,10 @@ auto run_benchmark(benchmark::State& state, size_t N, const managed_seed& seed, 
     // Round up size to the next multiple of items_per_block
     const auto size = num_blocks * items_per_block;
 
-    const std::vector<T> input = get_random_data<T>(size, T(0), T(10), seed.get_0());
+    const auto           random_range = limit_random_range<T>(0, 10);
+    const std::vector<T> input
+        = get_random_data<T>(size, random_range.first, random_range.second, seed.get_0());
+
     T* d_input;
     T* d_output;
     HIP_CHECK(hipMalloc(&d_input, input.size() * sizeof(input[0])));
@@ -302,9 +305,17 @@ auto run_benchmark(benchmark::State& state, size_t N, const managed_seed& seed, 
     // Round up size to the next multiple of items_per_block
     const auto size = num_blocks * items_per_block;
 
-    const std::vector<T>            input = get_random_data<T>(size, T(0), T(10), seed.get_0());
+    const auto           random_range_input      = limit_random_range<T>(0, 10);
+    const auto           random_range_tile_sizes = limit_random_range<T>(0, items_per_block);
+    const std::vector<T> input                   = get_random_data<T>(size,
+                                                    random_range_input.first,
+                                                    random_range_input.second,
+                                                    seed.get_0());
     const std::vector<unsigned int> tile_sizes
-        = get_random_data<unsigned int>(num_blocks, 0, items_per_block, seed.get_1());
+        = get_random_data<unsigned int>(num_blocks,
+                                        random_range_tile_sizes.first,
+                                        random_range_tile_sizes.second,
+                                        seed.get_1());
 
     T*            d_input;
     unsigned int* d_tile_sizes;

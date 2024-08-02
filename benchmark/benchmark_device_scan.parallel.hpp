@@ -121,7 +121,9 @@ struct device_scan_benchmark : public config_autotune_interface
              hipStream_t         stream) const override
     {
         ScanOp         scan_op{};
-        std::vector<T> input         = get_random_data<T>(size, T(0), T(1000), seed.get_0());
+        const auto     random_range = limit_random_range<T>(0, 1000);
+        std::vector<T> input
+            = get_random_data<T>(size, random_range.first, random_range.second, seed.get_0());
         T              initial_value = T(123);
         T*             d_input;
         T*             d_output;

@@ -39,6 +39,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #define HIP_CHECK(condition)                                                                \
@@ -280,10 +281,38 @@ struct custom_type
 };
 
 template<typename>
-struct is_custom_type : std::false_type {};
+struct is_custom_type : std::false_type
+{};
 
 template<class T, class U>
-struct is_custom_type<custom_type<T,U>> : std::true_type {};
+struct is_custom_type<custom_type<T, U>> : std::true_type
+{};
+
+template<typename T, typename U>
+struct is_comparable
+{
+private:
+    // A dummy template function that attempts to compare two objects of types T and U
+    template<typename V, typename W>
+    static auto test(V&& v, W&& w)
+        -> decltype(std::declval<V>() < std::declval<W>(), std::true_type{});
+
+    // Fallback if the above template function is not valid
+    template<typename, typename>
+    static std::false_type test(...);
+
+public:
+    // Final result
+    static constexpr bool value = decltype(test<T, U>(std::declval<T>(), std::declval<U>()))::value;
+};
+
+template<typename T, typename U, typename V>
+struct is_comparable<custom_type<U, V>, T>
+    : std::conditional_t<rocprim::is_arithmetic<T>::value
+                             || !std::is_same<T, custom_type<U, V>>::value,
+                         std::false_type,
+                         std::true_type>
+{};
 
 template<class CustomType>
 struct custom_type_decomposer
@@ -357,6 +386,102 @@ inline std::vector<T> get_random_data(
     engine_type    gen(seed);
     generate_random_data_n(data.begin(), size, min, max, gen, max_random_size);
     return data;
+}
+
+template<typename T, typename U>
+auto limit_cast(U value) -> T
+{
+    static_assert(rocprim::is_arithmetic<T>::value && rocprim::is_arithmetic<U>::value
+                      && is_comparable<T, U>::value,
+                  "Cannot use limit_cast with chosen types of T and U");
+
+    using common_type = typename std::common_type<T, U>::type;
+    if(rocprim::is_unsigned<T>::value)
+    {
+        if(value < 0)
+        {
+            return std::numeric_limits<T>::min();
+        }
+        if(static_cast<common_type>(value)
+           > static_cast<common_type>(std::numeric_limits<T>::max()))
+        {
+            return std::numeric_limits<T>::max();
+        }
+    }
+    else if(rocprim::is_signed<T>::value && rocprim::is_unsigned<U>::value)
+    {
+        if(value > std::numeric_limits<T>::max())
+        {
+            return std::numeric_limits<T>::max();
+        }
+    }
+    else if(rocprim::is_floating_point<T>::value)
+    {
+        return static_cast<T>(value);
+    }
+    else // Both T and U are signed
+    {
+        if(value < static_cast<common_type>(std::numeric_limits<T>::min()))
+        {
+            return std::numeric_limits<T>::min();
+        }
+        else if(value > static_cast<common_type>(std::numeric_limits<T>::max()))
+        {
+            return std::numeric_limits<T>::max();
+        }
+    }
+    return static_cast<T>(value);
+}
+
+// This overload below is selected for non-standard float types, e.g. half, which cannot be compared with the limit types.
+template<class T, class U, class V>
+inline auto limit_random_range(U range_start, V range_end)
+    -> std::enable_if_t<!is_custom_type<T>::value
+                            && (!is_comparable<T, U>::value || !is_comparable<T, V>::value),
+                        std::pair<T, T>>
+{
+    return {static_cast<T>(range_start), static_cast<T>(range_end)};
+}
+
+template<typename T, typename U, typename V>
+auto limit_random_range(U range_start, V range_end)
+    -> std::enable_if_t<(is_custom_type<T>::value && is_comparable<typename T::first_type, U>::value
+                         && is_comparable<typename T::second_type, U>::value
+                         && is_comparable<typename T::first_type, V>::value
+                         && is_comparable<typename T::second_type, V>::value
+                         && rocprim::is_arithmetic<typename T::first_type>::value
+                         && rocprim::is_arithmetic<typename T::second_type>::value
+                         && rocprim::is_arithmetic<U>::value && rocprim::is_arithmetic<V>::value),
+                        std::pair<T, T>>
+{
+
+    return {
+        T{limit_cast<typename T::first_type>(range_start),
+          limit_cast<typename T::second_type>(range_start)},
+        T{  limit_cast<typename T::first_type>(range_end),
+          limit_cast<typename T::second_type>(range_end)  }
+    };
+}
+
+template<class T, class U, class V>
+inline auto limit_random_range(U range_start, V range_end)
+    -> std::enable_if_t<!is_custom_type<T>::value && is_comparable<T, U>::value
+                            && is_comparable<T, V>::value,
+                        std::pair<T, T>>
+{
+
+    if(is_comparable<V, U>::value)
+    {
+        using common_type = typename std::common_type<T, U>::type;
+        if(static_cast<common_type>(range_start) > static_cast<common_type>(range_end))
+        {
+            throw std::range_error("limit_random_range: Incorrect range used!");
+        }
+    }
+
+    T start = limit_cast<T>(range_start);
+    T end   = limit_cast<T>(range_end);
+    return std::make_pair(start, end);
 }
 
 inline bool is_warp_size_supported(const unsigned int required_warp_size, const int device_id)

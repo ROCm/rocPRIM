@@ -137,8 +137,10 @@ struct device_scan_by_key_benchmark : public config_autotune_interface
         const std::vector<Key> keys
             = get_random_segments<Key>(size, MaxSegmentLength, seed.get_0());
 
+        const auto random_range = limit_random_range<Value>(0, 1000);
+
         const std::vector<Value> input
-            = get_random_data<Value>(size, Value(0), Value(1000), seed.get_1());
+            = get_random_data<Value>(size, random_range.first, random_range.second, seed.get_1());
 
         ScanOp    scan_op{};
         CompareOp compare_op{};

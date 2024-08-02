@@ -62,7 +62,9 @@ void run_benchmark(benchmark::State&   state,
     std::vector<key_type> keys_input(size);
 
     unsigned int unique_count = 0;
-    std::vector<size_t> key_counts   = get_random_data<size_t>(100000, 1, max_length, seed.get_0());
+    const auto          random_range = limit_random_range<size_t>(1, max_length);
+    std::vector<size_t> key_counts
+        = get_random_data<size_t>(100000, random_range.first, random_range.second, seed.get_0());
     size_t offset = 0;
     while(offset < size)
     {

@@ -133,8 +133,11 @@ struct device_binary_search_benchmark : public config_autotune_interface
         std::vector<T> haystack(haystack_size);
         std::iota(haystack.begin(), haystack.end(), 0);
 
-        std::vector<T> needles
-            = get_random_data<T>(needles_size, T(0), T(haystack_size), seed.get_0());
+        const auto     random_range = limit_random_range<T>(0, haystack_size);
+        std::vector<T> needles      = get_random_data<T>(needles_size,
+                                                    random_range.first,
+                                                    random_range.second,
+                                                    seed.get_0());
         T*             d_haystack;
         T*             d_needles;
         OutputType*    d_output;

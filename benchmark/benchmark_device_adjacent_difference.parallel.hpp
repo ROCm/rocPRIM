@@ -147,8 +147,10 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
         static constexpr bool debug_synchronous = false;
 
         // Generate data
-        const size_t         size  = bytes / sizeof(T);
-        const std::vector<T> input = get_random_data<T>(size, 1, 100, seed.get_0());
+        const size_t         size         = bytes / sizeof(T);
+        const auto           random_range = limit_random_range<T>(1, 100);
+        const std::vector<T> input
+            = get_random_data<T>(size, random_range.first, random_range.second, seed.get_0());
 
         T*           d_input;
         output_type* d_output = nullptr;

@@ -87,24 +87,6 @@ void warp_sort_by_key_kernel(K* input_keys, V* input_values, K* output_keys, V* 
     rp::block_store_direct_blocked(flat_tid, output_values + block_offset, values);
 }
 
-template<class Value>
-Value get_max_value()
-{
-    return Value(10000);
-}
-
-template<>
-char get_max_value()
-{
-    return std::numeric_limits<char>::max();
-}
-
-template<>
-custom_type<char, double> get_max_value()
-{
-    return custom_type<char, double>(std::numeric_limits<char>::max());
-}
-
 template<class Key,
          unsigned int BlockSize,
          unsigned int WarpSize,
@@ -121,10 +103,16 @@ void run_benchmark(benchmark::State&   state,
     constexpr auto items_per_block = BlockSize * ItemsPerThread;
     size = BlockSize * ((size + items_per_block - 1) / items_per_block);
     // Allocate and fill memory
-    std::vector<Key> input_key = get_random_data<Key>(size, 0, get_max_value<Key>(), seed.get_0());
+    const auto       random_range = limit_random_range<Key>(0, 10'000);
+    std::vector<Key> input_key
+        = get_random_data<Key>(size, random_range.first, random_range.second, seed.get_0());
     std::vector<Value> input_value(size_t(1));
     if(SortByKey)
-        input_value = get_random_data<Value>(size, 0, get_max_value<Value>(), seed.get_1());
+    {
+        const auto random_range = limit_random_range<Value>(0, 10'000);
+        input_value
+            = get_random_data<Value>(size, random_range.first, random_range.second, seed.get_1());
+    }
     Key * d_input_key = nullptr;
     Key * d_output_key = nullptr;
     Value * d_input_value = nullptr;

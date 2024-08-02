@@ -65,8 +65,12 @@ void run_merge_keys_benchmark(benchmark::State&   state,
     compare_op_type compare_op;
 
     // Generate data
-    std::vector<key_type> keys_input1 = get_random_data<key_type>(size1, 0, size, seed.get_0());
-    std::vector<key_type> keys_input2 = get_random_data<key_type>(size2, 0, size, seed.get_1());
+    const auto random_range = limit_random_range<key_type>(0, size);
+
+    std::vector<key_type> keys_input1
+        = get_random_data<key_type>(size1, random_range.first, random_range.second, seed.get_0());
+    std::vector<key_type> keys_input2
+        = get_random_data<key_type>(size2, random_range.first, random_range.second, seed.get_1());
     std::sort(keys_input1.begin(), keys_input1.end(), compare_op);
     std::sort(keys_input2.begin(), keys_input2.end(), compare_op);
 
@@ -175,8 +179,11 @@ void run_merge_pairs_benchmark(benchmark::State&   state,
     compare_op_type compare_op;
 
     // Generate data
-    std::vector<key_type> keys_input1 = get_random_data<key_type>(size1, 0, size, seed.get_0());
-    std::vector<key_type> keys_input2 = get_random_data<key_type>(size2, 0, size, seed.get_1());
+    const auto            random_range = limit_random_range<key_type>(0, size);
+    std::vector<key_type> keys_input1
+        = get_random_data<key_type>(size1, random_range.first, random_range.second, seed.get_0());
+    std::vector<key_type> keys_input2
+        = get_random_data<key_type>(size2, random_range.first, random_range.second, seed.get_1());
     std::sort(keys_input1.begin(), keys_input1.end(), compare_op);
     std::sort(keys_input2.begin(), keys_input2.end(), compare_op);
     std::vector<value_type> values_input1(size1);

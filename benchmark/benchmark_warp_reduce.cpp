@@ -152,7 +152,9 @@ void run_benchmark(benchmark::State& state, size_t N, const managed_seed& seed, 
 
     const auto size = BlockSize * ((N + BlockSize - 1)/BlockSize);
 
-    std::vector<T>         input = get_random_data<T>(size, T(0), T(10), seed.get_0());
+    const auto     random_range = limit_random_range<T>(0, 10);
+    std::vector<T> input
+        = get_random_data<T>(size, random_range.first, random_range.second, seed.get_0());
     std::vector<flag_type> flags = get_random_data<flag_type>(size, 0, 1, seed.get_1());
     T * d_input;
     flag_type * d_flags;

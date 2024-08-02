@@ -206,7 +206,9 @@ void run_benchmark(benchmark::State& state, size_t N, const managed_seed& seed, 
     constexpr auto items_per_block = BlockSize * ItemsPerThread;
     const auto size = items_per_block * ((N + items_per_block - 1)/items_per_block);
 
-    std::vector<T> input = get_random_data<T>(size, T(0), T(10), seed.get_0());
+    const auto     random_range = limit_random_range<T>(0, 10);
+    std::vector<T> input
+        = get_random_data<T>(size, random_range.first, random_range.second, seed.get_0());
     T * d_input;
     T * d_output;
     HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_input), size * sizeof(T)));

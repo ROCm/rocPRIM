@@ -79,7 +79,9 @@ struct device_transform_benchmark : public config_autotune_interface
         static constexpr bool debug_synchronous = false;
 
         // Generate data
-        const std::vector<T> input = get_random_data<T>(size, 1, 100, seed.get_0());
+        const auto           random_range = limit_random_range<T>(1, 100);
+        const std::vector<T> input
+            = get_random_data<T>(size, random_range.first, random_range.second, seed.get_0());
 
         T*           d_input;
         output_type* d_output = nullptr;

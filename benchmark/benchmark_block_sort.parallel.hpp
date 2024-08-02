@@ -237,7 +237,10 @@ public:
         std::vector<KeyType> input;
         if(std::is_floating_point<KeyType>::value)
         {
-            input = get_random_data<KeyType>(size, (KeyType)-1000, (KeyType) + 1000, seed.get_0());
+            input = get_random_data<KeyType>(size,
+                                             static_cast<KeyType>(-1000),
+                                             static_cast<KeyType>(1000),
+                                             seed.get_0());
         }
         else
         {

@@ -138,7 +138,10 @@ struct device_partition_flag_benchmark : public config_autotune_interface
         std::vector<DataType> input;
         if(std::is_floating_point<DataType>::value)
         {
-            input = get_random_data<DataType>(size, DataType(-1000), DataType(1000), seed.get_0());
+            input = get_random_data<DataType>(size,
+                                              static_cast<DataType>(-1000),
+                                              static_cast<DataType>(1000),
+                                              seed.get_0());
         }
         else
         {
@@ -287,8 +290,10 @@ struct device_partition_predicate_benchmark : public config_autotune_interface
              const hipStream_t   stream) const override
     {
         // all data types can represent [0, 127], -1 so a predicate can select all
-        std::vector<DataType> input
-            = get_random_data<DataType>(size, DataType(0), DataType(126), seed.get_0());
+        std::vector<DataType> input = get_random_data<DataType>(size,
+                                                                static_cast<DataType>(0),
+                                                                static_cast<DataType>(126),
+                                                                seed.get_0());
 
         DataType* d_input{};
         HIP_CHECK(hipMalloc(&d_input, size * sizeof(*d_input)));
@@ -399,7 +404,10 @@ struct device_partition_two_way_flag_benchmark : public config_autotune_interfac
         std::vector<DataType> input;
         if(std::is_floating_point<DataType>::value)
         {
-            input = get_random_data<DataType>(size, DataType(-1000), DataType(1000), seed.get_0());
+            input = get_random_data<DataType>(size,
+                                              static_cast<DataType>(-1000),
+                                              static_cast<DataType>(1000),
+                                              seed.get_0());
         }
         else
         {
@@ -553,8 +561,10 @@ struct device_partition_two_way_predicate_benchmark : public config_autotune_int
              const hipStream_t   stream) const override
     {
         // all data types can represent [0, 127], -1 so a predicate can select all
-        std::vector<DataType> input
-            = get_random_data<DataType>(size, DataType(0), DataType(126), seed.get_0());
+        std::vector<DataType> input = get_random_data<DataType>(size,
+                                                                static_cast<DataType>(0),
+                                                                static_cast<DataType>(126),
+                                                                seed.get_0());
 
         DataType* d_input;
         HIP_CHECK(hipMalloc(&d_input, size * sizeof(*d_input)));
@@ -665,8 +675,10 @@ struct device_partition_three_way_benchmark : public config_autotune_interface
              const hipStream_t   stream) const override
     {
         // all data types can represent [0, 127], -1 so a predicate can select all
-        std::vector<DataType> input
-            = get_random_data<DataType>(size, DataType(0), DataType(126), seed.get_0());
+        std::vector<DataType> input = get_random_data<DataType>(size,
+                                                                static_cast<DataType>(0),
+                                                                static_cast<DataType>(126),
+                                                                seed.get_0());
 
         DataType* d_input{};
         HIP_CHECK(hipMalloc(&d_input, size * sizeof(*d_input)));

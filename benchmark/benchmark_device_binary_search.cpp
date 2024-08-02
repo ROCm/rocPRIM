@@ -68,9 +68,11 @@ void run_benchmark(benchmark::State&   state,
     std::vector<haystack_type> haystack(haystack_size);
     std::iota(haystack.begin(), haystack.end(), 0);
 
+    const auto random_range = limit_random_range<needle_type>(0, haystack_size);
+
     std::vector<needle_type> needles = get_random_data<needle_type>(needles_size,
-                                                                    needle_type(0),
-                                                                    needle_type(haystack_size),
+                                                                    random_range.first,
+                                                                    random_range.second,
                                                                     seed.get_0());
     if(sorted_needles)
     {

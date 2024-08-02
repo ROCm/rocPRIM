@@ -23,6 +23,7 @@ Documentation for rocPRIM is available at
   time in debug builds.
 * `block_load`, `block_store`, `block_shuffle`, `block_exchange` and `warp_exchange` now use placement `new` instead of copy
   assignment (`operator=`) when writing to local memory. This fixes the behavior of custom types with non-trivial copy assignments.
+* Fixed a bug in the generation of input data for benchmarks, which caused incorrect performance to be reported in specific cases. It may affect the reported performance for one-byte types (`uint8_t` and `int8_t`) and instantiations of `custom_type`. Specifically, device binary search, device histogram, device merge and warp sort are affected.
 
 ### Deprecations
 
