@@ -54,9 +54,8 @@
     #endif
 #endif // ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
 
-extern "C"
-{
-    void __builtin_amdgcn_s_sleep(int);
+extern "C" {
+void __builtin_amdgcn_s_sleep(int);
 }
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -96,24 +95,20 @@ private:
     // Type which is used in store/load operations of block prefix (flag and value).
     // It is 32-bit or 64-bit int and can be loaded/stored using single atomic instruction.
     using prefix_underlying_type =
-        typename std::conditional<
-            (sizeof(T) > 2),
-            unsigned long long,
-            unsigned int
-        >::type;
+        typename std::conditional<(sizeof(T) > 2), unsigned long long, unsigned int>::type;
 
     // Helper struct
     struct alignas(sizeof(prefix_underlying_type)) prefix_type
     {
         flag_type_ flag;
-        T value;
+        T          value;
     };
 
     static_assert(sizeof(prefix_underlying_type) == sizeof(prefix_type), "");
 
 public:
     // Type used for flag/flag of block prefix
-    using flag_type = flag_type_;
+    using flag_type  = flag_type_;
     using value_type = T;
 
     static constexpr bool use_sleep = UseSleep;
@@ -181,9 +176,8 @@ public:
         return result;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void initialize_prefix(const unsigned int block_id,
-                           const unsigned int number_of_blocks)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void initialize_prefix(const unsigned int block_id,
+                                                         const unsigned int number_of_blocks)
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
@@ -205,38 +199,35 @@ public:
         }
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void set_partial(const unsigned int block_id, const T value)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void set_partial(const unsigned int block_id, const T value)
     {
         this->set(block_id, PREFIX_PARTIAL, value);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void set_complete(const unsigned int block_id, const T value)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void set_complete(const unsigned int block_id, const T value)
     {
         this->set(block_id, PREFIX_COMPLETE, value);
     }
 
     // block_id must be > 0
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void get(const unsigned int block_id, flag_type& flag, T& value)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void get(const unsigned int block_id, flag_type& flag, T& value)
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
         prefix_type prefix;
 
-        const unsigned int SLEEP_MAX = 32;
-        unsigned int times_through = 1;
+        const unsigned int SLEEP_MAX     = 32;
+        unsigned int       times_through = 1;
 
         prefix_underlying_type p = ::rocprim::detail::atomic_load(&prefixes[padding + block_id]);
         memcpy(&prefix, &p, sizeof(prefix_type));
         while(prefix.flag == PREFIX_EMPTY)
         {
-            if (UseSleep)
+            if(UseSleep)
             {
                 for(unsigned int j = 0; j < times_through; j++)
                     __builtin_amdgcn_s_sleep(1);
-                if (times_through < SLEEP_MAX)
+                if(times_through < SLEEP_MAX)
                     times_through++;
             }
             prefix_underlying_type p
@@ -245,7 +236,7 @@ public:
         }
 
         // return
-        flag = prefix.flag;
+        flag  = prefix.flag;
         value = prefix.value;
     }
 
@@ -263,18 +254,18 @@ public:
     }
 
 private:
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void set(const unsigned int block_id, const flag_type flag, const T value)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        set(const unsigned int block_id, const flag_type flag, const T value)
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-        prefix_type prefix = { flag, value };
+        prefix_type            prefix = {flag, value};
         prefix_underlying_type p;
         memcpy(&p, &prefix, sizeof(prefix_type));
         ::rocprim::detail::atomic_store(&prefixes[padding + block_id], p);
     }
 
-    prefix_underlying_type * prefixes;
+    prefix_underlying_type* prefixes;
 };
 
 // Flag, partial and final prefixes are stored in separate arrays.
@@ -350,10 +341,11 @@ public:
                                 const hipStream_t             stream,
                                 detail::temp_storage::layout& layout)
     {
-        size_t     storage_size = 0;
-        size_t alignment = std::max({alignof(flag_type), alignof(T), alignof(value_underlying_type)});
-        hipError_t error        = get_storage_size(number_of_blocks, stream, storage_size);
-        layout                  = detail::temp_storage::layout{storage_size, alignment};
+        size_t storage_size = 0;
+        size_t alignment
+            = std::max({alignof(flag_type), alignof(T), alignof(value_underlying_type)});
+        hipError_t error = get_storage_size(number_of_blocks, stream, storage_size);
+        layout           = detail::temp_storage::layout{storage_size, alignment};
         return error;
     }
 
@@ -396,17 +388,17 @@ public:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-        const unsigned int SLEEP_MAX = 32;
-        unsigned int times_through = 1;
+        const unsigned int SLEEP_MAX     = 32;
+        unsigned int       times_through = 1;
 
         flag = ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]);
         while(flag == PREFIX_EMPTY)
         {
-            if (UseSleep)
+            if(UseSleep)
             {
                 for(unsigned int j = 0; j < times_through; j++)
                     __builtin_amdgcn_s_sleep(1);
-                if (times_through < SLEEP_MAX)
+                if(times_through < SLEEP_MAX)
                     times_through++;
             }
 
@@ -428,7 +420,7 @@ public:
 
         const auto* values = static_cast<const T*>(
             flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
-        value       = values[padding + block_id];
+        value = values[padding + block_id];
 #endif
     }
 
@@ -439,7 +431,7 @@ public:
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
-        T    value;
+        T           value;
         const auto* values = static_cast<const value_underlying_type*>(prefixes_complete_values);
         value_underlying_type v;
         for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
@@ -489,7 +481,7 @@ private:
         unsigned int words[words_no];
     };
 
-    flag_type * prefixes_flags;
+    flag_type* prefixes_flags;
     // We need to separate arrays for partial and final prefixes, because
     // value can be overwritten before flag is changed (flag and value are
     // not stored in single instruction).
@@ -501,58 +493,42 @@ template<class T, class BinaryFunction, class LookbackScanState>
 class lookback_scan_prefix_op
 {
     using flag_type = typename LookbackScanState::flag_type;
-    static_assert(
-        std::is_same<T, typename LookbackScanState::value_type>::value,
-        "T must be LookbackScanState::value_type"
-    );
+    static_assert(std::is_same<T, typename LookbackScanState::value_type>::value,
+                  "T must be LookbackScanState::value_type");
 
 public:
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    lookback_scan_prefix_op(unsigned int block_id,
-                            BinaryFunction scan_op,
-                            LookbackScanState &scan_state)
-        : block_id_(block_id),
-          scan_op_(scan_op),
-          scan_state_(scan_state)
-    {
-    }
+    ROCPRIM_DEVICE ROCPRIM_INLINE lookback_scan_prefix_op(unsigned int       block_id,
+                                                          BinaryFunction     scan_op,
+                                                          LookbackScanState& scan_state)
+        : block_id_(block_id), scan_op_(scan_op), scan_state_(scan_state)
+    {}
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    ~lookback_scan_prefix_op() = default;
+    ROCPRIM_DEVICE ROCPRIM_INLINE ~lookback_scan_prefix_op() = default;
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    void reduce_partial_prefixes(unsigned int block_id,
-                                 flag_type& flag,
-                                 T& partial_prefix)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void
+        reduce_partial_prefixes(unsigned int block_id, flag_type& flag, T& partial_prefix)
     {
         // Order of reduction must be reversed, because 0th thread has
         // prefix from the (block_id_ - 1) block, 1st thread has prefix
         // from (block_id_ - 2) block etc.
-        using headflag_scan_op_type = reverse_binary_op_wrapper<
-            BinaryFunction, T, T
-        >;
-        using warp_reduce_prefix_type = warp_reduce_crosslane<
-            T, ::rocprim::device_warp_size(), false
-        >;
+        using headflag_scan_op_type = reverse_binary_op_wrapper<BinaryFunction, T, T>;
+        using warp_reduce_prefix_type
+            = warp_reduce_crosslane<T, ::rocprim::device_warp_size(), false>;
 
         T block_prefix;
         scan_state_.get(block_id, flag, block_prefix);
 
         auto headflag_scan_op = headflag_scan_op_type(scan_op_);
-        warp_reduce_prefix_type()
-            .tail_segmented_reduce(
-                block_prefix,
-                partial_prefix,
-                (flag == PREFIX_COMPLETE),
-                headflag_scan_op
-            );
+        warp_reduce_prefix_type().tail_segmented_reduce(block_prefix,
+                                                        partial_prefix,
+                                                        (flag == PREFIX_COMPLETE),
+                                                        headflag_scan_op);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    T get_prefix()
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix()
     {
-        flag_type flag;
-        T partial_prefix;
+        flag_type    flag;
+        T            partial_prefix;
         unsigned int previous_block_id = block_id_ - ::rocprim::lane_id() - 1;
 
         // reduce last warp_size() number of prefixes to
@@ -570,8 +546,7 @@ public:
         return prefix;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE
-    T operator()(T reduction)
+    ROCPRIM_DEVICE ROCPRIM_INLINE T operator()(T reduction)
     {
         // Set partial prefix for next block
         if(::rocprim::lane_id() == 0)
@@ -728,7 +703,7 @@ private:
     storage_type& storage;
 };
 
-} // end of detail namespace
+} // namespace detail
 
 END_ROCPRIM_NAMESPACE
 
