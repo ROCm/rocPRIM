@@ -39,7 +39,7 @@ template<class KeysIterator,
          class Key = typename std::iterator_traits<KeysIterator>::value_type,
          class BinaryFunction
          = ::rocprim::less<typename std::iterator_traits<KeysIterator>::value_type>>
-ROCPRIM_INLINE hipError_t nth_element_keys(void*          temporary_storage,
+ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
                                            size_t&        storage_size,
                                            KeysIterator   keys,
                                            size_t         nth,
@@ -86,6 +86,15 @@ ROCPRIM_INLINE hipError_t nth_element_keys(void*          temporary_storage,
     if(size == 0 || nth >= size)
     {
         return hipSuccess;
+    }
+
+    if(debug_synchronous)
+    {
+        std::cout << "-----" << '\n';
+        std::cout << "size: " << size << std::endl;
+        std::cout << "num_buckets: " << num_buckets << std::endl;
+        std::cout << "num_threads_per_block: " << num_threads_per_block << std::endl;
+        std::cout << "num_blocks: " << num_blocks << std::endl;
     }
 
     const size_t tree_depth = std::log2(num_buckets);

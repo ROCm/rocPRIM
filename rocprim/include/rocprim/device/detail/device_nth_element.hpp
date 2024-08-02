@@ -58,7 +58,10 @@ ROCPRIM_KERNEL void
     }
 }
 
-template<size_t num_buckets, size_t num_threads_per_block, class KeysIterator>
+template<size_t num_buckets,
+         size_t num_threads_per_block,
+         class KeysIterator,
+         class Key = typename std::iterator_traits<KeysIterator>::value_type>
 ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
                                         const size_t   rank,
                                         const size_t   size,
@@ -116,7 +119,7 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
     }
 
     auto bucket  = idx < size ? oracles[idx] : 0;
-    auto element = idx < size ? keys[idx] : 0;
+    auto element = idx < size ? keys[idx] : Key(0);
 
     using block_scan_local_offsets = rocprim::block_scan<size_t, num_threads_per_block>;
 
@@ -242,7 +245,7 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
         //     bucket += compare_function(element, search_tree[bucket]) ? -diff : diff;
         // }
 
-        if(idx > 0 && equality_buckets[bucket - 1] && element == search_tree[bucket - 1])
+        if(bucket > 0 && equality_buckets[bucket - 1] && element == search_tree[bucket - 1])
         {
             bucket = bucket - 1;
         }
@@ -299,9 +302,10 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
 
     if(debug_synchronous)
     {
-        std::cout << "Size: " << size << std::endl;
-        std::cout << "Rank: " << rank << std::endl;
-        std::cout << "Recursion level: " << recursion << std::endl;
+        std::cout << "-----" << '\n';
+        std::cout << "size: " << size << std::endl;
+        std::cout << "rank: " << rank << std::endl;
+        std::cout << "recursion level: " << recursion << std::endl;
     }
 
     if(size < min_size)
