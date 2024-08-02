@@ -349,13 +349,16 @@ TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
 
     auto iter = h_buffer_num_elements.begin();
 
-    iter = test_utils::generate_random_data_n(iter, num_tlev, 1, wlev_min_elems - 1, rng);
-    iter = test_utils::generate_random_data_n(iter,
-                                              num_wlev,
-                                              wlev_min_elems,
-                                              blev_min_elems - 1,
-                                              rng);
-    iter = test_utils::generate_random_data_n(iter, num_blev, blev_min_elems, max_elems, rng);
+    if(num_tlev > 0)
+        iter = test_utils::generate_random_data_n(iter, num_tlev, 1, wlev_min_elems - 1, rng);
+    if(num_wlev > 0)
+        iter = test_utils::generate_random_data_n(iter,
+                                                  num_wlev,
+                                                  wlev_min_elems,
+                                                  blev_min_elems - 1,
+                                                  rng);
+    if(num_blev > 0)
+        iter = test_utils::generate_random_data_n(iter, num_blev, blev_min_elems, max_elems, rng);
 
     const byte_offset_type total_num_elements = std::accumulate(h_buffer_num_elements.begin(),
                                                                 h_buffer_num_elements.end(),
