@@ -33,7 +33,7 @@
 // required rocprim headers
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp>
-#include <rocprim/device/device_nth_element.hpp>
+#include <rocprim/device/device_partial_sort.hpp>
 #include <rocprim/functional.hpp>
 
 #include <iostream>

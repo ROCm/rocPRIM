@@ -66,6 +66,7 @@
 #include "device/device_merge.hpp"
 #include "device/device_merge_sort.hpp"
 #include "device/device_nth_element.hpp"
+#include "device/device_partial_sort.hpp"
 #include "device/device_partition.hpp"
 #include "device/device_radix_sort.hpp"
 #include "device/device_reduce.hpp"

@@ -32,7 +32,7 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
-#include <rocprim/device/device_nth_element.hpp>
+#include <rocprim/device/device_partial_sort.hpp>
 
 #include <string>
 #include <vector>
