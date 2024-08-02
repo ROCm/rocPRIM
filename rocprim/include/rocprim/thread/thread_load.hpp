@@ -31,6 +31,7 @@
 #define ROCPRIM_THREAD_THREAD_LOAD_HPP_
 
 #include "../config.hpp"
+#include "../detail/various.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -86,7 +87,7 @@ ROCPRIM_DEVICE __forceinline__ T AsmThreadLoad(void * ptr)
                                        "(%2)"                                                   \
                          : "=" #output_modifier(retval)                                         \
                          : "v"(ptr), "I"(0x00));                                                \
-            return *reinterpret_cast<type*>(&retval);                                           \
+            return *bit_cast<type*>(&retval);                                                   \
         }
 
 // TODO Add specialization for custom larger data types

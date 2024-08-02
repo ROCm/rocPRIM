@@ -98,9 +98,11 @@ TYPED_TEST(RocprimThreadOperationTests, Load)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_input),
+                                                     input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_output),
+                                                     output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -161,9 +163,11 @@ TYPED_TEST(RocprimThreadOperationTests, Store)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_input),
+                                                     input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_output),
+                                                     output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -249,9 +253,11 @@ TYPED_TEST(RocprimThreadOperationTests, Reduction)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_input),
+                                                     input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_output),
+                                                     output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -333,9 +339,11 @@ TYPED_TEST(RocprimThreadOperationTests, Scan)
 
         // Preparing device
         T* device_input;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input), input.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_input),
+                                                     input.size() * sizeof(T)));
         T* device_output;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output), output.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_output),
+                                                     output.size() * sizeof(T)));
 
         HIP_CHECK(
             hipMemcpy(
@@ -428,15 +436,17 @@ void merge_path_search_test()
 
         // Preparing device
         T* device_input1;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input1), input1.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_input1),
+                                                     input1.size() * sizeof(T)));
         T* device_input2;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_input2), input2.size() * sizeof(T)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_input2),
+                                                     input2.size() * sizeof(T)));
         OffsetT* device_output_x;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output_x),
-                            output_x.size() * sizeof(OffsetT)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_output_x),
+                                                     output_x.size() * sizeof(OffsetT)));
         OffsetT* device_output_y;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&device_output_y),
-                            output_y.size() * sizeof(OffsetT)));
+        HIP_CHECK(test_common_utils::hipMallocHelper(reinterpret_cast<void**>(&device_output_y),
+                                                     output_y.size() * sizeof(OffsetT)));
 
         HIP_CHECK(hipMemcpy(device_input1,
                             input1.data(),
@@ -476,7 +486,6 @@ void merge_path_search_test()
                    input2.end(),
                    combined_input.begin(),
                    bin_op);
-        std::sort(combined_input.begin(), combined_input.end(), bin_op);
 
         OffsetT slice_index = 0;
         for(OffsetT i = 0; i < index_size - 1; i++)

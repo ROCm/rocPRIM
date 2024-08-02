@@ -32,6 +32,7 @@
 
 
 #include "../config.hpp"
+#include "../detail/various.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -83,7 +84,7 @@ ROCPRIM_DEVICE __forceinline__ void AsmThreadStore(void * ptr, T val)
         ROCPRIM_DEVICE __forceinline__ void AsmThreadStore<cache_modifier, type>(void* ptr,     \
                                                                                  type  val)     \
         {                                                                                       \
-            interim_type temp_val = *reinterpret_cast<interim_type*>(&val);                     \
+            interim_type temp_val = *bit_cast<interim_type*>(&val);                             \
             asm volatile(#asm_operator " %0, %1 " llvm_cache_modifier "\n\t" wait_inst wait_cmd \
                                        "(%2)"                                                   \
                          :                                                                      \
