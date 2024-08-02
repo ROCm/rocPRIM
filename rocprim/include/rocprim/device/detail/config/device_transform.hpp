@@ -39,7 +39,7 @@ namespace detail
 {
 
 template<unsigned int arch, class data_type, class enable = void>
-struct default_transform_config : default_transform_config_base<data_type>
+struct default_transform_config : default_transform_config_base<data_type>::type
 {};
 
 // Based on value_type = double

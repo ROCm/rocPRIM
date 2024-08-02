@@ -10,7 +10,7 @@ transform_config<{{ measurement['cfg']['bs'] }}, {{ measurement['cfg']['ipt'] }}
 
 {% macro general_case() -%}
 template<unsigned int arch, class data_type, class enable = void>
-struct default_transform_config : default_transform_config_base<data_type>
+struct default_transform_config : default_transform_config_base<data_type>::type
 {};
 {%- endmacro %}
 
