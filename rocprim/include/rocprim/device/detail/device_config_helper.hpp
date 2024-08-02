@@ -35,6 +35,8 @@
 #include "rocprim/block/block_radix_rank.hpp"
 #include "rocprim/block/block_sort.hpp"
 
+#include "lookback_scan_state.hpp"
+
 /// \addtogroup primitivesmodule_deviceconfigs
 /// @{
 
@@ -919,18 +921,26 @@ struct select_config : public detail::partition_config_params
 namespace detail
 {
 
-template<typename Key, int ItemScaleBase = 13>
+template<typename Key, bool IsThreeway, int ItemScaleBase = 13>
 struct default_partition_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key), sizeof(int));
 
-    using type = select_config<limit_block_size<256U, sizeof(Key), ROCPRIM_WARP_SIZE_64>::value,
-                               ::rocprim::max(1u, ItemScaleBase / item_scale),
-                               ::rocprim::block_load_method::block_load_transpose,
-                               ::rocprim::block_load_method::block_load_transpose,
-                               ::rocprim::block_load_method::block_load_transpose,
-                               ::rocprim::block_scan_algorithm::using_warp_scan>;
+    using offset_t = std::conditional_t<IsThreeway, uint2, unsigned int>;
+
+    // Additional shared memory is required by the lookback scan state.
+    static constexpr unsigned int shared_mem_offset = sizeof(
+        typename offset_lookback_scan_prefix_op<offset_t,
+                                                lookback_scan_state<offset_t>>::storage_type);
+
+    using type = select_config<
+        limit_block_size<256U, sizeof(Key), ROCPRIM_WARP_SIZE_64, shared_mem_offset>::value,
+        ::rocprim::max(1u, ItemScaleBase / item_scale),
+        ::rocprim::block_load_method::block_load_transpose,
+        ::rocprim::block_load_method::block_load_transpose,
+        ::rocprim::block_load_method::block_load_transpose,
+        ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
 } // namespace detail
 

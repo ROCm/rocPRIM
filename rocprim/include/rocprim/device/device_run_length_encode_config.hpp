@@ -59,7 +59,8 @@ namespace detail
 //   total problem size. The tuning assumption of reasonably large inputs does therefore not hold.
 template<typename T>
 using default_run_length_encode_config
-    = run_length_encode_config<default_config, typename default_partition_config_base<T>::type>;
+    = run_length_encode_config<default_config,
+                               typename default_partition_config_base<T, false>::type>;
 
 } // end namespace detail
 

@@ -40,7 +40,7 @@ namespace detail
 {
 
 template<unsigned int arch, class key_type, class value_type, class enable = void>
-struct default_select_unique_by_key_config : default_partition_config_base<key_type>::type
+struct default_select_unique_by_key_config : default_partition_config_base<key_type, false>::type
 {};
 
 // Based on key_type = double, value_type = int64_t

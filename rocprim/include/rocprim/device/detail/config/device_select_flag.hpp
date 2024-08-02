@@ -40,7 +40,7 @@ namespace detail
 {
 
 template<unsigned int arch, class data_type, class enable = void>
-struct default_select_flag_config : default_partition_config_base<data_type>::type
+struct default_select_flag_config : default_partition_config_base<data_type, false>::type
 {};
 
 // Based on data_type = double

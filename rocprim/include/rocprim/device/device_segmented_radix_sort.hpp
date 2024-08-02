@@ -244,9 +244,9 @@ struct Partitioner
                           const bool                  debug_synchronous)
     {
         using input_type = typename std::iterator_traits<InputIterator>::value_type;
-        using config     = typename default_partition_config_base<input_type>::type;
         if(three_way_partitioning)
         {
+            using config = typename default_partition_config_base<input_type, true>::type;
             return partition_three_way<config>(temporary_storage,
                                                storage_size,
                                                input,
@@ -262,6 +262,7 @@ struct Partitioner
         }
         else
         {
+            using config = typename default_partition_config_base<input_type, false>::type;
             return partition<config>(temporary_storage,
                                      storage_size,
                                      input,
