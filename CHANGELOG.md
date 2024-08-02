@@ -5,11 +5,13 @@ Documentation for rocPRIM is available at
 
 ## Unreleased rocPRIM-3.3.0 for ROCm 6.3.0
 
+### Changes
+
+* Modified the input size in device adjacent difference benchmarks. Observed performance with these benchmarks might be different.
+
 ### Fixes
 
-
 * Fixed an issue where while running rtest.py on windows and passing in an absolute path to `--install_dir` causes a `FileNotFound` error.
-
 
 ## Unreleased rocPRIM-3.2.0 for ROCm 6.2.0
 
