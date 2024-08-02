@@ -182,7 +182,9 @@ ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, bool 
 /// lane <tt>i</tt>'s result includes bit <tt>j</tt> in the lane mask if lane <tt>j</tt> is part
 /// of the same group as lane <tt>i</tt>, i.e. lane <tt>i</tt> and <tt>j</tt> called with the
 /// same value for label.
-ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label, unsigned int label_bits, bool valid = true)
+ROCPRIM_DEVICE ROCPRIM_INLINE lane_mask_type match_any(unsigned int label,
+                                                       unsigned int label_bits,
+                                                       bool         valid = true)
 {
     // Obtain a mask with the threads which are currently active.
     lane_mask_type peer_mask = ballot(valid);
