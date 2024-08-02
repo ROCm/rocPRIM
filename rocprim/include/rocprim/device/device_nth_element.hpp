@@ -152,14 +152,15 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     const unsigned int     num_items_per_block   = num_threads_per_block * num_items_per_threads;
     const unsigned int     num_blocks            = detail::ceiling_div(size, num_items_per_block);
 
+    // oracles stores the bucket that correlates with the index
+    uint8_t*                                     oracles          = nullptr;
     key_type*                                    tree             = nullptr;
     size_t*                                      buckets          = nullptr;
     detail::n_th_element_iteration_data*         nth_element_data = nullptr;
-    uint8_t*                                     oracles          = nullptr;
     bool*                                        equality_buckets = nullptr;
     detail::nth_element_onesweep_lookback_state* lookback_states  = nullptr;
 
-    key_type* output = nullptr;
+    key_type* keys_buffer = nullptr;
 
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
@@ -169,7 +170,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
             detail::temp_storage::ptr_aligned_array(&equality_buckets, num_buckets),
             detail::temp_storage::ptr_aligned_array(&buckets, num_buckets),
             detail::temp_storage::ptr_aligned_array(&oracles, size),
-            detail::temp_storage::ptr_aligned_array(&output, size),
+            detail::temp_storage::ptr_aligned_array(&keys_buffer, size),
             detail::temp_storage::ptr_aligned_array(&nth_element_data, 1),
             detail::temp_storage::ptr_aligned_array(&lookback_states,
                                                     num_partitions * num_blocks)));
@@ -213,7 +214,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     }
 
     return detail::nth_element_keys_impl<config, num_partitions>(keys_output,
-                                                                 output,
+                                                                 keys_buffer,
                                                                  tree,
                                                                  nth,
                                                                  size,
