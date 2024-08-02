@@ -125,9 +125,8 @@ struct n_th_element_iteration_data
 };
 
 template<class config, class KeysIterator, class BinaryFunction>
-ROCPRIM_KERNEL
-    __launch_bounds__(device_params<config>().stop_recursion_size) void kernel_block_sort(
-        KeysIterator keys, const size_t size, BinaryFunction compare_function)
+ROCPRIM_DEVICE ROCPRIM_INLINE void
+    kernel_block_sort_impl(KeysIterator keys, const size_t size, BinaryFunction compare_function)
 {
     constexpr nth_element_config_params params = device_params<config>();
 
@@ -160,12 +159,19 @@ ROCPRIM_KERNEL
 }
 
 template<class config, class KeysIterator, class BinaryFunction>
-ROCPRIM_KERNEL __launch_bounds__(device_params<config>().number_of_buckets
-                                 - 1) void kernel_find_splitters(KeysIterator   keys,
-                                                                 KeysIterator   tree,
-                                                                 bool*          equality_buckets,
-                                                                 const size_t   size,
-                                                                 BinaryFunction compare_function)
+ROCPRIM_KERNEL
+    __launch_bounds__(device_params<config>().stop_recursion_size) void kernel_block_sort(
+        KeysIterator keys, const size_t size, BinaryFunction compare_function)
+{
+    kernel_block_sort_impl<config>(keys, size, compare_function);
+}
+
+template<class config, class KeysIterator, class BinaryFunction>
+ROCPRIM_DEVICE ROCPRIM_INLINE void kernel_find_splitters_impl(KeysIterator   keys,
+                                                              KeysIterator   tree,
+                                                              bool*          equality_buckets,
+                                                              const size_t   size,
+                                                              BinaryFunction compare_function)
 {
     constexpr nth_element_config_params params        = device_params<config>();
     constexpr unsigned int              num_splitters = params.number_of_buckets - 1;
@@ -202,9 +208,18 @@ ROCPRIM_KERNEL __launch_bounds__(device_params<config>().number_of_buckets
 }
 
 template<class config, class KeysIterator, class BinaryFunction>
-ROCPRIM_KERNEL __launch_bounds__(
-    device_params<config>()
-        .kernel_config.block_size) void kernel_count_bucket_sizes(KeysIterator   keys,
+ROCPRIM_KERNEL __launch_bounds__(device_params<config>().number_of_buckets
+                                 - 1) void kernel_find_splitters(KeysIterator   keys,
+                                                                 KeysIterator   tree,
+                                                                 bool*          equality_buckets,
+                                                                 const size_t   size,
+                                                                 BinaryFunction compare_function)
+{
+    kernel_find_splitters_impl<config>(keys, tree, equality_buckets, size, compare_function);
+}
+
+template<class config, class KeysIterator, class BinaryFunction>
+ROCPRIM_DEVICE ROCPRIM_INLINE void kernel_count_bucket_sizes_impl(KeysIterator   keys,
                                                                   KeysIterator   tree,
                                                                   const size_t   size,
                                                                   size_t*        buckets,
@@ -333,14 +348,32 @@ ROCPRIM_KERNEL __launch_bounds__(
     }
 }
 
-template<class config>
+template<class config, class KeysIterator, class BinaryFunction>
 ROCPRIM_KERNEL __launch_bounds__(
     device_params<config>()
-        .number_of_buckets) void kernel_find_nth_element_bucket(size_t* buckets,
-                                                                n_th_element_iteration_data*
-                                                                             nth_element_data,
-                                                                bool*        equality_buckets,
-                                                                const size_t rank)
+        .kernel_config.block_size) void kernel_count_bucket_sizes(KeysIterator   keys,
+                                                                  KeysIterator   tree,
+                                                                  const size_t   size,
+                                                                  size_t*        buckets,
+                                                                  uint8_t*       oracles,
+                                                                  bool*          equality_buckets,
+                                                                  BinaryFunction compare_function)
+{
+    kernel_count_bucket_sizes_impl<config>(keys,
+                                           tree,
+                                           size,
+                                           buckets,
+                                           oracles,
+                                           equality_buckets,
+                                           compare_function);
+}
+
+template<class config>
+ROCPRIM_DEVICE ROCPRIM_INLINE void
+    kernel_find_nth_element_bucket_impl(size_t*                      buckets,
+                                        n_th_element_iteration_data* nth_element_data,
+                                        bool*                        equality_buckets,
+                                        const size_t                 rank)
 
 {
     constexpr nth_element_config_params params = device_params<config>();
@@ -381,15 +414,27 @@ ROCPRIM_KERNEL __launch_bounds__(
     }
 }
 
+template<class config>
+ROCPRIM_KERNEL __launch_bounds__(
+    device_params<config>()
+        .number_of_buckets) void kernel_find_nth_element_bucket(size_t* buckets,
+                                                                n_th_element_iteration_data*
+                                                                             nth_element_data,
+                                                                bool*        equality_buckets,
+                                                                const size_t rank)
+
+{
+    kernel_find_nth_element_bucket_impl<config>(buckets, nth_element_data, equality_buckets, rank);
+}
+
 template<class config, class KeysIterator>
-ROCPRIM_KERNEL
-    __launch_bounds__(device_params<config>().kernel_config.block_size) void kernel_copy_buckets(
-        KeysIterator                         keys,
-        const size_t                         size,
-        uint8_t*                             oracles,
-        nth_element_onesweep_lookback_state* lookback_states,
-        n_th_element_iteration_data*         nth_element_data,
-        KeysIterator                         output)
+ROCPRIM_DEVICE ROCPRIM_INLINE void
+    kernel_copy_buckets_impl(KeysIterator                         keys,
+                             const size_t                         size,
+                             uint8_t*                             oracles,
+                             nth_element_onesweep_lookback_state* lookback_states,
+                             n_th_element_iteration_data*         nth_element_data,
+                             KeysIterator                         output)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
@@ -568,6 +613,24 @@ ROCPRIM_KERNEL
             output[index]       = elements[item];
         }
     }
+}
+
+template<class config, class KeysIterator>
+ROCPRIM_KERNEL
+    __launch_bounds__(device_params<config>().kernel_config.block_size) void kernel_copy_buckets(
+        KeysIterator                         keys,
+        const size_t                         size,
+        uint8_t*                             oracles,
+        nth_element_onesweep_lookback_state* lookback_states,
+        n_th_element_iteration_data*         nth_element_data,
+        KeysIterator                         output)
+{
+    kernel_copy_buckets_impl<config>(keys,
+                                     size,
+                                     oracles,
+                                     lookback_states,
+                                     nth_element_data,
+                                     output);
 }
 
 template<class config, class KeysIterator, class BinaryFunction>
