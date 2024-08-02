@@ -83,6 +83,10 @@
     #define ROCPRIM_DETAIL_HAS_DPP_BROADCAST 1
 #endif
 
+#if defined(ROCPRIM_DETAIL_HAS_DPP) && (defined(__GFX8__) || defined(__GFX9__))
+    #define ROCPRIM_DETAIL_HAS_DPP_WF 1
+#endif
+
 #ifndef ROCPRIM_THREAD_LOAD_USE_CACHE_MODIFIERS
     #define ROCPRIM_THREAD_LOAD_USE_CACHE_MODIFIERS 1
 #endif

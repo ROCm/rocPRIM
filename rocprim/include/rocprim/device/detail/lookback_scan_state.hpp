@@ -78,6 +78,24 @@ enum prefix_flag
     PREFIX_COMPLETE = 2
 };
 
+// In the original implementation, lookback scan is not deterministic
+// for non-associative operations: This is because the number of lookback
+// steps may vary depending on the algorithm that its used in, scanned
+// operator, and the hardware of the device running on it. Usually, the
+// trade-off is worth the extra speed bonus, but sometimes bitwise
+// reproducibility is more important. This enum may be used to tune the
+// lookback scan implementation to favor one or the other.
+enum class lookback_scan_determinism
+{
+    // Allow the implementation to produce non-deterministic results.
+    nondeterministic,
+    // Do not allow the implementation to produce non-deterministic results.
+    // This may come at a performance penalty, depending on algorithm and device.
+    deterministic,
+    // By default, prefer the speedy option.
+    default_determinism = nondeterministic,
+};
+
 // lookback_scan_state object keeps track of prefixes status for
 // a look-back prefix scan. Initially every prefix can be either
 // invalid (padding values) or empty. One thread in a block should
@@ -489,7 +507,10 @@ private:
     void* prefixes_complete_values;
 };
 
-template<class T, class BinaryFunction, class LookbackScanState>
+template<class T,
+         class BinaryFunction,
+         class LookbackScanState,
+         lookback_scan_determinism Determinism = lookback_scan_determinism::default_determinism>
 class lookback_scan_prefix_op
 {
     using flag_type = typename LookbackScanState::flag_type;
@@ -505,6 +526,7 @@ public:
 
     ROCPRIM_DEVICE ROCPRIM_INLINE ~lookback_scan_prefix_op() = default;
 
+private:
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         reduce_partial_prefixes(unsigned int block_id, flag_type& flag, T& partial_prefix)
     {
@@ -525,27 +547,159 @@ public:
                                                         headflag_scan_op);
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix()
+    /// Reduce lanes `0-valid_items` and return the result in lane `device_warp_size() - 1`.
+    ROCPRIM_DEVICE ROCPRIM_INLINE T reduce_forward_init(T block_prefix, unsigned int valid_items)
     {
-        flag_type    flag;
-        T            partial_prefix;
-        unsigned int previous_block_id = block_id_ - ::rocprim::lane_id() - 1;
-
-        // reduce last warp_size() number of prefixes to
-        // get the complete prefix for this block.
-        reduce_partial_prefixes(previous_block_id, flag, partial_prefix);
-        T prefix = partial_prefix;
-
-        // while we don't load a complete prefix, reduce partial prefixes
-        while(::rocprim::detail::warp_all(flag != PREFIX_COMPLETE))
+        block_prefix = warp_shuffle_up(block_prefix, device_warp_size() - 1 - valid_items);
+        T prefix     = block_prefix;
+        for(int i = valid_items - 1; i >= 0; --i)
         {
-            previous_block_id -= ::rocprim::device_warp_size();
-            reduce_partial_prefixes(previous_block_id, flag, partial_prefix);
-            prefix = scan_op_(partial_prefix, prefix);
+#ifdef ROCPRIM_DETAIL_HAS_DPP_WF_ROTATE
+            block_prefix = warp_move_dpp<T, 0x13C>(block_prefix);
+#else
+            block_prefix = warp_shuffle_up(block_prefix, 1);
+#endif
+            prefix = scan_op_(prefix, block_prefix);
         }
         return prefix;
     }
 
+    /// Reduce all lanes with the `prefix`, which is taken from the `device_warp_size() - 1`th
+    /// lane, and return the result in lane `device_warp_size() - 1`.
+    ROCPRIM_DEVICE ROCPRIM_INLINE T reduce_forward(T prefix, T block_prefix)
+    {
+#ifdef ROCPRIM_DETAIL_HAS_DPP_WF
+        ROCPRIM_UNROLL
+        for(int i = device_warp_size() - 1; i >= 0; --i)
+        {
+            prefix       = scan_op_(prefix, block_prefix);
+            block_prefix = warp_move_dpp<T, 0x13C /* DPP_WF_RR1 */>(block_prefix);
+        }
+#elif ROCPRIM_DETAIL_USE_DPP == 1
+        // If we can't rotate or shift the entire wavefront in one instruction,
+        // iterate over rows of 16 lanes and use warp_readlane to communicate across rows.
+        constexpr const int row_size = 16;
+        ROCPRIM_UNROLL
+        for(int j = device_warp_size() - 1; j > 0; j -= row_size)
+        {
+            ROCPRIM_UNROLL
+            for(int i = 0; i < row_size; ++i)
+            {
+                prefix       = scan_op_(prefix, block_prefix);
+                block_prefix = warp_move_dpp<T, 0x121 /* DPP_ROW_RR1 */>(block_prefix);
+            }
+
+            prefix = warp_readlane(prefix, j);
+        }
+#else
+        // If no DPP available at all, fall back to shuffles.
+        ROCPRIM_UNROLL
+        for(int i = device_warp_size() - 1; i >= 0; --i)
+        {
+            prefix       = scan_op_(prefix, block_prefix);
+            block_prefix = warp_shuffle(block_prefix, lane_id() - 1);
+        }
+#endif
+        return prefix;
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix()
+    {
+        if ROCPRIM_IF_CONSTEXPR(Determinism == lookback_scan_determinism::nondeterministic)
+        {
+            flag_type    flag;
+            T            partial_prefix;
+            unsigned int previous_block_id = block_id_ - ::rocprim::lane_id() - 1;
+
+            // reduce last warp_size() number of prefixes to
+            // get the complete prefix for this block.
+            reduce_partial_prefixes(previous_block_id, flag, partial_prefix);
+            T prefix = partial_prefix;
+
+            // while we don't load a complete prefix, reduce partial prefixes
+            while(::rocprim::detail::warp_all(flag != PREFIX_COMPLETE))
+            {
+                previous_block_id -= ::rocprim::device_warp_size();
+                reduce_partial_prefixes(previous_block_id, flag, partial_prefix);
+                prefix = scan_op_(partial_prefix, prefix);
+            }
+            return prefix;
+        }
+        else /* Determinism == lookback_scan_state::deterministic */
+        {
+            unsigned int lookback_block_id = block_id_ - lane_id() - 1;
+
+            // There is one lookback scan per block, though a lookback scan is done by a single warp.
+            // Because every lane of the warp checks a different lookback scan state value,
+            // we need space for at least ceil(CUs / device_warp_size()) items in the cache,
+            // assuming that only one block is active per CU (assumes low occupancy).
+            // For MI300, with 304 CUs, we have 304 / 64 = 5 items for the lookback cache.
+            // Note that one item is kept in the `block_prefix` register, so we only need to
+            // cache 4 values here in the worst case.
+            constexpr int max_lookback_per_thread = 4;
+
+            T   cache[max_lookback_per_thread];
+            int cache_offset = 0;
+
+            flag_type flag;
+            T         block_prefix;
+            scan_state_.get(lookback_block_id, flag, block_prefix);
+
+            while(warp_all(flag != PREFIX_COMPLETE && flag != PREFIX_INVALID)
+                  && cache_offset < max_lookback_per_thread)
+            {
+                cache[cache_offset++] = block_prefix;
+                lookback_block_id -= device_warp_size();
+                scan_state_.get(lookback_block_id, flag, block_prefix);
+            }
+
+            // If no flags are complete, we have hit either of the following edge cases:
+            // - The lookback_block_id is < 0 for all lanes. In this case, we need to go
+            //   forward one block and pop one invalid item off the cache.
+            // - We have run out of available space in the cache. In this case, wait until
+            //   any of the current lookback flags pointed to by lookback_block_id changes
+            //   to complete.
+            if(warp_all(flag != PREFIX_COMPLETE))
+            {
+                if(warp_all(flag == PREFIX_INVALID))
+                {
+                    // All invalid, so we have to move one block back to
+                    // get back to known civilization.
+                    // Don't forget to pop one item off the cache too.
+                    lookback_block_id += device_warp_size();
+                    --cache_offset;
+                }
+
+                do
+                {
+                    scan_state_.get(lookback_block_id, flag, block_prefix);
+                }
+                while(warp_all(flag != PREFIX_COMPLETE));
+            }
+
+            // Now just sum all these values to get the prefix
+            // Note that the values are striped across the threads.
+            // In the first iteration, the current prefix is at the value cache for the current
+            // offset at the lowest warp number that has PREFIX_COMPLETE set.
+            const auto bits   = ballot(flag == PREFIX_COMPLETE);
+            const auto lowest = ctz(bits);
+
+            // Now sum all the values from block_prefix that are lower than the current prefix.
+            T prefix = reduce_forward_init(block_prefix, lowest);
+
+            // Now sum all from the prior cache.
+            // These are all guaranteed to be PARTIAL
+            while(cache_offset > 0)
+            {
+                block_prefix = cache[--cache_offset];
+                prefix       = reduce_forward(prefix, block_prefix);
+            }
+
+            return warp_readlane(prefix, device_warp_size() - 1);
+        }
+    }
+
+public:
     ROCPRIM_DEVICE ROCPRIM_INLINE T operator()(T reduction)
     {
         // Set partial prefix for next block
@@ -655,12 +809,15 @@ public:
     }
 };
 
-template<class T, class LookbackScanState, class BinaryOp = ::rocprim::plus<T>>
+template<class T,
+         class LookbackScanState,
+         class BinaryOp                        = ::rocprim::plus<T>,
+         lookback_scan_determinism Determinism = lookback_scan_determinism::default_determinism>
 class offset_lookback_scan_prefix_op
-    : public lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>
+    : public lookback_scan_prefix_op<T, BinaryOp, LookbackScanState, Determinism>
 {
 private:
-    using base_type = lookback_scan_prefix_op<T, BinaryOp, LookbackScanState>;
+    using base_type = lookback_scan_prefix_op<T, BinaryOp, LookbackScanState, Determinism>;
     using factory   = detail::offset_lookback_scan_factory<T>;
 
     ROCPRIM_DEVICE ROCPRIM_INLINE base_type& base()
