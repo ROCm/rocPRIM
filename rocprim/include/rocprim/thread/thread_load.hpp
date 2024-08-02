@@ -34,6 +34,12 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
+/// \defgroup thread_load Thread Load Functions
+/// \ingroup threadmodule
+
+/// \addtogroup thread_load
+/// @{
+
 /// \brief These enum values are used to specify caching behaviour on load
 enum cache_load_modifier : int
 {
@@ -45,6 +51,9 @@ enum cache_load_modifier : int
     load_ldg,       ///< Cache as texture
     load_volatile,  ///< Volatile (any memory space)
 };
+
+/// @}
+// end of group thread_load
 
 namespace detail
 {
@@ -124,10 +133,13 @@ ROCPRIM_ASM_THREAD_LOAD_GROUP(load_cs, "", "s_waitcnt", "");
 
 }
 
+/// \addtogroup thread_load
+/// @{
+
 /// \brief Store data using the default load instruction. No support for cache modified stores yet
-/// \tparam MODIFIER        - Value in enum for determine which type of cache store modifier to be used
-/// \tparam InputIteratorT - Type of Output Iterator
-/// \param itr [in]         - Iterator to location where data is to be stored
+/// \tparam MODIFIER Value in enum for determine which type of cache store modifier to be used
+/// \tparam InputIteratorT Type of Output Iterator
+/// \param itr [in] Iterator to location where data is to be stored
 /// \return Data that is loaded from memory
 template <
     cache_load_modifier MODIFIER = load_default,
@@ -142,8 +154,8 @@ thread_load(InputIteratorT itr)
 }
 
 /// \brief Load data using the default load instruction. No support for cache modified loads yet
-/// \tparam MODIFIER        - Value in enum for determine which type of cache store modifier to be used
-/// \tparam T               - Type of Data to be loaded
+/// \tparam MODIFIER Value in enum for determine which type of cache store modifier to be used
+/// \tparam T Type of Data to be loaded
 /// \param ptr [in] - Pointer to data to be loaded
 /// \return Data that is loaded from memory
 template <
@@ -160,6 +172,9 @@ T thread_load(T* ptr)
     return retval;
 #endif
 }
+
+/// @}
+// end of group thread_load
 
 END_ROCPRIM_NAMESPACE
 

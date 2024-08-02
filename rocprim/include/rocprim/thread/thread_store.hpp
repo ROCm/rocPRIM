@@ -1,7 +1,7 @@
 /******************************************************************************
  * Copyright (c) 2010-2011, Duane Merrill.  All rights reserved.
  * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
- * Modifications Copyright (c) 2021, Advanced Micro Devices, Inc.  All rights reserved.
+ * Modifications Copyright (c) 2021-2024, Advanced Micro Devices, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,12 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
+/// \defgroup thread_store Thread Store Functions
+/// \ingroup threadmodule
+
+/// \addtogroup thread_store
+/// @{
+
 /// \brief These enum values are used to specify caching behaviour on store
 enum cache_store_modifier
 {
@@ -45,6 +51,9 @@ enum cache_store_modifier
     store_wt,        ///< Cache write-through (to system memory)
     store_volatile,  ///< Volatile shared (any memory space)
 };
+
+/// @}
+// end group thread_store
 
 namespace detail
 {
@@ -122,12 +131,15 @@ ROCPRIM_ASM_THREAD_STORE_GROUP(store_cs, "", "s_waitcnt", "");
 
 }
 
+/// \addtogroup thread_store
+/// @{
+
 /// \brief Store data using the default load instruction. No support for cache modified stores yet
-/// \tparam MODIFIER        - Value in enum for determine which type of cache store modifier to be used
-/// \tparam OutputIteratorT - Type of Output Iterator
-/// \tparam T               - Type of Data to be stored
-/// \param itr [in]         - Iterator to location where data is to be stored
-/// \param val [in]         - Data to be stored
+/// \tparam MODIFIER        Value in enum for determine which type of cache store modifier to be used
+/// \tparam OutputIteratorT Type of Output Iterator
+/// \tparam T               Type of Data to be stored
+/// \param itr [in]         Iterator to location where data is to be stored
+/// \param val [in]         Data to be stored
 template <
     cache_store_modifier MODIFIER = store_default,
     typename OutputIteratorT,
@@ -141,10 +153,10 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void thread_store(
 }
 
 /// \brief Store data using the default load instruction. No support for cache modified stores yet
-/// \tparam MODIFIER        - Value in enum for determine which type of cache store modifier to be used
-/// \tparam T               - Type of Data to be stored
-/// \param ptr [in] - Pointer to location where data is to be stored
-/// \param val [in] - Data to be stored
+/// \tparam MODIFIER Value in enum for determine which type of cache store modifier to be used
+/// \tparam T        Type of Data to be stored
+/// \param ptr [in]  Pointer to location where data is to be stored
+/// \param val [in]  Data to be stored
 template <
     cache_store_modifier MODIFIER = store_default,
     typename T
@@ -159,6 +171,9 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void thread_store(
     std::memcpy(ptr, &val, sizeof(T));
 #endif
 }
+
+/// @}
+// end group thread_store
 
 END_ROCPRIM_NAMESPACE
 

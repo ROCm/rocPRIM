@@ -64,7 +64,12 @@ subtrees:
         subtrees:
         - entries:
           - file: thread_ops/radix_key_codec.rst
-      - file: reference/thread_ops.rst
+          - file: thread_ops/thread_operators.rst
+          - file: thread_ops/thread_load.rst
+          - file: thread_ops/thread_reduce.rst
+          - file: thread_ops/thread_scan.rst
+          - file: thread_ops/thread_search.rst
+          - file: thread_ops/thread_store.rst
       - file: reference/iterators.rst
       - file: reference/intrinsics.rst
       - file: reference/acknowledge.rst

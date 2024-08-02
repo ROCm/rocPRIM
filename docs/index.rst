@@ -30,7 +30,6 @@ The rocPRIM documentation is structured as follows:
     * :ref:`block-index`
     * :ref:`warp-index` 
     * :ref:`thread-index`
-    * :ref:`thread_ops` 
     * :ref:`iterators` 
     * :ref:`intrinsics` 
 
