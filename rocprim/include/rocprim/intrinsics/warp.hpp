@@ -119,7 +119,7 @@ int warp_all(int predicate)
 /// \overload
 /// \brief Group active lanes having the same bits of \p label
 ///
-/// Threads that have the same least significant \p LabelBits bits are grouped into the same group.
+/// Threads that have the same least significant \p label_bits bits are grouped into the same group.
 /// Every lane in the warp receives a mask of all active lanes participating in its group.
 ///
 /// This overload does not accept a template parameter for label bits. It is passed as a function parameter instead.
