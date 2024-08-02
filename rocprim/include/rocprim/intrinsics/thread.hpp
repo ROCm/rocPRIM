@@ -36,12 +36,13 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief [DEPRECATED] Returns a number of threads in a hardware warp.
 ///
 /// It is constant for a device.
-/// This function is not supported for the gfx1030 architecture and will be removed in a future release.
+/// This function is not supported for gfx1030 and newer architectures and will be removed in a future release.
 /// Please use the new host_warp_size() and device_warp_size() functions.
-ROCPRIM_HOST_DEVICE inline
-constexpr unsigned int warp_size()
+[[deprecated("Use host_warp_size() or device_warp_size() "
+             "instead.")]] ROCPRIM_HOST_DEVICE inline constexpr unsigned int
+    warp_size()
 {
-    return warpSize;
+    return ROCPRIM_WAVEFRONT_SIZE;
 }
 
 /// \brief Returns a number of threads in a hardware warp for the actual target.
@@ -51,7 +52,7 @@ constexpr unsigned int warp_size()
 ROCPRIM_DEVICE ROCPRIM_INLINE
 constexpr unsigned int device_warp_size()
 {
-    return warpSize;
+    return ROCPRIM_WAVEFRONT_SIZE;
 }
 
 /// \brief Returns flat size of a multidimensional block (tile).
@@ -78,7 +79,7 @@ unsigned int lane_id()
     return ::__lane_id();
 #else
     using namespace hip::detail;
-    return id(Fiber::this_fiber()) % warpSize;
+    return id(Fiber::this_fiber()) % device_warp_size();
 #endif
 }
 

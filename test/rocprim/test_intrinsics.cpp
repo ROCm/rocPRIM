@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -561,7 +561,7 @@ __global__ void masked_bit_count_kernel(unsigned int*             out,
                                         const max_lane_mask_type  active_lanes)
 {
     const unsigned int out_index = blockIdx.x * blockDim.x + threadIdx.x;
-    const unsigned int in_index  = out_index / rocprim::warp_size();
+    const unsigned int in_index  = out_index / rocprim::device_warp_size();
 
     const auto   value  = static_cast<rocprim::lane_mask_type>(in[in_index]);
     unsigned int result = test_type_helper<unsigned int>::uninitialized();
@@ -682,7 +682,8 @@ __global__ void warp_any_all_kernel(unsigned int*             out,
                                     max_lane_mask_type        active_lanes)
 {
     const unsigned int index     = blockIdx.x * blockDim.x + threadIdx.x;
-    const unsigned int predicate = (in[index / rocprim::warp_size()] >> rocprim::lane_id()) & 1;
+    const unsigned int predicate
+        = (in[index / rocprim::device_warp_size()] >> rocprim::lane_id()) & 1;
 
     unsigned int result = test_type_helper<unsigned int>::uninitialized();
     if(is_lane_active(active_lanes, rocprim::lane_id()))
