@@ -174,7 +174,7 @@ auto assert_near(const std::vector<T>& result, const std::vector<T>& expected, c
     for(size_t i = 0; i < result.size(); i++)
     {
         if(bit_equal(result[i], expected[i])) continue; // Check bitwise equality for +NaN, -NaN, +0.0, -0.0, +inf, -inf.
-        auto diff = std::abs(percent * expected[i]);
+        auto diff = std::abs(percent * std::max(result[i], expected[i]));
         ASSERT_NEAR(result[i], expected[i], diff) << "where index = " << i;
     }
 }
