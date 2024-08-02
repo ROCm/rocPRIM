@@ -158,7 +158,7 @@ build:cmake-minimum-apt:
       -D CMAKE_CXX_COMPILER="$AMDCLANG"
       -D CMAKE_CXX_FLAGS="-Wall -Wextra -Werror"
       -D CMAKE_BUILD_TYPE="$BUILD_TYPE"
-      -D BUILD_$BUILD_TARGET=ON 
+      -D BUILD_$BUILD_TARGET=ON
       -D BUILD_EXAMPLE=ON
       -D GPU_TARGETS=$GPU_TARGETS
       -D AMDGPU_TEST_TARGETS=$GPU_TARGETS
@@ -241,15 +241,15 @@ build:windows:
         BUILD_TARGET: [BENCHMARK, TEST]
   script:
     - mkdir -p $CI_PROJECT_DIR/build
-    - cmake -G Ninja 
-      -S $CI_PROJECT_DIR 
-      -B $CI_PROJECT_DIR/build 
-      -D BUILD_$BUILD_TARGET=ON 
+    - cmake -G Ninja
+      -S $CI_PROJECT_DIR
+      -B $CI_PROJECT_DIR/build
+      -D BUILD_$BUILD_TARGET=ON
       -D GPU_TARGETS=$GPU_TARGET
-      -D CMAKE_CXX_COMPILER:PATH="${env:HIP_PATH}\bin\clang++.exe" 
-      -D CMAKE_PREFIX_PATH:PATH="${env:HIP_PATH}" 
-      -D CMAKE_BUILD_TYPE="$BUILD_TYPE" 
-    - cmake --build "$CI_PROJECT_DIR/build" 
+      -D CMAKE_CXX_COMPILER:PATH="${env:HIP_PATH}\bin\clang++.exe"
+      -D CMAKE_PREFIX_PATH:PATH="${env:HIP_PATH}"
+      -D CMAKE_BUILD_TYPE="$BUILD_TYPE"
+    - cmake --build "$CI_PROJECT_DIR/build"
   artifacts:
     paths:
       - $CI_PROJECT_DIR/build/test/test_*
@@ -350,7 +350,7 @@ test:
     - cd $CI_PROJECT_DIR/build
     - ctest --output-on-failure
 
-# Disabled due to extensive link times. 
+# Disabled due to extensive link times.
 # This is tracked in issue 679
 # test-windows-debug:
 #   extends:
