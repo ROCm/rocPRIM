@@ -49,23 +49,23 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
                                       hipStream_t    stream            = 0,
                                       bool           debug_synchronous = false)
 {
-    constexpr size_t num_buckets   = 64;
-    constexpr size_t num_splitters = num_buckets - 1;
-    constexpr size_t min_size      = num_buckets;
+    constexpr size_t num_buckets           = 64;
+    constexpr size_t num_splitters         = num_buckets - 1;
+    constexpr size_t min_size              = num_buckets;
+    constexpr size_t num_items_per_threads = 16;
+    constexpr size_t num_threads_per_block = 512;
+    constexpr size_t num_items_per_block   = num_threads_per_block * num_items_per_threads;
+    const size_t     num_blocks            = (size + num_items_per_block - 1) / num_items_per_block;
 
-    Key*    tree    = nullptr;
-    size_t* buckets = nullptr;
+    Key*    tree                      = nullptr;
+    size_t* buckets                   = nullptr;
     size_t* buckets_per_block_offsets = nullptr;
     size_t* nth_element_data          = nullptr;
-    // Maximum of 256 buckets
+    // Maximum of 128 buckets
     unsigned char* oracles          = nullptr;
     bool*          equality_buckets = nullptr;
 
     Key* output = nullptr;
-
-    // Find the maximum number of threads in one block
-    constexpr size_t num_threads_per_block = 1024;
-    const size_t     num_blocks            = (size / num_threads_per_block) + 1;
 
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
@@ -111,7 +111,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     }
 
     const size_t tree_depth = std::log2(num_buckets);
-    detail::nth_element_keys_impl<num_buckets, min_size, num_threads_per_block>(
+    detail::nth_element_keys_impl<num_buckets, min_size, num_threads_per_block, num_items_per_threads>(
         keys_output,
         output,
         tree,
