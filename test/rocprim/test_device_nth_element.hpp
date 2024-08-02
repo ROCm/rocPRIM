@@ -20,12 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
+#include "../common_test_header.hpp"
 #include "test_utils_data_generation.hpp"
-#include <cstddef>
+
 #include <rocprim/device/device_nth_element.hpp>
 
 #include <iostream>
+
+#include <cassert>
+#include <cstddef>
 
 TEST(RocprimDeviceNthElementTests, BasicTest)
 {
@@ -33,24 +36,18 @@ TEST(RocprimDeviceNthElementTests, BasicTest)
     engine_type gen{std::random_device{}()};
 
     size_t storage_size;
-    size_t size = 8;
+    size_t size = 20;
     int    input[size];
-    size_t nth = 4;
+    size_t nth = size/2;
     int*   d_input;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, size * sizeof(int)));
 
     test_utils::generate_random_data_n(input, size, -10, 10, gen);
 
-    for(int i = 0; i < size; i++)
-    {
-        std::cout << input[i] << ' ';
-    }
-    std::cout << std::endl;
     HIP_CHECK(hipMemcpy(d_input, input, size * sizeof(int), hipMemcpyHostToDevice));
 
     rocprim::nth_element_keys(nullptr, storage_size, d_input, nth, size);
 
-    std::cout << "Size: " << storage_size << std::endl;
     void* d_temp_storage;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, storage_size));
 
@@ -60,11 +57,22 @@ TEST(RocprimDeviceNthElementTests, BasicTest)
 
     HIP_CHECK(hipMemcpy(output, d_input, size * sizeof(int), hipMemcpyHostToDevice));
 
+    auto value_nth = output[nth];
     for(int i = 0; i < size; i++)
     {
-        std::cout << output[i] << ' ';
+        if (i < nth)
+        {
+            ASSERT_LE(output[i], value_nth);
+        }
+        if (i > nth)
+        {
+            ASSERT_GE(output[i], value_nth);
+        }
+        if (i == nth)
+        {
+            ASSERT_EQ(output[i], value_nth);
+        }
     }
-    std::cout << std::endl;
 
     HIP_CHECK(hipFree(d_temp_storage));
     HIP_CHECK(hipFree(d_input));
