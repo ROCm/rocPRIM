@@ -121,8 +121,8 @@ __global__ __launch_bounds__(BlockSize) void sort_key_value_kernel(key_type*   d
 
     rocprim::
         block_radix_sort<key_type, BlockSize, ItemsPerThread, value_type, 1, 1, RadixBitsPerPass>
-                                                                               bsort;
-    test_utils::select_decomposer_t<key_type>                                  decomposer{};
+                                              bsort;
+    test_utils::select_decomposer_t<key_type> decomposer{};
     if(to_striped)
     {
         if(descending)
