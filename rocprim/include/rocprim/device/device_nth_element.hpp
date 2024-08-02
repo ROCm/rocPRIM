@@ -97,6 +97,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
         std::cout << "num_buckets: " << num_buckets << std::endl;
         std::cout << "num_threads_per_block: " << num_threads_per_block << std::endl;
         std::cout << "num_blocks: " << num_blocks << std::endl;
+        std::cout << "storage_size: " << storage_size << std::endl;
     }
 
     if(keys_input != keys_output)

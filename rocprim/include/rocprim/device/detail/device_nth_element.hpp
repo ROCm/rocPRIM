@@ -33,6 +33,24 @@ BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
 {
+
+#define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                           \
+    {                                                                                            \
+        auto _error = hipGetLastError();                                                         \
+        if(_error != hipSuccess)                                                                 \
+            return _error;                                                                       \
+        if(debug_synchronous)                                                                    \
+        {                                                                                        \
+            std::cout << name << "(" << size << ")";                                             \
+            auto __error = hipStreamSynchronize(stream);                                         \
+            if(__error != hipSuccess)                                                            \
+                return __error;                                                                  \
+            auto _end = std::chrono::high_resolution_clock::now();                               \
+            auto _d   = std::chrono::duration_cast<std::chrono::duration<double>>(_end - start); \
+            std::cout << " " << _d.count() * 1000 << " ms" << '\n';                              \
+        }                                                                                        \
+    }
+
 template<size_t min_size, class KeysIterator, class BinaryFunction>
 ROCPRIM_KERNEL void
     kernel_block_sort(KeysIterator keys, const size_t size, BinaryFunction compare_function)
@@ -223,14 +241,14 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator    keys,
     if(idx < size)
     {
         size_t bucket = num_splitters / 2;
-        auto diff = num_buckets / 2;
-        for (size_t i = 0; i < tree_depth-1; i++)
+        auto   diff   = num_buckets / 2;
+        for(size_t i = 0; i < tree_depth - 1; i++)
         {
             diff = diff / 2;
             bucket += compare_function(element, storage_.search_tree[bucket]) ? -diff : diff;
         }
 
-        if (!compare_function(element, storage_.search_tree[bucket]))
+        if(!compare_function(element, storage_.search_tree[bucket]))
         {
             bucket++;
         }
@@ -308,6 +326,10 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
         return error;
     }
 
+    // Start point for time measurements
+    std::chrono::high_resolution_clock::time_point start;
+
+    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
     // Currently launches power of 2 minus 1 threads
     kernel_build_searchtree<num_splitters><<<1, num_splitters, 0, stream>>>(keys,
                                                                             tree,
@@ -315,6 +337,8 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
                                                                             size,
                                                                             compare_function,
                                                                             recursion);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_build_searchtree", size, start);
+    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
     kernel_traversal_searchtree<num_buckets, num_threads_per_block>
         <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
                                                            tree,
@@ -325,6 +349,8 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
                                                            oracles,
                                                            tree_depth,
                                                            compare_function);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_traversal_searchtree", size, start);
+    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
     kernel_copy_buckets<num_buckets, num_threads_per_block>
         <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
                                                            rank,
@@ -335,14 +361,15 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
                                                            oracles,
                                                            nth_element_data,
                                                            output);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_copy_buckets", size, start);
 
     error = hipMemcpyAsync(keys, output, sizeof(Key) * size, hipMemcpyDeviceToDevice);
 
     size_t h_nth_element_data[3];
     error = hipMemcpyAsync(&h_nth_element_data,
-                      nth_element_data,
-                      3 * sizeof(size_t),
-                      hipMemcpyDeviceToHost);
+                           nth_element_data,
+                           3 * sizeof(size_t),
+                           hipMemcpyDeviceToHost);
 
     if(error != hipSuccess)
     {
