@@ -66,27 +66,29 @@ ROCPRIM_DEVICE __forceinline__ void AsmThreadStore(void * ptr, T val)
 
 #if ROCPRIM_THREAD_STORE_USE_CACHE_MODIFIERS == 1
 
-// NOTE: the reason there is an interim_type is because of a bug for 8bit types.
-// TODO fix flat_store_ubyte and flat_store_sbyte issues
+    // NOTE: the reason there is an interim_type is because of a bug for 8bit types.
+    // TODO fix flat_store_ubyte and flat_store_sbyte issues
 
-// Important for syncing. Check section 9.2.2 or 7.3 in the following document
-// http://developer.amd.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf
-#define ROCPRIM_ASM_THREAD_STORE(cache_modifier,                                                             \
-                                llvm_cache_modifier,                                                         \
-                                type,                                                                        \
-                                interim_type,                                                                \
-                                asm_operator,                                                                \
-                                output_modifier,                                                             \
-                                wait_inst,                                                                   \
-                                wait_cmd)                                                                    \
-    template<>                                                                                               \
-    ROCPRIM_DEVICE __forceinline__ void AsmThreadStore<cache_modifier, type>(void * ptr, type val)           \
-    {                                                                                                        \
-        interim_type temp_val = val;                                                                         \
-        asm volatile(#asm_operator " %0, %1 " llvm_cache_modifier "\n\t"                                     \
-                                   wait_inst wait_cmd "(%2)"                                                 \
-                     : : "v"(ptr), #output_modifier(temp_val), "I"(0x00));                                   \
-    }
+    // Important for syncing. Check section 9.2.2 or 7.3 in the following document
+    // http://developer.amd.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf
+    #define ROCPRIM_ASM_THREAD_STORE(cache_modifier,                                            \
+                                     llvm_cache_modifier,                                       \
+                                     type,                                                      \
+                                     interim_type,                                              \
+                                     asm_operator,                                              \
+                                     output_modifier,                                           \
+                                     wait_inst,                                                 \
+                                     wait_cmd)                                                  \
+        template<>                                                                              \
+        ROCPRIM_DEVICE __forceinline__ void AsmThreadStore<cache_modifier, type>(void* ptr,     \
+                                                                                 type  val)     \
+        {                                                                                       \
+            interim_type temp_val = *reinterpret_cast<interim_type*>(&val);                     \
+            asm volatile(#asm_operator " %0, %1 " llvm_cache_modifier "\n\t" wait_inst wait_cmd \
+                                       "(%2)"                                                   \
+                         :                                                                      \
+                         : "v"(ptr), #output_modifier(temp_val), "I"(0x00));                    \
+        }
 
 // TODO fix flat_store_ubyte and flat_store_sbyte issues
 // TODO Add specialization for custom larger data types
