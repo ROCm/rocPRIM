@@ -254,18 +254,17 @@ TYPED_TEST(RocprimDeviceHistogramEven, Even)
             // Calculate expected results on host
             // native host types - used for low-precision floating-point types
             // to provide correct arithmetics (rocprim::half have no host-side operators on 5.7.1)
-            using native_sample_type = convert_to_fundamental_t<sample_type>;
-            using native_level_type  = convert_to_fundamental_t<level_type>;
+            using native_level_type               = convert_to_fundamental_t<level_type>;
             const native_level_type n_lower_level = static_cast<native_level_type>(lower_level);
             const native_level_type n_upper_level = static_cast<native_level_type>(upper_level);
 
             std::vector<counter_type> histogram_expected(bins, 0);
-            const native_level_type scale = (n_upper_level - n_lower_level) / bins;
+            const native_level_type   scale = (n_upper_level - n_lower_level) / bins;
             for(size_t row = 0; row < rows; row++)
             {
                 for(size_t column = 0; column < columns; column++)
                 {
-                    const sample_type sample = input[row * row_stride + column];
+                    const sample_type       sample   = input[row * row_stride + column];
                     const native_level_type n_sample = static_cast<native_level_type>(sample);
                     if(n_sample >= n_lower_level && n_sample < n_upper_level)
                     {
