@@ -158,25 +158,28 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
 
     key_type* keys_buffer = nullptr;
 
-    const hipError_t partition_result = detail::temp_storage::partition(
-        temporary_storage,
-        storage_size,
-        detail::temp_storage::make_linear_partition(
-            detail::temp_storage::ptr_aligned_array(&tree, num_splitters),
-            detail::temp_storage::ptr_aligned_array(&equality_buckets, num_buckets),
-            detail::temp_storage::ptr_aligned_array(&buckets, num_buckets),
-            detail::temp_storage::ptr_aligned_array(&oracles, size),
-            detail::temp_storage::ptr_aligned_array(&keys_buffer, size),
-            detail::temp_storage::ptr_aligned_array(&nth_element_data, 1),
-            detail::temp_storage::ptr_aligned_array(&lookback_states,
-                                                    num_partitions * num_blocks)));
-
-    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
-        return partition_result;
+        using namespace detail::temp_storage;
+
+        const hipError_t partition_result
+            = partition(temporary_storage,
+                        storage_size,
+                        make_linear_partition(
+                            ptr_aligned_array(&tree, num_splitters),
+                            ptr_aligned_array(&equality_buckets, num_buckets),
+                            ptr_aligned_array(&buckets, num_buckets),
+                            ptr_aligned_array(&oracles, size),
+                            ptr_aligned_array(&keys_buffer, size),
+                            ptr_aligned_array(&nth_element_data, 1),
+                            ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
+
+        if(partition_result != hipSuccess || temporary_storage == nullptr)
+        {
+            return partition_result;
+        }
     }
 
-    if(size == 0)
+    if((size == 0) || (size == 1 && nth == 0))
     {
         return hipSuccess;
     }

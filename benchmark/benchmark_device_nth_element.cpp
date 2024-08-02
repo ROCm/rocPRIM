@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
     benchmark::AddCustomContext("seed", seed_type);
 
     // Add benchmarks
-    std::vector<benchmark::internal::Benchmark*> benchmarks = {};
+    std::vector<benchmark::internal::Benchmark*> benchmarks{};
     CREATE_BENCHMARK(int)
     CREATE_BENCHMARK(long long)
     CREATE_BENCHMARK(int8_t)

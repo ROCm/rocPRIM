@@ -45,8 +45,8 @@
 
 // Params for tests
 template<class KeyType,
-         class CompareFunction    = ::rocprim::less<KeyType>,
-         class Config             = ::rocprim::default_config,
+         class CompareFunction    = rocprim::less<KeyType>,
+         class Config             = rocprim::default_config,
          bool UseGraphs           = false,
          bool UseIndirectIterator = false>
 struct DeviceNthelementParams
@@ -59,7 +59,7 @@ struct DeviceNthelementParams
 };
 
 // ---------------------------------------------------------
-// Test for reduce ops taking single input value
+// Test for ops taking single input value
 // ---------------------------------------------------------
 
 template<class Params>
@@ -91,12 +91,12 @@ using RocprimDeviceNthelementTestsParams = ::testing::Types<
     DeviceNthelementParams<test_utils::custom_test_type<float>>,
     DeviceNthelementParams<test_utils::custom_float_type>,
     DeviceNthelementParams<test_utils::custom_test_array_type<int, 4>>,
-    // DeviceNthelementParams<int, ::rocprim::less<int>, rocprim::default_config, true>, // Graphs currently do not work
-    DeviceNthelementParams<int, ::rocprim::less<int>, rocprim::default_config, false, true>,
-    DeviceNthelementParams<int, ::rocprim::greater<int>>,
+    // DeviceNthelementParams<int, rocprim::less<int>, rocprim::default_config, true>, // Graphs currently do not work
+    DeviceNthelementParams<int, rocprim::less<int>, rocprim::default_config, false, true>,
+    DeviceNthelementParams<int, rocprim::greater<int>>,
     DeviceNthelementParams<
         int,
-        ::rocprim::less<int>,
+        rocprim::less<int>,
         rocprim::nth_element_config<128, 4, 32, 16, rocprim::block_radix_rank_algorithm::basic>>>;
 
 TYPED_TEST_SUITE(RocprimDeviceNthelementTests, RocprimDeviceNthelementTestsParams);
@@ -107,11 +107,11 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using key_type                              = typename TestFixture::key_type;
-    using compare_function                      = typename TestFixture::compare_function;
-    using config                                = typename TestFixture::config;
-    const bool            debug_synchronous     = TestFixture::debug_synchronous;
-    static constexpr bool use_indirect_iterator = TestFixture::use_indirect_iterator;
+    using key_type                       = typename TestFixture::key_type;
+    using compare_function               = typename TestFixture::compare_function;
+    using config                         = typename TestFixture::config;
+    const bool     debug_synchronous     = TestFixture::debug_synchronous;
+    constexpr bool use_indirect_iterator = TestFixture::use_indirect_iterator;
 
     // The size loop alternates between in place and not in place
     bool in_place = false;

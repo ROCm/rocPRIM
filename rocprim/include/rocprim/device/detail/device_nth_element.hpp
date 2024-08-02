@@ -35,6 +35,7 @@
 
 #include "device_config_helper.hpp"
 
+#include <cstdint>
 #include <hip/amd_detail/amd_hip_runtime.h>
 #include <hip/hip_runtime.h>
 
@@ -49,21 +50,34 @@ namespace detail
 {
 
 #define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                           \
+    do                                                                                           \
     {                                                                                            \
-        auto _error = hipGetLastError();                                                         \
+        hipError_t _error = hipGetLastError();                                                   \
         if(_error != hipSuccess)                                                                 \
             return _error;                                                                       \
         if(debug_synchronous)                                                                    \
         {                                                                                        \
             std::cout << name << "(" << size << ")";                                             \
-            auto __error = hipStreamSynchronize(stream);                                         \
+            hipError_t __error = hipStreamSynchronize(stream);                                   \
             if(__error != hipSuccess)                                                            \
                 return __error;                                                                  \
-            auto _end = std::chrono::high_resolution_clock::now();                               \
+            auto _end = std::chrono::steady_clock::now();                                        \
             auto _d   = std::chrono::duration_cast<std::chrono::duration<double>>(_end - start); \
             std::cout << " " << _d.count() * 1000 << " ms" << '\n';                              \
         }                                                                                        \
-    }
+    }                                                                                            \
+    while(0)
+
+#define RETURN_ON_ERROR(...)              \
+    do                                    \
+    {                                     \
+        hipError_t error = (__VA_ARGS__); \
+        if(error != hipSuccess)           \
+        {                                 \
+            return error;                 \
+        }                                 \
+    }                                     \
+    while(0)
 
 struct nth_element_onesweep_lookback_state
 {
@@ -75,12 +89,12 @@ struct nth_element_onesweep_lookback_state
 
     enum prefix_flag : underlying_type
     {
-        EMPTY    = 0,
-        PARTIAL  = 1u << (state_bits - 2),
-        COMPLETE = 2u << (state_bits - 2)
+        EMPTY    = underlying_type(0),
+        PARTIAL  = underlying_type(1) << (state_bits - 2),
+        COMPLETE = underlying_type(2) << (state_bits - 2)
     };
 
-    static constexpr underlying_type status_mask = 3u << (state_bits - 2);
+    static constexpr underlying_type status_mask = underlying_type(3) << (state_bits - 2);
     static constexpr underlying_type value_mask  = ~status_mask;
 
     underlying_type state;
@@ -165,7 +179,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     syncthreads();
 
-    block_store_key().store(keys, sample_buffer, size, storage.load);
+    block_store_key().store(keys, sample_buffer, size, storage.store);
 }
 
 template<class config, class KeysIterator, class BinaryFunction>
@@ -193,11 +207,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     ROCPRIM_SHARED_MEMORY typename block_sort_key::storage_type storage;
 
-    const auto stride = size / num_splitters;
-    auto       idx    = threadIdx.x;
+    const size_t       stride = size / num_splitters;
+    const unsigned int idx    = threadIdx.x;
 
     // Find values to split data in buckets
-    auto sample_buffer = keys[stride * idx];
+    key_type sample_buffer = keys[stride * idx];
     // Sort the splitters
     block_sort_key().sort(sample_buffer, storage, compare_function);
 
@@ -244,9 +258,9 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     constexpr unsigned int num_buckets           = params.number_of_buckets;
     constexpr unsigned int num_threads_per_block = params.kernel_config.block_size;
-    constexpr unsigned int num_items_per_threads = params.kernel_config.items_per_thread;
+    constexpr unsigned int num_items_per_thread  = params.kernel_config.items_per_thread;
     constexpr unsigned int num_splitters         = num_buckets - 1;
-    constexpr unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
+    constexpr unsigned int num_items_per_block   = num_threads_per_block * num_items_per_thread;
 
     // It needs enough splitters to choose from the input
     static_assert(params.stop_recursion_size >= num_buckets,
@@ -258,18 +272,17 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     static_assert(detail::is_power_of_two(num_buckets),
                   "number_of_buckets should be a power of two");
     // The buckets are stored in a uint8_t
-    static_assert(num_buckets <= 256, "number_of_buckets should be smaller or equal than 256");
+    static_assert(num_buckets <= 256 && num_buckets >= 2, "number_of_buckets should from 2 to 256");
 
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
-    using block_load_key     = block_load<key_type, num_threads_per_block, num_items_per_threads>;
-    using block_store_oracle = block_store<uint8_t, num_threads_per_block, num_items_per_threads>;
+    using block_load_key     = block_load<key_type, num_threads_per_block, num_items_per_thread>;
+    using block_store_oracle = block_store<uint8_t, num_threads_per_block, num_items_per_thread>;
 
     ROCPRIM_SHARED_MEMORY struct
     {
         union
         {
-            typename block_load_key::storage_type        load;
             typename block_store_oracle::storage_type    store;
             uninitialized_array<key_type, num_splitters> buffer;
         };
@@ -287,33 +300,33 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     {
         storage.buffer.emplace(threadIdx.x, tree[threadIdx.x]);
     }
-    const auto& search_tree = storage.buffer.get_unsafe_array();
+    const key_type* search_tree = storage.buffer.get_unsafe_array();
 
-    key_type     elements[num_items_per_threads];
+    key_type     elements[num_items_per_thread];
     const size_t offset            = blockIdx.x * num_items_per_block;
     const bool   is_complete_block = offset + num_items_per_block <= size;
 
     if(is_complete_block)
     {
-        block_load_key().load(keys + offset, elements, storage.load);
+        block_load_key().load(keys + offset, elements);
     }
     else
     {
-        block_load_key().load(keys + offset, elements, size - offset, storage.load);
+        block_load_key().load(keys + offset, elements, size - offset);
     }
 
     syncthreads();
 
-    uint8_t local_oracles[num_items_per_threads];
-    for(size_t item = 0; item < num_items_per_threads; item++)
+    uint8_t local_oracles[num_items_per_thread];
+    for(size_t item = 0; item < num_items_per_thread; item++)
     {
-        auto idx = offset + threadIdx.x * num_items_per_threads + item;
+        size_t idx = offset + threadIdx.x * num_items_per_thread + item;
         if(idx < size)
         {
-            const auto   element = elements[item];
-            unsigned int left    = 0;
-            unsigned int right   = num_splitters;
-            unsigned int bucket;
+            const key_type element = elements[item];
+            unsigned int   left    = 0;
+            unsigned int   right   = num_splitters;
+            unsigned int   bucket;
             // Binary search through splitters to put in bucket
             for(unsigned int i = 0; i < Log2<num_buckets>::VALUE; i++)
             {
@@ -445,34 +458,34 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                              typename std::iterator_traits<KeysIterator>::value_type* keys_buffer)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+    using state    = nth_element_onesweep_lookback_state;
 
     constexpr nth_element_config_params params = device_params<config>();
 
     constexpr unsigned int num_buckets           = params.number_of_buckets;
     constexpr unsigned int num_splitters         = num_buckets - 1;
     constexpr unsigned int num_threads_per_block = params.kernel_config.block_size;
-    constexpr unsigned int num_items_per_threads = params.kernel_config.items_per_thread;
-    constexpr unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
+    constexpr unsigned int num_items_per_thread  = params.kernel_config.items_per_thread;
+    constexpr unsigned int num_items_per_block   = num_threads_per_block * num_items_per_thread;
     constexpr unsigned int num_partitions        = NumPartitions;
 
-    using block_load_bucket_t  = block_load<uint8_t, num_threads_per_block, num_items_per_threads>;
-    using block_rank_t         = rocprim::block_radix_rank<num_threads_per_block,
-                                                   Log2<num_partitions + 1>::VALUE,
-                                                   params.radix_rank_algorithm>;
-    using block_load_element_t = block_load<key_type, num_threads_per_block, num_items_per_threads>;
+    using block_load_bucket  = block_load<uint8_t, num_threads_per_block, num_items_per_thread>;
+    using block_rank         = rocprim::block_radix_rank<num_threads_per_block,
+                                                 Log2<num_partitions + 1>::VALUE,
+                                                 params.radix_rank_algorithm>;
+    using block_load_element = block_load<key_type, num_threads_per_block, num_items_per_thread>;
 
-    static_assert(block_rank_t::digits_per_thread == 1,
+    static_assert(block_rank::digits_per_thread == 1,
                   "The digits_per_thread is assumed to be one.");
 
     ROCPRIM_SHARED_MEMORY union
     {
-        typename block_load_bucket_t::storage_type  load_bucket;
-        typename block_rank_t::storage_type         rank;
-        typename block_load_element_t::storage_type load_element;
-        size_t                                      buckets_block_offsets_shared[num_partitions];
+        typename block_load_bucket::storage_type load_bucket;
+        typename block_rank::storage_type        rank;
+        size_t                                   buckets_block_offsets_shared[num_partitions];
     } storage;
 
-    uint8_t buckets[num_items_per_threads];
+    uint8_t buckets[num_items_per_thread];
 
     const size_t nth_element = nth_element_data->bucket_idx;
 
@@ -481,27 +494,27 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     if(is_complete_block)
     {
-        block_load_bucket_t().load(oracles + offset, buckets, storage.load_bucket);
+        block_load_bucket().load(oracles + offset, buckets, storage.load_bucket);
     }
     else
     {
         const size_t valid = size - offset;
-        block_load_bucket_t().load(oracles + offset,
-                                   buckets,
-                                   valid,
-                                   num_partitions,
-                                   storage.load_bucket);
+        block_load_bucket().load(oracles + offset,
+                                 buckets,
+                                 valid,
+                                 num_partitions,
+                                 storage.load_bucket);
     }
 
-    const size_t thread_id = (threadIdx.x * num_items_per_threads) + offset;
+    const size_t thread_id = (threadIdx.x * num_items_per_thread) + offset;
 
     if(is_complete_block)
     {
         ROCPRIM_UNROLL
-        for(size_t item = 0; item < num_items_per_threads; item++)
+        for(size_t item = 0; item < num_items_per_thread; item++)
         {
-            auto bucket = buckets[item];
-            // All buckets before the nth element go in bucket 0 in nth bucket 1 and after nth element go in bucket 2
+            uint8_t bucket = buckets[item];
+            // All buckets before the nth element go in bucket 0, bucket of the nth element go in bucket 1, and buckets after nth element go in bucket 2
             buckets[item] = ((nth_element > 0) && (bucket >= nth_element))
                             + ((nth_element < num_splitters) && (bucket > nth_element));
         }
@@ -509,9 +522,9 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     else
     {
         ROCPRIM_UNROLL
-        for(size_t item = 0; item < num_items_per_threads; item++)
+        for(size_t item = 0; item < num_items_per_thread; item++)
         {
-            auto         bucket = buckets[item];
+            uint8_t      bucket = buckets[item];
             const size_t idx    = item + thread_id;
             if(idx < size)
             {
@@ -523,10 +536,10 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     syncthreads();
 
-    unsigned int ranks[num_items_per_threads];
-    unsigned int partition_prefix[block_rank_t::digits_per_thread];
-    unsigned int partition_counts[block_rank_t::digits_per_thread];
-    block_rank_t().rank_keys(
+    unsigned int ranks[num_items_per_thread];
+    unsigned int partition_prefix[block_rank::digits_per_thread];
+    unsigned int partition_counts[block_rank::digits_per_thread];
+    block_rank().rank_keys(
         buckets,
         ranks,
         storage.rank,
@@ -539,11 +552,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     const unsigned int partition = threadIdx.x;
     if(partition < num_partitions)
     {
-        nth_element_onesweep_lookback_state* block_state
-            = &lookback_states[blockIdx.x * num_partitions + partition];
-        nth_element_onesweep_lookback_state(nth_element_onesweep_lookback_state::PARTIAL,
-                                            partition_counts[0])
-            .store(block_state);
+        state* block_state = &lookback_states[blockIdx.x * num_partitions + partition];
+        state(state::PARTIAL, partition_counts[0]).store(block_state);
 
         unsigned int exclusive_prefix  = 0;
         unsigned int lookback_block_id = blockIdx.x;
@@ -551,17 +561,16 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         while(lookback_block_id > 0)
         {
             --lookback_block_id;
-            nth_element_onesweep_lookback_state* lookback_state_ptr
+            state* lookback_state_ptr
                 = &lookback_states[lookback_block_id * num_partitions + partition];
-            nth_element_onesweep_lookback_state lookback_state
-                = nth_element_onesweep_lookback_state::load(lookback_state_ptr);
-            while(lookback_state.status() == nth_element_onesweep_lookback_state::EMPTY)
+            state lookback_state = state::load(lookback_state_ptr);
+            while(lookback_state.status() == state::EMPTY)
             {
-                lookback_state = nth_element_onesweep_lookback_state::load(lookback_state_ptr);
+                lookback_state = state::load(lookback_state_ptr);
             }
 
             exclusive_prefix += lookback_state.value();
-            if(lookback_state.status() == nth_element_onesweep_lookback_state::COMPLETE)
+            if(lookback_state.status() == state::COMPLETE)
             {
                 break;
             }
@@ -569,11 +578,9 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
         // Update the state for the current block.
         const unsigned int inclusive_digit_prefix = exclusive_prefix + partition_counts[0];
-        // Note that this should not deadlock, as HSA guarantees that blocks with a lower block ID launch before
-        // those with a higher block id.
-        nth_element_onesweep_lookback_state(nth_element_onesweep_lookback_state::COMPLETE,
-                                            inclusive_digit_prefix)
-            .store(block_state);
+        // Note that this should not deadlock, as HSA guarantees that block with a lowest block ID
+        // of all not finished yet is progressing.
+        state(state::COMPLETE, inclusive_digit_prefix).store(block_state);
 
         size_t global_offset = 0;
 
@@ -592,38 +599,34 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
         // Subtract the exclusive digit prefix from the global offset here, since we already ordered the keys in shared
         // memory.
-        storage.buckets_block_offsets_shared[threadIdx.x]
+        storage.buckets_block_offsets_shared[partition]
             = global_offset - partition_prefix[0] + exclusive_prefix;
     }
 
     syncthreads();
 
-    key_type elements[num_items_per_threads];
+    key_type elements[num_items_per_thread];
     if(is_complete_block)
     {
-        block_load_element_t().load(keys + offset, elements, storage.load_element);
+        block_load_element().load(keys + offset, elements);
     }
     else
     {
-        block_load_element_t().load(keys + offset,
-                                    elements,
-                                    size - offset,
-                                    0,
-                                    storage.load_element);
+        block_load_element().load(keys + offset, elements, size - offset, 0);
     }
 
     syncthreads();
 
     // Scatter the keys based on their placement in the buckets
     ROCPRIM_UNROLL
-    for(size_t item = 0; item < num_items_per_threads; item++)
+    for(size_t item = 0; item < num_items_per_thread; item++)
     {
         const size_t idx = item + thread_id;
         if(idx < size)
         {
-            const auto   bucket = buckets[item];
-            const size_t index  = storage.buckets_block_offsets_shared[bucket] + ranks[item];
-            keys_buffer[index]  = elements[item];
+            const uint8_t bucket = buckets[item];
+            const size_t  index  = storage.buckets_block_offsets_shared[bucket] + ranks[item];
+            keys_buffer[index]   = elements[item];
         }
     }
 }
@@ -660,7 +663,7 @@ ROCPRIM_INLINE hipError_t
                           const unsigned int                                       num_buckets,
                           const unsigned int           stop_recursion_size,
                           const unsigned int           num_threads_per_block,
-                          const unsigned int           num_items_per_threads,
+                          const unsigned int           num_items_per_thread,
                           n_th_element_iteration_data* nth_element_data,
                           BinaryFunction               compare_function,
                           hipStream_t                  stream,
@@ -670,17 +673,17 @@ ROCPRIM_INLINE hipError_t
 
     constexpr unsigned int num_partitions      = NumPartitions;
     const unsigned int     num_splitters       = num_buckets - 1;
-    const unsigned int     num_items_per_block = num_threads_per_block * num_items_per_threads;
+    const unsigned int     num_items_per_block = num_threads_per_block * num_items_per_thread;
     size_t                 iteration           = 0;
 
     // Start point for time measurements
-    std::chrono::high_resolution_clock::time_point start;
+    std::chrono::steady_clock::time_point start;
 
     const auto start_timer = [&start, debug_synchronous]()
     {
         if(debug_synchronous)
         {
-            start = std::chrono::high_resolution_clock::now();
+            start = std::chrono::steady_clock::now();
         }
     };
 
@@ -696,30 +699,15 @@ ROCPRIM_INLINE hipError_t
             std::cout << "iteration: " << iteration++ << '\n';
         }
 
-        hipError_t error = hipMemsetAsync(buckets, 0, sizeof(*buckets) * num_buckets, stream);
+        RETURN_ON_ERROR(hipMemsetAsync(buckets, 0, sizeof(*buckets) * num_buckets, stream));
 
-        if(error != hipSuccess)
-        {
-            return error;
-        }
-
-        error
-            = hipMemsetAsync(equality_buckets, 0, sizeof(*equality_buckets) * num_buckets, stream);
-
-        if(error != hipSuccess)
-        {
-            return error;
-        }
+        RETURN_ON_ERROR(
+            hipMemsetAsync(equality_buckets, 0, sizeof(*equality_buckets) * num_buckets, stream));
 
         // Reset lookback scan states to zero, indicating empty prefix.
-        error = nth_element_onesweep_lookback_state::reset(lookback_states,
-                                                           num_partitions * num_blocks,
-                                                           stream);
-
-        if(error != hipSuccess)
-        {
-            return error;
-        }
+        RETURN_ON_ERROR(nth_element_onesweep_lookback_state::reset(lookback_states,
+                                                                   num_partitions * num_blocks,
+                                                                   stream));
 
         start_timer();
         kernel_find_splitters<config>
@@ -753,35 +741,21 @@ ROCPRIM_INLINE hipError_t
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_copy_buckets", size, start);
 
         // Copy the results in keys_buffer back to the keys
-        error = transform(keys_buffer,
-                          keys,
-                          size,
-                          ::rocprim::identity<key_type>(),
-                          stream,
-                          debug_synchronous);
-
-        if(error != hipSuccess)
-        {
-            return error;
-        }
+        RETURN_ON_ERROR(transform(keys_buffer,
+                                  keys,
+                                  size,
+                                  ::rocprim::identity<key_type>(),
+                                  stream,
+                                  debug_synchronous));
 
         n_th_element_iteration_data h_nth_element_data;
-        error = hipMemcpyAsync(&h_nth_element_data,
-                               nth_element_data,
-                               sizeof(h_nth_element_data),
-                               hipMemcpyDeviceToHost,
-                               stream);
-        if(error != hipSuccess)
-        {
-            return error;
-        }
+        RETURN_ON_ERROR(hipMemcpyAsync(&h_nth_element_data,
+                                       nth_element_data,
+                                       sizeof(h_nth_element_data),
+                                       hipMemcpyDeviceToHost,
+                                       stream));
 
-        error = hipStreamSynchronize(stream);
-
-        if(error != hipSuccess)
-        {
-            return error;
-        }
+        RETURN_ON_ERROR(hipStreamSynchronize(stream));
 
         size_t offset          = h_nth_element_data.offset;
         size_t bucket_size     = h_nth_element_data.size;
@@ -806,6 +780,7 @@ ROCPRIM_INLINE hipError_t
 }
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
+#undef RETURN_ON_ERROR
 
 } // namespace detail
 
