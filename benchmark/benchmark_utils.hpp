@@ -502,7 +502,9 @@ std::vector<T>
     static_assert(rocprim::is_arithmetic<T>::value, "Key type must be arithmetic");
 
     engine_type                           prng(seed);
-    std::uniform_int_distribution<size_t> segment_length_distribution(max_segment_length);
+    std::uniform_int_distribution<size_t> segment_length_distribution(
+        std::numeric_limits<size_t>::min(),
+        max_segment_length);
     // std::uniform_real_distribution cannot handle rocprim::half, use float instead
     using dis_type =
         typename std::conditional<std::is_same<rocprim::half, T>::value, float, T>::type;
