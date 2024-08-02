@@ -114,6 +114,66 @@ enum class lookback_scan_determinism
 template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 7)>
 struct lookback_scan_state;
 
+/// Reduce lanes `0-valid_items` and return the result in lane `device_warp_size() - 1`.
+template<typename F, typename T>
+ROCPRIM_DEVICE ROCPRIM_INLINE T lookback_reduce_forward_init(F            scan_op,
+                                                             T            block_prefix,
+                                                             unsigned int valid_items)
+{
+    block_prefix = warp_shuffle_up(block_prefix, device_warp_size() - 1 - valid_items);
+    T prefix     = block_prefix;
+    for(int i = valid_items - 1; i >= 0; --i)
+    {
+#ifdef ROCPRIM_DETAIL_HAS_DPP_WF_ROTATE
+        block_prefix = warp_move_dpp<T, 0x13C>(block_prefix);
+#else
+        block_prefix = warp_shuffle_up(block_prefix, 1);
+#endif
+        prefix = scan_op(prefix, block_prefix);
+    }
+    return prefix;
+}
+
+/// Reduce all lanes with the `prefix`, which is taken from the `device_warp_size() - 1`th
+/// lane, and return the result in lane `device_warp_size() - 1`.
+template<typename F, typename T>
+ROCPRIM_DEVICE ROCPRIM_INLINE T lookback_reduce_forward(F scan_op, T prefix, T block_prefix)
+{
+#ifdef ROCPRIM_DETAIL_HAS_DPP_WF
+    ROCPRIM_UNROLL
+    for(int i = device_warp_size() - 1; i >= 0; --i)
+    {
+        prefix       = scan_op(prefix, block_prefix);
+        block_prefix = warp_move_dpp<T, 0x13C /* DPP_WF_RR1 */>(block_prefix);
+    }
+#elif ROCPRIM_DETAIL_USE_DPP == 1
+    // If we can't rotate or shift the entire wavefront in one instruction,
+    // iterate over rows of 16 lanes and use warp_readlane to communicate across rows.
+    constexpr const int row_size = 16;
+    ROCPRIM_UNROLL
+    for(int j = device_warp_size() - 1; j > 0; j -= row_size)
+    {
+        ROCPRIM_UNROLL
+        for(int i = 0; i < row_size; ++i)
+        {
+            prefix       = scan_op(prefix, block_prefix);
+            block_prefix = warp_move_dpp<T, 0x121 /* DPP_ROW_RR1 */>(block_prefix);
+        }
+
+        prefix = warp_readlane(prefix, j);
+    }
+#else
+    // If no DPP available at all, fall back to shuffles.
+    ROCPRIM_UNROLL
+    for(int i = device_warp_size() - 1; i >= 0; --i)
+    {
+        prefix       = scan_op(prefix, block_prefix);
+        block_prefix = warp_shuffle_up(block_prefix, 1);
+    }
+#endif
+    return prefix;
+}
+
 // Packed flag and prefix value are loaded/stored in one atomic operation.
 template<class T, bool UseSleep>
 struct lookback_scan_state<T, UseSleep, true>
@@ -248,7 +308,7 @@ public:
         memcpy(&prefix, &p, sizeof(prefix_type));
         while(prefix.flag == prefix_flag::EMPTY)
         {
-            if(UseSleep)
+            if ROCPRIM_IF_CONSTEXPR(UseSleep)
             {
                 for(unsigned int j = 0; j < times_through; j++)
                     __builtin_amdgcn_s_sleep(1);
@@ -276,6 +336,80 @@ public:
         memcpy(&prefix, &p, sizeof(prefix_type));
         assert(prefix.flag == prefix_flag::COMPLETE);
         return prefix.value;
+    }
+
+    template<typename F>
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix_forward(F scan_op, unsigned int block_id_)
+    {
+        unsigned int lookback_block_id = block_id_ - lane_id() - 1;
+
+        // There is one lookback scan per block, though a lookback scan is done by a single warp.
+        // Because every lane of the warp checks a different lookback scan state value,
+        // we need space for at least ceil(CUs / device_warp_size()) items in the cache,
+        // assuming that only one block is active per CU (assumes low occupancy).
+        // For MI300, with 304 CUs, we have 304 / 64 = 5 items for the lookback cache.
+        // Note that one item is kept in the `block_prefix` register, so we only need to
+        // cache 4 values here in the worst case.
+        constexpr int max_lookback_per_thread = 4;
+
+        T   cache[max_lookback_per_thread];
+        int cache_offset = 0;
+
+        prefix_flag flag;
+        T           block_prefix;
+        this->get(lookback_block_id, flag, block_prefix);
+
+        while(warp_all(flag != prefix_flag::COMPLETE && flag != prefix_flag::INVALID)
+              && cache_offset < max_lookback_per_thread)
+        {
+            cache[cache_offset++] = block_prefix;
+            lookback_block_id -= device_warp_size();
+            this->get(lookback_block_id, flag, block_prefix);
+        }
+
+        // If no flags are complete, we have hit either of the following edge cases:
+        // - The lookback_block_id is < 0 for all lanes. In this case, we need to go
+        //   forward one block and pop one invalid item off the cache.
+        // - We have run out of available space in the cache. In this case, wait until
+        //   any of the current lookback flags pointed to by lookback_block_id changes
+        //   to complete.
+        if(warp_all(flag != prefix_flag::COMPLETE))
+        {
+            if(warp_all(flag == prefix_flag::INVALID))
+            {
+                // All invalid, so we have to move one block back to
+                // get back to known civilization.
+                // Don't forget to pop one item off the cache too.
+                lookback_block_id += device_warp_size();
+                --cache_offset;
+            }
+
+            do
+            {
+                this->get(lookback_block_id, flag, block_prefix);
+            }
+            while(warp_all(flag != prefix_flag::COMPLETE));
+        }
+
+        // Now just sum all these values to get the prefix
+        // Note that the values are striped across the threads.
+        // In the first iteration, the current prefix is at the value cache for the current
+        // offset at the lowest warp number that has prefix_flag::COMPLETE set.
+        const auto bits   = ballot(flag == prefix_flag::COMPLETE);
+        const auto lowest = ctz(bits);
+
+        // Now sum all the values from block_prefix that are lower than the current prefix.
+        T prefix = lookback_reduce_forward_init(scan_op, block_prefix, lowest);
+
+        // Now sum all from the prior cache.
+        // These are all guaranteed to be PARTIAL
+        while(cache_offset > 0)
+        {
+            block_prefix = cache[--cache_offset];
+            prefix       = lookback_reduce_forward(scan_op, prefix, block_prefix);
+        }
+
+        return warp_readlane(prefix, device_warp_size() - 1);
     }
 
 private:
@@ -415,24 +549,7 @@ public:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-        const unsigned int SLEEP_MAX     = 32;
-        unsigned int       times_through = 1;
-
-        flag = static_cast<prefix_flag>(
-            ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]));
-        while(flag == prefix_flag::EMPTY)
-        {
-            if(UseSleep)
-            {
-                for(unsigned int j = 0; j < times_through; j++)
-                    __builtin_amdgcn_s_sleep(1);
-                if(times_through < SLEEP_MAX)
-                    times_through++;
-            }
-
-            flag = static_cast<prefix_flag>(
-                ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]));
-        }
+        flag = this->get_flag(block_id);
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
         rocprim::detail::atomic_fence_acquire_order_only();
 
@@ -476,7 +593,119 @@ public:
 #endif
     }
 
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_partial_value(const unsigned int block_id)
+    {
+        constexpr unsigned int padding = ::rocprim::device_warp_size();
+
+#if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
+        T           value;
+        const auto* values = static_cast<const value_underlying_type*>(prefixes_partial_values);
+        value_underlying_type v;
+        for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
+        {
+            v.words[i] = ::rocprim::detail::atomic_load(&values[padding + block_id].words[i]);
+        }
+        __builtin_memcpy(&value, &v, sizeof(value));
+        return value;
+#else
+        assert(prefixes_flags[padding + block_id] == prefix_flag::COMPLETE);
+        const auto* values = static_cast<const T*>(prefixes_partial_values);
+        return values[padding + block_id];
+#endif
+    }
+
+    template<typename F>
+    ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix_forward(F scan_op, unsigned int block_id_)
+    {
+        unsigned int lookback_block_id = block_id_ - lane_id() - 1;
+
+        int cache_offset = 0;
+
+        prefix_flag flag = this->get_flag(lookback_block_id);
+
+        while(warp_all(flag != prefix_flag::COMPLETE && flag != prefix_flag::INVALID))
+        {
+            ++cache_offset;
+            lookback_block_id -= device_warp_size();
+            flag = this->get_flag(lookback_block_id);
+        }
+
+        // If no flags are complete, we have hit either of the following edge cases:
+        // - The lookback_block_id is < 0 for all lanes. In this case, we need to go
+        //   forward one block and pop one invalid item off the cache.
+        // - We have run out of available space in the cache. In this case, wait until
+        //   any of the current lookback flags pointed to by lookback_block_id changes
+        //   to complete.
+        if(warp_all(flag != prefix_flag::COMPLETE))
+        {
+            if(warp_all(flag == prefix_flag::INVALID))
+            {
+                // All invalid, so we have to move one block back to
+                // get back to known civilization.
+                // Don't forget to pop one item off the cache too.
+                lookback_block_id += device_warp_size();
+                --cache_offset;
+            }
+
+            do
+            {
+                flag = this->get_flag(lookback_block_id);
+            }
+            while(warp_all(flag != prefix_flag::COMPLETE));
+        }
+
+        T block_prefix;
+        this->get(lookback_block_id, flag, block_prefix);
+
+        // Now just sum all these values to get the prefix
+        // Note that the values are striped across the threads.
+        // In the first iteration, the current prefix is at the value cache for the current
+        // offset at the lowest warp number that has prefix_flag::COMPLETE set.
+        const auto bits   = ballot(flag == prefix_flag::COMPLETE);
+        const auto lowest = ctz(bits);
+
+        // Now sum all the values from block_prefix that are lower than the current prefix.
+        T prefix = lookback_reduce_forward_init(scan_op, block_prefix, lowest);
+
+        // Now sum all from the prior cache.
+        // These are all guaranteed to be PARTIAL
+        while(cache_offset > 0)
+        {
+            lookback_block_id += device_warp_size();
+            --cache_offset;
+            block_prefix = this->get_partial_value(lookback_block_id);
+            prefix       = lookback_reduce_forward(scan_op, prefix, block_prefix);
+        }
+
+        return warp_readlane(prefix, device_warp_size() - 1);
+    }
+
 private:
+    ROCPRIM_DEVICE ROCPRIM_INLINE prefix_flag get_flag(const unsigned int block_id)
+    {
+        constexpr unsigned int padding = ::rocprim::device_warp_size();
+
+        const unsigned int SLEEP_MAX     = 32;
+        unsigned int       times_through = 1;
+
+        prefix_flag flag = static_cast<prefix_flag>(
+            ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]));
+        while(flag == prefix_flag::EMPTY)
+        {
+            if(UseSleep)
+            {
+                for(unsigned int j = 0; j < times_through; j++)
+                    __builtin_amdgcn_s_sleep(1);
+                if(times_through < SLEEP_MAX)
+                    times_through++;
+            }
+
+            flag = static_cast<prefix_flag>(
+                ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]));
+        }
+        return flag;
+    }
+
     ROCPRIM_DEVICE ROCPRIM_INLINE void
         set(const unsigned int block_id, const prefix_flag flag, const T value)
     {
@@ -558,62 +787,6 @@ private:
                                                         headflag_scan_op);
     }
 
-    /// Reduce lanes `0-valid_items` and return the result in lane `device_warp_size() - 1`.
-    ROCPRIM_DEVICE ROCPRIM_INLINE T reduce_forward_init(T block_prefix, unsigned int valid_items)
-    {
-        block_prefix = warp_shuffle_up(block_prefix, device_warp_size() - 1 - valid_items);
-        T prefix     = block_prefix;
-        for(int i = valid_items - 1; i >= 0; --i)
-        {
-#ifdef ROCPRIM_DETAIL_HAS_DPP_WF_ROTATE
-            block_prefix = warp_move_dpp<T, 0x13C>(block_prefix);
-#else
-            block_prefix = warp_shuffle_up(block_prefix, 1);
-#endif
-            prefix = scan_op_(prefix, block_prefix);
-        }
-        return prefix;
-    }
-
-    /// Reduce all lanes with the `prefix`, which is taken from the `device_warp_size() - 1`th
-    /// lane, and return the result in lane `device_warp_size() - 1`.
-    ROCPRIM_DEVICE ROCPRIM_INLINE T reduce_forward(T prefix, T block_prefix)
-    {
-#ifdef ROCPRIM_DETAIL_HAS_DPP_WF
-        ROCPRIM_UNROLL
-        for(int i = device_warp_size() - 1; i >= 0; --i)
-        {
-            prefix       = scan_op_(prefix, block_prefix);
-            block_prefix = warp_move_dpp<T, 0x13C /* DPP_WF_RR1 */>(block_prefix);
-        }
-#elif ROCPRIM_DETAIL_USE_DPP == 1
-        // If we can't rotate or shift the entire wavefront in one instruction,
-        // iterate over rows of 16 lanes and use warp_readlane to communicate across rows.
-        constexpr const int row_size = 16;
-        ROCPRIM_UNROLL
-        for(int j = device_warp_size() - 1; j > 0; j -= row_size)
-        {
-            ROCPRIM_UNROLL
-            for(int i = 0; i < row_size; ++i)
-            {
-                prefix       = scan_op_(prefix, block_prefix);
-                block_prefix = warp_move_dpp<T, 0x121 /* DPP_ROW_RR1 */>(block_prefix);
-            }
-
-            prefix = warp_readlane(prefix, j);
-        }
-#else
-        // If no DPP available at all, fall back to shuffles.
-        ROCPRIM_UNROLL
-        for(int i = device_warp_size() - 1; i >= 0; --i)
-        {
-            prefix       = scan_op_(prefix, block_prefix);
-            block_prefix = warp_shuffle(block_prefix, lane_id() - 1);
-        }
-#endif
-        return prefix;
-    }
-
     ROCPRIM_DEVICE ROCPRIM_INLINE T get_prefix()
     {
         if ROCPRIM_IF_CONSTEXPR(Determinism == lookback_scan_determinism::nondeterministic)
@@ -638,75 +811,7 @@ private:
         }
         else /* Determinism == lookback_scan_state::deterministic */
         {
-            unsigned int lookback_block_id = block_id_ - lane_id() - 1;
-
-            // There is one lookback scan per block, though a lookback scan is done by a single warp.
-            // Because every lane of the warp checks a different lookback scan state value,
-            // we need space for at least ceil(CUs / device_warp_size()) items in the cache,
-            // assuming that only one block is active per CU (assumes low occupancy).
-            // For MI300, with 304 CUs, we have 304 / 64 = 5 items for the lookback cache.
-            // Note that one item is kept in the `block_prefix` register, so we only need to
-            // cache 4 values here in the worst case.
-            constexpr int max_lookback_per_thread = 4;
-
-            T   cache[max_lookback_per_thread];
-            int cache_offset = 0;
-
-            prefix_flag flag;
-            T           block_prefix;
-            scan_state_.get(lookback_block_id, flag, block_prefix);
-
-            while(warp_all(flag != prefix_flag::COMPLETE && flag != prefix_flag::INVALID)
-                  && cache_offset < max_lookback_per_thread)
-            {
-                cache[cache_offset++] = block_prefix;
-                lookback_block_id -= device_warp_size();
-                scan_state_.get(lookback_block_id, flag, block_prefix);
-            }
-
-            // If no flags are complete, we have hit either of the following edge cases:
-            // - The lookback_block_id is < 0 for all lanes. In this case, we need to go
-            //   forward one block and pop one invalid item off the cache.
-            // - We have run out of available space in the cache. In this case, wait until
-            //   any of the current lookback flags pointed to by lookback_block_id changes
-            //   to complete.
-            if(warp_all(flag != prefix_flag::COMPLETE))
-            {
-                if(warp_all(flag == prefix_flag::INVALID))
-                {
-                    // All invalid, so we have to move one block back to
-                    // get back to known civilization.
-                    // Don't forget to pop one item off the cache too.
-                    lookback_block_id += device_warp_size();
-                    --cache_offset;
-                }
-
-                do
-                {
-                    scan_state_.get(lookback_block_id, flag, block_prefix);
-                }
-                while(warp_all(flag != prefix_flag::COMPLETE));
-            }
-
-            // Now just sum all these values to get the prefix
-            // Note that the values are striped across the threads.
-            // In the first iteration, the current prefix is at the value cache for the current
-            // offset at the lowest warp number that has prefix_flag::COMPLETE set.
-            const auto bits   = ballot(flag == prefix_flag::COMPLETE);
-            const auto lowest = ctz(bits);
-
-            // Now sum all the values from block_prefix that are lower than the current prefix.
-            T prefix = reduce_forward_init(block_prefix, lowest);
-
-            // Now sum all from the prior cache.
-            // These are all guaranteed to be PARTIAL
-            while(cache_offset > 0)
-            {
-                block_prefix = cache[--cache_offset];
-                prefix       = reduce_forward(prefix, block_prefix);
-            }
-
-            return warp_readlane(prefix, device_warp_size() - 1);
+            return scan_state_.get_prefix_forward(scan_op_, block_id_);
         }
     }
 
