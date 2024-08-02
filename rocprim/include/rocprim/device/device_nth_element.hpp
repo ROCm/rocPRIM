@@ -40,44 +40,52 @@ BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Parallel nth_element for device level.
 ///
-/// \p nth_element function performs a device-wide nth_element,
-/// this means that all number before the nth_element are smaller or equal
-/// then the nth_element and after are larger or equal to the nth element
+/// `nth_element` function performs a device-wide nth_element,
+///   this function sets nth element as if the list was sorted.
+///   Also for all values `i` in `[first, nth)` and all values `j` in `[nth, last)`
+///   the condition `comp(*j, *i)` is `false` where `comp` is the compare function.
 ///
 /// \par Overview
 /// * The contents of the inputs are not altered by the function.
-/// * Returns the required size of \p temporary_storage in \p storage_size
-/// if \p temporary_storage in a null pointer.
+/// * Returns the required size of `temporary_storage` in `storage_size`
+/// if `temporary_storage` in a null pointer.
 /// * Accepts custom compare_functions for nth_element across the device.
 /// * Does not work with hipGraph
 ///
-/// \tparam KeysIterator - random-access iterator type of the input range. Must meet the
-/// requirements of a C++ InputIterator concept. It can be a simple pointer type.
+/// \tparam Config [optional] configuration of the primitive. It has to be `radix_sort_config`
+///   or a class derived from it.
+/// \tparam KeysIterator [inferred] random-access iterator type of the input range. Must meet the
+///   requirements of a C++ InputIterator concept. It can be a simple pointer type.
+/// \tparam CompareFunction [inferred] Type of binary function that accepts two arguments of the
+///   type `KeysIterator` and returns a value convertible to bool. Default type is `::rocprim::less<>.`
 ///
-/// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
-/// a null pointer is passed, the required allocation size (in bytes) is written to
-/// \p storage_size and function returns without performing the sort operation.
-/// \param [in,out] storage_size - reference to a size (in bytes) of \p temporary_storage.
-/// \param [in] keys_input - pointer to the first element in the range to sort.
-/// \param [out] keys_output - pointer to the first element in the output range.
-/// \param [in] nth - The index of the nth_element in the input range.
-/// \param [in] size - number of element in the input range.
-/// \param [in] compare_function - binary operation function object that will be used for comparison.
-/// The signature of the function should be equivalent to the following:
-/// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
-/// <tt>const &</tt>, but function object must not modify the objects passed to it.
-/// The default value is \p BinaryFunction().
-/// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
-/// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
-/// launch is forced in order to check for errors. Default value is \p false.
+/// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
+///   a null pointer is passed, the required allocation size (in bytes) is written to
+/// `storage_size` and function returns without performing the sort operation.
+/// \param [in,out] storage_size reference to a size (in bytes) of `temporary_storage`.
+/// \param [in] keys_input iterator to the input range.
+/// \param [out] keys_output iterator to the output range. Allowed to point to the same elements as `keys_input`.
+///   Only complete overlap or no overlap at all is allowed between `keys_input` and `keys_output`. In other words
+///   writing to `keys_output[i]` is only allowed to overwrite `keys_input[i]`, any other element must not be changed.
+/// \param [in] nth The index of the nth_element in the input range.
+/// \param [in] size number of element in the input range.
+/// \param [in] compare_function binary operation function object that will be used for comparison.
+///   The signature of the function should be equivalent to the following:
+///   <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
+///   <tt>const &</tt>, but function object must not modify the objects passed to it.
+///   The comperator must meet the C++ named requirement Compare.
+///   The default value is `BinaryFunction()`.
+/// \param [in] stream [optional] HIP stream object. Default is `0` (default stream).
+/// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
+///   launch is forced in order to check for errors. Default value is `false`.
 ///
-/// \returns \p hipSuccess (\p 0) after successful sort; otherwise a HIP runtime error of
-/// type \p hipError_t.
+/// \returns `hipSuccess` (`0`) after successful sort; otherwise a HIP runtime error of
+///   type `hipError_t`.
 ///
 /// \par Example
 /// \parblock
 /// In this example a device-level nth_element is performed where input keys are
-/// represented by an array of unsigned integers.
+///   represented by an array of unsigned integers.
 ///
 /// \code{.cpp}
 /// #include <rocprim/rocprim.hpp>
