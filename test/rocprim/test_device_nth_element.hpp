@@ -82,7 +82,8 @@ using RocprimDeviceNthelementTestsParams = ::testing::Types<
     DeviceNthelementParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
     DeviceNthelementParams<short, test_utils::custom_test_type<int>>,
     DeviceNthelementParams<double, test_utils::custom_test_type<double>>,
-    DeviceNthelementParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<double>>,
+    DeviceNthelementParams<test_utils::custom_test_type<float>,
+                           test_utils::custom_test_type<double>>,
     DeviceNthelementParams<int, test_utils::custom_float_type>,
     DeviceNthelementParams<test_utils::custom_test_array_type<int, 4>>,
     // DeviceNthelementParams<int, int, ::rocprim::less<int>, true>, // Bug with graphs
@@ -99,6 +100,8 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
     using key_type               = typename TestFixture::key_type;
     using compare_function       = typename TestFixture::compare_function;
     const bool debug_synchronous = TestFixture::debug_synchronous;
+
+    bool in_place = false;
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
@@ -117,6 +120,8 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
+            in_place = !in_place;
+
             auto nth_element = size / 2;
             SCOPED_TRACE(testing::Message() << "with nth_element = " << nth_element);
 
@@ -129,8 +134,18 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             std::vector<key_type> output(size);
 
             key_type* d_input;
+            key_type* d_output;
             HIP_CHECK(
                 test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(key_type)));
+            if(in_place)
+            {
+                d_output = d_input;
+            }
+            else
+            {
+                HIP_CHECK(test_common_utils::hipMallocHelper(&d_output,
+                                                             output.size() * sizeof(key_type)));
+            }
 
             HIP_CHECK(hipMemcpy(d_input,
                                 input.data(),
@@ -152,6 +167,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             HIP_CHECK(rocprim::nth_element(d_temp_storage,
                                            temp_storage_size_bytes,
                                            d_input,
+                                           d_output,
                                            nth_element,
                                            input.size(),
                                            compare_op,
@@ -175,6 +191,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             HIP_CHECK(rocprim::nth_element(d_temp_storage,
                                            temp_storage_size_bytes,
                                            d_input,
+                                           d_output,
                                            nth_element,
                                            input.size(),
                                            compare_op,
@@ -192,7 +209,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
 
             // Copy output to host
             HIP_CHECK(hipMemcpy(output.data(),
-                                d_input,
+                                d_output,
                                 output.size() * sizeof(key_type),
                                 hipMemcpyDeviceToHost));
             HIP_CHECK(hipDeviceSynchronize());
@@ -217,6 +234,10 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(sorted_output, sorted_input));
 
             hipFree(d_input);
+            if(!in_place)
+            {
+                hipFree(d_output);
+            }
             hipFree(d_temp_storage);
 
             if(TestFixture::use_graphs)
@@ -271,6 +292,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKeySame)
         HIP_CHECK(rocprim::nth_element(d_temp_storage,
                                        temp_storage_size_bytes,
                                        d_input,
+                                       d_input,
                                        nth_element,
                                        input.size(),
                                        compare_op,
@@ -287,6 +309,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKeySame)
         // Run
         HIP_CHECK(rocprim::nth_element(d_temp_storage,
                                        temp_storage_size_bytes,
+                                       d_input,
                                        d_input,
                                        nth_element,
                                        input.size(),

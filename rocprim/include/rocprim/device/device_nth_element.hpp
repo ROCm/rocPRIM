@@ -40,13 +40,14 @@ template<class KeysIterator,
          class BinaryFunction
          = ::rocprim::less<typename std::iterator_traits<KeysIterator>::value_type>>
 ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
-                                           size_t&        storage_size,
-                                           KeysIterator   keys,
-                                           size_t         nth,
-                                           size_t         size,
-                                           BinaryFunction compare_function  = BinaryFunction(),
-                                           hipStream_t    stream            = 0,
-                                           bool           debug_synchronous = false)
+                                      size_t&        storage_size,
+                                      KeysIterator   keys_input,
+                                      KeysIterator   keys_output,
+                                      size_t         nth,
+                                      size_t         size,
+                                      BinaryFunction compare_function  = BinaryFunction(),
+                                      hipStream_t    stream            = 0,
+                                      bool           debug_synchronous = false)
 {
     constexpr size_t num_buckets   = 64;
     constexpr size_t num_splitters = num_buckets - 1;
@@ -97,8 +98,18 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
         std::cout << "num_blocks: " << num_blocks << std::endl;
     }
 
+    if(keys_input != keys_output)
+    {
+        hipError_t error
+            = hipMemcpy(keys_output, keys_input, sizeof(Key) * size, hipMemcpyDeviceToDevice);
+        if(error != hipSuccess)
+        {
+            return error;
+        }
+    }
+
     const size_t tree_depth = std::log2(num_buckets);
-    detail::nth_element_keys_impl<num_buckets, min_size, num_threads_per_block>(keys,
+    detail::nth_element_keys_impl<num_buckets, min_size, num_threads_per_block>(keys_output,
                                                                                 output,
                                                                                 tree,
                                                                                 nth,
