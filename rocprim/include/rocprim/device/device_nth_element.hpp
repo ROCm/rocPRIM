@@ -57,6 +57,10 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     constexpr size_t num_items_per_block   = num_threads_per_block * num_items_per_threads;
     const size_t     num_blocks            = (size + num_items_per_block - 1) / num_items_per_block;
 
+    static_assert(num_threads_per_block >= num_buckets,
+                  "Minimum thread blocksize is the num of buckets");
+    static_assert(min_size >= num_buckets, "Minimum min size is the num of buckets");
+
     Key*    tree                      = nullptr;
     size_t* buckets                   = nullptr;
     size_t* buckets_per_block_offsets = nullptr;
@@ -74,8 +78,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
             detail::temp_storage::ptr_aligned_array(&tree, num_splitters),
             detail::temp_storage::ptr_aligned_array(&equality_buckets, num_buckets),
             detail::temp_storage::ptr_aligned_array(&buckets, num_buckets),
-            detail::temp_storage::ptr_aligned_array(&buckets_per_block_offsets,
-                                                    3 * num_blocks),
+            detail::temp_storage::ptr_aligned_array(&buckets_per_block_offsets, 3 * num_blocks),
             detail::temp_storage::ptr_aligned_array(&oracles, size),
             detail::temp_storage::ptr_aligned_array(&output, size),
             detail::temp_storage::ptr_aligned_array(&nth_element_data, 4)));
@@ -111,22 +114,23 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     }
 
     const size_t tree_depth = std::log2(num_buckets);
-    detail::nth_element_keys_impl<num_buckets, min_size, num_threads_per_block, num_items_per_threads>(
-        keys_output,
-        output,
-        tree,
-        nth,
-        size,
-        buckets,
-        buckets_per_block_offsets,
-        equality_buckets,
-        oracles,
-        tree_depth,
-        nth_element_data,
-        compare_function,
-        stream,
-        debug_synchronous,
-        0);
+    detail::
+        nth_element_keys_impl<num_buckets, min_size, num_threads_per_block, num_items_per_threads>(
+            keys_output,
+            output,
+            tree,
+            nth,
+            size,
+            buckets,
+            buckets_per_block_offsets,
+            equality_buckets,
+            oracles,
+            tree_depth,
+            nth_element_data,
+            compare_function,
+            stream,
+            debug_synchronous,
+            0);
 
     return hipSuccess;
 }
