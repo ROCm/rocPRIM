@@ -1,7 +1,7 @@
 /******************************************************************************
  * Copyright (c) 2011, Duane Merrill.  All rights reserved.
  * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
- * Modifications Copyright (c) 2017-2023, Advanced Micro Devices, Inc.  All rights reserved.
+ * Modifications Copyright (c) 2017-2024, Advanced Micro Devices, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -65,7 +65,9 @@ __global__
 void thread_load_kernel(Type* volatile const device_input, Type* device_output)
 {
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated-declarations")
     device_output[index] = rocprim::thread_load<rocprim::load_cg>(device_input + index);
+    ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 }
 
 TYPED_TEST(RocprimThreadOperationTests, Load)
@@ -133,7 +135,9 @@ __global__
 void thread_store_kernel(Type* const device_input, Type* device_output)
 {
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated-declarations")
     rocprim::thread_store<rocprim::store_wb>(device_output + index, device_input[index]);
+    ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 }
 
 TYPED_TEST(RocprimThreadOperationTests, Store)
