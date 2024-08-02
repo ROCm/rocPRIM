@@ -101,10 +101,9 @@ struct device_partial_sort_benchmark : public config_autotune_interface
                             size * sizeof(*d_keys_input),
                             hipMemcpyHostToDevice));
 
-        ::rocprim::less<key_type> lesser_op;
-
-        void*  d_temporary_storage     = nullptr;
-        size_t temporary_storage_bytes = 0;
+        rocprim::less<key_type> lesser_op;
+        void*                   d_temporary_storage     = nullptr;
+        size_t                  temporary_storage_bytes = 0;
         HIP_CHECK(rocprim::partial_sort_copy(d_temporary_storage,
                                              temporary_storage_bytes,
                                              d_keys_input,

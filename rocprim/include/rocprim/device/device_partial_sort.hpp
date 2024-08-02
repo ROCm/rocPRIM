@@ -58,10 +58,11 @@ namespace detail
     }                                     \
     while(0)
 
-template<class Config, class KeysIterator, class BinaryFunction>
+template<class Config, class KeysIterator, class BinaryFunction, bool inplace = true>
 hipError_t partial_sort_impl(void*          temporary_storage,
                              size_t&        storage_size,
-                             KeysIterator   keys,
+                             KeysIterator   keys_in,
+                             KeysIterator   keys_out,
                              size_t         middle,
                              size_t         size,
                              BinaryFunction compare_function,
@@ -69,35 +70,42 @@ hipError_t partial_sort_impl(void*          temporary_storage,
                              bool           debug_synchronous)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
-    using config
-        = detail::default_or_custom_config<Config, detail::default_partial_sort_config<key_type>>;
+    using config = default_or_custom_config<Config, detail::default_partial_sort_config<key_type>>;
     using config_merge_sort  = typename config::merge_sort;
     using config_nth_element = typename config::nth_element;
+
+    if(size != 0 && middle >= size)
+    {
+        return hipErrorInvalidValue;
+    }
 
     size_t storage_size_nth_element{};
     // non-null placeholder so that no buffer is allocated for keys
     key_type* keys_buffer_placeholder = reinterpret_cast<key_type*>(1);
 
-    RETURN_ON_ERROR(nth_element_impl<config_nth_element>(nullptr,
-                                                         storage_size_nth_element,
-                                                         keys,
-                                                         middle,
-                                                         size,
-                                                         compare_function,
-                                                         stream,
-                                                         debug_synchronous,
-                                                         keys_buffer_placeholder));
-
+    const bool full_sort = middle + 1 == size;
+    if(!full_sort)
+    {
+        RETURN_ON_ERROR(nth_element_impl<config_nth_element>(nullptr,
+                                                             storage_size_nth_element,
+                                                             keys_in,
+                                                             middle,
+                                                             size,
+                                                             compare_function,
+                                                             stream,
+                                                             debug_synchronous,
+                                                             keys_buffer_placeholder));
+    }
     size_t storage_size_merge_sort{};
 
     RETURN_ON_ERROR(
         merge_sort_impl<config_merge_sort>(nullptr,
                                            storage_size_merge_sort,
-                                           keys,
-                                           keys,
+                                           keys_in,
+                                           keys_out,
                                            static_cast<empty_type*>(nullptr), // values_input
                                            static_cast<empty_type*>(nullptr), // values_output
-                                           middle,
+                                           (!inplace || full_sort) ? middle + 1 : middle,
                                            compare_function,
                                            stream,
                                            debug_synchronous,
@@ -107,12 +115,14 @@ hipError_t partial_sort_impl(void*          temporary_storage,
     void*     temporary_storage_nth_element = nullptr;
     void*     temporary_storage_merge_sort  = nullptr;
     key_type* keys_buffer                   = nullptr;
+    key_type* keys_output_nth_element       = nullptr;
 
     const hipError_t partition_result = temp_storage::partition(
         temporary_storage,
         storage_size,
         temp_storage::make_linear_partition(
             temp_storage::ptr_aligned_array(&keys_buffer, size),
+            temp_storage::ptr_aligned_array(&keys_output_nth_element, inplace ? 0 : size),
             temp_storage::make_partition(&temporary_storage_nth_element, storage_size_nth_element),
             temp_storage::make_partition(&temporary_storage_merge_sort, storage_size_merge_sort)));
 
@@ -126,36 +136,51 @@ hipError_t partial_sort_impl(void*          temporary_storage,
         return hipSuccess;
     }
 
-    if(middle > size)
+    if(!inplace)
     {
-        return hipErrorInvalidValue;
+        RETURN_ON_ERROR(transform(keys_in,
+                                  keys_output_nth_element,
+                                  size,
+                                  rocprim::identity<key_type>(),
+                                  stream,
+                                  debug_synchronous));
     }
 
-    if(middle < size)
+    if(!full_sort)
     {
-        RETURN_ON_ERROR(nth_element_impl<config_nth_element>(temporary_storage_nth_element,
-                                                             storage_size_nth_element,
-                                                             keys,
-                                                             middle,
-                                                             size,
-                                                             compare_function,
-                                                             stream,
-                                                             debug_synchronous,
-                                                             keys_buffer));
+        RETURN_ON_ERROR(
+            nth_element_impl<config_nth_element>(temporary_storage_nth_element,
+                                                 storage_size_nth_element,
+                                                 inplace ? keys_in : keys_output_nth_element,
+                                                 middle,
+                                                 size,
+                                                 compare_function,
+                                                 stream,
+                                                 debug_synchronous,
+                                                 keys_buffer));
     }
 
     if(middle == 0)
     {
+        if(!inplace)
+        {
+            RETURN_ON_ERROR(transform(keys_output_nth_element,
+                                      keys_out,
+                                      1,
+                                      rocprim::identity<key_type>(),
+                                      stream,
+                                      debug_synchronous));
+        }
         return hipSuccess;
     }
 
     return merge_sort_impl<config_merge_sort>(temporary_storage_merge_sort,
                                               storage_size_merge_sort,
-                                              keys,
-                                              keys,
+                                              inplace ? keys_in : keys_output_nth_element,
+                                              keys_out,
                                               static_cast<empty_type*>(nullptr), // values_input
                                               static_cast<empty_type*>(nullptr), // values_output
-                                              middle,
+                                              (!inplace || full_sort) ? middle + 1 : middle,
                                               compare_function,
                                               stream,
                                               debug_synchronous,
@@ -171,7 +196,7 @@ hipError_t partial_sort_impl(void*          temporary_storage,
 /// * The contents of the inputs are not altered by the function.
 /// * Returns the required size of `temporary_storage` in `storage_size`
 /// if `temporary_storage` is a null pointer.
-/// * Accepts custom compare_functions for nth_element across the device.
+/// * Accepts custom compare_functions for partial_sort_copy across the device.
 /// * Streams in graph capture mode are not supported
 ///
 /// \tparam Config [optional] configuration of the primitive. It has to be `partial_sort_config`.
@@ -184,18 +209,18 @@ hipError_t partial_sort_impl(void*          temporary_storage,
 ///
 /// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 ///   a null pointer is passed, the required allocation size (in bytes) is written to
-/// `storage_size` and function returns without performing the nth_element rearrangement.
+/// `storage_size` and function returns without performing the partial_sort_copy rearrangement.
 /// \param [in,out] storage_size reference to a size (in bytes) of `temporary_storage`.
 /// \param [in] keys_input iterator to the input range.
 /// \param [out] keys_output iterator to the output range. No overlap at all is allowed between `keys_input` and `keys_output`.
-///   `keys_output` should be able to be written and read from for `size` elements.
+///   `keys_output` should be able to be write to at least `middle` + 1 elements.
 /// \param [in] middle The index of the point till where it is sorted in the input range.
 /// \param [in] size number of element in the input range.
 /// \param [in] compare_function binary operation function object that will be used for comparison.
 ///   The signature of the function should be equivalent to the following:
 ///   <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
 ///   <tt>const &</tt>, but function object must not modify the objects passed to it.
-///   The comperator must meet the C++ named requirement Compare.
+///   The comparator must meet the C++ named requirement Compare.
 ///   The default value is `BinaryFunction()`.
 /// \param [in] stream [optional] HIP stream object. Default is `0` (default stream).
 /// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
@@ -206,7 +231,7 @@ hipError_t partial_sort_impl(void*          temporary_storage,
 ///
 /// \par Example
 /// \parblock
-/// In this example a device-level nth_element is performed where input keys are
+/// In this example a device-level partial_sort_copy is performed where input keys are
 ///   represented by an array of unsigned integers.
 ///
 /// \code{.cpp}
@@ -216,7 +241,7 @@ hipError_t partial_sort_impl(void*          temporary_storage,
 /// size_t input_size;          // e.g., 8
 /// size_t middle;              // e.g., 4
 /// unsigned int * keys_input;  // e.g., [ 6, 3, 5, 4, 1, 8, 2, 7 ]
-/// unsigned int * keys_output; // empty array of 8 elements
+/// unsigned int * keys_output; // e.g., [ 9, 9, 9, 9, 9, 9, 9, 9 ]
 ///
 /// size_t temporary_storage_size_bytes;
 /// void * temporary_storage_ptr = nullptr;
@@ -234,7 +259,7 @@ hipError_t partial_sort_impl(void*          temporary_storage,
 ///     temporary_storage_ptr, temporary_storage_size_bytes,
 ///     keys_input, keys_output, middle, input_size
 /// );
-/// // possible keys_output:   [ 1, 2, 3, 4, 5, 8, 7, 6 ]
+/// // possible keys_output:   [ 1, 2, 3, 4, 5, 9, 9, 9 ]
 /// \endcode
 /// \endparblock
 template<class Config = default_config,
@@ -258,21 +283,16 @@ hipError_t partial_sort_copy(void*              temporary_storage,
                      typename std::iterator_traits<KeysOutputIterator>::value_type>::value,
         "KeysInputIterator and KeysOutputIterator must have the same value_type");
 
-    RETURN_ON_ERROR(transform(keys_input,
-                              keys_output,
-                              size,
-                              ::rocprim::identity<key_type>(),
-                              stream,
-                              debug_synchronous));
-
-    return detail::partial_sort_impl<Config>(temporary_storage,
-                                             storage_size,
-                                             keys_output,
-                                             middle,
-                                             size,
-                                             compare_function,
-                                             stream,
-                                             debug_synchronous);
+    return detail::partial_sort_impl<Config, KeysInputIterator, BinaryFunction, false>(
+        temporary_storage,
+        storage_size,
+        keys_input,
+        keys_output,
+        middle,
+        size,
+        compare_function,
+        stream,
+        debug_synchronous);
 }
 
 /// \brief Rearranges elements such that the range [0, middle) contains the sorted middle smallest elements in the range [0, size).
@@ -281,7 +301,7 @@ hipError_t partial_sort_copy(void*              temporary_storage,
 /// * The contents of the inputs are not altered by the function.
 /// * Returns the required size of `temporary_storage` in `storage_size`
 /// if `temporary_storage` is a null pointer.
-/// * Accepts custom compare_functions for nth_element across the device.
+/// * Accepts custom compare_functions for partial_sort across the device.
 /// * Streams in graph capture mode are not supported
 ///
 /// \tparam Config [optional] configuration of the primitive. It has to be `partial_sort_config`.
@@ -292,7 +312,7 @@ hipError_t partial_sort_copy(void*              temporary_storage,
 ///
 /// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 ///   a null pointer is passed, the required allocation size (in bytes) is written to
-/// `storage_size` and function returns without performing the nth_element rearrangement.
+/// `storage_size` and function returns without performing the partial_sort rearrangement.
 /// \param [in,out] storage_size reference to a size (in bytes) of `temporary_storage`.
 /// \param [in,out] keys iterator to the input range.
 /// \param [in] middle The index of the point till where it is sorted in the input range.
@@ -301,7 +321,7 @@ hipError_t partial_sort_copy(void*              temporary_storage,
 ///   The signature of the function should be equivalent to the following:
 ///   <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
 ///   <tt>const &</tt>, but function object must not modify the objects passed to it.
-///   The comperator must meet the C++ named requirement Compare.
+///   The comparator must meet the C++ named requirement Compare.
 ///   The default value is `BinaryFunction()`.
 /// \param [in] stream [optional] HIP stream object. Default is `0` (default stream).
 /// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
@@ -312,7 +332,7 @@ hipError_t partial_sort_copy(void*              temporary_storage,
 ///
 /// \par Example
 /// \parblock
-/// In this example a device-level nth_element is performed where input keys are
+/// In this example a device-level partial_sort is performed where input keys are
 ///   represented by an array of unsigned integers.
 ///
 /// \code{.cpp}
@@ -328,7 +348,7 @@ hipError_t partial_sort_copy(void*              temporary_storage,
 /// // Get required size of the temporary storage
 /// rocprim::partial_sort(
 ///     temporary_storage_ptr, temporary_storage_size_bytes,
-///     keys, nth, input_size
+///     keys, middle, input_size
 /// );
 ///
 /// // allocate temporary storage
@@ -337,7 +357,7 @@ hipError_t partial_sort_copy(void*              temporary_storage,
 /// // perform partial_sort
 /// rocprim::partial_sort(
 ///     temporary_storage_ptr, temporary_storage_size_bytes,
-///     keys, nth, input_size
+///     keys, middle, input_size
 /// );
 /// // possible keys:   [ 1, 2, 3, 4, 5, 8, 7, 6 ]
 /// \endcode
@@ -357,6 +377,7 @@ hipError_t partial_sort(void*          temporary_storage,
 {
     return detail::partial_sort_impl<Config>(temporary_storage,
                                              storage_size,
+                                             keys,
                                              keys,
                                              middle,
                                              size,

@@ -43,28 +43,29 @@ namespace detail
 {
 
 template<class Config, class KeysIterator, class BinaryFunction>
-ROCPRIM_INLINE hipError_t nth_element_impl(
-    void*                                                    temporary_storage,
-    size_t&                                                  storage_size,
-    KeysIterator                                             keys,
-    size_t                                                   nth,
-    size_t                                                   size,
-    BinaryFunction                                           compare_function,
-    hipStream_t                                              stream,
-    bool                                                     debug_synchronous,
-    typename std::iterator_traits<KeysIterator>::value_type* keys_double_buffer = nullptr)
+ROCPRIM_INLINE
+hipError_t
+    nth_element_impl(void*                                                    temporary_storage,
+                     size_t&                                                  storage_size,
+                     KeysIterator                                             keys,
+                     size_t                                                   nth,
+                     size_t                                                   size,
+                     BinaryFunction                                           compare_function,
+                     hipStream_t                                              stream,
+                     bool                                                     debug_synchronous,
+                     typename std::iterator_traits<KeysIterator>::value_type* keys_double_buffer
+                     = nullptr)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
     using config   = wrapped_nth_element_config<Config, key_type>;
 
-    detail::target_arch target_arch;
-    hipError_t          result = host_target_arch(stream, target_arch);
+    target_arch target_arch;
+    hipError_t  result = host_target_arch(stream, target_arch);
     if(result != hipSuccess)
     {
         return result;
     }
-    const detail::nth_element_config_params params
-        = detail::dispatch_target_arch<config>(target_arch);
+    const nth_element_config_params params = dispatch_target_arch<config>(target_arch);
 
     constexpr unsigned int num_partitions        = 3;
     const unsigned int     num_buckets           = params.number_of_buckets;
@@ -73,19 +74,18 @@ ROCPRIM_INLINE hipError_t nth_element_impl(
     const unsigned int     num_items_per_threads = params.kernel_config.items_per_thread;
     const unsigned int     num_threads_per_block = params.kernel_config.block_size;
     const unsigned int     num_items_per_block   = num_threads_per_block * num_items_per_threads;
-    const unsigned int     num_blocks            = detail::ceiling_div(size, num_items_per_block);
+    const unsigned int     num_blocks            = ceiling_div(size, num_items_per_block);
 
-    // oracles stores the bucket that correlates with the index
-    key_type*                                    tree             = nullptr;
-    size_t*                                      buckets          = nullptr;
-    detail::n_th_element_iteration_data*         nth_element_data = nullptr;
-    bool*                                        equality_buckets = nullptr;
-    detail::nth_element_onesweep_lookback_state* lookback_states  = nullptr;
+    key_type*                            tree             = nullptr;
+    size_t*                              buckets          = nullptr;
+    n_th_element_iteration_data*         nth_element_data = nullptr;
+    bool*                                equality_buckets = nullptr;
+    nth_element_onesweep_lookback_state* lookback_states  = nullptr;
 
     key_type* keys_buffer = nullptr;
 
     {
-        using namespace detail::temp_storage;
+        using namespace temp_storage;
 
         hipError_t partition_result;
         if(keys_double_buffer == nullptr)
@@ -141,22 +141,22 @@ ROCPRIM_INLINE hipError_t nth_element_impl(
         std::cout << "storage_size: " << storage_size << '\n';
     }
 
-    return detail::nth_element_keys_impl<config, num_partitions>(keys,
-                                                                 keys_buffer,
-                                                                 tree,
-                                                                 nth,
-                                                                 size,
-                                                                 buckets,
-                                                                 equality_buckets,
-                                                                 lookback_states,
-                                                                 num_buckets,
-                                                                 stop_recursion_size,
-                                                                 num_threads_per_block,
-                                                                 num_items_per_threads,
-                                                                 nth_element_data,
-                                                                 compare_function,
-                                                                 stream,
-                                                                 debug_synchronous);
+    return nth_element_keys_impl<config, num_partitions>(keys,
+                                                         keys_buffer,
+                                                         tree,
+                                                         nth,
+                                                         size,
+                                                         buckets,
+                                                         equality_buckets,
+                                                         lookback_states,
+                                                         num_buckets,
+                                                         stop_recursion_size,
+                                                         num_threads_per_block,
+                                                         num_items_per_threads,
+                                                         nth_element_data,
+                                                         compare_function,
+                                                         stream,
+                                                         debug_synchronous);
 }
 
 } // namespace detail
@@ -195,7 +195,7 @@ ROCPRIM_INLINE hipError_t nth_element_impl(
 ///   The signature of the function should be equivalent to the following:
 ///   <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
 ///   <tt>const &</tt>, but function object must not modify the objects passed to it.
-///   The comperator must meet the C++ named requirement Compare.
+///   The comparator must meet the C++ named requirement Compare.
 ///   The default value is `BinaryFunction()`.
 /// \param [in] stream [optional] HIP stream object. Default is `0` (default stream).
 /// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
@@ -295,7 +295,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
 ///   The signature of the function should be equivalent to the following:
 ///   <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
 ///   <tt>const &</tt>, but function object must not modify the objects passed to it.
-///   The comperator must meet the C++ named requirement Compare.
+///   The comparator must meet the C++ named requirement Compare.
 ///   The default value is `BinaryFunction()`.
 /// \param [in] stream [optional] HIP stream object. Default is `0` (default stream).
 /// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
