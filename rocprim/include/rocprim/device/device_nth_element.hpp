@@ -53,10 +53,11 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     constexpr size_t num_splitters = num_buckets - 1;
     constexpr size_t min_size      = num_buckets;
 
-    Key*    tree              = nullptr;
-    size_t* buckets           = nullptr;
-    size_t* buckets_per_block = nullptr;
-    size_t* nth_element_data  = nullptr;
+    Key*    tree    = nullptr;
+    size_t* buckets = nullptr;
+    // Maximum items per block 65535
+    unsigned short* buckets_per_block = nullptr;
+    size_t*         nth_element_data  = nullptr;
     // Maximum of 256 buckets
     unsigned char* oracles          = nullptr;
     bool*          equality_buckets = nullptr;
