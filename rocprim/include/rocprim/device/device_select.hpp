@@ -58,7 +58,7 @@ namespace detail
 /// * Range specified by \p selected_count_output must have at least 1 element.
 /// * Values of \p flag range should be implicitly convertible to `bool` type.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam FlagIterator - random-access iterator type of the flag range. It can be
@@ -181,7 +181,7 @@ hipError_t select(void * temporary_storage,
 /// values can be copied into it.
 /// * Range specified by \p selected_count_output must have at least 1 element.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. It can be
@@ -311,7 +311,7 @@ hipError_t select(void * temporary_storage,
 /// * By default <tt>InputIterator::value_type</tt>'s equality operator is used to check
 /// if elements are equivalent.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. It can be
@@ -438,7 +438,7 @@ hipError_t unique(void * temporary_storage,
 /// * By default <tt>InputIterator::value_type</tt>'s equality operator is used to check
 /// if elements are equivalent.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam KeyIterator - random-access iterator type of the input key range. It can be
 /// a simple pointer type.
 /// \tparam ValueIterator - random-access iterator type of the input value range. It can be

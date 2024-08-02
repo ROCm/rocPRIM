@@ -374,7 +374,7 @@ inline hipError_t partition_impl(void*                       temporary_storage,
 /// * Range specified by \p selected_count_output must have at least 1 element.
 /// * Relative order is preserved.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be an instance of \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be a simple
 /// pointer type.
 /// \tparam SelectedOutputIterator - random-access iterator type of the selected output range. It
@@ -521,7 +521,7 @@ inline hipError_t partition_two_way(void*                       temporary_storag
 /// * Values of \p flag range should be implicitly convertible to `bool` type.
 /// * The relative order of elements in both output ranges matches the input range.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be an instance of \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam FlagIterator - random-access iterator type of the flag range. It can be
@@ -656,7 +656,7 @@ inline hipError_t partition_two_way(void*                       temporary_storag
 /// * Relative order is preserved for the elements for which the corresponding values from \p flags
 /// are \p true. Other elements are copied in reverse order.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam FlagIterator - random-access iterator type of the flag range. It can be
@@ -777,7 +777,7 @@ hipError_t partition(void * temporary_storage,
 /// * Relative order is preserved for the elements for which the \p predicate returns \p true. Other
 /// elements are copied in reverse order.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam OutputIterator - random-access iterator type of the output range. It can be
@@ -922,7 +922,7 @@ hipError_t partition(void * temporary_storage,
 /// minus the number of elements written to \p output_first_part minus the number of elements written
 /// to \p output_second_part.
 ///
-/// \tparam Config - [optional] configuration of the primitive. It has to be \p select_config or a class derived from it.
+/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `select_config`.
 /// \tparam InputIterator - random-access iterator type of the input range. It can be
 /// a simple pointer type.
 /// \tparam FirstOutputIterator - random-access iterator type of the first output range. It can be

@@ -60,7 +60,7 @@ Algorithms are grouped by the level-of-scope at which they operate. The followin
 
 Supporting code is distributed into several subdirectories depending on its scope:
 * `detail/`: utility functions and structs for the internal state of algorithms.
-    * `detail/config/`: configs for tuned algorithms (see [autotuning](#autotuning)).
+    * `detail/config/`: configs for tuned algorithms (see [tuning](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/concepts/tuning.html)).
 * `intrinsics/`: specialized intrinsic functions (eg. atomics, warp-shuffling, bit manipulation, etc.). Some of them are just wrappers around HIP's intrinsics, atomic/warp-shuffle functions or compiler's intrinsics.
 * `iterator/`: iterators that are used to interact with most algorithms in the library (like `constant_iterator` for iterating over a homogeneous range of values or `transform_iterator` for applying a transformation to a given range of values).
 * `types/`: a number of convenient types used in the library (eg. for storing future values, compile-time integer sequences, etc.).
@@ -78,21 +78,6 @@ Finally, performance code (benchmarks) is located inside the `benchmark` folder.
 * `benchmark/benchmark_<algorithm>.parallel.hpp`
 
 while non-tuned algorithms have only one `benchmark/benchmark_<algorithm>.cpp` file.
-
-### Autotuning ###
-
-Algorithms often perform better if their launch parameters (number of blocks, block size, items per thread, etc.) are tailored for the particular architecture they are run on.
-rocPRIM achieves this by passing structs called configs to algorithms when they are run. A config struct encapsulates all the information that's needed to run a particular algorithm in the most performant way for a specific device. Default configurations (non custom-defined by users) can be selected by device code at compile time, since the architecture is known, while device algorithms detect at runtime which configuration should be used.
-
-What we call **autotuning** is a method of generating the above-mentioned architecture-optimized default configurations for algorithms. The process to run the autotune is described below, as well as all the templates and scripts used.
-
-1. Configure the project for autotuning. Autotune is an extension on top of the regular benchmarking process and it is enabled with a CMake option `BENCHMARK_CONFIG_TUNING`, which doubles as a C++ macro to determine whether autotuning is enabled.
-2. When the project is configured, a large amount of C++ benchmark files are generated with variation in parameters such as block size, items per thread, and method. The files are generated based on a template (`benchmark/benchmark_*.parallel.cpp.in`) and arguments defined in `ConfigAutotuneSettings.cmake`. CMake will automatically detect when the input template changes and will reconfigure the required files as necessary.
-3. Compile results in one executable based on all generated files for an algorithm.
-4. Run the executable and gather the JSON output files. The generation of output files is triggered by the use of `--benchmark_out_format=json` and `--benchmark_out=<output_file_name>.json` options when running the executable.
-5. Convert the benchmark results into a config with `scripts/autotune/create_optimization.py`. This python script injects the optimal configurations into the templates in `scripts/autotune/templates`.
-  - The option `--out_basedir` can be used to place the output config(s) in a specific path, otherwise the config(s) will be placed in the current directory. 
-6. If `--out_basedir rocprim/include/device/detail/config` was not used in the previous step, place the generated config(s) from the output path to `rocprim/include/device/detail/config`.
 
 ## Coding Style ##
 
