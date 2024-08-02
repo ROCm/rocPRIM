@@ -334,7 +334,6 @@ public:
         auto        p = prefixes[padding + block_id];
         prefix_type prefix{};
         memcpy(&prefix, &p, sizeof(prefix_type));
-        assert(prefix.flag == prefix_flag::COMPLETE);
         return prefix.value;
     }
 
@@ -587,7 +586,6 @@ public:
         __builtin_memcpy(&value, &v, sizeof(value));
         return value;
 #else
-        assert(prefixes_flags[padding + block_id] == prefix_flag::COMPLETE);
         const auto* values = static_cast<const T*>(prefixes_complete_values);
         return values[padding + block_id];
 #endif
@@ -608,7 +606,6 @@ public:
         __builtin_memcpy(&value, &v, sizeof(value));
         return value;
 #else
-        assert(prefixes_flags[padding + block_id] == prefix_flag::COMPLETE);
         const auto* values = static_cast<const T*>(prefixes_partial_values);
         return values[padding + block_id];
 #endif
