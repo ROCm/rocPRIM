@@ -250,7 +250,6 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                                    typename std::iterator_traits<KeysIterator>::value_type* tree,
                                    const size_t                                             size,
                                    size_t*                                                  buckets,
-                                   uint8_t*                                                 oracles,
                                    bool*          equality_buckets,
                                    BinaryFunction compare_function)
 {
@@ -276,16 +275,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
-    using block_load_key     = block_load<key_type, num_threads_per_block, num_items_per_thread>;
-    using block_store_oracle = block_store<uint8_t, num_threads_per_block, num_items_per_thread>;
+    using block_load_key = block_load<key_type, num_threads_per_block, num_items_per_thread>;
 
     ROCPRIM_SHARED_MEMORY struct
     {
-        union
-        {
-            typename block_store_oracle::storage_type    store;
-            uninitialized_array<key_type, num_splitters> buffer;
-        };
+        uninitialized_array<key_type, num_splitters> buffer;
         unsigned int shared_buckets[num_buckets];
         bool         shared_equality_buckets[num_buckets];
     } storage;
@@ -317,7 +311,6 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     syncthreads();
 
-    uint8_t local_oracles[num_items_per_thread];
     for(size_t item = 0; item < num_items_per_thread; item++)
     {
         size_t idx = offset + threadIdx.x * num_items_per_thread + item;
@@ -344,22 +337,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                 bucket = bucket - 1;
             }
 
-            local_oracles[item] = bucket;
-
             atomic_add(&storage.shared_buckets[bucket], 1);
         }
     }
 
     syncthreads();
-
-    if(is_complete_block)
-    {
-        block_store_oracle().store(oracles + offset, local_oracles, storage.store);
-    }
-    else
-    {
-        block_store_oracle().store(oracles + offset, local_oracles, size - offset, storage.store);
-    }
 
     if(threadIdx.x < num_buckets)
     {
@@ -376,7 +358,6 @@ ROCPRIM_KERNEL __launch_bounds__(
                                                         KeysIterator>::value_type* tree,
                                                     const size_t                   size,
                                                     size_t*                        buckets,
-                                                    uint8_t*                       oracles,
                                                     bool*                          equality_buckets,
                                                     BinaryFunction                 compare_function)
 {
@@ -384,7 +365,6 @@ ROCPRIM_KERNEL __launch_bounds__(
                                            tree,
                                            size,
                                            buckets,
-                                           oracles,
                                            equality_buckets,
                                            compare_function);
 }
@@ -448,14 +428,16 @@ ROCPRIM_KERNEL __launch_bounds__(
     kernel_find_nth_element_bucket_impl<config>(buckets, nth_element_data, equality_buckets, rank);
 }
 
-template<class config, unsigned int NumPartitions, class KeysIterator>
+template<class config, unsigned int NumPartitions, class KeysIterator, class BinaryFunction>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
-    kernel_copy_buckets_impl(KeysIterator                         keys,
-                             const size_t                         size,
-                             uint8_t*                             oracles,
+    kernel_copy_buckets_impl(KeysIterator                                             keys,
+                             typename std::iterator_traits<KeysIterator>::value_type* tree,
+                             const size_t                                             size,
                              nth_element_onesweep_lookback_state* lookback_states,
                              n_th_element_iteration_data*         nth_element_data,
-                             typename std::iterator_traits<KeysIterator>::value_type* keys_buffer)
+                             typename std::iterator_traits<KeysIterator>::value_type* keys_buffer,
+                             bool*          equality_buckets,
+                             BinaryFunction compare_function)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
     using state    = nth_element_onesweep_lookback_state;
@@ -469,7 +451,6 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     constexpr unsigned int num_items_per_block   = num_threads_per_block * num_items_per_thread;
     constexpr unsigned int num_partitions        = NumPartitions;
 
-    using block_load_bucket  = block_load<uint8_t, num_threads_per_block, num_items_per_thread>;
     using block_rank         = rocprim::block_radix_rank<num_threads_per_block,
                                                  Log2<num_partitions + 1>::VALUE,
                                                  params.radix_rank_algorithm>;
@@ -480,30 +461,30 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     ROCPRIM_SHARED_MEMORY union
     {
-        typename block_load_bucket::storage_type load_bucket;
-        typename block_rank::storage_type        rank;
-        size_t                                   buckets_block_offsets_shared[num_partitions];
+        typename block_rank::storage_type         rank;
+        typename block_load_element::storage_type load_element;
+        size_t                                    buckets_block_offsets_shared[num_partitions];
     } storage;
 
     uint8_t buckets[num_items_per_thread];
 
-    const size_t nth_element = nth_element_data->bucket_idx;
+    const size_t   nth_element     = nth_element_data->bucket_idx;
+    const key_type lower_bound     = nth_element > 0 ? tree[nth_element - 1] : key_type(0);
+    const key_type upper_bound     = nth_element < num_splitters ? tree[nth_element] : key_type(0);
+    const bool     equality_bucket = nth_element_data->equality_bucket;
+    const bool     equality_bucket_before = nth_element > 0 && equality_buckets[nth_element - 1];
 
     const size_t offset            = blockIdx.x * num_items_per_block;
     const bool   is_complete_block = offset + num_items_per_block <= size;
 
+    key_type elements[num_items_per_thread];
     if(is_complete_block)
     {
-        block_load_bucket().load(oracles + offset, buckets, storage.load_bucket);
+        block_load_element().load(keys + offset, elements, storage.load_element);
     }
     else
     {
-        const size_t valid = size - offset;
-        block_load_bucket().load(oracles + offset,
-                                 buckets,
-                                 valid,
-                                 num_partitions,
-                                 storage.load_bucket);
+        block_load_element().load(keys + offset, elements, size - offset, 0, storage.load_element);
     }
 
     const size_t thread_id = (threadIdx.x * num_items_per_thread) + offset;
@@ -513,10 +494,15 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         ROCPRIM_UNROLL
         for(size_t item = 0; item < num_items_per_thread; item++)
         {
-            uint8_t bucket = buckets[item];
-            // All buckets before the nth element go in bucket 0, bucket of the nth element go in bucket 1, and buckets after nth element go in bucket 2
-            buckets[item] = ((nth_element > 0) && (bucket >= nth_element))
-                            + ((nth_element < num_splitters) && (bucket > nth_element));
+            const key_type element = elements[item];
+            // All buckets before the lower_bound go in bucket 0 in nth bucket 1 and after the upper_bound go in bucket 2
+            // If there is an equality bucket then equals needs to be included.
+            buckets[item] = ((nth_element > 0)
+                             && (equality_bucket_before ? compare_function(lower_bound, element)
+                                                        : !compare_function(element, lower_bound)))
+                            + ((nth_element < num_splitters)
+                               && (equality_bucket ? compare_function(upper_bound, element)
+                                                   : !compare_function(element, upper_bound)));
         }
     }
     else
@@ -524,12 +510,21 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         ROCPRIM_UNROLL
         for(size_t item = 0; item < num_items_per_thread; item++)
         {
-            uint8_t      bucket = buckets[item];
-            const size_t idx    = item + thread_id;
+            const key_type element = elements[item];
+            const size_t   idx     = item + thread_id;
             if(idx < size)
             {
-                buckets[item] = ((nth_element > 0) && (bucket >= nth_element))
-                                + ((nth_element < num_splitters) && (bucket > nth_element));
+                buckets[item]
+                    = ((nth_element > 0)
+                       && (equality_bucket_before ? compare_function(lower_bound, element)
+                                                  : !compare_function(element, lower_bound)))
+                      + ((nth_element < num_splitters)
+                         && (equality_bucket ? compare_function(upper_bound, element)
+                                             : !compare_function(element, upper_bound)));
+            }
+            else
+            {
+                buckets[item] = num_partitions;
             }
         }
     }
@@ -605,18 +600,6 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
     syncthreads();
 
-    key_type elements[num_items_per_thread];
-    if(is_complete_block)
-    {
-        block_load_element().load(keys + offset, elements);
-    }
-    else
-    {
-        block_load_element().load(keys + offset, elements, size - offset, 0);
-    }
-
-    syncthreads();
-
     // Scatter the keys based on their placement in the buckets
     ROCPRIM_UNROLL
     for(size_t item = 0; item < num_items_per_thread; item++)
@@ -631,22 +614,26 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     }
 }
 
-template<class config, unsigned int NumPartitions, class KeysIterator>
+template<class config, unsigned int NumPartitions, class KeysIterator, class BinaryFunction>
 ROCPRIM_KERNEL
     __launch_bounds__(device_params<config>().kernel_config.block_size) void kernel_copy_buckets(
         KeysIterator                                             keys,
+        typename std::iterator_traits<KeysIterator>::value_type* tree,
         const size_t                                             size,
-        uint8_t*                                                 oracles,
         nth_element_onesweep_lookback_state*                     lookback_states,
         n_th_element_iteration_data*                             nth_element_data,
-        typename std::iterator_traits<KeysIterator>::value_type* keys_buffer)
+        typename std::iterator_traits<KeysIterator>::value_type* keys_buffer,
+        bool*                                                    equality_buckets,
+        BinaryFunction                                           compare_function)
 {
     kernel_copy_buckets_impl<config, NumPartitions>(keys,
+                                                    tree,
                                                     size,
-                                                    oracles,
                                                     lookback_states,
                                                     nth_element_data,
-                                                    keys_buffer);
+                                                    keys_buffer,
+                                                    equality_buckets,
+                                                    compare_function);
 }
 
 template<class config, unsigned int NumPartitions, class KeysIterator, class BinaryFunction>
@@ -658,7 +645,6 @@ ROCPRIM_INLINE hipError_t
                           size_t                                                   size,
                           size_t*                                                  buckets,
                           bool*                                                    equality_buckets,
-                          uint8_t*                                                 oracles,
                           nth_element_onesweep_lookback_state*                     lookback_states,
                           const unsigned int                                       num_buckets,
                           const unsigned int           stop_recursion_size,
@@ -720,7 +706,6 @@ ROCPRIM_INLINE hipError_t
                                                                tree,
                                                                size,
                                                                buckets,
-                                                               oracles,
                                                                equality_buckets,
                                                                compare_function);
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_count_bucket_sizes", size, start);
@@ -733,11 +718,13 @@ ROCPRIM_INLINE hipError_t
         start_timer();
         kernel_copy_buckets<config, num_partitions>
             <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
+                                                               tree,
                                                                size,
-                                                               oracles,
                                                                lookback_states,
                                                                nth_element_data,
-                                                               keys_buffer);
+                                                               keys_buffer,
+                                                               equality_buckets,
+                                                               compare_function);
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_copy_buckets", size, start);
 
         // Copy the results in keys_buffer back to the keys
