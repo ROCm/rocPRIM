@@ -116,7 +116,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             size_t nth_element = 0;
             if(size > 0)
             {
-                nth_element = rand() % size;
+                nth_element = test_utils::get_random_value<size_t>(0, size - 1, seed_value);
             }
 
             SCOPED_TRACE(testing::Message() << "with nth_element = " << nth_element);
@@ -245,15 +245,15 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
     }
 }
 
-TYPED_TEST(RocprimDeviceNthelementTests, NthelementKeySame)
+TEST(RocprimNthelementKeySameTests, NthelementKeySame)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using key_type               = typename TestFixture::key_type;
-    using compare_function       = typename TestFixture::compare_function;
-    const bool debug_synchronous = TestFixture::debug_synchronous;
+    using key_type               = int;
+    using compare_function       = rocprim::less<int>;
+    const bool debug_synchronous = false;
 
     unsigned int seed_value = rand();
     for(size_t size : test_utils::get_sizes(seed_value))
