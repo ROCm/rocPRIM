@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -485,6 +485,15 @@ class AlgorithmDeviceSegmentedRadixSort(Algorithm):
     def __init__(self, fallback_entries):
         Algorithm.__init__(self, fallback_entries)
 
+class AlgorithmDeviceTransform(Algorithm):
+    algorithm_name = 'device_transform'
+    cpp_configuration_template_name = 'transform_config_template'
+    config_selection_params = [
+        SelectionType(name='value_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
 def filt_algo_regex(e, algorithm_name):
     if 'algo_regex' in e:
         return re.match(e['algo_regex'], algorithm_name) is not None
@@ -520,6 +529,8 @@ def create_algorithm(algorithm_name: str, fallback_entries):
         return AlgorithmDeviceAdjacentDifferenceInplace(fallback_entries)
     elif algorithm_name == 'device_segmented_radix_sort':
         return AlgorithmDeviceSegmentedRadixSort(fallback_entries)
+    elif algorithm_name == 'device_transform':
+        return AlgorithmDeviceTransform(fallback_entries)
     else:
         raise(NotSupportedError(f'Algorithm "{algorithm_name}" is not supported (yet)'))
 

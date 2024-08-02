@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -93,5 +93,11 @@ KeyType;ValueType;BlockSize;ItemsPerThread;PartitionAllowed" PARENT_SCOPE)
     set(list_across "${TUNING_TYPES};int8_t;64;4 8 16;true false" PARENT_SCOPE)
     set(output_pattern_suffix "\
 @KeyType@_@ValueType@_@BlockSize@_@ItemsPerThread@_@PartitionAllowed@" PARENT_SCOPE)
+  elseif(file STREQUAL "benchmark_device_transform")
+    set(list_across_names "\
+DataType;BlockSize;" PARENT_SCOPE)
+    set(list_across "${TUNING_TYPES};256" PARENT_SCOPE)
+    set(output_pattern_suffix "\
+@DataType@_@BlockSize@" PARENT_SCOPE)
   endif()
 endfunction()

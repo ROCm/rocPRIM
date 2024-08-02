@@ -153,6 +153,17 @@ int main(int argc, char *argv[])
                                      "name_format",
                                      "human",
                                      "either: json,human,txt");
+#ifdef BENCHMARK_CONFIG_TUNING
+    // optionally run an evenly split subset of benchmarks, when making multiple program invocations
+    parser.set_optional<int>("parallel_instance",
+                             "parallel_instance",
+                             0,
+                             "parallel instance index");
+    parser.set_optional<int>("parallel_instances",
+                             "parallel_instances",
+                             1,
+                             "total parallel instances");
+#endif
     parser.run_and_exit_if_error();
 
     // Parse argv
@@ -172,6 +183,16 @@ int main(int argc, char *argv[])
     using custom_double2 = custom_type<double, double>;
 
     // Add benchmarks
+#ifdef BENCHMARK_CONFIG_TUNING
+    std::vector<benchmark::internal::Benchmark*> benchmarks = {};
+    const int parallel_instance                             = parser.get<int>("parallel_instance");
+    const int parallel_instances                            = parser.get<int>("parallel_instances");
+    config_autotune_register::register_benchmark_subset(benchmarks,
+                                                        parallel_instance,
+                                                        parallel_instances,
+                                                        size,
+                                                        stream);
+#else
     std::vector<benchmark::internal::Benchmark*> benchmarks =
     {
         CREATE_BENCHMARK(int, transform<int>),
@@ -187,6 +208,7 @@ int main(int argc, char *argv[])
         CREATE_BENCHMARK(custom_float2, transform<custom_float2>),
         CREATE_BENCHMARK(custom_double2, transform<custom_double2>),
     };
+#endif
 
     // Use manual timing
     for(auto& b : benchmarks)
