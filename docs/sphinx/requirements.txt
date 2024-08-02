@@ -16,7 +16,7 @@ beautifulsoup4==4.12.3
     # via pydata-sphinx-theme
 breathe==4.35.0
     # via rocm-docs-core
-certifi==2024.6.2
+certifi==2024.7.4
     # via requests
 cffi==1.16.0
     # via
@@ -25,8 +25,13 @@ cffi==1.16.0
 charset-normalizer==3.3.2
     # via requests
 click==8.1.7
-    # via sphinx-external-toc
-cryptography==42.0.8
+    # via
+    #   click-log
+    #   doxysphinx
+    #   sphinx-external-toc
+click-log==0.4.0
+    # via doxysphinx
+cryptography==43.0.0
     # via pyjwt
 deprecated==1.2.14
     # via pygithub
@@ -36,6 +41,8 @@ docutils==0.21.2
     #   myst-parser
     #   pydata-sphinx-theme
     #   sphinx
+doxysphinx==3.3.10
+    # via rocm-docs-core
 fastjsonschema==2.20.0
     # via rocm-docs-core
 gitdb==4.0.11
@@ -50,6 +57,10 @@ jinja2==3.1.4
     # via
     #   myst-parser
     #   sphinx
+libsass==0.22.0
+    # via doxysphinx
+lxml==4.9.4
+    # via doxysphinx
 markdown-it-py==3.0.0
     # via
     #   mdit-py-plugins
@@ -60,8 +71,12 @@ mdit-py-plugins==0.4.1
     # via myst-parser
 mdurl==0.1.2
     # via markdown-it-py
+mpire==2.10.2
+    # via doxysphinx
 myst-parser==3.0.1
     # via rocm-docs-core
+numpy==1.26.4
+    # via doxysphinx
 packaging==24.1
     # via
     #   pydata-sphinx-theme
@@ -77,12 +92,17 @@ pygithub==2.3.0
 pygments==2.18.0
     # via
     #   accessible-pygments
+    #   mpire
     #   pydata-sphinx-theme
     #   sphinx
-pyjwt[crypto]==2.8.0
+pyjson5==1.6.6
+    # via doxysphinx
+pyjwt[crypto]==2.9.0
     # via pygithub
 pynacl==1.5.0
     # via pygithub
+pyparsing==3.1.2
+    # via doxysphinx
 pyyaml==6.0.1
     # via
     #   myst-parser
@@ -92,7 +112,7 @@ requests==2.32.3
     # via
     #   pygithub
     #   sphinx
-rocm-docs-core==1.4.1
+rocm-docs-core[api-reference]==1.6.1
     # via -r requirements.in
 smmap==5.0.1
     # via gitdb
@@ -100,7 +120,7 @@ snowballstemmer==2.2.0
     # via sphinx
 soupsieve==2.5
     # via beautifulsoup4
-sphinx==7.3.7
+sphinx==7.4.7
     # via
     #   breathe
     #   myst-parser
@@ -115,26 +135,28 @@ sphinx-book-theme==1.1.3
     # via rocm-docs-core
 sphinx-copybutton==0.5.2
     # via rocm-docs-core
-sphinx-design==0.6.0
+sphinx-design==0.6.1
     # via rocm-docs-core
 sphinx-external-toc==1.0.1
     # via rocm-docs-core
-sphinx-notfound-page==1.0.2
+sphinx-notfound-page==1.0.4
     # via rocm-docs-core
-sphinxcontrib-applehelp==1.0.8
+sphinxcontrib-applehelp==2.0.0
     # via sphinx
-sphinxcontrib-devhelp==1.0.6
+sphinxcontrib-devhelp==2.0.0
     # via sphinx
-sphinxcontrib-htmlhelp==2.0.5
+sphinxcontrib-htmlhelp==2.1.0
     # via sphinx
 sphinxcontrib-jsmath==1.0.1
     # via sphinx
-sphinxcontrib-qthelp==1.0.7
+sphinxcontrib-qthelp==2.0.0
     # via sphinx
-sphinxcontrib-serializinghtml==1.1.10
+sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 tomli==2.0.1
     # via sphinx
+tqdm==4.66.4
+    # via mpire
 typing-extensions==4.12.2
     # via
     #   pydata-sphinx-theme
