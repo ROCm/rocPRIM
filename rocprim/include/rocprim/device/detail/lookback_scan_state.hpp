@@ -21,6 +21,7 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_LOOKBACK_SCAN_STATE_HPP_
 #define ROCPRIM_DEVICE_DETAIL_LOOKBACK_SCAN_STATE_HPP_
 
+#include <cstring>
 #include <type_traits>
 
 #include "../../functional.hpp"
@@ -191,11 +192,7 @@ public:
             prefix_type prefix;
             prefix.flag = PREFIX_EMPTY;
             prefix_underlying_type p;
-#ifndef __HIP_CPU_RT__
-            __builtin_memcpy(&p, &prefix, sizeof(prefix_type));
-#else
-            std::memcpy(&p, &prefix, sizeof(prefix_type));
-#endif
+            memcpy(&p, &prefix, sizeof(prefix_type));
             prefixes[padding + block_id] = p;
         }
         if(block_id < padding)
@@ -203,11 +200,7 @@ public:
             prefix_type prefix;
             prefix.flag = PREFIX_INVALID;
             prefix_underlying_type p;
-#ifndef __HIP_CPU_RT__
-            __builtin_memcpy(&p, &prefix, sizeof(prefix_type));
-#else
-            std::memcpy(&p, &prefix, sizeof(prefix_type));
-#endif
+            memcpy(&p, &prefix, sizeof(prefix_type));
             prefixes[block_id] = p;
         }
     }
@@ -236,31 +229,19 @@ public:
         unsigned int times_through = 1;
 
         prefix_underlying_type p = ::rocprim::detail::atomic_load(&prefixes[padding + block_id]);
-#ifndef __HIP_CPU_RT__
-        __builtin_memcpy(&prefix, &p, sizeof(prefix_type));
-#else
-        std::memcpy(&prefix, &p, sizeof(prefix_type));
-#endif
+        memcpy(&prefix, &p, sizeof(prefix_type));
         while(prefix.flag == PREFIX_EMPTY)
         {
             if (UseSleep)
             {
-                for (unsigned int j = 0; j < times_through; j++)
-#ifndef __HIP_CPU_RT__
+                for(unsigned int j = 0; j < times_through; j++)
                     __builtin_amdgcn_s_sleep(1);
-#else
-                    std::this_thread::sleep_for(std::chrono::microseconds{1});
-#endif
                 if (times_through < SLEEP_MAX)
                     times_through++;
             }
             prefix_underlying_type p
                 = ::rocprim::detail::atomic_load(&prefixes[padding + block_id]);
-#ifndef __HIP_CPU_RT__
-            __builtin_memcpy(&prefix, &p, sizeof(prefix_type));
-#else
-            std::memcpy(&prefix, &p, sizeof(prefix_type));
-#endif
+            memcpy(&prefix, &p, sizeof(prefix_type));
         }
 
         // return
@@ -276,11 +257,7 @@ public:
 
         auto        p = prefixes[padding + block_id];
         prefix_type prefix{};
-#ifndef __HIP_CPU_RT__
-        __builtin_memcpy(&prefix, &p, sizeof(prefix_type));
-#else
-        std::memcpy(&prefix, &p, sizeof(prefix_type));
-#endif
+        memcpy(&prefix, &p, sizeof(prefix_type));
         assert(prefix.flag == PREFIX_COMPLETE);
         return prefix.value;
     }
@@ -293,11 +270,7 @@ private:
 
         prefix_type prefix = { flag, value };
         prefix_underlying_type p;
-#ifndef __HIP_CPU_RT__
-        __builtin_memcpy(&p, &prefix, sizeof(prefix_type));
-#else
-        std::memcpy(&p, &prefix, sizeof(prefix_type));
-#endif
+        memcpy(&p, &prefix, sizeof(prefix_type));
         ::rocprim::detail::atomic_store(&prefixes[padding + block_id], p);
     }
 
@@ -431,12 +404,8 @@ public:
         {
             if (UseSleep)
             {
-                for (unsigned int j = 0; j < times_through; j++)
-#ifndef __HIP_CPU_RT__
+                for(unsigned int j = 0; j < times_through; j++)
                     __builtin_amdgcn_s_sleep(1);
-#else
-                    std::this_thread::sleep_for(std::chrono::microseconds{1});
-#endif
                 if (times_through < SLEEP_MAX)
                     times_through++;
             }
