@@ -75,10 +75,10 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
             detail::temp_storage::ptr_aligned_array(&equality_buckets, num_buckets),
             detail::temp_storage::ptr_aligned_array(&buckets, num_buckets),
             detail::temp_storage::ptr_aligned_array(&buckets_per_block_offsets,
-                                                    num_buckets * num_blocks),
+                                                    3 * num_blocks),
             detail::temp_storage::ptr_aligned_array(&oracles, size),
             detail::temp_storage::ptr_aligned_array(&output, size),
-            detail::temp_storage::ptr_aligned_array(&nth_element_data, 3)));
+            detail::temp_storage::ptr_aligned_array(&nth_element_data, 4)));
 
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
