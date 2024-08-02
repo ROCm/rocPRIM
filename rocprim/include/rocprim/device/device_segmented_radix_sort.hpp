@@ -243,32 +243,34 @@ struct Partitioner
                           const hipStream_t           stream,
                           const bool                  debug_synchronous)
     {
+        using input_type = typename std::iterator_traits<InputIterator>::value_type;
+        using config     = typename default_partition_config_base<input_type>::type;
         if(three_way_partitioning)
         {
-            return partition_three_way(temporary_storage,
-                                       storage_size,
-                                       input,
-                                       output_first_part,
-                                       output_second_part,
-                                       output_unselected,
-                                       selected_count_output,
-                                       size,
-                                       select_first_part_op,
-                                       select_second_part_op,
-                                       stream,
-                                       debug_synchronous);
+            return partition_three_way<config>(temporary_storage,
+                                               storage_size,
+                                               input,
+                                               output_first_part,
+                                               output_second_part,
+                                               output_unselected,
+                                               selected_count_output,
+                                               size,
+                                               select_first_part_op,
+                                               select_second_part_op,
+                                               stream,
+                                               debug_synchronous);
         }
         else
         {
-            return partition(temporary_storage,
-                             storage_size,
-                             input,
-                             output_first_part,
-                             selected_count_output,
-                             size,
-                             select_first_part_op,
-                             stream,
-                             debug_synchronous);
+            return partition<config>(temporary_storage,
+                                     storage_size,
+                                     input,
+                                     output_first_part,
+                                     selected_count_output,
+                                     size,
+                                     select_first_part_op,
+                                     stream,
+                                     debug_synchronous);
         }
     }
 };

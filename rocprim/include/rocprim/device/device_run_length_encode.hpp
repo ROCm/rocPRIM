@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -161,10 +161,10 @@ hipError_t run_length_encode(void * temporary_storage,
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
     using count_type = unsigned int;
 
-    using config = detail::default_or_custom_config<
-        Config,
-        detail::default_run_length_encode_config
-    >;
+    using config
+        = detail::default_or_custom_config<Config,
+                                           // type is irrelevant, select config is not used
+                                           detail::default_run_length_encode_config<empty_type>>;
 
     return ::rocprim::reduce_by_key<typename config::reduce_by_key>(
         temporary_storage, storage_size,
@@ -280,8 +280,7 @@ hipError_t run_length_encode_non_trivial_runs(void * temporary_storage,
 
     using config = detail::default_or_custom_config<
         Config,
-        detail::default_run_length_encode_config
-    >;
+        detail::default_run_length_encode_config<tuple<offset_type, count_type>>>;
 
     hipError_t error;
 
