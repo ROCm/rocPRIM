@@ -15,6 +15,8 @@ Bitwise
 .. doxygenfunction:: rocprim::get_bit(int x, int i)
 .. doxygenfunction:: rocprim::bit_count(unsigned int x)
 .. doxygenfunction:: rocprim::bit_count(unsigned long long x)
+.. doxygenfunction:: rocprim::ctz(unsigned int x)
+.. doxygenfunction:: rocprim::ctz(unsigned long long x)
 
 Warp size
 ===========
