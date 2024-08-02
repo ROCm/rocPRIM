@@ -261,18 +261,13 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     using block_load_key     = block_load<key_type, num_threads_per_block, num_items_per_threads>;
     using block_store_oracle = block_store<uint8_t, num_threads_per_block, num_items_per_threads>;
 
-    struct storage_type_
-    {
-        key_type search_tree[num_splitters];
-    };
-
     ROCPRIM_SHARED_MEMORY struct
     {
         union
         {
-            typename block_load_key::storage_type     load;
-            typename block_store_oracle::storage_type store;
-            raw_storage<storage_type_>                raw_storage;
+            typename block_load_key::storage_type        load;
+            typename block_store_oracle::storage_type    store;
+            uninitialized_array<key_type, num_splitters> buffer;
         };
         unsigned int shared_buckets[num_buckets];
         bool         shared_equality_buckets[num_buckets];
@@ -284,11 +279,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         storage.shared_equality_buckets[threadIdx.x] = equality_buckets[threadIdx.x];
     }
 
-    storage_type_& raw_storage_ = storage.raw_storage.get();
     if(threadIdx.x < num_splitters)
     {
-        raw_storage_.search_tree[threadIdx.x] = tree[threadIdx.x];
+        storage.buffer.emplace(threadIdx.x, tree[threadIdx.x]);
     }
+    const auto& search_tree = storage.buffer.get_unsafe_array();
 
     key_type     elements[num_items_per_threads];
     const size_t offset            = blockIdx.x * num_items_per_block;
@@ -311,7 +306,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         auto idx = offset + threadIdx.x * num_items_per_threads + item;
         if(idx < size)
         {
-            auto         element = elements[item];
+            const auto   element = elements[item];
             unsigned int left    = 0;
             unsigned int right   = num_splitters;
             unsigned int bucket;
@@ -319,7 +314,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
             for(unsigned int i = 0; i < Log2<num_buckets>::VALUE; i++)
             {
                 const unsigned int mid  = (left + right) >> 1;
-                const bool         comp = compare_function(element, raw_storage_.search_tree[mid]);
+                const bool         comp = compare_function(element, search_tree[mid]);
                 right                   = comp ? mid : right;
                 left                    = comp ? left : mid;
                 bucket                  = right;
@@ -327,7 +322,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 
             // Checks if the bucket before is an equality bucket for the current value
             if(bucket > 0 && storage.shared_equality_buckets[bucket - 1]
-               && element == raw_storage_.search_tree[bucket - 1])
+               && element == search_tree[bucket - 1])
             {
                 bucket = bucket - 1;
             }
