@@ -326,14 +326,14 @@ ROCPRIM_INLINE hipError_t nth_element(void*              temporary_storage,
             return error;
         }
     }
-    return nth_element(temporary_storage,
-                       storage_size,
-                       keys_output,
-                       nth,
-                       size,
-                       compare_function,
-                       stream,
-                       debug_synchronous);
+    return nth_element<Config>(temporary_storage,
+                               storage_size,
+                               keys_output,
+                               nth,
+                               size,
+                               compare_function,
+                               stream,
+                               debug_synchronous);
 }
 
 /// @}
