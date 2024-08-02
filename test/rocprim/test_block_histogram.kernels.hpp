@@ -72,6 +72,24 @@ void histogram_kernel(T* device_output, BinType* device_output_bin)
     }
 }
 
+/// \brief Reduce the value of `maxval` such that it can be represented by `T`.
+template<typename T>
+auto get_safe_maxval(size_t maxval) -> std::enable_if_t<rocprim::is_floating_point<T>::value, bool>
+{
+    // Assert that the cast is defined behavior, based on the assumption that all floating-point
+    //   types can be represented by a double
+    EXPECT_LT(static_cast<double>(maxval),
+              static_cast<double>(test_utils::numeric_limits<T>::max()));
+    return static_cast<T>(maxval);
+}
+
+/// \brief Reduce the value of `maxval` such that it can be represented by `T`.
+template<typename T>
+auto get_safe_maxval(size_t maxval) -> std::enable_if_t<!rocprim::is_floating_point<T>::value, bool>
+{
+    return test_utils::saturate_cast<T>(maxval);
+}
+
 // Test for histogram
 template<
     class T,
@@ -110,11 +128,9 @@ void test_block_histogram_input_arrays()
         SCOPED_TRACE(testing::Message() << "with ItemsPerThread = " << items_per_thread);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(
-            size,
-            0,
-            std::min<size_t>(std::numeric_limits<T>::max(), bin - 1),
-            seed_value);
+        const size_t   max_value = bin - 1;
+        std::vector<T> output
+            = test_utils::get_random_data<T>(size, 0, get_safe_maxval<T>(max_value), seed_value);
 
         // Output histogram results
         std::vector<BinType> output_bin(bin_sizes, 0);
