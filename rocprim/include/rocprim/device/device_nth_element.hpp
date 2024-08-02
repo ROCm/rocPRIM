@@ -76,7 +76,6 @@ ROCPRIM_INLINE hipError_t nth_element_impl(
     const unsigned int     num_blocks            = detail::ceiling_div(size, num_items_per_block);
 
     // oracles stores the bucket that correlates with the index
-    uint8_t*                                     oracles          = nullptr;
     key_type*                                    tree             = nullptr;
     size_t*                                      buckets          = nullptr;
     detail::n_th_element_iteration_data*         nth_element_data = nullptr;
@@ -98,7 +97,6 @@ ROCPRIM_INLINE hipError_t nth_element_impl(
                                 ptr_aligned_array(&tree, num_splitters),
                                 ptr_aligned_array(&equality_buckets, num_buckets),
                                 ptr_aligned_array(&buckets, num_buckets),
-                                ptr_aligned_array(&oracles, size),
                                 ptr_aligned_array(&keys_buffer, size),
                                 ptr_aligned_array(&nth_element_data, 1),
                                 ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
@@ -112,7 +110,6 @@ ROCPRIM_INLINE hipError_t nth_element_impl(
                                 ptr_aligned_array(&tree, num_splitters),
                                 ptr_aligned_array(&equality_buckets, num_buckets),
                                 ptr_aligned_array(&buckets, num_buckets),
-                                ptr_aligned_array(&oracles, size),
                                 ptr_aligned_array(&nth_element_data, 1),
                                 ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
             keys_buffer = keys_double_buffer;
@@ -151,7 +148,6 @@ ROCPRIM_INLINE hipError_t nth_element_impl(
                                                                  size,
                                                                  buckets,
                                                                  equality_buckets,
-                                                                 oracles,
                                                                  lookback_states,
                                                                  num_buckets,
                                                                  stop_recursion_size,
