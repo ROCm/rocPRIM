@@ -142,7 +142,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     constexpr unsigned int num_partitions        = 3;
     const unsigned int     num_buckets           = params.number_of_buckets;
     const unsigned int     num_splitters         = num_buckets - 1;
-    const unsigned int     stop_recursion_size   = num_buckets;
+    const unsigned int     stop_recursion_size   = params.stop_recursion_size;
     const unsigned int     num_items_per_threads = params.kernel_config.items_per_thread;
     const unsigned int     num_threads_per_block = params.kernel_config.block_size;
     const unsigned int     num_items_per_block   = num_threads_per_block * num_items_per_threads;
