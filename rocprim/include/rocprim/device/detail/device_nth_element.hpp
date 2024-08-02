@@ -25,6 +25,7 @@
 #include "../../block/block_radix_rank.hpp"
 #include "../../block/block_scan.hpp"
 #include "../../block/block_sort.hpp"
+#include "../../block/block_store.hpp"
 
 #include "../../config.hpp"
 
@@ -33,6 +34,7 @@
 #include <hip/driver_types.h>
 #include <iostream>
 #include <rocprim/block/block_radix_rank.hpp>
+#include <rocprim/config.hpp>
 #include <rocprim/intrinsics/atomic.hpp>
 #include <rocprim/intrinsics/thread.hpp>
 
@@ -162,12 +164,12 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
     }
 
     const size_t thread_id
-        = (threadIdx.x * num_items_per_threads) + (num_items_per_block * blockIdx.x);
+        = (threadIdx.x * num_items_per_threads) + offset;
 
     ROCPRIM_UNROLL
     for(size_t item = 0; item < num_items_per_threads; item++)
     {
-        auto idx = item + thread_id;
+        const size_t idx = item + thread_id;
         if(idx < size)
         {
             const auto bucket = buckets[item];
@@ -326,6 +328,8 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
 
     using block_load_key = rocprim::block_load<Key, num_threads_per_block, num_items_per_threads>;
     block_load_key bload;
+    using block_store_oracle = rocprim::block_store<unsigned char, num_threads_per_block, num_items_per_threads>;
+    block_store_oracle bstore;
 
     struct storage_type_
     {
@@ -336,6 +340,7 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
 
     __shared__ storage_type                          storage;
     __shared__ typename block_load_key::storage_type key_load_storage;
+    __shared__ typename block_store_oracle::storage_type oracle_store_storage;
     __shared__ size_t                                shared_buckets[3];
 
     if(threadIdx.x < 3)
@@ -370,9 +375,12 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
 
     rocprim::syncthreads();
 
+    const size_t  thread_offset = offset + threadIdx.x * num_items_per_threads;
+    unsigned char local_oracles[num_items_per_threads];
+
     for(size_t item = 0; item < num_items_per_threads; item++)
     {
-        auto idx = offset + threadIdx.x * num_items_per_threads + item;
+        const size_t idx = thread_offset + item;
         if(idx < size)
         {
             Key           element = elements[item];
@@ -404,10 +412,19 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
                 }
             }
 
-            oracles[idx] = bucket;
+            local_oracles[item] = bucket;
 
             detail::atomic_add(&shared_buckets[bucket], 1);
         }
+    }
+
+    if(offset + num_items_per_block < size)
+    {
+        bstore.store(oracles + offset, local_oracles, oracle_store_storage);
+    }
+    else
+    {
+        bstore.store(oracles + offset, local_oracles, size - offset, oracle_store_storage);
     }
 
     rocprim::syncthreads();
