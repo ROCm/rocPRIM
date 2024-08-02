@@ -21,6 +21,7 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_CONFIG_HELPER_HPP_
 #define ROCPRIM_DEVICE_DETAIL_CONFIG_HELPER_HPP_
 
+#include <cstddef>
 #include <type_traits>
 
 #include "../../config.hpp"
@@ -1034,6 +1035,48 @@ struct default_reduce_by_key_config_base
 
     using type = std::
         conditional_t<std::max(sizeof(Key), sizeof(Value)) <= 16, small_config, large_config>;
+};
+
+} // namespace detail
+
+namespace detail
+{
+
+struct nth_element_config_params
+{
+    unsigned int                 BlockSize;
+    unsigned int                 ItemsPerThread;
+    unsigned int                 MinimumSize;
+    unsigned int                 NumberOfBuckets;
+    block_radix_rank_algorithm   RadixRankAlgorithm;
+};
+
+} // namespace detail
+
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         unsigned int                 MinimumSize,
+         unsigned int                 NumberOfBuckets,
+         block_radix_rank_algorithm   RadixRankAlgorithm>
+struct nth_element_config : public detail::nth_element_config_params
+{
+    constexpr nth_element_config()
+        : detail::nth_element_config_params{
+            BlockSize, ItemsPerThread, MinimumSize, NumberOfBuckets, RadixRankAlgorithm}
+    {}
+};
+
+namespace detail
+{
+
+template<typename Type>
+struct default_nth_element_config_base
+{
+    using type = nth_element_config<512,
+                                    16,
+                                    64,
+                                    64,
+                                    block_radix_rank_algorithm::match>;
 };
 
 } // namespace detail

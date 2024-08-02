@@ -27,6 +27,9 @@
 
 #include "../config.hpp"
 
+#include "config_types.hpp"
+#include "device_nth_element_config.hpp"
+
 #include <iostream>
 #include <iterator>
 
@@ -35,7 +38,8 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
-template<class KeysIterator,
+template<class Config = default_config,
+         class KeysIterator,
          class Key = typename std::iterator_traits<KeysIterator>::value_type,
          class BinaryFunction
          = ::rocprim::less<typename std::iterator_traits<KeysIterator>::value_type>>
@@ -49,24 +53,29 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
                                       hipStream_t    stream            = 0,
                                       bool           debug_synchronous = false)
 {
-    constexpr size_t num_buckets           = 64;
-    constexpr size_t num_splitters         = num_buckets - 1;
-    constexpr size_t min_size              = num_buckets;
-    constexpr size_t num_items_per_threads = 16;
-    constexpr size_t num_threads_per_block = 512;
-    constexpr size_t num_items_per_block   = num_threads_per_block * num_items_per_threads;
-    const size_t     num_blocks            = (size + num_items_per_block - 1) / num_items_per_block;
+    using config = detail::wrapped_nth_element_config<Config, Key>;
+    detail::target_arch target_arch;
+    hipError_t          result = host_target_arch(stream, target_arch);
+    if(result != hipSuccess)
+    {
+        return result;
+    }
+    const detail::nth_element_config_params params = detail::dispatch_target_arch<config>(target_arch);
 
-    static_assert(num_threads_per_block >= num_buckets,
-                  "Minimum thread blocksize is the num of buckets");
-    static_assert(min_size >= num_buckets, "Minimum min size is the num of buckets");
+    const unsigned int num_buckets           = params.NumberOfBuckets;
+    const unsigned int num_splitters         = num_buckets - 1;
+    const unsigned int min_size              = num_buckets;
+    const unsigned int num_items_per_threads = params.ItemsPerThread;
+    const unsigned int num_threads_per_block = params.BlockSize;
+    const unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
+    const unsigned int num_blocks            = (size + num_items_per_block - 1) / num_items_per_block;
 
-    Key*    tree                      = nullptr;
-    size_t* buckets                   = nullptr;
-    size_t* buckets_per_block_offsets = nullptr;
-    size_t* nth_element_data          = nullptr;
-    unsigned char* oracles          = nullptr;
-    bool*          equality_buckets = nullptr;
+    Key*           tree                      = nullptr;
+    size_t*        buckets                   = nullptr;
+    size_t*        buckets_per_block_offsets = nullptr;
+    size_t*        nth_element_data          = nullptr;
+    unsigned char* oracles                   = nullptr;
+    bool*          equality_buckets          = nullptr;
 
     Key* output = nullptr;
 
@@ -112,24 +121,26 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
         }
     }
 
-    const size_t tree_depth = std::log2(num_buckets);
-    detail::
-        nth_element_keys_impl<num_buckets, min_size, num_threads_per_block, num_items_per_threads>(
-            keys_output,
-            output,
-            tree,
-            nth,
-            size,
-            buckets,
-            buckets_per_block_offsets,
-            equality_buckets,
-            oracles,
-            tree_depth,
-            nth_element_data,
-            compare_function,
-            stream,
-            debug_synchronous,
-            0);
+    const unsigned int tree_depth = std::log2(num_buckets);
+    detail::nth_element_keys_impl<config>(keys_output,
+                                  output,
+                                  tree,
+                                  nth,
+                                  size,
+                                  buckets,
+                                  buckets_per_block_offsets,
+                                  equality_buckets,
+                                  oracles,
+                                  num_buckets,
+                                  min_size,
+                                  num_threads_per_block,
+                                  num_items_per_threads,
+                                  tree_depth,
+                                  nth_element_data,
+                                  compare_function,
+                                  stream,
+                                  debug_synchronous,
+                                  0);
 
     return hipSuccess;
 }
