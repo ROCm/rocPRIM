@@ -919,14 +919,14 @@ struct select_config : public detail::partition_config_params
 namespace detail
 {
 
-template<typename Key>
+template<typename Key, int ItemScaleBase = 13>
 struct default_partition_config_base
 {
     static constexpr unsigned int item_scale
         = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Key), sizeof(int));
 
     using type = select_config<limit_block_size<256U, sizeof(Key), ROCPRIM_WARP_SIZE_64>::value,
-                               ::rocprim::max(1u, 13 / item_scale),
+                               ::rocprim::max(1u, ItemScaleBase / item_scale),
                                ::rocprim::block_load_method::block_load_transpose,
                                ::rocprim::block_load_method::block_load_transpose,
                                ::rocprim::block_load_method::block_load_transpose,

@@ -71,29 +71,29 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
         REGISTER_BENCHMARK(benchmarks, size, seed, stream, instance);                           \
     }
 
-#define BENCHMARK_SELECT_FLAG_TYPE(type, value)    \
-    CREATE_SELECT_FLAG_BENCHMARK(type, value, 5);  \
-    CREATE_SELECT_FLAG_BENCHMARK(type, value, 25); \
-    CREATE_SELECT_FLAG_BENCHMARK(type, value, 50); \
-    CREATE_SELECT_FLAG_BENCHMARK(type, value, 75)
+#define BENCHMARK_SELECT_FLAG_TYPE(type, value)                          \
+    CREATE_SELECT_FLAG_BENCHMARK(type, value, select_probability::p005); \
+    CREATE_SELECT_FLAG_BENCHMARK(type, value, select_probability::p025); \
+    CREATE_SELECT_FLAG_BENCHMARK(type, value, select_probability::p050); \
+    CREATE_SELECT_FLAG_BENCHMARK(type, value, select_probability::p075)
 
-#define BENCHMARK_SELECT_PREDICATE_TYPE(type)    \
-    CREATE_SELECT_PREDICATE_BENCHMARK(type, 5);  \
-    CREATE_SELECT_PREDICATE_BENCHMARK(type, 25); \
-    CREATE_SELECT_PREDICATE_BENCHMARK(type, 50); \
-    CREATE_SELECT_PREDICATE_BENCHMARK(type, 75)
+#define BENCHMARK_SELECT_PREDICATE_TYPE(type)                          \
+    CREATE_SELECT_PREDICATE_BENCHMARK(type, select_probability::p005); \
+    CREATE_SELECT_PREDICATE_BENCHMARK(type, select_probability::p025); \
+    CREATE_SELECT_PREDICATE_BENCHMARK(type, select_probability::p050); \
+    CREATE_SELECT_PREDICATE_BENCHMARK(type, select_probability::p075)
 
-#define BENCHMARK_UNIQUE_TYPE(type)    \
-    CREATE_UNIQUE_BENCHMARK(type, 5);  \
-    CREATE_UNIQUE_BENCHMARK(type, 25); \
-    CREATE_UNIQUE_BENCHMARK(type, 50); \
-    CREATE_UNIQUE_BENCHMARK(type, 75)
+#define BENCHMARK_UNIQUE_TYPE(type)                          \
+    CREATE_UNIQUE_BENCHMARK(type, select_probability::p005); \
+    CREATE_UNIQUE_BENCHMARK(type, select_probability::p025); \
+    CREATE_UNIQUE_BENCHMARK(type, select_probability::p050); \
+    CREATE_UNIQUE_BENCHMARK(type, select_probability::p075)
 
-#define BENCHMARK_UNIQUE_BY_KEY_TYPE(K, V)    \
-    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, 5);  \
-    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, 25); \
-    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, 50); \
-    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, 75)
+#define BENCHMARK_UNIQUE_BY_KEY_TYPE(K, V)                          \
+    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, select_probability::p005); \
+    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, select_probability::p025); \
+    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, select_probability::p050); \
+    CREATE_UNIQUE_BY_KEY_BENCHMARK(K, V, select_probability::p075)
 
 int main(int argc, char* argv[])
 {

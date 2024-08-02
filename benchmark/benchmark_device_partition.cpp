@@ -73,41 +73,41 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
         REGISTER_BENCHMARK(benchmarks, size, seed, stream, instance);                     \
     }
 
-#define CREATE_PARTITION_THREE_WAY_BENCHMARK(T, p1, p2)                                          \
-    {                                                                                            \
-        const device_partition_three_way_benchmark<T, rocprim::default_config, p1, p2> instance; \
-        REGISTER_BENCHMARK(benchmarks, size, seed, stream, instance);                            \
+#define CREATE_PARTITION_THREE_WAY_BENCHMARK(T, p)                                          \
+    {                                                                                       \
+        const device_partition_three_way_benchmark<T, rocprim::default_config, p> instance; \
+        REGISTER_BENCHMARK(benchmarks, size, seed, stream, instance);                       \
     }
 
-#define BENCHMARK_FLAG_TYPE(type, flag_type)              \
-    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, 5);  \
-    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, 25); \
-    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, 50); \
-    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, 75)
+#define BENCHMARK_FLAG_TYPE(type, flag_type)                                       \
+    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, partition_probability::p005); \
+    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, partition_probability::p025); \
+    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, partition_probability::p050); \
+    CREATE_PARTITION_FLAG_BENCHMARK(type, flag_type, partition_probability::p075)
 
-#define BENCHMARK_PREDICATE_TYPE(type)              \
-    CREATE_PARTITION_PREDICATE_BENCHMARK(type, 5);  \
-    CREATE_PARTITION_PREDICATE_BENCHMARK(type, 25); \
-    CREATE_PARTITION_PREDICATE_BENCHMARK(type, 50); \
-    CREATE_PARTITION_PREDICATE_BENCHMARK(type, 75)
+#define BENCHMARK_PREDICATE_TYPE(type)                                       \
+    CREATE_PARTITION_PREDICATE_BENCHMARK(type, partition_probability::p005); \
+    CREATE_PARTITION_PREDICATE_BENCHMARK(type, partition_probability::p025); \
+    CREATE_PARTITION_PREDICATE_BENCHMARK(type, partition_probability::p050); \
+    CREATE_PARTITION_PREDICATE_BENCHMARK(type, partition_probability::p075)
 
-#define BENCHMARK_TWO_WAY_FLAG_TYPE(type, flag_type)              \
-    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, 5);  \
-    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, 25); \
-    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, 50); \
-    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, 75)
+#define BENCHMARK_TWO_WAY_FLAG_TYPE(type, flag_type)                                       \
+    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, partition_probability::p005); \
+    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, partition_probability::p025); \
+    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, partition_probability::p050); \
+    CREATE_PARTITION_TWO_WAY_FLAG_BENCHMARK(type, flag_type, partition_probability::p075)
 
-#define BENCHMARK_TWO_WAY_PREDICATE_TYPE(type)              \
-    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, 5);  \
-    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, 25); \
-    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, 50); \
-    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, 70)
+#define BENCHMARK_TWO_WAY_PREDICATE_TYPE(type)                                       \
+    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, partition_probability::p005); \
+    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, partition_probability::p025); \
+    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, partition_probability::p050); \
+    CREATE_PARTITION_TWO_WAY_PREDICATE_BENCHMARK(type, partition_probability::p075)
 
-#define BENCHMARK_THREE_WAY_TYPE(type)                  \
-    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, 5, 25);  \
-    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, 25, 50); \
-    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, 50, 75); \
-    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, 75, 100)
+#define BENCHMARK_THREE_WAY_TYPE(type)                                                      \
+    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, partition_three_way_probability::p005_p025); \
+    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, partition_three_way_probability::p025_p050); \
+    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, partition_three_way_probability::p050_p075); \
+    CREATE_PARTITION_THREE_WAY_BENCHMARK(type, partition_three_way_probability::p075_p100)
 
 int main(int argc, char* argv[])
 {
