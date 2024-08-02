@@ -241,11 +241,12 @@ struct scatter_helper
 
 template<typename KeyType,
          typename AccumulatorType,
-         unsigned int         BlockSize,
-         unsigned int         ItemsPerThread,
-         block_load_method    load_keys_method,
-         block_load_method    load_values_method,
-         block_scan_algorithm scan_algorithm>
+         unsigned int              BlockSize,
+         unsigned int              ItemsPerThread,
+         block_load_method         load_keys_method,
+         block_load_method         load_values_method,
+         block_scan_algorithm      scan_algorithm,
+         lookback_scan_determinism Determinism>
 class tile_helper
 {
 private:
@@ -394,11 +395,11 @@ public:
         }
         else
         {
-            auto lookback_op = detail::lookback_scan_prefix_op<wrapped_type,
-                                                               decltype(wrapped_op),
-                                                               decltype(scan_state)>{tile_id,
-                                                                                     wrapped_op,
-                                                                                     scan_state};
+            auto lookback_op
+                = detail::lookback_scan_prefix_op<wrapped_type,
+                                                  decltype(wrapped_op),
+                                                  decltype(scan_state),
+                                                  Determinism>{tile_id, wrapped_op, scan_state};
 
             auto offset_lookback_op = prefix_op_factory::create(lookback_op, storage.scan.prefix);
 
@@ -474,7 +475,8 @@ public:
     }
 };
 
-template<typename Config,
+template<lookback_scan_determinism Determinism,
+         typename Config,
          typename AccumulatorType,
          typename KeyIterator,
          typename ValueIterator,
@@ -504,7 +506,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto kernel_impl(KeyIterator,
     // No need to build the kernel with sleep on a device that does not require it
 }
 
-template<typename Config,
+template<lookback_scan_determinism Determinism,
+         typename Config,
          typename AccumulatorType,
          typename KeyIterator,
          typename ValueIterator,
@@ -550,7 +553,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                                        items_per_thread,
                                        load_keys_method,
                                        load_values_method,
-                                       scan_algorithm>;
+                                       scan_algorithm,
+                                       Determinism>;
 
     ROCPRIM_SHARED_MEMORY union
     {

@@ -90,7 +90,8 @@ ROCPRIM_KERNEL __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void reduce_by_
     init_lookback_scan_state(lookback_scan_state, number_of_tiles, ordered_bid, flat_thread_id);
 }
 
-template<typename Config,
+template<lookback_scan_determinism Determinism,
+         typename Config,
          typename AccumulatorType,
          typename KeyIterator,
          typename ValueIterator,
@@ -118,21 +119,21 @@ ROCPRIM_KERNEL
         const AccumulatorType* const         previous_accumulated,
         const std::size_t                    number_of_tiles_launch)
 {
-    reduce_by_key::kernel_impl<Config>(keys_input,
-                                       values_input,
-                                       unique_keys,
-                                       reductions,
-                                       unique_count,
-                                       reduce_op,
-                                       compare,
-                                       scan_state,
-                                       ordered_tile_id,
-                                       starting_tile,
-                                       total_number_of_tiles,
-                                       size,
-                                       global_head_count,
-                                       previous_accumulated,
-                                       number_of_tiles_launch);
+    reduce_by_key::kernel_impl<Determinism, Config>(keys_input,
+                                                    values_input,
+                                                    unique_keys,
+                                                    reductions,
+                                                    unique_count,
+                                                    reduce_op,
+                                                    compare,
+                                                    scan_state,
+                                                    ordered_tile_id,
+                                                    starting_tile,
+                                                    total_number_of_tiles,
+                                                    size,
+                                                    global_head_count,
+                                                    previous_accumulated,
+                                                    number_of_tiles_launch);
 }
 
 #define ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR(name, size, start)                           \
@@ -154,7 +155,8 @@ ROCPRIM_KERNEL
     }                                                                                            \
     while(false)
 
-template<class Config,
+template<lookback_scan_determinism Determinism,
+         class Config,
          class KeysInputIterator,
          class ValuesInputIterator,
          class UniqueOutputIterator,
@@ -349,7 +351,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
         with_scan_state(
             [&](const auto scan_state)
             {
-                reduce_by_key_kernel<config>
+                reduce_by_key_kernel<Determinism, config>
                     <<<dim3(number_of_blocks_launch), dim3(block_size), 0, stream>>>(
                         keys_input + offset,
                         values_input + offset,
@@ -391,6 +393,8 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 ///    - the results may be non-deterministic and/or vary in precision,
 ///    - and bit-wise reproducibility is not guaranteed, that is, results from multiple runs
 ///      using the same input values on the same device may not be bit-wise identical.
+///   If deterministic behavior is required, Use \link deterministic_reduce_by_key()
+///   rocprim::deterministic_reduce_by_key \endlink instead.
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 /// * Ranges specified by \p keys_input and \p values_input must have at least \p size elements.
@@ -505,7 +509,8 @@ inline hipError_t reduce_by_key(void*                     temporary_storage,
                                 hipStream_t               stream            = 0,
                                 bool                      debug_synchronous = false)
 {
-    return detail::reduce_by_key_impl<Config>(temporary_storage,
+    return detail::reduce_by_key_impl<detail::lookback_scan_determinism::default_determinism,
+                                      Config>(temporary_storage,
                                               storage_size,
                                               keys_input,
                                               values_input,
@@ -517,6 +522,52 @@ inline hipError_t reduce_by_key(void*                     temporary_storage,
                                               key_compare_op,
                                               stream,
                                               debug_synchronous);
+}
+
+/// \brief Bitwise-reproducible parallel reduce-by-key primitive for device level.
+///
+/// This function behaves the same as <tt>reduce_by_key()</tt>, except that unlike
+/// <tt>reduce_by_key()</tt>, it provides run-to-run deterministic behavior for
+/// non-associative scan operators like floating point arithmetic operations.
+/// Refer to the documentation for \link reduce_by_key() rocprim::reduce_by_key \endlink
+/// for a detailed description of this function.
+template<class Config = default_config,
+         class KeysInputIterator,
+         class ValuesInputIterator,
+         class UniqueOutputIterator,
+         class AggregatesOutputIterator,
+         class UniqueCountOutputIterator,
+         class BinaryFunction
+         = ::rocprim::plus<typename std::iterator_traits<ValuesInputIterator>::value_type>,
+         class KeyCompareFunction
+         = ::rocprim::equal_to<typename std::iterator_traits<KeysInputIterator>::value_type>>
+inline hipError_t deterministic_reduce_by_key(void*                     temporary_storage,
+                                              size_t&                   storage_size,
+                                              KeysInputIterator         keys_input,
+                                              ValuesInputIterator       values_input,
+                                              const size_t              size,
+                                              UniqueOutputIterator      unique_output,
+                                              AggregatesOutputIterator  aggregates_output,
+                                              UniqueCountOutputIterator unique_count_output,
+                                              BinaryFunction     reduce_op = BinaryFunction(),
+                                              KeyCompareFunction key_compare_op
+                                              = KeyCompareFunction(),
+                                              hipStream_t stream            = 0,
+                                              bool        debug_synchronous = false)
+{
+    return detail::reduce_by_key_impl<detail::lookback_scan_determinism::deterministic, Config>(
+        temporary_storage,
+        storage_size,
+        keys_input,
+        values_input,
+        size,
+        unique_output,
+        aggregates_output,
+        unique_count_output,
+        reduce_op,
+        key_compare_op,
+        stream,
+        debug_synchronous);
 }
 
 /// @}

@@ -56,8 +56,9 @@ inline std::string config_name<rocprim::default_config>()
 
 template<typename KeyType,
          typename ValueType,
-         int MaxSegmentLength,
-         typename Config = rocprim::default_config>
+         int  MaxSegmentLength,
+         bool Deterministic = false,
+         typename Config    = rocprim::default_config>
 struct device_reduce_by_key_benchmark : public config_autotune_interface
 {
     std::string name() const override
@@ -130,17 +131,34 @@ struct device_reduce_by_key_benchmark : public config_autotune_interface
         {
             const auto dispatch_input = [&](KeyType* d_key_input)
             {
-                HIP_CHECK(rocprim::reduce_by_key<Config>(d_temp_storage,
-                                                         temp_storage_size_bytes,
-                                                         d_key_input,
-                                                         d_value_input,
-                                                         size,
-                                                         d_unique_output,
-                                                         d_aggregates_output,
-                                                         d_unique_count_output,
-                                                         reduce_op,
-                                                         key_compare_op,
-                                                         stream));
+                if ROCPRIM_IF_CONSTEXPR(!Deterministic)
+                {
+                    HIP_CHECK(rocprim::reduce_by_key<Config>(d_temp_storage,
+                                                             temp_storage_size_bytes,
+                                                             d_key_input,
+                                                             d_value_input,
+                                                             size,
+                                                             d_unique_output,
+                                                             d_aggregates_output,
+                                                             d_unique_count_output,
+                                                             reduce_op,
+                                                             key_compare_op,
+                                                             stream));
+                }
+                else
+                {
+                    HIP_CHECK(rocprim::deterministic_reduce_by_key<Config>(d_temp_storage,
+                                                                           temp_storage_size_bytes,
+                                                                           d_key_input,
+                                                                           d_value_input,
+                                                                           size,
+                                                                           d_unique_output,
+                                                                           d_aggregates_output,
+                                                                           d_unique_count_output,
+                                                                           reduce_op,
+                                                                           key_compare_op,
+                                                                           stream));
+                }
             };
 
             // One tuning iteration runs multiple inputs with different distributions,
@@ -223,7 +241,8 @@ struct device_reduce_by_key_benchmark_generator
                                                 TilesPerBlock>;
             // max segment length argument is irrelevant, tuning overrides segment length
             storage.emplace_back(
-                std::make_unique<device_reduce_by_key_benchmark<KeyType, ValueType, 0, config>>());
+                std::make_unique<
+                    device_reduce_by_key_benchmark<KeyType, ValueType, 0, false, config>>());
         }
     };
 
