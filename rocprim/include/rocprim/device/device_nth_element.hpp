@@ -38,22 +38,24 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
-/// \brief Parallel nth_element for device level.
+/// \addtogroup devicemodule
+/// @{
+
+/// \brief Rearrange elements smaller than the n-th before and bigger than n-th after the n-th element.
 ///
-/// `nth_element` function performs a device-wide nth_element,
-///   this function sets nth element as if the list was sorted.
-///   Also for all values `i` in `[first, nth)` and all values `j` in `[nth, last)`
-///   the condition `comp(*j, *i)` is `false` where `comp` is the compare function.
+/// The element at index `n` is set to the element that would be at the n-th position if the input was sorted.
+///   Additionally the other elements are rearranged such that for all values of `i` in [keys_output, jeys_output + n)
+///   and all values of `j` in [keys_output + n, keys_output + size): `comp(*i, *j)` is false.
+///   Smaller elements than the n-th will be arranged before, and bigger ones after the n-th element.
 ///
 /// \par Overview
 /// * The contents of the inputs are not altered by the function.
 /// * Returns the required size of `temporary_storage` in `storage_size`
 /// if `temporary_storage` in a null pointer.
 /// * Accepts custom compare_functions for nth_element across the device.
-/// * Does not work with hipGraph
+/// * Streams in graph capture mode are not supported
 ///
-/// \tparam Config [optional] configuration of the primitive. It has to be `radix_sort_config`
-///   or a class derived from it.
+/// \tparam Config [optional] configuration of the primitive. It has to be `nth_element_config`.
 /// \tparam KeysIterator [inferred] random-access iterator type of the input range. Must meet the
 ///   requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam CompareFunction [inferred] Type of binary function that accepts two arguments of the
@@ -61,7 +63,7 @@ BEGIN_ROCPRIM_NAMESPACE
 ///
 /// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 ///   a null pointer is passed, the required allocation size (in bytes) is written to
-/// `storage_size` and function returns without performing the sort operation.
+/// `storage_size` and function returns without performing the nth_element rearrangement.
 /// \param [in,out] storage_size reference to a size (in bytes) of `temporary_storage`.
 /// \param [in] keys_input iterator to the input range.
 /// \param [out] keys_output iterator to the output range. Allowed to point to the same elements as `keys_input`.
@@ -79,7 +81,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
 ///   launch is forced in order to check for errors. Default value is `false`.
 ///
-/// \returns `hipSuccess` (`0`) after successful sort; otherwise a HIP runtime error of
+/// \returns `hipSuccess` (`0`) after successful rearrangement; otherwise a HIP runtime error of
 ///   type `hipError_t`.
 ///
 /// \par Example
@@ -149,12 +151,12 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     const unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
     const unsigned int num_blocks            = detail::ceiling_div(size, num_items_per_block);
 
-    key_type*                        tree             = nullptr;
-    size_t*                          buckets          = nullptr;
-    detail::nth_element_data_type*   nth_element_data = nullptr;
-    uint8_t*                         oracles          = nullptr;
-    bool*                            equality_buckets = nullptr;
-    detail::onesweep_lookback_state* lookback_states  = nullptr;
+    key_type*                                    tree             = nullptr;
+    size_t*                                      buckets          = nullptr;
+    detail::n_th_element_iteration_data*         nth_element_data = nullptr;
+    uint8_t*                                     oracles          = nullptr;
+    bool*                                        equality_buckets = nullptr;
+    detail::nth_element_onesweep_lookback_state* lookback_states  = nullptr;
 
     key_type* output = nullptr;
 
@@ -175,9 +177,14 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
         return partition_result;
     }
 
-    if(size == 0 || nth >= size)
+    if(size == 0)
     {
         return hipSuccess;
+    }
+
+    if(nth >= size)
+    {
+        return hipErrorInvalidValue;
     }
 
     if(debug_synchronous)
@@ -194,7 +201,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     {
         hipError_t error = hipMemcpyAsync(keys_output,
                                           keys_input,
-                                          sizeof(key_type) * size,
+                                          sizeof(*keys_output) * size,
                                           hipMemcpyDeviceToDevice,
                                           stream);
         if(error != hipSuccess)
@@ -203,29 +210,28 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
         }
     }
 
-    const unsigned int tree_depth = std::log2(num_buckets);
-    detail::nth_element_keys_impl<config>(keys_output,
-                                          output,
-                                          tree,
-                                          nth,
-                                          size,
-                                          buckets,
-                                          equality_buckets,
-                                          oracles,
-                                          lookback_states,
-                                          num_buckets,
-                                          stop_recursion_size,
-                                          num_threads_per_block,
-                                          num_items_per_threads,
-                                          tree_depth,
-                                          nth_element_data,
-                                          compare_function,
-                                          stream,
-                                          debug_synchronous,
-                                          0);
-
-    return hipSuccess;
+    return detail::nth_element_keys_impl<config>(keys_output,
+                                                 output,
+                                                 tree,
+                                                 nth,
+                                                 size,
+                                                 buckets,
+                                                 equality_buckets,
+                                                 oracles,
+                                                 lookback_states,
+                                                 num_buckets,
+                                                 stop_recursion_size,
+                                                 num_threads_per_block,
+                                                 num_items_per_threads,
+                                                 nth_element_data,
+                                                 compare_function,
+                                                 stream,
+                                                 debug_synchronous,
+                                                 0);
 }
+
+/// @}
+// end of group devicemodule
 
 END_ROCPRIM_NAMESPACE
 
