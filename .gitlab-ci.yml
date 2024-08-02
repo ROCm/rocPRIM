@@ -185,9 +185,11 @@ build:cmake-latest:
   extends:
     - .cmake-latest
     - .build:common
-  variables:
-    BUILD_TYPE: Release
-    BUILD_TARGET: TEST
+  parallel:
+    # Debug builds disabled due to excessive build times for debug test builds
+    matrix:
+      - BUILD_TYPE: Release
+        BUILD_TARGET: [BENCHMARK, TEST]
 
 build:cmake-minimum:
   needs: []
