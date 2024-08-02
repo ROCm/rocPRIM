@@ -116,6 +116,11 @@ void test_block_histogram_input_arrays()
     const size_t bin_sizes = bin * 37;
     const size_t grid_size = size / items_per_block;
 
+    SCOPED_TRACE(testing::Message() << "with items_per_block = " << items_per_block);
+    SCOPED_TRACE(testing::Message() << "with size = " << size);
+    SCOPED_TRACE(testing::Message() << "with bin_sizes = " << bin_sizes);
+    SCOPED_TRACE(testing::Message() << "with grid_size = " << grid_size);
+
     // TODO: Use assert near for bin_type.
     if (std::is_same<BinType, ::rocprim::bfloat16>::value) {
         GTEST_SKIP() << "Temporary skipped test";
@@ -207,11 +212,14 @@ struct static_for_input_array
 {
     static void run()
     {
-        int device_id = test_common_utils::obtain_device_from_ctest();
-        SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
-        HIP_CHECK(hipSetDevice(device_id));
+        {
+            SCOPED_TRACE(testing::Message() << "TestID = " << First);
+            int device_id = test_common_utils::obtain_device_from_ctest();
+            SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
+            HIP_CHECK(hipSetDevice(device_id));
 
-        test_block_histogram_input_arrays<T, BinType, BlockSize, items[First], Algorithm>();
+            test_block_histogram_input_arrays<T, BinType, BlockSize, items[First], Algorithm>();
+        }
         static_for_input_array<First + 1, Last, T, BinType, BlockSize, Algorithm>::run();
     }
 };
