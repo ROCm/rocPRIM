@@ -158,23 +158,24 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, Scan)
 
             scan_op_type scan_op;
 
-            size_t temp_storage_size_bytes;
-            void*  d_temp_storage = nullptr;
-            HIP_CHECK(rocprim::deterministic_inclusive_scan<Config>(d_temp_storage,
-                                                                    temp_storage_size_bytes,
-                                                                    d_input,
-                                                                    d_output,
-                                                                    input.size(),
-                                                                    scan_op,
-                                                                    stream,
-                                                                    debug_synchronous));
-
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-
             test_reproducibility(
                 scan_op,
                 [&](auto test_scan_op)
                 {
+                    size_t temp_storage_size_bytes;
+                    void*  d_temp_storage = nullptr;
+                    HIP_CHECK(rocprim::deterministic_inclusive_scan<Config>(d_temp_storage,
+                                                                            temp_storage_size_bytes,
+                                                                            d_input,
+                                                                            d_output,
+                                                                            input.size(),
+                                                                            scan_op,
+                                                                            stream,
+                                                                            debug_synchronous));
+
+                    HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage,
+                                                                 temp_storage_size_bytes));
+
                     HIP_CHECK(rocprim::deterministic_inclusive_scan<Config>(d_temp_storage,
                                                                             temp_storage_size_bytes,
                                                                             d_input,
@@ -190,10 +191,10 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, Scan)
                                         d_output,
                                         output.size() * sizeof(T),
                                         hipMemcpyDeviceToHost));
+                    hipFree(d_temp_storage);
                     return output;
                 });
 
-            hipFree(d_temp_storage);
             hipFree(d_input);
             hipFree(d_output);
         }
@@ -248,46 +249,49 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ScanByKey)
             scan_op_type    scan_op;
             compare_op_type compare_op;
 
-            size_t temp_storage_size_bytes;
-            void*  d_temp_storage = nullptr;
-            HIP_CHECK(rocprim::deterministic_inclusive_scan_by_key<Config>(d_temp_storage,
-                                                                           temp_storage_size_bytes,
-                                                                           d_keys,
-                                                                           d_input,
-                                                                           d_output,
-                                                                           input.size(),
-                                                                           scan_op,
-                                                                           compare_op,
-                                                                           stream,
-                                                                           debug_synchronous));
+            test_reproducibility(
+                scan_op,
+                [&](auto test_scan_op)
+                {
+                    size_t temp_storage_size_bytes;
+                    void*  d_temp_storage = nullptr;
+                    HIP_CHECK(rocprim::deterministic_inclusive_scan_by_key<Config>(
+                        d_temp_storage,
+                        temp_storage_size_bytes,
+                        d_keys,
+                        d_input,
+                        d_output,
+                        input.size(),
+                        scan_op,
+                        compare_op,
+                        stream,
+                        debug_synchronous));
 
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+                    HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage,
+                                                                 temp_storage_size_bytes));
 
-            test_reproducibility(scan_op,
-                                 [&](auto test_scan_op)
-                                 {
-                                     HIP_CHECK(rocprim::deterministic_inclusive_scan_by_key<Config>(
-                                         d_temp_storage,
-                                         temp_storage_size_bytes,
-                                         d_keys,
-                                         d_input,
-                                         d_output,
-                                         input.size(),
-                                         test_scan_op,
-                                         compare_op,
-                                         stream,
-                                         debug_synchronous));
-                                     HIP_CHECK(hipGetLastError());
+                    HIP_CHECK(rocprim::deterministic_inclusive_scan_by_key<Config>(
+                        d_temp_storage,
+                        temp_storage_size_bytes,
+                        d_keys,
+                        d_input,
+                        d_output,
+                        input.size(),
+                        test_scan_op,
+                        compare_op,
+                        stream,
+                        debug_synchronous));
+                    HIP_CHECK(hipGetLastError());
 
-                                     std::vector<V> output(input.size());
-                                     HIP_CHECK(hipMemcpy(output.data(),
-                                                         d_output,
-                                                         output.size() * sizeof(V),
-                                                         hipMemcpyDeviceToHost));
-                                     return output;
-                                 });
+                    std::vector<V> output(input.size());
+                    HIP_CHECK(hipMemcpy(output.data(),
+                                        d_output,
+                                        output.size() * sizeof(V),
+                                        hipMemcpyDeviceToHost));
+                    hipFree(d_temp_storage);
+                    return output;
+                });
 
-            hipFree(d_temp_storage);
             hipFree(d_input);
             hipFree(d_output);
         }
@@ -350,27 +354,28 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ReduceByKey)
             // reduce_by_key tests.
             auto d_discard_unique_output = rocprim::make_discard_iterator();
 
-            size_t temp_storage_size_bytes;
-            void*  d_temp_storage = nullptr;
-            HIP_CHECK(rocprim::deterministic_reduce_by_key<Config>(d_temp_storage,
-                                                                   temp_storage_size_bytes,
-                                                                   d_keys,
-                                                                   d_input,
-                                                                   input.size(),
-                                                                   d_discard_unique_output,
-                                                                   d_output,
-                                                                   d_unique_count_output,
-                                                                   scan_op,
-                                                                   compare_op,
-                                                                   stream,
-                                                                   debug_synchronous));
-
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-
             test_reproducibility(
                 scan_op,
                 [&](auto test_scan_op)
                 {
+                    size_t temp_storage_size_bytes;
+                    void*  d_temp_storage = nullptr;
+                    HIP_CHECK(rocprim::deterministic_reduce_by_key<Config>(d_temp_storage,
+                                                                           temp_storage_size_bytes,
+                                                                           d_keys,
+                                                                           d_input,
+                                                                           input.size(),
+                                                                           d_discard_unique_output,
+                                                                           d_output,
+                                                                           d_unique_count_output,
+                                                                           test_scan_op,
+                                                                           compare_op,
+                                                                           stream,
+                                                                           debug_synchronous));
+
+                    HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage,
+                                                                 temp_storage_size_bytes));
+
                     HIP_CHECK(rocprim::deterministic_reduce_by_key<Config>(d_temp_storage,
                                                                            temp_storage_size_bytes,
                                                                            d_keys,
@@ -396,10 +401,10 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ReduceByKey)
                                         d_output,
                                         output.size() * sizeof(V),
                                         hipMemcpyDeviceToHost));
+                    hipFree(d_temp_storage);
                     return output;
                 });
 
-            hipFree(d_temp_storage);
             hipFree(d_input);
             hipFree(d_output);
             hipFree(d_unique_count_output);
