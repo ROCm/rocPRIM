@@ -114,61 +114,63 @@ enum class lookback_scan_determinism
 template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 7)>
 struct lookback_scan_state;
 
-/// Reduce lanes `0-valid_items` and return the result in lane `device_warp_size() - 1`.
+/// Reduce lanes `0-valid_items` and return the result in lane 0.
 template<typename F, typename T>
 ROCPRIM_DEVICE ROCPRIM_INLINE T lookback_reduce_forward_init(F            scan_op,
                                                              T            block_prefix,
                                                              unsigned int valid_items)
 {
-    block_prefix = warp_shuffle_up(block_prefix, device_warp_size() - 1 - valid_items);
-    T prefix     = block_prefix;
-    for(int i = valid_items - 1; i >= 0; --i)
+    T prefix = block_prefix;
+    for(unsigned int i = 0; i < valid_items; ++i)
     {
 #ifdef ROCPRIM_DETAIL_HAS_DPP_WF_ROTATE
-        block_prefix = warp_move_dpp<T, 0x13C>(block_prefix);
+        prefix = warp_move_dpp<T, 0x134 /* DPP_WF_RL1 */>(prefix);
 #else
-        block_prefix = warp_shuffle_up(block_prefix, 1);
+        prefix = warp_shuffle_down(prefix, 1);
 #endif
         prefix = scan_op(prefix, block_prefix);
     }
     return prefix;
 }
 
-/// Reduce all lanes with the `prefix`, which is taken from the `device_warp_size() - 1`th
-/// lane, and return the result in lane `device_warp_size() - 1`.
+/// Reduce all lanes with the `prefix`, which is taken from lane 0,
+/// and return the result in lane 0.
 template<typename F, typename T>
 ROCPRIM_DEVICE ROCPRIM_INLINE T lookback_reduce_forward(F scan_op, T prefix, T block_prefix)
 {
 #ifdef ROCPRIM_DETAIL_HAS_DPP_WF
     ROCPRIM_UNROLL
-    for(int i = device_warp_size() - 1; i >= 0; --i)
+    for(unsigned int i = 0; i < device_warp_size(); ++i)
     {
-        prefix       = scan_op(prefix, block_prefix);
-        block_prefix = warp_move_dpp<T, 0x13C /* DPP_WF_RR1 */>(block_prefix);
+        prefix = warp_move_dpp<T, 0x134 /* DPP_WF_RL1 */>(prefix);
+        prefix = scan_op(prefix, block_prefix);
     }
 #elif ROCPRIM_DETAIL_USE_DPP == 1
     // If we can't rotate or shift the entire wavefront in one instruction,
     // iterate over rows of 16 lanes and use warp_readlane to communicate across rows.
     constexpr const int row_size = 16;
     ROCPRIM_UNROLL
-    for(int j = device_warp_size() - 1; j > 0; j -= row_size)
+    for(int j = device_warp_size(); j > 0; j -= row_size)
     {
-        ROCPRIM_UNROLL
-        for(int i = 0; i < row_size; ++i)
-        {
-            prefix       = scan_op(prefix, block_prefix);
-            block_prefix = warp_move_dpp<T, 0x121 /* DPP_ROW_RR1 */>(block_prefix);
-        }
+        prefix = warp_readlane(
+            prefix,
+            j /* automatically taken modulo device_warp_size(), first read is lane 0 */);
+        prefix = scan_op(prefix, block_prefix);
 
-        prefix = warp_readlane(prefix, j);
+        ROCPRIM_UNROLL
+        for(int i = 0; i < row_size - 1; ++i)
+        {
+            prefix = warp_move_dpp<T, 0x101 /* DPP_ROW_SL1 */>(prefix);
+            prefix = scan_op(prefix, block_prefix);
+        }
     }
 #else
     // If no DPP available at all, fall back to shuffles.
     ROCPRIM_UNROLL
-    for(int i = device_warp_size() - 1; i >= 0; --i)
+    for(unsigned int i = 0; i < device_warp_size(); ++i)
     {
-        prefix       = scan_op(prefix, block_prefix);
-        block_prefix = warp_shuffle_up(block_prefix, 1);
+        prefix = warp_shuffle(prefix, lane_id() + 1);
+        prefix = scan_op(prefix, block_prefix);
     }
 #endif
     return prefix;
@@ -408,7 +410,7 @@ public:
             prefix       = lookback_reduce_forward(scan_op, prefix, block_prefix);
         }
 
-        return warp_readlane(prefix, device_warp_size() - 1);
+        return warp_readfirstlane(prefix);
     }
 
 private:
@@ -674,7 +676,7 @@ public:
             prefix       = lookback_reduce_forward(scan_op, prefix, block_prefix);
         }
 
-        return warp_readlane(prefix, device_warp_size() - 1);
+        return warp_readfirstlane(prefix);
     }
 
 private:
