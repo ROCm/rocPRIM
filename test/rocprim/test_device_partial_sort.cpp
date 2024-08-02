@@ -126,7 +126,10 @@ void inline compare_cpp_17(InputVector     input,
 
     // Calculate sorted input results on host
     std::vector<key_type> sorted_input(input);
-    std::partial_sort(sorted_input.begin(), sorted_input.begin() + middle, sorted_input.end(), compare_op);
+    std::partial_sort(sorted_input.begin(),
+                      sorted_input.begin() + middle,
+                      sorted_input.end(),
+                      compare_op);
     std::sort(sorted_input.begin() + middle, sorted_input.end(), compare_op);
 
     // Calculate sorted output results on host

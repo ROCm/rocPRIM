@@ -47,6 +47,17 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
+#define RETURN_ON_ERROR(...)              \
+    do                                    \
+    {                                     \
+        hipError_t error = (__VA_ARGS__); \
+        if(error != hipSuccess)           \
+        {                                 \
+            return error;                 \
+        }                                 \
+    }                                     \
+    while(0)
+
 template<class Config, class KeysIterator, class BinaryFunction>
 hipError_t partial_sort_impl(void*          temporary_storage,
                              size_t&        storage_size,
@@ -67,38 +78,31 @@ hipError_t partial_sort_impl(void*          temporary_storage,
     // non-null placeholder so that no buffer is allocated for keys
     key_type* keys_buffer_placeholder = reinterpret_cast<key_type*>(1);
 
-    hipError_t result = nth_element_impl<config_nth_element>(nullptr,
-                                                             storage_size_nth_element,
-                                                             keys,
-                                                             middle,
-                                                             size,
-                                                             compare_function,
-                                                             stream,
-                                                             debug_synchronous,
-                                                             keys_buffer_placeholder);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
+    RETURN_ON_ERROR(nth_element_impl<config_nth_element>(nullptr,
+                                                         storage_size_nth_element,
+                                                         keys,
+                                                         middle,
+                                                         size,
+                                                         compare_function,
+                                                         stream,
+                                                         debug_synchronous,
+                                                         keys_buffer_placeholder));
 
     size_t storage_size_merge_sort{};
 
-    result = merge_sort_impl<config_merge_sort>(nullptr,
-                                                storage_size_merge_sort,
-                                                keys,
-                                                keys,
-                                                static_cast<empty_type*>(nullptr), // values_input
-                                                static_cast<empty_type*>(nullptr), // values_output
-                                                middle,
-                                                compare_function,
-                                                stream,
-                                                debug_synchronous,
-                                                keys_buffer_placeholder, // keys_buffer
-                                                static_cast<empty_type*>(nullptr)); // values_buffer
-    if(result != hipSuccess)
-    {
-        return result;
-    }
+    RETURN_ON_ERROR(
+        merge_sort_impl<config_merge_sort>(nullptr,
+                                           storage_size_merge_sort,
+                                           keys,
+                                           keys,
+                                           static_cast<empty_type*>(nullptr), // values_input
+                                           static_cast<empty_type*>(nullptr), // values_output
+                                           middle,
+                                           compare_function,
+                                           stream,
+                                           debug_synchronous,
+                                           keys_buffer_placeholder, // keys_buffer
+                                           static_cast<empty_type*>(nullptr))); // values_buffer
 
     void*     temporary_storage_nth_element = nullptr;
     void*     temporary_storage_merge_sort  = nullptr;
@@ -129,19 +133,20 @@ hipError_t partial_sort_impl(void*          temporary_storage,
 
     if(middle < size)
     {
-        result = nth_element_impl<config_nth_element>(temporary_storage_nth_element,
-                                                      storage_size_nth_element,
-                                                      keys,
-                                                      middle,
-                                                      size,
-                                                      compare_function,
-                                                      stream,
-                                                      debug_synchronous,
-                                                      keys_buffer);
-        if(result != hipSuccess)
-        {
-            return result;
-        }
+        RETURN_ON_ERROR(nth_element_impl<config_nth_element>(temporary_storage_nth_element,
+                                                             storage_size_nth_element,
+                                                             keys,
+                                                             middle,
+                                                             size,
+                                                             compare_function,
+                                                             stream,
+                                                             debug_synchronous,
+                                                             keys_buffer));
+    }
+
+    if(middle == 0)
+    {
+        return hipSuccess;
     }
 
     return merge_sort_impl<config_merge_sort>(temporary_storage_merge_sort,
@@ -253,16 +258,12 @@ hipError_t partial_sort_copy(void*              temporary_storage,
                      typename std::iterator_traits<KeysOutputIterator>::value_type>::value,
         "KeysInputIterator and KeysOutputIterator must have the same value_type");
 
-    hipError_t error = transform(keys_input,
-                                 keys_output,
-                                 size,
-                                 ::rocprim::identity<key_type>(),
-                                 stream,
-                                 debug_synchronous);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+    RETURN_ON_ERROR(transform(keys_input,
+                              keys_output,
+                              size,
+                              ::rocprim::identity<key_type>(),
+                              stream,
+                              debug_synchronous));
 
     return detail::partial_sort_impl<Config>(temporary_storage,
                                              storage_size,
@@ -366,6 +367,8 @@ hipError_t partial_sort(void*          temporary_storage,
 
 /// @}
 // end of group devicemodule
+
+#undef RETURN_ON_ERROR
 
 END_ROCPRIM_NAMESPACE
 
