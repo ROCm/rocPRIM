@@ -165,15 +165,30 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
 
                 // Allocate temporary storage
                 size_t temp_storage_size_bytes{};
-                HIP_CHECK(rocprim::partial_sort<config>(nullptr,
-                                                        temp_storage_size_bytes,
-                                                        d_input,
-                                                        d_output,
-                                                        middle,
-                                                        size,
-                                                        compare_op,
-                                                        stream,
-                                                        debug_synchronous));
+                if(in_place)
+                {
+                    HIP_CHECK(rocprim::partial_sort<config>(nullptr,
+                                                            temp_storage_size_bytes,
+                                                            d_input,
+                                                            middle,
+                                                            size,
+                                                            compare_op,
+                                                            stream,
+                                                            debug_synchronous));
+                }
+                else
+                {
+                    HIP_CHECK(rocprim::partial_sort_copy<config>(nullptr,
+                                                                 temp_storage_size_bytes,
+                                                                 d_input,
+                                                                 d_output,
+                                                                 middle,
+                                                                 size,
+                                                                 compare_op,
+                                                                 stream,
+                                                                 debug_synchronous));
+                }
+
                 ASSERT_GT(temp_storage_size_bytes, 0);
                 void* d_temp_storage{};
                 HIP_CHECK(
@@ -184,16 +199,30 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                 {
                     graph = test_utils::createGraphHelper(stream);
                 }
+                if(in_place)
+                {
+                    HIP_CHECK(rocprim::partial_sort<config>(d_temp_storage,
+                                                            temp_storage_size_bytes,
+                                                            d_input,
+                                                            middle,
+                                                            size,
+                                                            compare_op,
+                                                            stream,
+                                                            debug_synchronous));
+                }
+                else
+                {
+                    HIP_CHECK(rocprim::partial_sort_copy<config>(d_temp_storage,
+                                                                 temp_storage_size_bytes,
+                                                                 d_input,
+                                                                 d_output,
+                                                                 middle,
+                                                                 size,
+                                                                 compare_op,
+                                                                 stream,
+                                                                 debug_synchronous));
+                }
 
-                HIP_CHECK(rocprim::partial_sort<config>(d_temp_storage,
-                                                        temp_storage_size_bytes,
-                                                        d_input,
-                                                        d_output,
-                                                        middle,
-                                                        size,
-                                                        compare_op,
-                                                        stream,
-                                                        debug_synchronous));
                 HIP_CHECK(hipGetLastError());
 
                 hipGraphExec_t graph_instance;

@@ -67,11 +67,11 @@ struct device_partial_sort_benchmark : public config_autotune_interface
     {
         using key_type = Key;
 
-        size_t nth = 10;
+        size_t middle = 10;
 
         if(!small_n)
         {
-            nth = size / 2;
+            middle = size / 2;
         }
 
         // Generate data
@@ -105,30 +105,30 @@ struct device_partial_sort_benchmark : public config_autotune_interface
 
         void*  d_temporary_storage     = nullptr;
         size_t temporary_storage_bytes = 0;
-        HIP_CHECK(rocprim::partial_sort(d_temporary_storage,
-                                       temporary_storage_bytes,
-                                       d_keys_input,
-                                       d_keys_output,
-                                       nth,
-                                       size,
-                                       lesser_op,
-                                       stream,
-                                       false));
+        HIP_CHECK(rocprim::partial_sort_copy(d_temporary_storage,
+                                             temporary_storage_bytes,
+                                             d_keys_input,
+                                             d_keys_output,
+                                             middle,
+                                             size,
+                                             lesser_op,
+                                             stream,
+                                             false));
 
         HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
 
         // Warm-up
         for(size_t i = 0; i < warmup_size; i++)
         {
-            HIP_CHECK(rocprim::partial_sort(d_temporary_storage,
-                                           temporary_storage_bytes,
-                                           d_keys_input,
-                                           d_keys_output,
-                                           nth,
-                                           size,
-                                           lesser_op,
-                                           stream,
-                                           false));
+            HIP_CHECK(rocprim::partial_sort_copy(d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_keys_input,
+                                                 d_keys_output,
+                                                 middle,
+                                                 size,
+                                                 lesser_op,
+                                                 stream,
+                                                 false));
         }
         HIP_CHECK(hipDeviceSynchronize());
 
@@ -144,15 +144,15 @@ struct device_partial_sort_benchmark : public config_autotune_interface
 
             for(size_t i = 0; i < batch_size; i++)
             {
-                HIP_CHECK(rocprim::partial_sort(d_temporary_storage,
-                                               temporary_storage_bytes,
-                                               d_keys_input,
-                                               d_keys_output,
-                                               nth,
-                                               size,
-                                               lesser_op,
-                                               stream,
-                                               false));
+                HIP_CHECK(rocprim::partial_sort_copy(d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_keys_input,
+                                                     d_keys_output,
+                                                     middle,
+                                                     size,
+                                                     lesser_op,
+                                                     stream,
+                                                     false));
             }
 
             // Record stop event and wait until it completes

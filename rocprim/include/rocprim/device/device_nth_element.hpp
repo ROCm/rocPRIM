@@ -339,24 +339,18 @@ ROCPRIM_INLINE hipError_t nth_element(void*              temporary_storage,
 namespace detail
 {
 
-template<class Config, class KeysInputIterator, class KeysOutputIterator, class BinaryFunction>
-hipError_t partial_sort_impl(void*              temporary_storage,
-                             size_t&            storage_size,
-                             KeysInputIterator  keys_input,
-                             KeysOutputIterator keys_output,
-                             size_t             middle,
-                             size_t             size,
-                             BinaryFunction     compare_function,
-                             hipStream_t        stream,
-                             bool               debug_synchronous)
+template<class Config, class KeysIterator, class BinaryFunction>
+hipError_t partial_sort_impl(void*          temporary_storage,
+                             size_t&        storage_size,
+                             KeysIterator   keys,
+                             size_t         middle,
+                             size_t         size,
+                             BinaryFunction compare_function,
+                             hipStream_t    stream,
+                             bool           debug_synchronous)
 {
-    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
-    static_assert(
-        std::is_same<key_type,
-                     typename std::iterator_traits<KeysOutputIterator>::value_type>::value,
-        "KeysInputIterator and KeysOutputIterator must have the same value_type");
-
-    using config = wrapped_nth_element_config<Config, key_type>;
+    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+    using config   = wrapped_nth_element_config<Config, key_type>;
 
     target_arch target_arch;
     hipError_t  result = host_target_arch(stream, target_arch);
@@ -381,8 +375,8 @@ hipError_t partial_sort_impl(void*              temporary_storage,
 
     result = merge_sort_impl<default_config>(nullptr,
                                              storage_size_merge_sort,
-                                             keys_output,
-                                             keys_output,
+                                             keys,
+                                             keys,
                                              static_cast<empty_type*>(nullptr), // values_input
                                              static_cast<empty_type*>(nullptr), // values_output
                                              middle,
@@ -443,37 +437,23 @@ hipError_t partial_sort_impl(void*              temporary_storage,
         std::cout << "storage_size: " << storage_size << '\n';
     }
 
-    if(keys_input != keys_output)
-    {
-        hipError_t error = transform(keys_input,
-                                     keys_output,
-                                     size,
-                                     ::rocprim::identity<key_type>(),
-                                     stream,
-                                     debug_synchronous);
-        if(result != hipSuccess)
-        {
-            return result;
-        }
-    }
-
-    result = nth_element_keys_impl<config, num_partitions>(keys_output,
-                                                                 keys_buffer,
-                                                                 tree,
-                                                                 middle,
-                                                                 size,
-                                                                 buckets,
-                                                                 equality_buckets,
-                                                                 oracles,
-                                                                 lookback_states,
-                                                                 num_buckets,
-                                                                 stop_recursion_size,
-                                                                 num_threads_per_block,
-                                                                 num_items_per_threads,
-                                                                 nth_element_data,
-                                                                 compare_function,
-                                                                 stream,
-                                                                 debug_synchronous);
+    result = nth_element_keys_impl<config, num_partitions>(keys,
+                                                           keys_buffer,
+                                                           tree,
+                                                           middle,
+                                                           size,
+                                                           buckets,
+                                                           equality_buckets,
+                                                           oracles,
+                                                           lookback_states,
+                                                           num_buckets,
+                                                           stop_recursion_size,
+                                                           num_threads_per_block,
+                                                           num_items_per_threads,
+                                                           nth_element_data,
+                                                           compare_function,
+                                                           stream,
+                                                           debug_synchronous);
     if(result != hipSuccess)
     {
         return result;
@@ -481,8 +461,8 @@ hipError_t partial_sort_impl(void*              temporary_storage,
 
     return merge_sort_impl<default_config>(temporary_storage_merge_sort,
                                            storage_size_merge_sort,
-                                           keys_output,
-                                           keys_output,
+                                           keys,
+                                           keys,
                                            static_cast<empty_type*>(nullptr), // values_input
                                            static_cast<empty_type*>(nullptr), // values_output
                                            middle,
@@ -577,20 +557,136 @@ template<class Config = default_config,
          class KeysOutputIterator,
          class BinaryFunction
          = ::rocprim::less<typename std::iterator_traits<KeysInputIterator>::value_type>>
-hipError_t partial_sort(void*              temporary_storage,
-                        size_t&            storage_size,
-                        KeysInputIterator  keys_input,
-                        KeysOutputIterator keys_output,
-                        size_t             middle,
-                        size_t             size,
-                        BinaryFunction     compare_function  = BinaryFunction(),
-                        hipStream_t        stream            = 0,
-                        bool               debug_synchronous = false)
+hipError_t partial_sort_copy(void*              temporary_storage,
+                             size_t&            storage_size,
+                             KeysInputIterator  keys_input,
+                             KeysOutputIterator keys_output,
+                             size_t             middle,
+                             size_t             size,
+                             BinaryFunction     compare_function  = BinaryFunction(),
+                             hipStream_t        stream            = 0,
+                             bool               debug_synchronous = false)
+{
+    using key_type = typename std::iterator_traits<KeysInputIterator>::value_type;
+    static_assert(
+        std::is_same<key_type,
+                     typename std::iterator_traits<KeysOutputIterator>::value_type>::value,
+        "KeysInputIterator and KeysOutputIterator must have the same value_type");
+
+    hipError_t error = transform(keys_input,
+                                 keys_output,
+                                 size,
+                                 ::rocprim::identity<key_type>(),
+                                 stream,
+                                 debug_synchronous);
+    if(error != hipSuccess)
+    {
+        return error;
+    }
+
+    return detail::partial_sort_impl<Config>(temporary_storage,
+                                             storage_size,
+                                             keys_output,
+                                             middle,
+                                             size,
+                                             compare_function,
+                                             stream,
+                                             debug_synchronous);
+}
+
+/// \brief Parallel nth_element for device level.
+///
+/// `nth_element` function performs a device-wide nth_element,
+///   this function sets nth element as if the list was sorted.
+///   Also for all values `i` in `[first, nth)` and all values `j` in `[nth, last)`
+///   the condition `comp(*j, *i)` is `false` where `comp` is the compare function.
+///
+/// \par Overview
+/// * The contents of the inputs are not altered by the function.
+/// * Returns the required size of `temporary_storage` in `storage_size`
+/// if `temporary_storage` in a null pointer.
+/// * Accepts custom compare_functions for nth_element across the device.
+/// * Does not work with hipGraph
+///
+/// \tparam Config [optional] configuration of the primitive. It has to be `radix_sort_config`
+///   or a class derived from it.
+/// \tparam KeysIterator [inferred] random-access iterator type of the input range. Must meet the
+///   requirements of a C++ InputIterator concept. It can be a simple pointer type.
+/// \tparam CompareFunction [inferred] Type of binary function that accepts two arguments of the
+///   type `KeysIterator` and returns a value convertible to bool. Default type is `::rocprim::less<>.`
+///
+/// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
+///   a null pointer is passed, the required allocation size (in bytes) is written to
+/// `storage_size` and function returns without performing the sort operation.
+/// \param [in,out] storage_size reference to a size (in bytes) of `temporary_storage`.
+/// \param [in] keys_input iterator to the input range.
+/// \param [out] keys_output iterator to the output range. Allowed to point to the same elements as `keys_input`.
+///   Only complete overlap or no overlap at all is allowed between `keys_input` and `keys_output`. In other words
+///   writing to `keys_output[i]` is only allowed to overwrite `keys_input[i]`, any other element must not be changed.
+/// \param [in] nth The index of the nth_element in the input range.
+/// \param [in] size number of element in the input range.
+/// \param [in] compare_function binary operation function object that will be used for comparison.
+///   The signature of the function should be equivalent to the following:
+///   <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
+///   <tt>const &</tt>, but function object must not modify the objects passed to it.
+///   The comperator must meet the C++ named requirement Compare.
+///   The default value is `BinaryFunction()`.
+/// \param [in] stream [optional] HIP stream object. Default is `0` (default stream).
+/// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
+///   launch is forced in order to check for errors. Default value is `false`.
+///
+/// \returns `hipSuccess` (`0`) after successful sort; otherwise a HIP runtime error of
+///   type `hipError_t`.
+///
+/// \par Example
+/// \parblock
+/// In this example a device-level nth_element is performed where input keys are
+///   represented by an array of unsigned integers.
+///
+/// \code{.cpp}
+/// #include <rocprim/rocprim.hpp>
+///
+/// // Prepare input and output (declare pointers, allocate device memory etc.)
+/// size_t input_size;          // e.g., 8
+/// size_t nth;                 // e.g., 4
+/// unsigned int * keys_input;  // e.g., [ 6, 3, 5, 4, 1, 8, 2, 7 ]
+/// unsigned int * keys_output; // empty array of 8 elements
+///
+/// size_t temporary_storage_size_bytes;
+/// void * temporary_storage_ptr = nullptr;
+/// // Get required size of the temporary storage
+/// rocprim::nth_element(
+///     temporary_storage_ptr, temporary_storage_size_bytes,
+///     keys_input, keys_output, nth, input_size
+/// );
+///
+/// // allocate temporary storage
+/// hipMalloc(&temporary_storage_ptr, temporary_storage_size_bytes);
+///
+/// // perform nth_element
+/// rocprim::nth_element(
+///     temporary_storage_ptr, temporary_storage_size_bytes,
+///     keys_input, keys_output, nth, input_size
+/// );
+/// // possible keys_output:   [ 1, 3, 4, 2, 5, 8, 7, 6 ]
+/// \endcode
+/// \endparblock
+template<class Config = default_config,
+         class KeysIterator,
+         class BinaryFunction
+         = ::rocprim::less<typename std::iterator_traits<KeysIterator>::value_type>>
+hipError_t partial_sort(void*          temporary_storage,
+                        size_t&        storage_size,
+                        KeysIterator   keys,
+                        size_t         middle,
+                        size_t         size,
+                        BinaryFunction compare_function  = BinaryFunction(),
+                        hipStream_t    stream            = 0,
+                        bool           debug_synchronous = false)
 {
     return detail::partial_sort_impl<Config>(temporary_storage,
                                              storage_size,
-                                             keys_input,
-                                             keys_output,
+                                             keys,
                                              middle,
                                              size,
                                              compare_function,
