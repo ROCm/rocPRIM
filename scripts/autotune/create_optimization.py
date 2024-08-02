@@ -491,6 +491,77 @@ class AlgorithmDeviceTransform(Algorithm):
     config_selection_params = [
         SelectionType(name='value_type', is_optional=False)]
 
+class AlgorithmDevicePartitionTwoWayPredicate(Algorithm):
+    algorithm_name = 'device_partition_two_way_predicate'
+    cpp_configuration_template_name = 'partition_two_way_predicate_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDevicePartitionTwoWayFlag(Algorithm):
+    algorithm_name = 'device_partition_two_way_flag'
+    cpp_configuration_template_name = 'partition_two_way_flag_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDevicePartitionFlag(Algorithm):
+    algorithm_name = 'device_partition_flag'
+    cpp_configuration_template_name = 'partition_flag_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDevicePartitionPredicate(Algorithm):
+    algorithm_name = 'device_partition_predicate'
+    cpp_configuration_template_name = 'partition_predicate_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDevicePartitionThreeWay(Algorithm):
+    algorithm_name = 'device_partition_three_way'
+    cpp_configuration_template_name = 'partition_three_way_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDeviceSelectFlag(Algorithm):
+    algorithm_name = 'device_select_flag'
+    cpp_configuration_template_name = 'select_flag_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDeviceSelectPredicate(Algorithm):
+    algorithm_name = 'device_select_predicate'
+    cpp_configuration_template_name = 'select_predicate_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDeviceSelectUnique(Algorithm):
+    algorithm_name = 'device_select_unique'
+    cpp_configuration_template_name = 'select_unique_config_template'
+    config_selection_params = [SelectionType(name='data_type', is_optional=False)]
+
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
+class AlgorithmDeviceSelectUniqueByKey(Algorithm):
+    algorithm_name = 'device_select_unique_by_key'
+    cpp_configuration_template_name = 'select_unique_by_key_config_template'
+    config_selection_params = [
+            SelectionType(name='key_type', is_optional=False),
+            SelectionType(name='value_type', is_optional=False)]
+
     def __init__(self, fallback_entries):
         Algorithm.__init__(self, fallback_entries)
 
@@ -531,6 +602,24 @@ def create_algorithm(algorithm_name: str, fallback_entries):
         return AlgorithmDeviceSegmentedRadixSort(fallback_entries)
     elif algorithm_name == 'device_transform':
         return AlgorithmDeviceTransform(fallback_entries)
+    elif algorithm_name == 'device_partition_two_way_predicate':
+        return AlgorithmDevicePartitionTwoWayPredicate(fallback_entries)
+    elif algorithm_name == 'device_partition_two_way_flag':
+        return AlgorithmDevicePartitionTwoWayFlag(fallback_entries)
+    elif algorithm_name == 'device_partition_flag':
+        return AlgorithmDevicePartitionFlag(fallback_entries)
+    elif algorithm_name == 'device_partition_predicate':
+        return AlgorithmDevicePartitionPredicate(fallback_entries)
+    elif algorithm_name == 'device_partition_three_way':
+        return AlgorithmDevicePartitionThreeWay(fallback_entries)
+    elif algorithm_name == 'device_select_flag':
+        return AlgorithmDeviceSelectFlag(fallback_entries)
+    elif algorithm_name == 'device_select_predicate':
+        return AlgorithmDeviceSelectPredicate(fallback_entries)
+    elif algorithm_name == 'device_select_unique':
+        return AlgorithmDeviceSelectUnique(fallback_entries)
+    elif algorithm_name == 'device_select_unique_by_key':
+        return AlgorithmDeviceSelectUniqueByKey(fallback_entries)
     else:
         raise(NotSupportedError(f'Algorithm "{algorithm_name}" is not supported (yet)'))
 
@@ -594,6 +683,8 @@ class BenchmarkDataManager:
         In case the Algorithm object does not exist, a new object will be created.
         """
         algorithm_name: str = single_benchmark['lvl'] + "_" + single_benchmark['algo']
+        if 'subalgo' in single_benchmark:
+            algorithm_name += "_" + single_benchmark['subalgo']
         if algorithm_name not in self.algorithms:
             self.algorithms[algorithm_name] = create_algorithm(algorithm_name, self.fallback_entries)
         self.algorithms[algorithm_name].add_measurement(single_benchmark, arch)

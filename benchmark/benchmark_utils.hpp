@@ -26,6 +26,7 @@
 // rocPRIM
 #include <rocprim/block/block_scan.hpp>
 #include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp> // partition_config_params
 #include <rocprim/types.hpp>
 
 #include <algorithm>
@@ -706,6 +707,11 @@ struct Traits
 };
 
 // Explicit definitions
+template<>
+inline const char* Traits<char>::name()
+{
+    return "char";
+}
 template <>
 inline const char* Traits<int>::name() { return "int"; }
 template <>
@@ -757,6 +763,11 @@ template<>
 inline const char* Traits<custom_type<double, double>>::name()
 {
     return "custom_type<double,double>";
+}
+template<>
+inline const char* Traits<custom_type<int, double>>::name()
+{
+    return "custom_type<int,double>";
 }
 template<>
 inline const char* Traits<custom_type<char, double>>::name()
@@ -914,5 +925,19 @@ struct alignas(Alignment) custom_aligned_type
 {
     unsigned char data[Size];
 };
+
+template<typename Config>
+std::string partition_config_name()
+{
+    const rocprim::detail::partition_config_params config = Config();
+    return "{bs:" + std::to_string(config.kernel_config.block_size)
+           + ",ipt:" + std::to_string(config.kernel_config.items_per_thread) + "}";
+}
+
+template<>
+inline std::string partition_config_name<rocprim::default_config>()
+{
+    return "default_config";
+}
 
 #endif // ROCPRIM_BENCHMARK_UTILS_HPP_
