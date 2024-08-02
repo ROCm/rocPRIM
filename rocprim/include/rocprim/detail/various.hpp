@@ -190,7 +190,7 @@ struct [[deprecated("To store non default-constructible types in local memory, u
     typedef typename detail::match_fundamental_type<T>::type device_word;
 
     // Backing storage
-    device_word storage[sizeof(T) / sizeof(device_word)];
+    alignas(device_word) unsigned char storage[sizeof(T)];
 
     // Alias
     ROCPRIM_HOST_DEVICE T& get()
