@@ -109,7 +109,10 @@ struct test_type_helper
     /// Initialize some random data for this type, of \p n elements and with random seed <tt>seed</tt>.
     static std::vector<T> get_random_data(size_t n, seed_type seed)
     {
-        return test_utils::get_random_data<T>(n, static_cast<T>(-100), static_cast<T>(100), seed);
+        return test_utils::get_random_data<T>(n,
+                                              test_utils::saturate_cast<T>(-100),
+                                              test_utils::saturate_cast<T>(100),
+                                              seed);
     }
 };
 
