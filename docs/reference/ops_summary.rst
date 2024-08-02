@@ -32,6 +32,7 @@ Rearrangement
 ================
 
 * ``sort`` rearranges the sequence by sorting it. It could be according to a comparison operator or a value using a radix approach
+* ``nth_element`` places the nth element in its sorted position, with elements less-than before, and greater after, according to a comparison operator.
 * ``exchange`` rearranges the elements according to a different stride configuration which is equivalent to a tensor axis transposition
 * ``shuffle`` rotates the elements
 

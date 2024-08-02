@@ -23,3 +23,4 @@
    * :ref:`dev-histogram`
    * :ref:`dev-device_copy`
    * :ref:`dev-memcpy`
+   * :ref:`dev-nth_element`
