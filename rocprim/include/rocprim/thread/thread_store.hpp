@@ -140,14 +140,9 @@ ROCPRIM_ASM_THREAD_STORE_GROUP(store_cs, "", "s_waitcnt", "");
 /// \tparam T               Type of Data to be stored
 /// \param itr [in]         Iterator to location where data is to be stored
 /// \param val [in]         Data to be stored
-template <
-    cache_store_modifier MODIFIER = store_default,
-    typename OutputIteratorT,
-    typename T
->
-ROCPRIM_DEVICE ROCPRIM_INLINE void thread_store(
-    OutputIteratorT itr,
-    T               val)
+template<cache_store_modifier MODIFIER = store_default, typename OutputIteratorT, typename T>
+[[deprecated("Use a dereference instead.")]] ROCPRIM_DEVICE ROCPRIM_INLINE void
+    thread_store(OutputIteratorT itr, T val)
 {
     thread_store<MODIFIER>(&(*itr), val);
 }
@@ -157,13 +152,9 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void thread_store(
 /// \tparam T        Type of Data to be stored
 /// \param ptr [in]  Pointer to location where data is to be stored
 /// \param val [in]  Data to be stored
-template <
-    cache_store_modifier MODIFIER = store_default,
-    typename T
->
-ROCPRIM_DEVICE ROCPRIM_INLINE void thread_store(
-    T *ptr,
-    T val)
+template<cache_store_modifier MODIFIER = store_default, typename T>
+[[deprecated("Use a dereference instead.")]] ROCPRIM_DEVICE ROCPRIM_INLINE void thread_store(T* ptr,
+                                                                                             T  val)
 {
 #ifndef __HIP_CPU_RT__
     detail::AsmThreadStore<MODIFIER, T>(ptr, val);

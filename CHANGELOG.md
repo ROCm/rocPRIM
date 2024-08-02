@@ -21,6 +21,10 @@ Documentation for rocPRIM is available at
 * rocPRIM functions are no longer forcefully inlined on Windows, significantly reducing the build
   time in debug builds.
 
+### Deprecations
+
+* `rocprim::thread_load` and `rocprim::thread_store`, use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
+
 ## Unreleased rocPRIM-3.2.0 for ROCm 6.2.0
 
 ### Additions

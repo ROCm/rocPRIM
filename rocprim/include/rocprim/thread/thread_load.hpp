@@ -141,14 +141,12 @@ ROCPRIM_ASM_THREAD_LOAD_GROUP(load_cs, "", "s_waitcnt", "");
 /// \tparam InputIteratorT Type of Output Iterator
 /// \param itr [in] Iterator to location where data is to be stored
 /// \return Data that is loaded from memory
-template <
-    cache_load_modifier MODIFIER = load_default,
-    typename InputIteratorT>
-ROCPRIM_DEVICE ROCPRIM_INLINE
-typename std::iterator_traits<InputIteratorT>::value_type
-thread_load(InputIteratorT itr)
+template<cache_load_modifier MODIFIER = load_default, typename InputIteratorT>
+[[deprecated("Use a dereference instead.")]] ROCPRIM_DEVICE ROCPRIM_INLINE
+    typename std::iterator_traits<InputIteratorT>::value_type
+    thread_load(InputIteratorT itr)
 {
-    using T = typename std::iterator_traits<InputIteratorT>::value_type;
+    using T  = typename std::iterator_traits<InputIteratorT>::value_type;
     T retval = thread_load<MODIFIER>(&(*itr));
     return *itr;
 }
@@ -158,11 +156,8 @@ thread_load(InputIteratorT itr)
 /// \tparam T Type of Data to be loaded
 /// \param ptr [in] - Pointer to data to be loaded
 /// \return Data that is loaded from memory
-template <
-    cache_load_modifier MODIFIER = load_default,
-    typename T>
-ROCPRIM_DEVICE ROCPRIM_INLINE
-T thread_load(T* ptr)
+template<cache_load_modifier MODIFIER = load_default, typename T>
+[[deprecated("Use a dereference instead.")]] ROCPRIM_DEVICE ROCPRIM_INLINE T thread_load(T* ptr)
 {
 #ifndef __HIP_CPU_RT__
     return detail::AsmThreadLoad<MODIFIER, T>(ptr);
