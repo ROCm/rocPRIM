@@ -27,8 +27,6 @@
 
 #include "../common_test_header.hpp"
 
-#include <algorithm>
-#include <cinttypes>
 #include <rocprim/functional.hpp>
 
 #include <rocprim/device/device_nth_element.hpp>
@@ -41,14 +39,10 @@
 #include <cstddef>
 
 // Params for tests
-template<class KeyType,
-         class ValueType       = KeyType,
-         class CompareFunction = ::rocprim::less<KeyType>,
-         bool UseGraphs        = false>
+template<class KeyType, class CompareFunction = ::rocprim::less<KeyType>, bool UseGraphs = false>
 struct DeviceNthelementParams
 {
     using key_type                   = KeyType;
-    using value_type                 = ValueType;
     using compare_function           = CompareFunction;
     static constexpr bool use_graphs = UseGraphs;
 };
@@ -62,32 +56,30 @@ class RocprimDeviceNthelementTests : public ::testing::Test
 {
 public:
     using key_type               = typename Params::key_type;
-    using value_type             = typename Params::value_type;
     using compare_function       = typename Params::compare_function;
     const bool debug_synchronous = false;
     bool       use_graphs        = Params::use_graphs;
 };
 
 using RocprimDeviceNthelementTestsParams = ::testing::Types<
-    DeviceNthelementParams<unsigned short, int>,
-    DeviceNthelementParams<signed char, test_utils::custom_test_type<float>>,
+    DeviceNthelementParams<unsigned short>,
+    DeviceNthelementParams<signed char>,
     DeviceNthelementParams<int>,
     DeviceNthelementParams<test_utils::custom_test_type<int>>,
     DeviceNthelementParams<unsigned long>,
     DeviceNthelementParams<long long>,
-    DeviceNthelementParams<float, double>,
-    DeviceNthelementParams<int8_t, int8_t>,
-    DeviceNthelementParams<uint8_t, uint8_t>,
-    DeviceNthelementParams<rocprim::half, rocprim::half, rocprim::less<rocprim::half>>,
-    DeviceNthelementParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
-    DeviceNthelementParams<short, test_utils::custom_test_type<int>>,
-    DeviceNthelementParams<double, test_utils::custom_test_type<double>>,
-    DeviceNthelementParams<test_utils::custom_test_type<float>,
-                           test_utils::custom_test_type<double>>,
-    DeviceNthelementParams<int, test_utils::custom_float_type>,
+    DeviceNthelementParams<float>,
+    DeviceNthelementParams<int8_t>,
+    DeviceNthelementParams<uint8_t>,
+    DeviceNthelementParams<rocprim::half, rocprim::less<rocprim::half>>,
+    DeviceNthelementParams<rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
+    DeviceNthelementParams<short>,
+    DeviceNthelementParams<double>,
+    DeviceNthelementParams<test_utils::custom_test_type<float>>,
+    DeviceNthelementParams<test_utils::custom_float_type>,
     DeviceNthelementParams<test_utils::custom_test_array_type<int, 4>>,
-    // DeviceNthelementParams<int, int, ::rocprim::less<int>, true>, // Bug with graphs
-    DeviceNthelementParams<int, float, ::rocprim::greater<int>>>;
+    // DeviceNthelementParams<int, ::rocprim::less<int>, true>, // Bug with graphs
+    DeviceNthelementParams<int, ::rocprim::greater<int>>>;
 
 TYPED_TEST_SUITE(RocprimDeviceNthelementTests, RocprimDeviceNthelementTestsParams);
 
@@ -121,8 +113,12 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             in_place = !in_place;
-
-            auto nth_element = size / 2;
+            size_t nth_element = 0;
+            if (size > 0)
+            {
+                nth_element = rand() % size;
+            }
+            
             SCOPED_TRACE(testing::Message() << "with nth_element = " << nth_element);
 
             // Generate data
@@ -265,7 +261,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKeySame)
         hipStream_t stream = 0; // default
         SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-        auto nth_element = size / 2;
+        auto nth_element = 0;
         SCOPED_TRACE(testing::Message() << "with nth_element = " << nth_element);
 
         // Generate data
