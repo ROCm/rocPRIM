@@ -23,6 +23,7 @@ subtrees:
           - file: device_ops/transform.rst
           - file: device_ops/unique.rst
           - file: device_ops/sort.rst
+          - file: device_ops/partial_sort.rst
           - file: device_ops/nth_element.rst
           - file: device_ops/merge.rst
           - file: device_ops/partition.rst
