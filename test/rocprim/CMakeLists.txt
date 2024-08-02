@@ -217,6 +217,16 @@ ${TEST_TYPE_SLICE_COUNT} test type slice(s) for test target ${TEST_TARGET}")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SOURCES})
 endfunction()
 
+function(add_rocprim_cpp17_test TEST_NAME TEST_SOURCES)
+  add_rocprim_test(${TEST_NAME} ${TEST_SOURCES})
+  get_rocprim_test_target(${TEST_SOURCES} TEST_TARGET)
+  # Request C++ standard 17, but decay to a previous version if not available:
+  set_target_properties(${TEST_TARGET}
+    PROPERTIES
+    CXX_STANDARD 17)
+endfunction()
+
+
 # ****************************************************************************
 # Tests
 # ****************************************************************************
@@ -249,7 +259,7 @@ add_rocprim_test("rocprim.device_adjacent_difference" test_device_adjacent_diffe
 add_rocprim_test("rocprim.device_histogram" test_device_histogram.cpp)
 add_rocprim_test("rocprim.device_merge" test_device_merge.cpp)
 add_rocprim_test("rocprim.device_merge_sort" test_device_merge_sort.cpp)
-add_rocprim_test("rocprim.nth_element" test_device_nth_element.cpp)
+add_rocprim_cpp17_test("rocprim.nth_element" test_device_nth_element.cpp)
 add_rocprim_test("rocprim.device_partition" test_device_partition.cpp)
 add_rocprim_test_parallel("rocprim.device_radix_sort" test_device_radix_sort.cpp.in)
 add_rocprim_test("rocprim.device_reduce_by_key" test_device_reduce_by_key.cpp)

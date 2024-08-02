@@ -36,6 +36,7 @@
 #include <rocprim/device/device_nth_element.hpp>
 #include <rocprim/functional.hpp>
 
+#include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <vector>
@@ -57,6 +58,80 @@ struct DeviceNthelementParams
     static constexpr bool use_graphs            = UseGraphs;
     static constexpr bool use_indirect_iterator = UseIndirectIterator;
 };
+
+template<class InputVector, class OutputVector, class CompareFunction>
+void inline compare_cpp_14(InputVector     input,
+                           OutputVector    output,
+                           size_t          nth_element,
+                           CompareFunction compare_op)
+{
+    using key_type = typename InputVector::value_type;
+
+    // Calculate sorted input results on host
+    std::vector<key_type> sorted_input(input);
+    std::sort(sorted_input.begin(), sorted_input.end(), compare_op);
+
+    // Calculate sorted output results on host
+    std::vector<key_type> sorted_output(output);
+
+    // Sort numbers before nth element
+    std::sort(sorted_output.begin(), sorted_output.begin() + nth_element, compare_op);
+
+    // Sort numbers after nth element
+    std::sort(sorted_output.begin() + nth_element + 1, sorted_output.end(), compare_op);
+
+    // Check if the values are the same
+    ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(sorted_output, sorted_input));
+}
+
+#if CPP17
+template<class InputVector, class OutputVector, class CompareFunction>
+void inline compare_cpp_17(InputVector     input,
+                           OutputVector    output,
+                           size_t          nth_element,
+                           CompareFunction compare_op)
+{
+    using key_type = typename InputVector::value_type;
+
+    std::vector<key_type> sorted_input(input);
+    std::nth_element(sorted_input.begin(),
+                     sorted_input.begin() + nth_element,
+                     sorted_input.end(),
+                     compare_op);
+
+    // Sort numbers before nth element for input
+    std::sort(sorted_input.begin(), sorted_input.begin() + nth_element, compare_op);
+
+    // Sort numbers after nth element for input
+    std::sort(sorted_input.begin() + nth_element + 1, sorted_input.end(), compare_op);
+
+    // Calculate sorted output results on host
+    std::vector<key_type> sorted_output(output);
+
+    // Sort numbers before nth element for output
+    std::sort(sorted_output.begin(), sorted_output.begin() + nth_element, compare_op);
+
+    // Sort numbers after nth element for output
+    std::sort(sorted_output.begin() + nth_element + 1, sorted_output.end(), compare_op);
+
+    ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(sorted_output, sorted_input));
+}
+#endif
+
+template<class InputVector, class OutputVector, class CompareFunction>
+void inline compare(InputVector     input,
+                    OutputVector    output,
+                    size_t          nth_element,
+                    CompareFunction compare_op)
+{
+    compare_cpp_14(input, output, nth_element, compare_op);
+#if CPP17
+    // this comparison is only compiled and executed if c++17 is available
+    compare_cpp_17(input, output, nth_element, compare_op);
+#else
+    ROCPRIM_PRAGMA_MESSAGE("c++17 not available skips direct comparison with std::nth_element");
+#endif
+}
 
 // ---------------------------------------------------------
 // Test for ops taking single input value
@@ -183,10 +258,6 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             // compare function
             compare_function compare_op;
 
-            // Calculate sorted input results on host
-            std::vector<key_type> sorted_input(input);
-            std::sort(sorted_input.begin(), sorted_input.end(), compare_op);
-
             // temp storage
             size_t temp_storage_size_bytes;
             void*  d_temp_storage = nullptr;
@@ -268,27 +339,17 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
                                 output.size() * sizeof(*d_output),
                                 hipMemcpyDeviceToHost));
 
-            // Calculate sorted output results on host
-            std::vector<key_type> sorted_output(output);
-
-            // Sort numbers before nth element
-            std::sort(sorted_output.begin(), sorted_output.begin() + nth_element, compare_op);
-
-            // Sort numbers after nth element
             if(size > 0)
             {
-                std::sort(sorted_output.begin() + nth_element + 1, sorted_output.end(), compare_op);
+                compare(input, output, nth_element, compare_op);
             }
 
-            // Check if the values are the same
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(sorted_output, sorted_input));
-
-            hipFree(d_input);
+            HIP_CHECK(hipFree(d_input));
             if(!in_place)
             {
-                hipFree(d_output);
+                HIP_CHECK(hipFree(d_output));
             }
-            hipFree(d_temp_storage);
+            HIP_CHECK(hipFree(d_temp_storage));
 
             if(TestFixture::use_graphs)
             {
@@ -377,7 +438,7 @@ TEST(RocprimNthelementKeySameTests, NthelementKeySame)
         // Check if the values are the same
         ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(input, output));
 
-        hipFree(d_input);
-        hipFree(d_temp_storage);
+        HIP_CHECK(hipFree(d_input));
+        HIP_CHECK(hipFree(d_temp_storage));
     }
 }
