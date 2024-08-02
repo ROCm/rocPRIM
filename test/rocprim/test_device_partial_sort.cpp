@@ -70,7 +70,6 @@ public:
     static constexpr bool use_indirect_iterator = Params::use_indirect_iterator;
 };
 
-// TODO add custom config
 // TODO no graph support
 using RocprimDevicePartialSortTestsParams = ::testing::Types<
     DevicePartialSortParams<unsigned short>,
@@ -95,6 +94,64 @@ using RocprimDevicePartialSortTestsParams = ::testing::Types<
         rocprim::partial_sort_config<
             rocprim::
                 nth_element_config<128, 4, 32, 16, rocprim::block_radix_rank_algorithm::basic>>>>;
+
+template<class InputVector, class OutputVector, class CompareFunction>
+void inline compare_cpp_14(InputVector     input,
+                           OutputVector    output,
+                           size_t          middle,
+                           CompareFunction compare_op)
+{
+    using key_type = typename InputVector::value_type;
+
+    // Calculate sorted input results on host
+    std::vector<key_type> sorted_input(input);
+    std::sort(sorted_input.begin(), sorted_input.end(), compare_op);
+
+    // Calculate sorted output results on host
+    std::vector<key_type> sorted_output(output);
+    std::sort(sorted_output.begin() + middle, sorted_output.end(), compare_op);
+
+    // Check if the values are the same
+    ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(sorted_output, sorted_input));
+}
+
+#if CPP17
+template<class InputVector, class OutputVector, class CompareFunction>
+void inline compare_cpp_17(InputVector     input,
+                           OutputVector    output,
+                           size_t          middle,
+                           CompareFunction compare_op)
+{
+    using key_type = typename InputVector::value_type;
+
+    // Calculate sorted input results on host
+    std::vector<key_type> sorted_input(input);
+    std::partial_sort(sorted_input.begin(), sorted_input.begin() + middle, sorted_input.end(), compare_op);
+    std::sort(sorted_input.begin() + middle, sorted_input.end(), compare_op);
+
+    // Calculate sorted output results on host
+    std::vector<key_type> sorted_output(output);
+    std::sort(sorted_output.begin() + middle, sorted_output.end(), compare_op);
+
+    // Check if the values are the same
+    ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(sorted_output, sorted_input));
+}
+#endif
+
+template<class InputVector, class OutputVector, class CompareFunction>
+void inline compare(InputVector     input,
+                    OutputVector    output,
+                    size_t          middle,
+                    CompareFunction compare_op)
+{
+    compare_cpp_14(input, output, middle, compare_op);
+#if CPP17
+    // this comparison is only compiled and executed if c++17 is available
+    compare_cpp_17(input, output, middle, compare_op);
+#else
+    ROCPRIM_PRAGMA_MESSAGE("c++17 not available skips direct comparison with std::partial_sort");
+#endif
+}
 
 TYPED_TEST_SUITE(RocprimDevicePartialSortTests, RocprimDevicePartialSortTestsParams);
 
@@ -253,17 +310,13 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                                     d_output,
                                     size * sizeof(key_type),
                                     hipMemcpyDeviceToHost));
-                std::sort(output.begin() + middle, output.begin() + size, compare_op);
 
-                // Sort input fully to compare
-                std::sort(input.begin(), input.end(), compare_op);
-
-                ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, input));
+                compare(input, output, middle, compare_op);
 
                 HIP_CHECK(hipFree(d_input));
                 if(!in_place)
                 {
-                    hipFree(d_output);
+                    HIP_CHECK(hipFree(d_output));
                 }
                 HIP_CHECK(hipFree(d_temp_storage));
 
