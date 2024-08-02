@@ -202,7 +202,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
     }
 
     // Call the provided function with either scan_state or scan_state_with_sleep based on
-    // the value of use_sleep_scan_state
+    // the value of use_sleep
     auto with_scan_state
         = [use_sleep, scan_state, scan_state_with_sleep](auto&& func) mutable -> decltype(auto)
     {
