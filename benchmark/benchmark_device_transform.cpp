@@ -47,12 +47,9 @@
 const size_t DEFAULT_N = 1024 * 1024 * 128;
 #endif
 
-const unsigned int batch_size = 10;
-const unsigned int warmup_size = 5;
-
 #define CREATE_BENCHMARK(T)                                     \
     {                                                           \
-        const device_transform_benchmark<T> instance;           \
+        const device_transform_benchmark<T> instance{};         \
         REGISTER_BENCHMARK(benchmarks, size, stream, instance); \
     }
 

@@ -40,7 +40,7 @@
 #include "benchmark_utils.hpp"
 
 template<typename Config>
-std::string config_name()
+std::string transform_config_name()
 {
     auto config = Config();
     return "{bs:" + std::to_string(config.block_size)
@@ -48,7 +48,7 @@ std::string config_name()
 }
 
 template<>
-inline std::string config_name<rocprim::default_config>()
+inline std::string transform_config_name<rocprim::default_config>()
 {
     return "default_config";
 }
@@ -63,7 +63,7 @@ struct device_transform_benchmark : public config_autotune_interface
         using namespace std::string_literals;
         return bench_naming::format_name("{lvl:device,algo:transform,value_type:"
                                          + std::string(Traits<T>::name())
-                                         + ",cfg:" + config_name<Config>() + "}");
+                                         + ",cfg:" + transform_config_name<Config>() + "}");
     }
 
     static constexpr unsigned int batch_size  = 10;
