@@ -495,13 +495,8 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void
             if(sample_to_bin_op[channel](values[i].values[channel], bin))
             {
                 const unsigned int pos                 = flat_id * ItemsPerThread + i;
-                lane_mask_type     same_bin_lanes_mask = ::rocprim::ballot(pos < valid_count);
-                for(unsigned int b = 0; b < bins_bits[channel]; b++)
-                {
-                    const unsigned int   bit_set      = bin & (1u << b);
-                    const lane_mask_type bit_set_mask = ::rocprim::ballot(bit_set);
-                    same_bin_lanes_mask &= (bit_set ? bit_set_mask : ~bit_set_mask);
-                }
+                lane_mask_type     same_bin_lanes_mask = ::rocprim::match_any(bin, bins_bits[channel], pos < valid_count);
+                
                 if(::rocprim::group_elect(same_bin_lanes_mask))
                 {
                     // Write the number of lanes having this bin,
