@@ -494,8 +494,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         for(size_t item = 0; item < num_items_per_thread; item++)
         {
             const key_type element = elements[item];
-            // All buckets before the lower_bound go in bucket 0 in nth bucket 1 and after the upper_bound go in bucket 2
-            // If there is an equality bucket then equals needs to be included.
+            // Assign items to the offset of buckets:
+            // * 0 if the item is < lower bound and thus a bucket before nth-element
+            // * 1 if the item is in bounds and thus in the same bucket at nth-element
+            // * 2 if the item is > upper bound and thus in a bucket after nth-element
+            // If there is an equality bucket then the comparison needs to be inclusive.
             buckets[item] = ((nth_element > 0)
                              && (equality_bucket_before ? compare_function(lower_bound, element)
                                                         : !compare_function(element, lower_bound)))
