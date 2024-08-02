@@ -98,22 +98,23 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
                                         KeysIterator   output)
 {
     constexpr size_t num_items_per_block = num_items_per_threads * num_threads_per_block;
-    using block_rank_local_offset
-        = rocprim::block_radix_rank<num_threads_per_block, 2, block_radix_rank_algorithm::match>;
 
-    using block_load_buckets
+    using block_load_bucket_t
         = rocprim::block_load<unsigned char, num_threads_per_block, num_items_per_threads>;
-    block_load_buckets bload_buckets;
-
-    using block_load_elements
+    using block_rank_t
+        = rocprim::block_radix_rank<num_threads_per_block, 2, block_radix_rank_algorithm::match>;
+    using block_load_element_t
         = rocprim::block_load<Key, num_threads_per_block, num_items_per_threads>;
-    block_load_elements bload_elements;
 
-    __shared__ typename block_rank_local_offset::storage_type storage_bucket;
-    __shared__ typename block_load_buckets::storage_type      bucket_load_storage;
-    __shared__ typename block_load_elements::storage_type     elements_load_storage;
-    __shared__ unsigned int                                   local_bucket_count[num_buckets];
-    __shared__ size_t                                         buckets_block_offsets_shared[3];
+    ROCPRIM_SHARED_MEMORY union
+    {
+        typename block_load_bucket_t::storage_type  load_bucket;
+        typename block_rank_t::storage_type         rank;
+        typename block_load_element_t::storage_type load_element;
+    } storage;
+
+    __shared__ unsigned int local_bucket_count[num_buckets];
+    __shared__ size_t       buckets_block_offsets_shared[3];
 
     unsigned char buckets[num_items_per_threads];
 
@@ -127,21 +128,21 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
 
     if(offset + num_items_per_block <= size)
     {
-        bload_buckets.load(oracles + offset, buckets, bucket_load_storage);
+        block_load_bucket_t().load(oracles + offset, buckets, storage.load_bucket);
     }
     else
     {
         const size_t valid = size - offset;
-        bload_buckets.load(oracles + offset, buckets, valid, 3, bucket_load_storage);
+        block_load_bucket_t().load(oracles + offset, buckets, valid, 3, storage.load_bucket);
     }
 
     unsigned int ranks[num_items_per_threads];
-    unsigned int digit_prefix[block_rank_local_offset::digits_per_thread];
-    unsigned int digit_counts[block_rank_local_offset::digits_per_thread];
-    block_rank_local_offset().rank_keys(
+    unsigned int digit_prefix[block_rank_t::digits_per_thread];
+    unsigned int digit_counts[block_rank_t::digits_per_thread];
+    block_rank_t().rank_keys(
         buckets,
         ranks,
-        storage_bucket,
+        storage.rank,
         [](const int& key) { return key; },
         digit_prefix,
         digit_counts);
@@ -156,15 +157,18 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
     Key elements[num_items_per_threads];
     if(offset + num_items_per_block <= size)
     {
-        bload_elements.load(keys + offset, elements, elements_load_storage);
+        block_load_element_t().load(keys + offset, elements, storage.load_element);
     }
     else
     {
-        bload_elements.load(keys + offset, elements, size - offset, 0, elements_load_storage);
+        block_load_element_t().load(keys + offset,
+                                    elements,
+                                    size - offset,
+                                    0,
+                                    storage.load_element);
     }
 
-    const size_t thread_id
-        = (threadIdx.x * num_items_per_threads) + offset;
+    const size_t thread_id = (threadIdx.x * num_items_per_threads) + offset;
 
     ROCPRIM_UNROLL
     for(size_t item = 0; item < num_items_per_threads; item++)
@@ -327,9 +331,14 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
     using Key = typename std::iterator_traits<KeysIterator>::value_type;
 
     using block_load_key = rocprim::block_load<Key, num_threads_per_block, num_items_per_threads>;
-    block_load_key bload;
-    using block_store_oracle = rocprim::block_store<unsigned char, num_threads_per_block, num_items_per_threads>;
-    block_store_oracle bstore;
+    using block_store_oracle
+        = rocprim::block_store<unsigned char, num_threads_per_block, num_items_per_threads>;
+
+    ROCPRIM_SHARED_MEMORY union
+    {
+        typename block_load_key::storage_type     load;
+        typename block_store_oracle::storage_type store;
+    } storage;
 
     struct storage_type_
     {
@@ -338,17 +347,15 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
     };
     using storage_type = detail::raw_storage<storage_type_>;
 
-    __shared__ storage_type                          storage;
-    __shared__ typename block_load_key::storage_type key_load_storage;
-    __shared__ typename block_store_oracle::storage_type oracle_store_storage;
-    __shared__ size_t                                shared_buckets[3];
+    __shared__ storage_type                              raw_storage;
+    __shared__ size_t                                    shared_buckets[3];
 
     if(threadIdx.x < 3)
     {
         shared_buckets[threadIdx.x] = 0;
     }
 
-    storage_type_& storage_ = storage.get();
+    storage_type_& storage_ = raw_storage.get();
 
     const auto nth_element = nth_element_data[3];
     if(threadIdx.x < 2)
@@ -366,11 +373,11 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
 
     if(offset + num_items_per_block < size)
     {
-        bload.load(keys + offset, elements, key_load_storage);
+        block_load_key().load(keys + offset, elements, storage.load);
     }
     else
     {
-        bload.load(keys + offset, elements, size - offset, key_load_storage);
+        block_load_key().load(keys + offset, elements, size - offset, storage.load);
     }
 
     rocprim::syncthreads();
@@ -420,11 +427,11 @@ ROCPRIM_KERNEL void kernel_store_buckets(KeysIterator   keys,
 
     if(offset + num_items_per_block < size)
     {
-        bstore.store(oracles + offset, local_oracles, oracle_store_storage);
+        block_store_oracle().store(oracles + offset, local_oracles, storage.store);
     }
     else
     {
-        bstore.store(oracles + offset, local_oracles, size - offset, oracle_store_storage);
+        block_store_oracle().store(oracles + offset, local_oracles, size - offset, storage.store);
     }
 
     rocprim::syncthreads();
@@ -483,7 +490,7 @@ ROCPRIM_KERNEL void kernel_find_nth_element_bucket(size_t*      buckets_per_bloc
 
     __shared__ size_t bucket_offsets[num_buckets];
 
-    __shared__ union
+    ROCPRIM_SHARED_MEMORY union
     {
         typename block_scan_offsets::storage_type  bucket_offset;
         typename block_scan_find_nth::storage_type find_nth;
@@ -549,9 +556,17 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
         std::cout << "recursion level: " << recursion << std::endl;
     }
 
+    // Start point for time measurements
+    std::chrono::high_resolution_clock::time_point start;
+
     if(size < min_size)
     {
+        if(debug_synchronous)
+        {
+            start = std::chrono::high_resolution_clock::now();
+        }
         kernel_block_sort<min_size><<<1, min_size, 0, stream>>>(keys, size, compare_function);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_block_sort", size, start);
         return hipSuccess;
     }
 
@@ -569,16 +584,18 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
         return error;
     }
 
-    // Start point for time measurements
-    std::chrono::high_resolution_clock::time_point start;
     if(debug_synchronous)
+    {
         start = std::chrono::high_resolution_clock::now();
+    }
     // Currently launches power of 2 minus 1 threads
     kernel_find_splitters<num_splitters>
         <<<1, num_splitters, 0, stream>>>(keys, tree, equality_buckets, size, compare_function);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_find_splitters", size, start);
     if(debug_synchronous)
+    {
         start = std::chrono::high_resolution_clock::now();
+    }
     kernel_count_bucket_sizes<num_buckets, num_threads_per_block, num_items_per_threads>
         <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
                                                            tree,
@@ -589,7 +606,9 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
                                                            compare_function);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_count_bucket_sizes", size, start);
     if(debug_synchronous)
+    {
         start = std::chrono::high_resolution_clock::now();
+    }
     kernel_find_nth_element_bucket<num_buckets>
         <<<1, num_buckets, 0, stream>>>(buckets_per_block_offsets,
                                         buckets,
@@ -600,7 +619,9 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_find_nth_element_bucket", size, start);
 
     if(debug_synchronous)
+    {
         start = std::chrono::high_resolution_clock::now();
+    }
     kernel_store_buckets<num_buckets, num_threads_per_block, num_items_per_threads>
         <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
                                                            tree,
@@ -613,11 +634,13 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_store_buckets", size, start);
 
     if(debug_synchronous)
+    {
         start = std::chrono::high_resolution_clock::now();
+    }
     kernel_calc_block_offset<<<1, 3, 0, stream>>>(buckets_per_block_offsets,
                                                   nth_element_data,
                                                   num_blocks);
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_block_offset", size, start);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_calc_block_offset", size, start);
 
     if(debug_synchronous)
         start = std::chrono::high_resolution_clock::now();

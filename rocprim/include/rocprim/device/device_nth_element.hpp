@@ -65,7 +65,6 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     size_t* buckets                   = nullptr;
     size_t* buckets_per_block_offsets = nullptr;
     size_t* nth_element_data          = nullptr;
-    // Maximum of 128 buckets
     unsigned char* oracles          = nullptr;
     bool*          equality_buckets = nullptr;
 
