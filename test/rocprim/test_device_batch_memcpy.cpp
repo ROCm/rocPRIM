@@ -43,6 +43,87 @@
 
 #include <stdint.h>
 
+TEST(DeviceBatchMemcpyTests, BatchCopySimple)
+{
+    using value_type = uint8_t;
+    using size_type  = uint32_t;
+    std::vector<value_type> h_src(2048);
+    std::vector<value_type> h_dst(2048);
+    std::vector<size_type>  h_lengths{31, 64, 128, 256, 512, 1024, 33};
+    std::vector<size_type>  h_offsets(h_lengths.size());
+
+    std::iota(h_src.begin(), h_src.end(), 0);
+    std::partial_sum(h_lengths.begin(), h_lengths.end() - 1, h_offsets.begin() + 1);
+
+    value_type* d_src{};
+    value_type* d_dst{};
+
+    HIP_CHECK(hipMalloc(&d_src, h_src.size() * sizeof(value_type)));
+    HIP_CHECK(hipMalloc(&d_dst, h_dst.size() * sizeof(value_type)));
+    HIP_CHECK(
+        hipMemcpy(d_src, h_src.data(), h_src.size() * sizeof(value_type), hipMemcpyHostToDevice));
+
+    std::vector<value_type*> h_srcs(h_lengths.size(), d_src);
+    std::vector<value_type*> h_dsts(h_lengths.size(), d_dst);
+    std::transform(h_offsets.begin(),
+                   h_offsets.end(),
+                   h_srcs.begin(),
+                   [&](auto offset) { return d_src + offset; });
+    std::transform(h_offsets.begin(),
+                   h_offsets.end(),
+                   h_dsts.begin(),
+                   [&](auto offset) { return d_dst + offset; });
+
+    size_type*   d_lengths{};
+    value_type** d_srcs{};
+    value_type** d_dsts{};
+
+    HIP_CHECK(hipMalloc(&d_lengths, h_lengths.size() * sizeof(size_type)));
+    HIP_CHECK(hipMalloc(&d_srcs, h_srcs.size() * sizeof(value_type*)));
+    HIP_CHECK(hipMalloc(&d_dsts, h_dsts.size() * sizeof(value_type*)));
+
+    HIP_CHECK(hipMemcpy(d_lengths,
+                        h_lengths.data(),
+                        h_lengths.size() * sizeof(size_type),
+                        hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(d_srcs,
+                        h_srcs.data(),
+                        h_srcs.size() * sizeof(value_type*),
+                        hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(d_dsts,
+                        h_dsts.data(),
+                        h_dsts.size() * sizeof(value_type*),
+                        hipMemcpyHostToDevice));
+
+    size_t storage_size{};
+    rocprim::batch_copy(nullptr, storage_size, d_srcs, d_dsts, d_lengths, h_lengths.size());
+
+    void* temporary_storage{};
+    HIP_CHECK(hipMalloc(&temporary_storage, storage_size));
+
+    rocprim::batch_copy(temporary_storage,
+                        storage_size,
+                        d_srcs,
+                        d_dsts,
+                        d_lengths,
+                        h_lengths.size());
+
+    HIP_CHECK(
+        hipMemcpy(h_dst.data(), d_dst, h_dst.size() * sizeof(value_type), hipMemcpyDeviceToHost));
+
+    for(size_t i = 0; i < h_src.size(); ++i)
+    {
+        ASSERT_EQ(h_src[i], h_dst[i]) << "with i = " << i;
+    }
+
+    HIP_CHECK(hipFree(d_dst));
+    HIP_CHECK(hipFree(d_dsts));
+    HIP_CHECK(hipFree(d_src));
+    HIP_CHECK(hipFree(d_srcs));
+    HIP_CHECK(hipFree(d_lengths));
+    HIP_CHECK(hipFree(temporary_storage));
+}
+
 template<class ValueType,
          class SizeType,
          bool     IsMemCpy,
