@@ -21,8 +21,6 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_CONFIG_HELPER_HPP_
 #define ROCPRIM_DEVICE_DETAIL_CONFIG_HELPER_HPP_
 
-#include <cstddef>
-#include <rocprim/type_traits.hpp>
 #include <type_traits>
 
 #include "../../config.hpp"
@@ -1068,17 +1066,6 @@ template<unsigned int               BlockSize,
          unsigned int               SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct nth_element_config : public detail::nth_element_config_params
 {
-    // It needs enough splitters to choose from the input
-    static_assert(StopRecursionSize >= NumberOfBuckets,
-                  "StopRecursionSize should be larger or equal than the NumberOfBuckets");
-    // It loads in shared memory for the NumberOfBuckets for every thread
-    static_assert(BlockSize >= NumberOfBuckets,
-                  "BlockSize should be larger or equal than the NumberOfBuckets");
-    // It assumes the NumberOfBuckets of buckets is a power of two in the traversal
-    static_assert(detail::is_power_of_two(NumberOfBuckets), "NumberOfBuckets is a power of two");
-    // The buckets are stored in a uint8_t
-    static_assert(NumberOfBuckets <= 256, "NumberOfBuckets should be smaller or equal than 256");
-
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     constexpr nth_element_config()
         : detail::nth_element_config_params{

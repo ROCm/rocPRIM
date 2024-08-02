@@ -29,19 +29,17 @@
 
 #include "../../config.hpp"
 #include "../../intrinsics.hpp"
+#include "../../type_traits.hpp"
 
 #include "device_config_helper.hpp"
 
 #include <hip/amd_detail/amd_hip_runtime.h>
 #include <hip/hip_runtime.h>
 
-#include <rocprim/config.hpp>
-
 #include <iostream>
 
 #include <cstddef>
 #include <cstdio>
-#include <rocprim/intrinsics/thread.hpp>
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -221,6 +219,18 @@ ROCPRIM_KERNEL __launch_bounds__(
     constexpr unsigned int num_items_per_threads = params.kernel_config.items_per_thread;
     constexpr unsigned int num_splitters         = num_buckets - 1;
     constexpr unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
+
+    // It needs enough splitters to choose from the input
+    static_assert(params.stop_recursion_size >= num_buckets,
+                  "stop_recursion_size should be larger or equal than the number_of_buckets");
+    // It loads in shared memory for the number_of_buckets for every thread
+    static_assert(num_threads_per_block >= num_buckets,
+                  "num_threads_per_block should be larger or equal than the number_of_buckets");
+    // It assumes the number_of_buckets of buckets is a power of two in the traversal
+    static_assert(detail::is_power_of_two(num_buckets),
+                  "number_of_buckets should be a power of two");
+    // The buckets are stored in a uint8_t
+    static_assert(num_buckets <= 256, "number_of_buckets should be smaller or equal than 256");
 
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
