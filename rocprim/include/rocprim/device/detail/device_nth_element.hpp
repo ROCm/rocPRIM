@@ -270,8 +270,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     // It assumes the number_of_buckets of buckets is a power of two in the traversal
     static_assert(detail::is_power_of_two(num_buckets),
                   "number_of_buckets should be a power of two");
-    // The buckets are stored in a uint8_t
-    static_assert(num_buckets <= 256 && num_buckets >= 2, "number_of_buckets should from 2 to 256");
+    static_assert(num_buckets >= 2, "number_of_buckets should be larger than 2");
 
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
