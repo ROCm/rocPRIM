@@ -72,5 +72,6 @@ subtrees:
           - file: thread_ops/thread_store.rst
       - file: reference/iterators.rst
       - file: reference/intrinsics.rst
+      - file: reference/types.rst
       - file: reference/acknowledge.rst
   - file: license.rst
