@@ -75,13 +75,13 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
                                         size_t*        buckets_per_block,
                                         bool*          equality_buckets,
                                         unsigned char* oracles,
-                                        size_t*        nth_element_data)
+                                        size_t*        nth_element_data,
+                                        size_t*indices)
 {
     using block_scan_offsets = rocprim::block_scan<size_t, num_threads_per_block>;
 
     __shared__ typename block_scan_offsets::storage_type storage;
     __shared__ size_t bucket_offsets[num_buckets];
-    __shared__ size_t block_bucket_offsets[num_buckets];
 
     auto idx = threadIdx.x + (blockDim.x * blockIdx.x);
 
@@ -90,27 +90,31 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
     size_t init        = 0;
     block_scan_offsets().exclusive_scan(bucket_size, bucket_offset, init, storage);
 
+    rocprim::syncthreads();
+
     if (threadIdx.x < num_buckets)
     {
-        bucket_offsets[threadIdx.x] = bucket_offset;
-        block_bucket_offsets[threadIdx.x] = 0;
+        // TODO create this with scan or different kernel
         for (size_t i = 0; i < blockIdx.x; i++)
         {
-            block_bucket_offsets[threadIdx.x] += buckets_per_block[threadIdx.x + i * num_buckets];
+            bucket_offset += buckets_per_block[threadIdx.x + i * num_buckets];
         }
+        bucket_offsets[threadIdx.x] = bucket_offset;
     }
 
     rocprim::syncthreads();
 
     size_t num_buckets_before;
-    // Find offset and bucket size of nth element
+    // Find the data of the nth element
     using block_scan_find_nth = rocprim::block_scan<size_t, num_threads_per_block>;
 
     __shared__ typename block_scan_offsets::storage_type storage_find;
 
-    bool in_nth = threadIdx.x < num_buckets ? (bucket_offsets[idx] <= rank) : 0;
+    bool in_nth = idx < num_buckets ? (bucket_offsets[idx] <= rank) : 0;
 
     block_scan_find_nth().inclusive_scan(in_nth, num_buckets_before, storage_find);
+
+    rocprim::syncthreads();
 
     if(idx == (num_buckets - 1))
     {
@@ -120,29 +124,33 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
         nth_element_data[2]   = equality_buckets[nth_element];
     }
 
-    if (idx >= size)
-    {
-        return;
-    }
-    auto bucket  = oracles[idx];
-    auto element = keys[idx];
+    auto bucket  = idx < size ? oracles[idx] : 0;
+    auto element = idx < size ? keys[idx] : 0;
 
     using block_scan_local_offsets = rocprim::block_scan<size_t, num_threads_per_block>;
 
     __shared__ typename block_scan_local_offsets::storage_type storage_bucket;
-    size_t index = bucket_offsets[bucket] + block_bucket_offsets[bucket];
+    size_t index = bucket_offsets[bucket];
     for (int i = 0; i < num_buckets; i++)
     {
         size_t temp;
         size_t current_bucket = bucket == i;
         block_scan_local_offsets().exclusive_scan(current_bucket, temp, 0, storage_bucket);
 
+        rocprim::syncthreads();
+
         if (current_bucket)
         {
             index += temp;
         }
+        rocprim::syncthreads();
     }
-    keys[index] = element;
+
+    if (idx < size)
+    {
+        keys[index] = element;
+        indices[idx] = element;
+    }
 }
 
 template<size_t num_splitters, class KeysIterator, class BinaryFunction>
@@ -178,8 +186,8 @@ ROCPRIM_KERNEL void kernel_build_searchtree(KeysIterator   keys,
     if(idx > 0)
     {
         equality_bucket
-            = tree[idx - 1] == tree[idx]
-              && (idx == num_splitters-1 || tree[idx] < tree[idx + 1]);
+            = tree[idx - 1] == sample_buffer
+              && (idx == num_splitters-1 || sample_buffer < tree[idx + 1]);
     }
 
     equality_buckets[idx] = equality_bucket;
@@ -201,13 +209,11 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
     using Key = typename std::iterator_traits<KeysIterator>::value_type;
     
     __shared__ size_t shared_buckets[num_buckets];
-    
 
     auto idx = threadIdx.x + (blockDim.x * blockIdx.x);
 
     if (threadIdx.x < num_buckets)
     {
-        
         shared_buckets[threadIdx.x] = 0;
     }
 
@@ -285,7 +291,8 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
                                                 BinaryFunction compare_function,
                                                 hipStream_t    stream,
                                                 bool           debug_synchronous,
-                                                const size_t   recursion)
+                                                const size_t   recursion,
+                                                size_t* indices)
 {
     constexpr size_t num_splitters = num_buckets - 1;
     const size_t num_blocks = (size / num_threads_per_block) + 1;
@@ -319,12 +326,33 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
     }
 
     // Currently launches power of 2 minus 1 threads
-    kernel_build_searchtree<num_splitters>
-        <<<1, num_splitters, 0, stream>>>(keys, tree, equality_buckets, rank, size, compare_function, recursion);
+    kernel_build_searchtree<num_splitters><<<1, num_splitters, 0, stream>>>(keys,
+                                                                            tree,
+                                                                            equality_buckets,
+                                                                            rank,
+                                                                            size,
+                                                                            compare_function,
+                                                                            recursion);
     kernel_traversal_searchtree<num_buckets, num_threads_per_block>
-        <<<num_blocks, num_threads_per_block, 0, stream>>>(keys, tree, size, buckets, buckets_per_block, equality_buckets, oracles, tree_depth, compare_function);
+        <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
+                                                           tree,
+                                                           size,
+                                                           buckets,
+                                                           buckets_per_block,
+                                                           equality_buckets,
+                                                           oracles,
+                                                           tree_depth,
+                                                           compare_function);
     kernel_copy_buckets<num_buckets, num_threads_per_block>
-        <<<num_blocks, num_threads_per_block, 0, stream>>>(keys, rank, size, buckets, buckets_per_block, equality_buckets, oracles, nth_element_data);
+        <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
+                                                           rank,
+                                                           size,
+                                                           buckets,
+                                                           buckets_per_block,
+                                                           equality_buckets,
+                                                           oracles,
+                                                           nth_element_data,
+                                                           indices);
 
     size_t h_nth_element_data[3];
     error = hipMemcpy(&h_nth_element_data, nth_element_data,3 * sizeof(size_t), hipMemcpyDeviceToHost);
@@ -338,7 +366,7 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
     size_t bucket_size = h_nth_element_data[1];
     bool equality_bucket = h_nth_element_data[2];
 
-    if(false)
+    if(true)
     {
         std::cout << "Keys: " << std::endl;
         auto new_keys = keys + offset;
@@ -371,9 +399,27 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
             std::cout << h_equal[i] << ", ";
         }
         std::cout << std::endl;
-    }
 
-    std::cout << equality_bucket << std::endl;
+        Key h_indices[size];
+        hipMemcpy(&h_indices, indices,size * sizeof(Key), hipMemcpyDeviceToHost);
+        std::cout << "Indices: " << std::endl;
+        for(int i = 0; i < size; i++)
+        {
+            std::cout << h_indices[i] << ", ";
+        }
+        std::cout << std::endl;
+
+        size_t h_buck[num_blocks * num_buckets];
+        hipMemcpy(&h_buck, buckets_per_block,num_blocks * num_buckets * sizeof(size_t), hipMemcpyDeviceToHost);
+        std::cout << "Num buckets per block: " << std::endl;
+        for(int i = 0; i < num_blocks * num_buckets; i++)
+        {
+            std::cout << h_buck[i] << ", ";
+        }
+        std::cout << std::endl;
+
+        std::cout << equality_bucket << std::endl;
+    }
 
     if (equality_bucket)
     {
@@ -393,7 +439,8 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
                           compare_function,
                           stream,
                           debug_synchronous,
-                          recursion + 1);
+                          recursion + 1,
+                          indices);
 }
 
 template<class KeysIterator,
@@ -410,7 +457,7 @@ ROCPRIM_INLINE hipError_t nth_element_keys(void*          temporary_storage,
                                                           hipStream_t stream            = 0,
                                                           bool        debug_synchronous = false)
 {
-    constexpr size_t num_buckets = 64;
+    constexpr size_t num_buckets = 8;
     constexpr size_t num_splitters = num_buckets - 1;
     constexpr size_t min_size = num_buckets;
 
@@ -422,9 +469,12 @@ ROCPRIM_INLINE hipError_t nth_element_keys(void*          temporary_storage,
     unsigned char* oracles       = nullptr;
     bool*          equality_buckets = nullptr;
 
+    size_t* indices = nullptr;
+
     // Find the maximum number of threads in one block
-    constexpr size_t num_threads_per_block = 1024;
+    constexpr size_t num_threads_per_block = 32;
     const size_t num_blocks = (size / num_threads_per_block) + 1;
+    std::cout << "Num of blocks: " << num_blocks << std::endl;
 
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
@@ -435,6 +485,7 @@ ROCPRIM_INLINE hipError_t nth_element_keys(void*          temporary_storage,
             detail::temp_storage::ptr_aligned_array(&buckets, num_buckets),
             detail::temp_storage::ptr_aligned_array(&buckets_per_block, num_buckets * num_blocks),
             detail::temp_storage::ptr_aligned_array(&oracles, size),
+            detail::temp_storage::ptr_aligned_array(&indices, size),
             detail::temp_storage::ptr_aligned_array(&nth_element_data, 3)));
 
     if(partition_result != hipSuccess || temporary_storage == nullptr)
@@ -461,7 +512,8 @@ ROCPRIM_INLINE hipError_t nth_element_keys(void*          temporary_storage,
                                                  compare_function,
                                                  stream,
                                                  debug_synchronous,
-                                                 0);
+                                                 0,
+                                                 indices);
 
     return hipSuccess;
 }
