@@ -143,13 +143,14 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     const detail::nth_element_config_params params
         = detail::dispatch_target_arch<config>(target_arch);
 
-    const unsigned int num_buckets           = params.number_of_buckets;
-    const unsigned int num_splitters         = num_buckets - 1;
-    const unsigned int stop_recursion_size   = num_buckets;
-    const unsigned int num_items_per_threads = params.kernel_config.items_per_thread;
-    const unsigned int num_threads_per_block = params.kernel_config.block_size;
-    const unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
-    const unsigned int num_blocks            = detail::ceiling_div(size, num_items_per_block);
+    constexpr unsigned int num_partitions        = 3;
+    const unsigned int     num_buckets           = params.number_of_buckets;
+    const unsigned int     num_splitters         = num_buckets - 1;
+    const unsigned int     stop_recursion_size   = num_buckets;
+    const unsigned int     num_items_per_threads = params.kernel_config.items_per_thread;
+    const unsigned int     num_threads_per_block = params.kernel_config.block_size;
+    const unsigned int     num_items_per_block   = num_threads_per_block * num_items_per_threads;
+    const unsigned int     num_blocks            = detail::ceiling_div(size, num_items_per_block);
 
     key_type*                                    tree             = nullptr;
     size_t*                                      buckets          = nullptr;
@@ -170,7 +171,8 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
             detail::temp_storage::ptr_aligned_array(&oracles, size),
             detail::temp_storage::ptr_aligned_array(&output, size),
             detail::temp_storage::ptr_aligned_array(&nth_element_data, 1),
-            detail::temp_storage::ptr_aligned_array(&lookback_states, 3 * num_blocks)));
+            detail::temp_storage::ptr_aligned_array(&lookback_states,
+                                                    num_partitions * num_blocks)));
 
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
@@ -210,23 +212,23 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
         }
     }
 
-    return detail::nth_element_keys_impl<config>(keys_output,
-                                                 output,
-                                                 tree,
-                                                 nth,
-                                                 size,
-                                                 buckets,
-                                                 equality_buckets,
-                                                 oracles,
-                                                 lookback_states,
-                                                 num_buckets,
-                                                 stop_recursion_size,
-                                                 num_threads_per_block,
-                                                 num_items_per_threads,
-                                                 nth_element_data,
-                                                 compare_function,
-                                                 stream,
-                                                 debug_synchronous);
+    return detail::nth_element_keys_impl<config, num_partitions>(keys_output,
+                                                                 output,
+                                                                 tree,
+                                                                 nth,
+                                                                 size,
+                                                                 buckets,
+                                                                 equality_buckets,
+                                                                 oracles,
+                                                                 lookback_states,
+                                                                 num_buckets,
+                                                                 stop_recursion_size,
+                                                                 num_threads_per_block,
+                                                                 num_items_per_threads,
+                                                                 nth_element_data,
+                                                                 compare_function,
+                                                                 stream,
+                                                                 debug_synchronous);
 }
 
 /// @}

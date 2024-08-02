@@ -114,6 +114,15 @@ struct nth_element_onesweep_lookback_state
     {
         atomic_store(&ptr->state, this->state);
     }
+
+    static hipError_t reset(nth_element_onesweep_lookback_state* states,
+                            unsigned int                         num_states,
+                            unsigned int                         num_blocks,
+                            hipStream_t                          stream)
+    {
+        // All zeroes is equivalent to the empty prefix
+        return hipMemsetAsync(states, 0, num_states * num_blocks * sizeof(*states), stream);
+    }
 };
 
 struct n_th_element_iteration_data
@@ -427,7 +436,7 @@ ROCPRIM_KERNEL __launch_bounds__(
     kernel_find_nth_element_bucket_impl<config>(buckets, nth_element_data, equality_buckets, rank);
 }
 
-template<class config, class KeysIterator>
+template<class config, unsigned int NumPartitions, class KeysIterator>
 ROCPRIM_DEVICE ROCPRIM_INLINE void
     kernel_copy_buckets_impl(KeysIterator                         keys,
                              const size_t                         size,
@@ -445,7 +454,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void
     constexpr unsigned int num_threads_per_block = params.kernel_config.block_size;
     constexpr unsigned int num_items_per_threads = params.kernel_config.items_per_thread;
     constexpr unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
-    constexpr unsigned int num_partitions        = 3;
+    constexpr unsigned int num_partitions        = NumPartitions;
 
     using block_load_bucket_t  = block_load<uint8_t, num_threads_per_block, num_items_per_threads>;
     using block_rank_t         = rocprim::block_radix_rank<num_threads_per_block,
@@ -615,7 +624,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void
     }
 }
 
-template<class config, class KeysIterator>
+template<class config, unsigned int NumPartitions, class KeysIterator>
 ROCPRIM_KERNEL
     __launch_bounds__(device_params<config>().kernel_config.block_size) void kernel_copy_buckets(
         KeysIterator                         keys,
@@ -625,15 +634,15 @@ ROCPRIM_KERNEL
         n_th_element_iteration_data*         nth_element_data,
         KeysIterator                         output)
 {
-    kernel_copy_buckets_impl<config>(keys,
-                                     size,
-                                     oracles,
-                                     lookback_states,
-                                     nth_element_data,
-                                     output);
+    kernel_copy_buckets_impl<config, NumPartitions>(keys,
+                                                    size,
+                                                    oracles,
+                                                    lookback_states,
+                                                    nth_element_data,
+                                                    output);
 }
 
-template<class config, class KeysIterator, class BinaryFunction>
+template<class config, unsigned int NumPartitions, class KeysIterator, class BinaryFunction>
 ROCPRIM_INLINE hipError_t
     nth_element_keys_impl(KeysIterator                         keys,
                           KeysIterator                         output,
@@ -655,9 +664,10 @@ ROCPRIM_INLINE hipError_t
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
-    const unsigned int num_splitters       = num_buckets - 1;
-    const unsigned int num_items_per_block = num_threads_per_block * num_items_per_threads;
-    size_t             iteration           = 0;
+    constexpr unsigned int num_partitions      = NumPartitions;
+    const unsigned int     num_splitters       = num_buckets - 1;
+    const unsigned int     num_items_per_block = num_threads_per_block * num_items_per_threads;
+    size_t                 iteration           = 0;
 
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
@@ -698,8 +708,11 @@ ROCPRIM_INLINE hipError_t
         }
 
         // Reset lookback scan states to zero, indicating empty prefix.
-        error
-            = hipMemsetAsync(lookback_states, 0, sizeof(*lookback_states) * 3 * num_blocks, stream);
+        error = nth_element_onesweep_lookback_state::reset(lookback_states,
+                                                           NumPartitions,
+                                                           num_blocks,
+                                                           stream);
+
         if(error != hipSuccess)
         {
             return error;
@@ -727,7 +740,7 @@ ROCPRIM_INLINE hipError_t
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_find_nth_element_bucket", size, start);
 
         start_timer();
-        kernel_copy_buckets<config>
+        kernel_copy_buckets<config, NumPartitions>
             <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
                                                                size,
                                                                oracles,
