@@ -208,6 +208,12 @@ hipError_t partition_impl(void * temporary_storage,
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
+    bool use_sleep;
+    if(const hipError_t error = is_sleep_scan_state_used(use_sleep))
+    {
+        return error;
+    }
+
     // Create and initialize lookback_scan_state obj
     offset_scan_state_type            offset_scan_state{};
     hipError_t                        result = offset_scan_state_type::create(offset_scan_state,
@@ -225,6 +231,21 @@ hipError_t partition_impl(void * temporary_storage,
         return result;
     }
 
+    // Call the provided function with either offset_scan_state or offset_scan_state_with_sleep based on
+    // the value of use_sleep
+    auto with_scan_state = [use_sleep, offset_scan_state, offset_scan_state_with_sleep](
+                               auto&& func) mutable -> decltype(auto)
+    {
+        if(use_sleep)
+        {
+            return func(offset_scan_state_with_sleep);
+        }
+        else
+        {
+            return func(offset_scan_state);
+        }
+    };
+
     hipError_t error;
 
     // Memset selected_count and prev_selected_count at once
@@ -233,17 +254,6 @@ hipError_t partition_impl(void * temporary_storage,
                            sizeof(*selected_count) * 2 * selected_count_size,
                            stream);
     if (error != hipSuccess) return error;
-
-    hipDeviceProp_t prop;
-    int deviceId;
-    static_cast<void>(hipGetDevice(&deviceId));
-    static_cast<void>(hipGetDeviceProperties(&prop, deviceId));
-
-#if HIP_VERSION >= 307
-    int asicRevision = prop.asicRevision;
-#else
-    int asicRevision = 0;
-#endif
 
     const size_t number_of_launches = ::rocprim::detail::ceiling_div(size, aligned_size_limit);
 
@@ -276,78 +286,40 @@ hipError_t partition_impl(void * temporary_storage,
             start = std::chrono::high_resolution_clock::now();
         }
 
-        if(std::string(prop.gcnArchName).find("908") != std::string::npos && asicRevision < 2)
-        {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(init_lookback_scan_state_kernel<offset_scan_state_with_sleep_type>),
-                dim3(grid_size),
-                dim3(block_size),
-                0,
-                stream,
-                offset_scan_state_with_sleep,
-                current_number_of_blocks);
-        } else
-        {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(init_lookback_scan_state_kernel<offset_scan_state_type>),
-                dim3(grid_size),
-                dim3(block_size),
-                0,
-                stream,
-                offset_scan_state,
-                current_number_of_blocks);
-        }
-
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_offset_scan_state_kernel", current_number_of_blocks, start)
+        with_scan_state(
+            [&](const auto scan_state)
+            {
+                init_lookback_scan_state_kernel<<<dim3(grid_size), dim3(block_size), 0, stream>>>(
+                    scan_state,
+                    current_number_of_blocks);
+            });
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_offset_scan_state_kernel",
+                                                    current_number_of_blocks,
+                                                    start)
 
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
 
         grid_size = current_number_of_blocks;
 
-        if(std::string(prop.gcnArchName).find("908") != std::string::npos && asicRevision < 2)
-        {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(partition_kernel<SelectMethod, OnlySelected, config>),
-                dim3(grid_size),
-                dim3(block_size),
-                0,
-                stream,
-                keys_input + prev_processed,
-                values_input + prev_processed,
-                flags + prev_processed,
-                keys_output,
-                values_output,
-                selected_count,
-                prev_selected_count,
-                prev_processed,
-                size,
-                inequality_op,
-                offset_scan_state_with_sleep,
-                current_number_of_blocks,
-                predicates...);
-        } else
-        {
-            hipLaunchKernelGGL(
-                HIP_KERNEL_NAME(partition_kernel<SelectMethod, OnlySelected, config>),
-                dim3(grid_size),
-                dim3(block_size),
-                0,
-                stream,
-                keys_input + prev_processed,
-                values_input + prev_processed,
-                flags + prev_processed,
-                keys_output,
-                values_output,
-                selected_count,
-                prev_selected_count,
-                prev_processed,
-                size,
-                inequality_op,
-                offset_scan_state,
-                current_number_of_blocks,
-                predicates...);
-        }
-
+        with_scan_state(
+            [&](const auto scan_state)
+            {
+                partition_kernel<SelectMethod, OnlySelected, config>
+                    <<<dim3(grid_size), dim3(block_size), 0, stream>>>(keys_input + prev_processed,
+                                                                       values_input
+                                                                           + prev_processed,
+                                                                       flags + prev_processed,
+                                                                       keys_output,
+                                                                       values_output,
+                                                                       selected_count,
+                                                                       prev_selected_count,
+                                                                       prev_processed,
+                                                                       size,
+                                                                       inequality_op,
+                                                                       scan_state,
+                                                                       current_number_of_blocks,
+                                                                       predicates...);
+            });
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", size, start)
 
         std::swap(selected_count, prev_selected_count);
