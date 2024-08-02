@@ -57,10 +57,13 @@
 
     #ifndef DOXYGEN_DOCUMENTATION_BUILD
         #define ROCPRIM_INLINE inline
+        #define ROCPRIM_LAUNCH_BOUNDS(...) __launch_bounds__(__VA_ARGS__)
     #else
         // Prefer simpler signatures to let Sphinx/Breathe parse them
         #define ROCPRIM_FORCE_INLINE inline
         #define ROCPRIM_INLINE inline
+        // Ignore __launch_bounds__ for doxygen builds
+        #define ROCPRIM_LAUNCH_BOUNDS(...)
     #endif
     #define ROCPRIM_FORCE_INLINE __attribute__((always_inline))
 #endif

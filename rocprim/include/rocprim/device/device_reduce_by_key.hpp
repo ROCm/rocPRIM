@@ -34,6 +34,7 @@
 #include "../detail/temp_storage.hpp"
 #include "../detail/various.hpp"
 #include "../functional.hpp"
+#include "../intrinsics/thread.hpp"
 #include "../iterator/constant_iterator.hpp"
 
 #include <chrono>
@@ -49,14 +50,14 @@ namespace detail
 {
 
 template<typename LookBackScanState, typename AccumulatorType>
-ROCPRIM_KERNEL __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void reduce_by_key_init_kernel(
-    LookBackScanState              lookback_scan_state,
-    const unsigned int             number_of_tiles,
-    ordered_block_id<unsigned int> ordered_bid,
-    const bool                     is_first_launch,
-    const unsigned int             tile_save_idx,
-    std::size_t* const             global_head_count,
-    AccumulatorType* const         previous_accumulated)
+ROCPRIM_KERNEL ROCPRIM_LAUNCH_BOUNDS(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void
+    reduce_by_key_init_kernel(LookBackScanState              lookback_scan_state,
+                              const unsigned int             number_of_tiles,
+                              ordered_block_id<unsigned int> ordered_bid,
+                              const bool                     is_first_launch,
+                              const unsigned int             tile_save_idx,
+                              std::size_t* const             global_head_count,
+                              AccumulatorType* const         previous_accumulated)
 {
     const unsigned int block_id        = ::rocprim::detail::block_id<0>();
     const unsigned int block_size      = ::rocprim::detail::block_size<0>();

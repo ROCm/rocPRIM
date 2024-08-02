@@ -149,6 +149,7 @@ AttributeMacros:
     - ROCPRIM_KERNEL
     - ROCPRIM_INLINE
     - ROCPRIM_FORCE_INLINE
+    - ROCPRIM_LAUNCH_BOUNDS
 
 # Trick clang into thinking that our C-style attributes are C++-style attributes
 # Make sure that the sizes line up for linebreaks etc
@@ -167,5 +168,6 @@ Macros:
     - ROCPRIM_KERNEL=[[KERNEL____]]
     - ROCPRIM_INLINE=[[INLINE____]]
     - ROCPRIM_FORCE_INLINE=[FORCE_INLINE____]]
+    - ROCPRIM_LAUNCH_BOUNDS(x)=[[launch_bounds(x)____]]
 BreakAfterAttributes: Always
 ---
