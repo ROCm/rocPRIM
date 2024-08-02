@@ -88,7 +88,8 @@ ROCPRIM_DEVICE ROCPRIM_INLINE auto single_scan_block_scan(T (&input)[ItemsPerThr
                                scan_op);
 }
 
-template<bool Exclusive,
+template<lookback_scan_determinism Determinism,
+         bool                      Exclusive,
          class Config,
          class InputIterator,
          class OutputIterator,
@@ -111,7 +112,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto lookback_scan_kernel_impl(InputIterator
     // No need to build the kernel with sleep on a device that does not require it
 }
 
-template<bool Exclusive,
+template<lookback_scan_determinism Determinism,
+         bool                      Exclusive,
          class Config,
          class InputIterator,
          class OutputIterator,
@@ -147,7 +149,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     using block_scan_type = ::rocprim::block_scan<AccType, block_size, params.block_scan_method>;
 
     using lookback_scan_prefix_op_type
-        = lookback_scan_prefix_op<AccType, BinaryFunction, LookbackScanState>;
+        = lookback_scan_prefix_op<AccType, BinaryFunction, LookbackScanState, Determinism>;
 
     ROCPRIM_SHARED_MEMORY union
     {

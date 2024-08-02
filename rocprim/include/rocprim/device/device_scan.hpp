@@ -116,7 +116,8 @@ ROCPRIM_KERNEL
 
 // Single pass (look-back kernels)
 
-template<bool Exclusive,
+template<lookback_scan_determinism Determinism,
+         bool                      Exclusive,
          class Config,
          class InputIterator,
          class OutputIterator,
@@ -138,7 +139,7 @@ ROCPRIM_KERNEL
         bool                override_first_value  = false,
         bool                save_last_value       = false)
 {
-    lookback_scan_kernel_impl<Exclusive, Config>(
+    lookback_scan_kernel_impl<Determinism, Exclusive, Config>(
         input,
         output,
         size,
@@ -178,7 +179,8 @@ ROCPRIM_KERNEL
         } \
     }
 
-template<bool Exclusive,
+template<lookback_scan_determinism Determinism,
+         bool                      Exclusive,
          class Config,
          class InputIterator,
          class OutputIterator,
@@ -339,7 +341,8 @@ inline auto scan_impl(void*               temporary_storage,
             with_scan_state(
                 [&](const auto scan_state)
                 {
-                    lookback_scan_kernel<Exclusive,
+                    lookback_scan_kernel<Determinism,
+                                         Exclusive,
                                          config,
                                          InputIterator,
                                          OutputIterator,
@@ -414,6 +417,8 @@ inline auto scan_impl(void*               temporary_storage,
 ///    - the results may be non-deterministic and/or vary in precision,
 ///    - and bit-wise reproducibility is not guaranteed, that is, results from multiple runs
 ///      using the same input values on the same device may not be bit-wise identical.
+///   If deterministic behavior is required, Use \link deterministic_inclusive_scan()
+///   rocprim::deterministic_inclusive_scan \endlink instead.
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 /// * Ranges specified by \p input and \p output must have at least \p size elements.
@@ -530,17 +535,62 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
                                  bool              debug_synchronous = false)
 {
     // input_type() is a dummy initial value (not used)
-    return detail::
-        scan_impl<false, Config, InputIterator, OutputIterator, AccType, BinaryFunction, AccType>(
-            temporary_storage,
-            storage_size,
-            input,
-            output,
-            AccType{},
-            size,
-            scan_op,
-            stream,
-            debug_synchronous);
+    return detail::scan_impl<detail::lookback_scan_determinism::default_determinism,
+                             false,
+                             Config,
+                             InputIterator,
+                             OutputIterator,
+                             AccType,
+                             BinaryFunction,
+                             AccType>(temporary_storage,
+                                      storage_size,
+                                      input,
+                                      output,
+                                      AccType{},
+                                      size,
+                                      scan_op,
+                                      stream,
+                                      debug_synchronous);
+}
+
+/// \brief Bitwise-reproducible parallel inclusive scan primitive for device level.
+///
+/// This function behaves the same as <tt>inclusive_scan()</tt>, except that unlike
+/// <tt>inclusive_scan()</tt>, it provides run-to-run deterministic behavior for
+/// non-associative scan operators like floating point arithmetic operations.
+/// Refer to the documentation for \link inclusive_scan() rocprim::inclusive_scan \endlink
+/// for a detailed description of this function.
+template<class Config = default_config,
+         class InputIterator,
+         class OutputIterator,
+         class BinaryFunction
+         = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
+         class AccType = typename std::iterator_traits<InputIterator>::value_type>
+inline hipError_t deterministic_inclusive_scan(void*             temporary_storage,
+                                               size_t&           storage_size,
+                                               InputIterator     input,
+                                               OutputIterator    output,
+                                               const size_t      size,
+                                               BinaryFunction    scan_op = BinaryFunction(),
+                                               const hipStream_t stream  = 0,
+                                               bool              debug_synchronous = false)
+{
+    return detail::scan_impl<detail::lookback_scan_determinism::deterministic,
+                             false,
+                             Config,
+                             InputIterator,
+                             OutputIterator,
+                             AccType,
+                             BinaryFunction,
+                             AccType>(temporary_storage,
+                                      storage_size,
+                                      input,
+                                      output,
+                                      AccType{},
+                                      size,
+                                      scan_op,
+                                      stream,
+                                      debug_synchronous);
 }
 
 /// \brief Parallel exclusive scan primitive for device level.
@@ -555,6 +605,8 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
 ///    - the results may be non-deterministic and/or vary in precision,
 ///    - and bit-wise reproducibility is not guaranteed, that is, results from multiple runs
 ///      using the same input values on the same device may not be bit-wise identical.
+///   If deterministic behavior is required, Use \link deterministic_exclusive_scan()
+///   rocprim::deterministic_exclusive_scan \endlink instead.
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 /// * Ranges specified by \p input and \p output must have at least \p size elements.
@@ -649,7 +701,50 @@ inline hipError_t exclusive_scan(void*               temporary_storage,
                                  const hipStream_t   stream            = 0,
                                  bool                debug_synchronous = false)
 {
-    return detail::scan_impl<true,
+    return detail::scan_impl<detail::lookback_scan_determinism::default_determinism,
+                             true,
+                             Config,
+                             InputIterator,
+                             OutputIterator,
+                             InitValueType,
+                             BinaryFunction,
+                             AccType>(temporary_storage,
+                                      storage_size,
+                                      input,
+                                      output,
+                                      initial_value,
+                                      size,
+                                      scan_op,
+                                      stream,
+                                      debug_synchronous);
+}
+
+/// \brief Bitwise-reproducible parallel exclusive scan primitive for device level.
+///
+/// This function behaves the same as <tt>exclusive_scan()</tt>, except that unlike
+/// <tt>exclusive_scan()</tt>, it provides run-to-run deterministic behavior for
+/// non-associative scan operators like floating point arithmetic operations.
+/// Refer to the documentation for \link exclusive_scan() rocprim::exclusive_scan \endlink
+/// for a detailed description of this function.
+template<class Config = default_config,
+         class InputIterator,
+         class OutputIterator,
+         class InitValueType,
+         class BinaryFunction
+         = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
+         class AccType = detail::input_type_t<InitValueType>>
+inline hipError_t deterministic_exclusive_scan(void*               temporary_storage,
+                                               size_t&             storage_size,
+                                               InputIterator       input,
+                                               OutputIterator      output,
+                                               const InitValueType initial_value,
+                                               const size_t        size,
+                                               BinaryFunction      scan_op = BinaryFunction(),
+                                               const hipStream_t   stream  = 0,
+                                               bool                debug_synchronous = false)
+{
+    return detail::scan_impl<detail::lookback_scan_determinism::deterministic,
+                             true,
                              Config,
                              InputIterator,
                              OutputIterator,

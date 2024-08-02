@@ -34,6 +34,16 @@ exclusive
 
 .. doxygenfunction:: rocprim::exclusive_scan(void *temporary_storage, size_t &storage_size, InputIterator input, OutputIterator output, const InitValueType initial_value, const size_t size, BinaryFunction scan_op=BinaryFunction(), const hipStream_t stream=0, bool debug_synchronous=false)
 
+deterministic, inclusive
+-------------------------------
+
+.. doxygenfunction:: rocprim::deterministic_inclusive_scan(void *temporary_storage, size_t &storage_size, InputIterator input, OutputIterator output, const size_t size, BinaryFunction scan_op=BinaryFunction(), const hipStream_t stream=0, bool debug_synchronous=false)
+
+deterministic, exclusive
+-------------------------------
+
+.. doxygenfunction:: rocprim::deterministic_exclusive_scan(void *temporary_storage, size_t &storage_size, InputIterator input, OutputIterator output, const InitValueType initial_value, const size_t size, BinaryFunction scan_op=BinaryFunction(), const hipStream_t stream=0, bool debug_synchronous=false)
+
 segmented, inclusive
 ----------------------
 
