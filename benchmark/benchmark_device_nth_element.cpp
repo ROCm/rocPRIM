@@ -39,10 +39,16 @@
 const size_t DEFAULT_N = 1024 * 1024 * 32;
 #endif
 
-#define CREATE_BENCHMARK(...)                                         \
+#define CREATE_BENCHMARK_NTH_ELEMENT(TYPE, SMALL_N)                   \
     {                                                                 \
-        const device_nth_element_benchmark<__VA_ARGS__> instance;     \
+        const device_nth_element_benchmark<TYPE> instance(SMALL_N);   \
         REGISTER_BENCHMARK(benchmarks, size, seed, stream, instance); \
+    }
+
+#define CREATE_BENCHMARK(TYPE)                    \
+    {                                             \
+        CREATE_BENCHMARK_NTH_ELEMENT(TYPE, true)  \
+        CREATE_BENCHMARK_NTH_ELEMENT(TYPE, false) \
     }
 
 int main(int argc, char* argv[])
@@ -81,11 +87,12 @@ int main(int argc, char* argv[])
     CREATE_BENCHMARK(uint8_t)
     CREATE_BENCHMARK(rocprim::half)
     CREATE_BENCHMARK(short)
+    CREATE_BENCHMARK(float)
 
     using custom_float2          = custom_type<float, float>;
     using custom_double2         = custom_type<double, double>;
     using custom_int2            = custom_type<int, int>;
-    using custom_char_double     = custom_type<char, double>; // used by ssbk benchmark
+    using custom_char_double     = custom_type<char, double>;
     using custom_longlong_double = custom_type<long long, double>;
 
     CREATE_BENCHMARK(custom_float2)

@@ -42,25 +42,37 @@
 template<typename Key = int, typename Config = rocprim::default_config>
 struct device_nth_element_benchmark : public config_autotune_interface
 {
+    bool small_n = false;
+
+    device_nth_element_benchmark(bool SmallN)
+    {
+        small_n = SmallN;
+    }
+
     std::string name() const override
     {
-        return bench_naming::format_name("{lvl:device,algo:nth_element,key_type:"
-                                         + std::string(Traits<Key>::name())
-                                         + ",cfg:default_config}");
+        using namespace std::string_literals;
+        return bench_naming::format_name(
+            "{lvl:device,algo:nth_element,nth:" + (small_n ? "small"s : "large"s)
+            + ",key_type:" + std::string(Traits<Key>::name()) + ",cfg:default_config}");
     }
 
     static constexpr unsigned int batch_size  = 10;
     static constexpr unsigned int warmup_size = 5;
 
-    // keys benchmark
-    auto do_run(benchmark::State&   state,
-                size_t              size,
-                const managed_seed& seed,
-                const hipStream_t   stream) const
+    void run(benchmark::State&   state,
+             size_t              size,
+             const managed_seed& seed,
+             hipStream_t         stream) const override
     {
         using key_type = Key;
 
-        size_t nth = size / 2; // TODO: Create benchmarks with different n
+        size_t nth = 10;
+
+        if(!small_n)
+        {
+            nth = size / 2;
+        }
 
         // Generate data
         std::vector<key_type> keys_input;
@@ -81,12 +93,12 @@ struct device_nth_element_benchmark : public config_autotune_interface
 
         key_type* d_keys_input;
         key_type* d_keys_output;
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_keys_input), size * sizeof(key_type)));
-        HIP_CHECK(hipMalloc(reinterpret_cast<void**>(&d_keys_output), size * sizeof(key_type)));
+        HIP_CHECK(hipMalloc(&d_keys_input, size * sizeof(*d_keys_input)));
+        HIP_CHECK(hipMalloc(&d_keys_output, size * sizeof(*d_keys_output)));
 
         HIP_CHECK(hipMemcpy(d_keys_input,
                             keys_input.data(),
-                            size * sizeof(key_type),
+                            size * sizeof(*d_keys_input),
                             hipMemcpyHostToDevice));
 
         ::rocprim::less<key_type> lesser_op;
@@ -104,7 +116,6 @@ struct device_nth_element_benchmark : public config_autotune_interface
                                        false));
 
         HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
-        HIP_CHECK(hipDeviceSynchronize());
 
         // Warm-up
         for(size_t i = 0; i < warmup_size; i++)
@@ -157,20 +168,12 @@ struct device_nth_element_benchmark : public config_autotune_interface
         HIP_CHECK(hipEventDestroy(start));
         HIP_CHECK(hipEventDestroy(stop));
 
-        state.SetBytesProcessed(state.iterations() * batch_size * size * sizeof(key_type));
+        state.SetBytesProcessed(state.iterations() * batch_size * size * sizeof(*d_keys_input));
         state.SetItemsProcessed(state.iterations() * batch_size * size);
 
         HIP_CHECK(hipFree(d_temporary_storage));
         HIP_CHECK(hipFree(d_keys_input));
         HIP_CHECK(hipFree(d_keys_output));
-    }
-
-    void run(benchmark::State&   state,
-             size_t              size,
-             const managed_seed& seed,
-             hipStream_t         stream) const override
-    {
-        do_run(state, size, seed, stream);
     }
 };
 
