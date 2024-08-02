@@ -53,7 +53,10 @@ struct device_nth_element_benchmark : public config_autotune_interface
     static constexpr unsigned int warmup_size = 5;
 
     // keys benchmark
-    auto do_run(benchmark::State& state, size_t size, const hipStream_t stream) const
+    auto do_run(benchmark::State&   state,
+                size_t              size,
+                const managed_seed& seed,
+                const hipStream_t   stream) const
     {
         using key_type = Key;
 
@@ -65,13 +68,15 @@ struct device_nth_element_benchmark : public config_autotune_interface
         {
             keys_input = get_random_data<key_type>(size,
                                                    static_cast<key_type>(-1000),
-                                                   static_cast<key_type>(1000));
+                                                   static_cast<key_type>(1000),
+                                                   seed.get_0());
         }
         else
         {
             keys_input = get_random_data<key_type>(size,
                                                    std::numeric_limits<key_type>::min(),
-                                                   std::numeric_limits<key_type>::max());
+                                                   std::numeric_limits<key_type>::max(),
+                                                   seed.get_0());
         }
 
         key_type* d_keys_input;
@@ -160,9 +165,12 @@ struct device_nth_element_benchmark : public config_autotune_interface
         HIP_CHECK(hipFree(d_keys_output));
     }
 
-    void run(benchmark::State& state, size_t size, hipStream_t stream) const override
+    void run(benchmark::State&   state,
+             size_t              size,
+             const managed_seed& seed,
+             hipStream_t         stream) const override
     {
-        do_run(state, size, stream);
+        do_run(state, size, seed, stream);
     }
 };
 
