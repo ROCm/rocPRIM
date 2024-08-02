@@ -30,6 +30,7 @@ Documentation for rocPRIM is available at
 * Fixed a bug in the generation of input data for benchmarks, which caused incorrect performance to be reported in specific cases. It may affect the reported performance for one-byte types (`uint8_t` and `int8_t`) and instantiations of `custom_type`. Specifically, device binary search, device histogram, device merge and warp sort are affected.
 * Fixed a bug for `rocprim::merge_path_search` where using `unsigned` offsets would output wrong results.
 * Fixed a bug for `rocprim::thread_load` and `rocprim::thread_store` where `float` and `double` were not casted to the correct type resulting in wrong results.
+* Fix tests failing when compiling with `-D_GLIBCXX_ASSERTIONS=ON`.
 
 ### Deprecations
 
