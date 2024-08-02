@@ -78,6 +78,16 @@ enum class prefix_flag : uint8_t
     COMPLETE = 2
 };
 
+template<typename T>
+struct match_prefix_underlying_type
+{
+    using value_and_prefix = tuple<T, prefix_flag>;
+    using type = select_type<select_type_case<sizeof(value_and_prefix) <= 2, unsigned short>,
+                             select_type_case<sizeof(value_and_prefix) <= 4, unsigned int>,
+                             select_type_case<sizeof(value_and_prefix) <= 8, unsigned long long>,
+                             void>;
+};
+
 // In the original implementation, lookback scan is not deterministic
 // for non-associative operations: This is because the number of lookback
 // steps may vary depending on the algorithm that its used in, scanned
@@ -100,7 +110,7 @@ enum class lookback_scan_determinism
 // a look-back prefix scan. Initially every prefix can be either
 // invalid (padding values) or empty. One thread in a block should
 // later set it to partial, and later to complete.
-template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 4)>
+template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 7)>
 struct lookback_scan_state;
 
 // Packed flag and prefix value are loaded/stored in one atomic operation.
@@ -109,15 +119,14 @@ struct lookback_scan_state<T, UseSleep, true>
 {
 private:
     // Type which is used in store/load operations of block prefix (flag and value).
-    // It is 32-bit or 64-bit int and can be loaded/stored using single atomic instruction.
-    using prefix_underlying_type =
-        typename std::conditional<(sizeof(T) > 2), unsigned long long, unsigned int>::type;
+    // It is 16-, 32- or 64-bit int and can be loaded/stored using single atomic instruction.
+    using prefix_underlying_type = typename match_prefix_underlying_type<T>::type;
 
     // Helper struct
     struct alignas(sizeof(prefix_underlying_type)) prefix_type
     {
-        prefix_flag flag;
         T           value;
+        prefix_flag flag;
     };
 
     static_assert(sizeof(prefix_underlying_type) == sizeof(prefix_type), "");
@@ -274,7 +283,7 @@ private:
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
-        prefix_type            prefix = {flag, value};
+        prefix_type            prefix = {value, flag};
         prefix_underlying_type p;
         memcpy(&p, &prefix, sizeof(prefix_type));
         ::rocprim::detail::atomic_store(&prefixes[padding + block_id], p);
