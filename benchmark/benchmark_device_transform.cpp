@@ -179,9 +179,6 @@ int main(int argc, char *argv[])
     add_common_benchmark_info();
     benchmark::AddCustomContext("size", std::to_string(size));
 
-    using custom_float2 = custom_type<float, float>;
-    using custom_double2 = custom_type<double, double>;
-
     // Add benchmarks
 #ifdef BENCHMARK_CONFIG_TUNING
     std::vector<benchmark::internal::Benchmark*> benchmarks = {};
@@ -193,6 +190,9 @@ int main(int argc, char *argv[])
                                                         size,
                                                         stream);
 #else
+    using custom_float2  = custom_type<float, float>;
+    using custom_double2 = custom_type<double, double>;
+
     std::vector<benchmark::internal::Benchmark*> benchmarks =
     {
         CREATE_BENCHMARK(int, transform<int>),
