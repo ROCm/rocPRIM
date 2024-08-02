@@ -66,16 +66,16 @@ BEGIN_ROCPRIM_NAMESPACE
 namespace detail
 {
 
-enum prefix_flag
+enum class prefix_flag : uint8_t
 {
     // flag for padding, values should be discarded
-    PREFIX_INVALID = -1,
+    INVALID = 0xFF,
     // initialized, not result in value
-    PREFIX_EMPTY = 0,
+    EMPTY = 0,
     // partial prefix value (from single block)
-    PREFIX_PARTIAL = 1,
+    PARTIAL = 1,
     // final prefix value
-    PREFIX_COMPLETE = 2
+    COMPLETE = 2
 };
 
 // In the original implementation, lookback scan is not deterministic
@@ -108,8 +108,6 @@ template<class T, bool UseSleep>
 struct lookback_scan_state<T, UseSleep, true>
 {
 private:
-    using flag_type_ = char;
-
     // Type which is used in store/load operations of block prefix (flag and value).
     // It is 32-bit or 64-bit int and can be loaded/stored using single atomic instruction.
     using prefix_underlying_type =
@@ -118,15 +116,14 @@ private:
     // Helper struct
     struct alignas(sizeof(prefix_underlying_type)) prefix_type
     {
-        flag_type_ flag;
-        T          value;
+        prefix_flag flag;
+        T           value;
     };
 
     static_assert(sizeof(prefix_underlying_type) == sizeof(prefix_type), "");
 
 public:
     // Type used for flag/flag of block prefix
-    using flag_type  = flag_type_;
     using value_type = T;
 
     static constexpr bool use_sleep = UseSleep;
@@ -202,7 +199,7 @@ public:
         if(block_id < number_of_blocks)
         {
             prefix_type prefix;
-            prefix.flag = PREFIX_EMPTY;
+            prefix.flag = prefix_flag::EMPTY;
             prefix_underlying_type p;
             memcpy(&p, &prefix, sizeof(prefix_type));
             prefixes[padding + block_id] = p;
@@ -210,7 +207,7 @@ public:
         if(block_id < padding)
         {
             prefix_type prefix;
-            prefix.flag = PREFIX_INVALID;
+            prefix.flag = prefix_flag::INVALID;
             prefix_underlying_type p;
             memcpy(&p, &prefix, sizeof(prefix_type));
             prefixes[block_id] = p;
@@ -219,16 +216,16 @@ public:
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void set_partial(const unsigned int block_id, const T value)
     {
-        this->set(block_id, PREFIX_PARTIAL, value);
+        this->set(block_id, prefix_flag::PARTIAL, value);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void set_complete(const unsigned int block_id, const T value)
     {
-        this->set(block_id, PREFIX_COMPLETE, value);
+        this->set(block_id, prefix_flag::COMPLETE, value);
     }
 
     // block_id must be > 0
-    ROCPRIM_DEVICE ROCPRIM_INLINE void get(const unsigned int block_id, flag_type& flag, T& value)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void get(const unsigned int block_id, prefix_flag& flag, T& value)
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
@@ -239,7 +236,7 @@ public:
 
         prefix_underlying_type p = ::rocprim::detail::atomic_load(&prefixes[padding + block_id]);
         memcpy(&prefix, &p, sizeof(prefix_type));
-        while(prefix.flag == PREFIX_EMPTY)
+        while(prefix.flag == prefix_flag::EMPTY)
         {
             if(UseSleep)
             {
@@ -267,13 +264,13 @@ public:
         auto        p = prefixes[padding + block_id];
         prefix_type prefix{};
         memcpy(&prefix, &p, sizeof(prefix_type));
-        assert(prefix.flag == PREFIX_COMPLETE);
+        assert(prefix.flag == prefix_flag::COMPLETE);
         return prefix.value;
     }
 
 private:
     ROCPRIM_DEVICE ROCPRIM_INLINE void
-        set(const unsigned int block_id, const flag_type flag, const T value)
+        set(const unsigned int block_id, const prefix_flag flag, const T value)
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
@@ -293,7 +290,7 @@ struct lookback_scan_state<T, UseSleep, false>
 {
 
 public:
-    using flag_type  = unsigned int;
+    using flag_underlying_type = std::underlying_type_t<prefix_flag>;
     using value_type = T;
 
     static constexpr bool use_sleep = UseSleep;
@@ -311,13 +308,14 @@ public:
 
         auto ptr = static_cast<char*>(temp_storage);
 
-        state.prefixes_flags = reinterpret_cast<flag_type*>(ptr);
-        ptr += ::rocprim::detail::align_size(n * sizeof(flag_type));
-
         state.prefixes_partial_values = ptr;
         ptr += ::rocprim::detail::align_size(n * sizeof(value_underlying_type));
 
         state.prefixes_complete_values = ptr;
+        ptr += ::rocprim::detail::align_size(n * sizeof(value_underlying_type));
+
+        state.prefixes_flags = reinterpret_cast<flag_underlying_type*>(ptr);
+
         return error;
     }
 
@@ -338,10 +336,10 @@ public:
         unsigned int warp_size;
         hipError_t   error = ::rocprim::host_warp_size(stream, warp_size);
         const auto   n     = warp_size + number_of_blocks;
-        storage_size       = ::rocprim::detail::align_size(n * sizeof(flag_type));
         // Always use sizeof(value_underlying_type) instead of sizeof(T) because storage is
         // allocated by host so it can hold both types no matter what device is used.
-        storage_size += 2 * ::rocprim::detail::align_size(n * sizeof(value_underlying_type));
+        storage_size = 2 * ::rocprim::detail::align_size(n * sizeof(value_underlying_type));
+        storage_size += n * sizeof(prefix_flag);
         return error;
     }
 
@@ -361,7 +359,7 @@ public:
     {
         size_t storage_size = 0;
         size_t alignment
-            = std::max({alignof(flag_type), alignof(T), alignof(value_underlying_type)});
+            = std::max({alignof(prefix_flag), alignof(T), alignof(value_underlying_type)});
         hipError_t error = get_storage_size(number_of_blocks, stream, storage_size);
         layout           = detail::temp_storage::layout{storage_size, alignment};
         return error;
@@ -383,34 +381,36 @@ public:
         constexpr unsigned int padding = ::rocprim::device_warp_size();
         if(block_id < number_of_blocks)
         {
-            prefixes_flags[padding + block_id] = PREFIX_EMPTY;
+            prefixes_flags[padding + block_id]
+                = static_cast<flag_underlying_type>(prefix_flag::EMPTY);
         }
         if(block_id < padding)
         {
-            prefixes_flags[block_id] = PREFIX_INVALID;
+            prefixes_flags[block_id] = static_cast<flag_underlying_type>(prefix_flag::INVALID);
         }
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void set_partial(const unsigned int block_id, const T value)
     {
-        this->set(block_id, PREFIX_PARTIAL, value);
+        this->set(block_id, prefix_flag::PARTIAL, value);
     }
 
     ROCPRIM_DEVICE ROCPRIM_INLINE void set_complete(const unsigned int block_id, const T value)
     {
-        this->set(block_id, PREFIX_COMPLETE, value);
+        this->set(block_id, prefix_flag::COMPLETE, value);
     }
 
     // block_id must be > 0
-    ROCPRIM_DEVICE ROCPRIM_INLINE void get(const unsigned int block_id, flag_type& flag, T& value)
+    ROCPRIM_DEVICE ROCPRIM_INLINE void get(const unsigned int block_id, prefix_flag& flag, T& value)
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
         const unsigned int SLEEP_MAX     = 32;
         unsigned int       times_through = 1;
 
-        flag = ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]);
-        while(flag == PREFIX_EMPTY)
+        flag = static_cast<prefix_flag>(
+            ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]));
+        while(flag == prefix_flag::EMPTY)
         {
             if(UseSleep)
             {
@@ -420,13 +420,14 @@ public:
                     times_through++;
             }
 
-            flag = ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]);
+            flag = static_cast<prefix_flag>(
+                ::rocprim::detail::atomic_load(&prefixes_flags[padding + block_id]));
         }
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
         rocprim::detail::atomic_fence_acquire_order_only();
 
         const auto* values = static_cast<const value_underlying_type*>(
-            flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
+            flag == prefix_flag::PARTIAL ? prefixes_partial_values : prefixes_complete_values);
         value_underlying_type v;
         for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
         {
@@ -437,7 +438,7 @@ public:
         ::rocprim::detail::memory_fence_device();
 
         const auto* values = static_cast<const T*>(
-            flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
+            flag == prefix_flag::PARTIAL ? prefixes_partial_values : prefixes_complete_values);
         value = values[padding + block_id];
 #endif
     }
@@ -459,7 +460,7 @@ public:
         __builtin_memcpy(&value, &v, sizeof(value));
         return value;
 #else
-        assert(prefixes_flags[padding + block_id] == PREFIX_COMPLETE);
+        assert(prefixes_flags[padding + block_id] == prefix_flag::COMPLETE);
         const auto* values = static_cast<const T*>(prefixes_complete_values);
         return values[padding + block_id];
 #endif
@@ -467,13 +468,13 @@ public:
 
 private:
     ROCPRIM_DEVICE ROCPRIM_INLINE void
-        set(const unsigned int block_id, const flag_type flag, const T value)
+        set(const unsigned int block_id, const prefix_flag flag, const T value)
     {
         constexpr unsigned int padding = ::rocprim::device_warp_size();
 
 #if ROCPRIM_DETAIL_LOOKBACK_SCAN_STATE_WITHOUT_SLOW_FENCES
         auto* values = static_cast<value_underlying_type*>(
-            flag == PREFIX_PARTIAL ? prefixes_partial_values : prefixes_complete_values);
+            flag == prefix_flag::PARTIAL ? prefixes_partial_values : prefixes_complete_values);
         value_underlying_type v;
         __builtin_memcpy(&v, &value, sizeof(value));
         for(unsigned int i = 0; i < value_underlying_type::words_no; ++i)
@@ -483,13 +484,14 @@ private:
         // Wait for all atomic stores of prefixes_*_values before signaling complete / partial state
         rocprim::detail::atomic_fence_release_vmem_order_only();
 #else
-        auto* values = static_cast<T*>(flag == PREFIX_PARTIAL ? prefixes_partial_values
-                                                              : prefixes_complete_values);
+        auto* values = static_cast<T*>(flag == prefix_flag::PARTIAL ? prefixes_partial_values
+                                                                    : prefixes_complete_values);
         values[padding + block_id] = value;
         ::rocprim::detail::memory_fence_device();
 #endif
 
-        ::rocprim::detail::atomic_store(&prefixes_flags[padding + block_id], flag);
+        ::rocprim::detail::atomic_store(&prefixes_flags[padding + block_id],
+                                        static_cast<flag_underlying_type>(flag));
     }
 
     struct value_underlying_type
@@ -499,12 +501,12 @@ private:
         unsigned int words[words_no];
     };
 
-    flag_type* prefixes_flags;
     // We need to separate arrays for partial and final prefixes, because
     // value can be overwritten before flag is changed (flag and value are
     // not stored in single instruction).
     void* prefixes_partial_values;
     void* prefixes_complete_values;
+    flag_underlying_type* prefixes_flags;
 };
 
 template<class T,
@@ -513,7 +515,6 @@ template<class T,
          lookback_scan_determinism Determinism = lookback_scan_determinism::default_determinism>
 class lookback_scan_prefix_op
 {
-    using flag_type = typename LookbackScanState::flag_type;
     static_assert(std::is_same<T, typename LookbackScanState::value_type>::value,
                   "T must be LookbackScanState::value_type");
 
@@ -528,7 +529,7 @@ public:
 
 private:
     ROCPRIM_DEVICE ROCPRIM_INLINE void
-        reduce_partial_prefixes(unsigned int block_id, flag_type& flag, T& partial_prefix)
+        reduce_partial_prefixes(unsigned int block_id, prefix_flag& flag, T& partial_prefix)
     {
         // Order of reduction must be reversed, because 0th thread has
         // prefix from the (block_id_ - 1) block, 1st thread has prefix
@@ -543,7 +544,7 @@ private:
         auto headflag_scan_op = headflag_scan_op_type(scan_op_);
         warp_reduce_prefix_type().tail_segmented_reduce(block_prefix,
                                                         partial_prefix,
-                                                        (flag == PREFIX_COMPLETE),
+                                                        (flag == prefix_flag::COMPLETE),
                                                         headflag_scan_op);
     }
 
@@ -607,7 +608,7 @@ private:
     {
         if ROCPRIM_IF_CONSTEXPR(Determinism == lookback_scan_determinism::nondeterministic)
         {
-            flag_type    flag;
+            prefix_flag  flag;
             T            partial_prefix;
             unsigned int previous_block_id = block_id_ - ::rocprim::lane_id() - 1;
 
@@ -617,7 +618,7 @@ private:
             T prefix = partial_prefix;
 
             // while we don't load a complete prefix, reduce partial prefixes
-            while(::rocprim::detail::warp_all(flag != PREFIX_COMPLETE))
+            while(::rocprim::detail::warp_all(flag != prefix_flag::COMPLETE))
             {
                 previous_block_id -= ::rocprim::device_warp_size();
                 reduce_partial_prefixes(previous_block_id, flag, partial_prefix);
@@ -641,11 +642,11 @@ private:
             T   cache[max_lookback_per_thread];
             int cache_offset = 0;
 
-            flag_type flag;
-            T         block_prefix;
+            prefix_flag flag;
+            T           block_prefix;
             scan_state_.get(lookback_block_id, flag, block_prefix);
 
-            while(warp_all(flag != PREFIX_COMPLETE && flag != PREFIX_INVALID)
+            while(warp_all(flag != prefix_flag::COMPLETE && flag != prefix_flag::INVALID)
                   && cache_offset < max_lookback_per_thread)
             {
                 cache[cache_offset++] = block_prefix;
@@ -659,9 +660,9 @@ private:
             // - We have run out of available space in the cache. In this case, wait until
             //   any of the current lookback flags pointed to by lookback_block_id changes
             //   to complete.
-            if(warp_all(flag != PREFIX_COMPLETE))
+            if(warp_all(flag != prefix_flag::COMPLETE))
             {
-                if(warp_all(flag == PREFIX_INVALID))
+                if(warp_all(flag == prefix_flag::INVALID))
                 {
                     // All invalid, so we have to move one block back to
                     // get back to known civilization.
@@ -674,14 +675,14 @@ private:
                 {
                     scan_state_.get(lookback_block_id, flag, block_prefix);
                 }
-                while(warp_all(flag != PREFIX_COMPLETE));
+                while(warp_all(flag != prefix_flag::COMPLETE));
             }
 
             // Now just sum all these values to get the prefix
             // Note that the values are striped across the threads.
             // In the first iteration, the current prefix is at the value cache for the current
-            // offset at the lowest warp number that has PREFIX_COMPLETE set.
-            const auto bits   = ballot(flag == PREFIX_COMPLETE);
+            // offset at the lowest warp number that has prefix_flag::COMPLETE set.
+            const auto bits   = ballot(flag == prefix_flag::COMPLETE);
             const auto lowest = ctz(bits);
 
             // Now sum all the values from block_prefix that are lower than the current prefix.
