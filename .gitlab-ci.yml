@@ -246,8 +246,7 @@ build:windows:
     - .deps:visual-studio-devshell
   parallel:
     matrix:
-      # Debug is disabled due to extensive link times, tracked in issue 679.
-      - BUILD_TYPE: [Release]
+      - BUILD_TYPE: [Debug, Release]
         BUILD_TARGET: [BENCHMARK, TEST]
   script:
     - mkdir -p $CI_PROJECT_DIR/build
