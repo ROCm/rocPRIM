@@ -1062,8 +1062,7 @@ template<unsigned int               BlockSize,
          unsigned int               ItemsPerThread,
          unsigned int               StopRecursionSize,
          unsigned int               NumberOfBuckets,
-         block_radix_rank_algorithm RadixRankAlgorithm,
-         unsigned int               SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
+         block_radix_rank_algorithm RadixRankAlgorithm>
 struct nth_element_config : public detail::nth_element_config_params
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -1072,7 +1071,7 @@ struct nth_element_config : public detail::nth_element_config_params
             StopRecursionSize,
             NumberOfBuckets,
             RadixRankAlgorithm,
-            {BlockSize, ItemsPerThread, SizeLimit}
+            {BlockSize, ItemsPerThread, ROCPRIM_GRID_SIZE_LIMIT}
     }
     {}
 #endif

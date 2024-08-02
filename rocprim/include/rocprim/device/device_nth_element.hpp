@@ -44,14 +44,14 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief Rearrange elements smaller than the n-th before and bigger than n-th after the n-th element.
 ///
 /// The element at index `n` is set to the element that would be at the n-th position if the input was sorted.
-///   Additionally the other elements are rearranged such that for all values of `i` in [keys_output, jeys_output + n)
+///   Additionally the other elements are rearranged such that for all values of `i` in [keys_output, keys_output + n)
 ///   and all values of `j` in [keys_output + n, keys_output + size): `comp(*i, *j)` is false.
 ///   Smaller elements than the n-th will be arranged before, and bigger ones after the n-th element.
 ///
 /// \par Overview
 /// * The contents of the inputs are not altered by the function.
 /// * Returns the required size of `temporary_storage` in `storage_size`
-/// if `temporary_storage` in a null pointer.
+/// if `temporary_storage` is a null pointer.
 /// * Accepts custom compare_functions for nth_element across the device.
 /// * Streams in graph capture mode are not supported
 ///
