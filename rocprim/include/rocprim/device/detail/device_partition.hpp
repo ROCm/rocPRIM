@@ -863,7 +863,36 @@ template<select_method SelectMethod,
          class InequalityOp,
          class OffsetLookbackScanState,
          class... UnaryPredicates>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto partition_kernel_impl(KeyIterator,
+                                                               ValueIterator,
+                                                               FlagIterator,
+                                                               OutputKeyIterator,
+                                                               OutputValueIterator,
+                                                               size_t*,
+                                                               size_t*,
+                                                               size_t,
+                                                               const size_t,
+                                                               InequalityOp,
+                                                               OffsetLookbackScanState,
+                                                               const unsigned int,
+                                                               UnaryPredicates...)
+    -> std::enable_if_t<!is_lookback_kernel_runnable<OffsetLookbackScanState>()>
+{
+    // No need to build the kernel with sleep on a device that does not require it
+}
+
+template<select_method SelectMethod,
+         bool          OnlySelected,
+         class Config,
+         class KeyIterator,
+         class ValueIterator, // Can be rocprim::empty_type* if key only
+         class FlagIterator,
+         class OutputKeyIterator,
+         class OutputValueIterator,
+         class InequalityOp,
+         class OffsetLookbackScanState,
+         class... UnaryPredicates>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     partition_kernel_impl(KeyIterator             keys_input,
                           ValueIterator           values_input,
                           FlagIterator            flags,
@@ -877,6 +906,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                           OffsetLookbackScanState offset_scan_state,
                           const unsigned int      number_of_blocks,
                           UnaryPredicates... predicates)
+        -> std::enable_if_t<is_lookback_kernel_runnable<OffsetLookbackScanState>()>
 {
     static constexpr partition_config_params params = device_params<Config>();
 

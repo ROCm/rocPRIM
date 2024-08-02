@@ -35,6 +35,7 @@
 #include "../../config.hpp"
 
 #include <iterator>
+#include <type_traits>
 #include <utility>
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -482,7 +483,37 @@ template<typename Config,
          typename CompareFunction,
          typename BinaryOp,
          typename LookbackScanState>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto kernel_impl(KeyIterator,
+                                                     ValueIterator,
+                                                     const UniqueIterator,
+                                                     const ReductionIterator,
+                                                     const UniqueCountIterator,
+                                                     const BinaryOp,
+                                                     const CompareFunction,
+                                                     const LookbackScanState,
+                                                     ordered_block_id<unsigned int>,
+                                                     const std::size_t,
+                                                     const std::size_t,
+                                                     const std::size_t,
+                                                     const std::size_t* const,
+                                                     const AccumulatorType* const,
+                                                     const std::size_t)
+    -> std::enable_if_t<!is_lookback_kernel_runnable<LookbackScanState>()>
+{
+    // No need to build the kernel with sleep on a device that does not require it
+}
+
+template<typename Config,
+         typename AccumulatorType,
+         typename KeyIterator,
+         typename ValueIterator,
+         typename UniqueIterator,
+         typename ReductionIterator,
+         typename UniqueCountIterator,
+         typename CompareFunction,
+         typename BinaryOp,
+         typename LookbackScanState>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     kernel_impl(KeyIterator                    keys_input,
                 ValueIterator                  values_input,
                 const UniqueIterator           unique_keys,
@@ -498,6 +529,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                 const std::size_t* const       global_head_count,
                 const AccumulatorType* const   previous_accumulated,
                 const std::size_t              number_of_tiles_launch)
+        -> std::enable_if_t<is_lookback_kernel_runnable<LookbackScanState>()>
 {
     static constexpr unsigned int         block_size         = Config::block_size;
     static constexpr unsigned int         items_per_thread   = Config::items_per_thread;

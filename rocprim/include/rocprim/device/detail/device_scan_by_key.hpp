@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -252,7 +252,33 @@ namespace detail
              typename CompareFunction,
              typename BinaryFunction,
              typename LookbackScanState>
-    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void device_scan_by_key_kernel_impl(
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
+        device_scan_by_key_kernel_impl(KeyInputIterator,
+                                       InputIterator,
+                                       OutputIterator,
+                                       ResultType,
+                                       const CompareFunction,
+                                       const BinaryFunction,
+                                       LookbackScanState,
+                                       const size_t,
+                                       const size_t,
+                                       const size_t,
+                                       const rocprim::tuple<ResultType, bool>* const)
+            -> std::enable_if_t<!is_lookback_kernel_runnable<LookbackScanState>()>
+    {
+        // No need to build the kernel with sleep on a device that does not require it
+    }
+
+    template<bool Exclusive,
+             typename Config,
+             typename KeyInputIterator,
+             typename InputIterator,
+             typename OutputIterator,
+             typename ResultType,
+             typename CompareFunction,
+             typename BinaryFunction,
+             typename LookbackScanState>
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto device_scan_by_key_kernel_impl(
         KeyInputIterator                              keys,
         InputIterator                                 values,
         OutputIterator                                output,
@@ -264,6 +290,7 @@ namespace detail
         const size_t                                  starting_block,
         const size_t                                  number_of_blocks,
         const rocprim::tuple<ResultType, bool>* const previous_last_value)
+        -> std::enable_if_t<is_lookback_kernel_runnable<LookbackScanState>()>
     {
         using result_type = ResultType;
         static_assert(std::is_same<rocprim::tuple<ResultType, bool>,

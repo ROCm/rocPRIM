@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -95,7 +95,30 @@ template<bool Exclusive,
          class BinaryFunction,
          class AccType,
          class LookbackScanState>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto lookback_scan_kernel_impl(InputIterator,
+                                                                   OutputIterator,
+                                                                   const size_t,
+                                                                   AccType,
+                                                                   BinaryFunction,
+                                                                   LookbackScanState,
+                                                                   const unsigned int,
+                                                                   AccType* = nullptr,
+                                                                   AccType* = nullptr,
+                                                                   bool     = false,
+                                                                   bool     = false)
+    -> std::enable_if_t<!is_lookback_kernel_runnable<LookbackScanState>()>
+{
+    // No need to build the kernel with sleep on a device that does not require it
+}
+
+template<bool Exclusive,
+         class Config,
+         class InputIterator,
+         class OutputIterator,
+         class BinaryFunction,
+         class AccType,
+         class LookbackScanState>
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     lookback_scan_kernel_impl(InputIterator      input,
                               OutputIterator     output,
                               const size_t       size,
@@ -107,6 +130,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                               AccType*           new_last_element      = nullptr,
                               bool               override_first_value  = false,
                               bool               save_last_value       = false)
+        -> std::enable_if_t<is_lookback_kernel_runnable<LookbackScanState>()>
 {
     static_assert(std::is_same<AccType, typename LookbackScanState::value_type>::value,
                   "value_type of LookbackScanState must be result_type");

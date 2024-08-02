@@ -115,6 +115,8 @@ public:
     using flag_type = flag_type_;
     using value_type = T;
 
+    static constexpr bool use_sleep = UseSleep;
+
     // temp_storage must point to allocation of get_storage_size(number_of_blocks) bytes
     ROCPRIM_HOST static inline hipError_t create(lookback_scan_state& state,
                                                  void*                temp_storage,
@@ -311,6 +313,8 @@ struct lookback_scan_state<T, UseSleep, false>
 public:
     using flag_type  = unsigned int;
     using value_type = T;
+
+    static constexpr bool use_sleep = UseSleep;
 
     // temp_storage must point to allocation of get_storage_size(number_of_blocks) bytes
     ROCPRIM_HOST static inline hipError_t create(lookback_scan_state& state,
@@ -623,7 +627,16 @@ protected:
     LookbackScanState& scan_state_;
 };
 
-inline hipError_t is_sleep_scan_state_used(const hipStream_t stream, bool& use_sleep)
+// It is known that early revisions of MI100 (gfx908) hang in the wait loop of
+// lookback_scan_state::get() without sleeping (s_sleep).
+// is_sleep_scan_state_used() checks the architecture/revision of the device on host in runtime,
+// to select the corresponding kernel (with or without sleep). However, since the check is runtime,
+// both versions of the kernel must be compiled for all architectures.
+// is_lookback_kernel_runnable() can be used in device code to prevent compilation of the version
+// with sleep on all device arhitectures except gfx908.
+
+ROCPRIM_HOST ROCPRIM_INLINE hipError_t is_sleep_scan_state_used(const hipStream_t stream,
+                                                                bool&             use_sleep)
 {
     hipDeviceProp_t prop;
     int             device_id;
@@ -642,6 +655,19 @@ inline hipError_t is_sleep_scan_state_used(const hipStream_t stream, bool& use_s
 #endif
     use_sleep = std::string(prop.gcnArchName).find("908") != std::string::npos && asicRevision < 2;
     return hipSuccess;
+}
+
+template<typename LookbackScanState>
+constexpr bool is_lookback_kernel_runnable()
+{
+    if(device_target_arch() == target_arch::gfx908)
+    {
+        // For gfx908 kernels with both version of lookback_scan_state can run: with and without
+        // sleep
+        return true;
+    }
+    // For other GPUs only a kernel without sleep can run
+    return !LookbackScanState::use_sleep;
 }
 
 template<typename T>
