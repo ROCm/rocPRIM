@@ -183,7 +183,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
     }
 
     bool use_sleep;
-    if(const hipError_t error = is_sleep_scan_state_used(use_sleep))
+    if(const hipError_t error = is_sleep_scan_state_used(stream, use_sleep))
     {
         return error;
     }

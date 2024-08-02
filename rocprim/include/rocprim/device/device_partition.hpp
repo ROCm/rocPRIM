@@ -219,7 +219,7 @@ inline hipError_t partition_impl(void*                       temporary_storage,
     std::chrono::high_resolution_clock::time_point start;
 
     bool use_sleep;
-    result = is_sleep_scan_state_used(use_sleep);
+    result = is_sleep_scan_state_used(stream, use_sleep);
     if(result != hipSuccess)
     {
         return result;

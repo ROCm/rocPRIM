@@ -256,7 +256,7 @@ inline auto scan_impl(void*               temporary_storage,
     if(number_of_blocks > 1 || use_limited_size)
     {
         bool use_sleep;
-        if(const hipError_t error = is_sleep_scan_state_used(use_sleep))
+        if(const hipError_t error = is_sleep_scan_state_used(stream, use_sleep))
         {
             return error;
         }

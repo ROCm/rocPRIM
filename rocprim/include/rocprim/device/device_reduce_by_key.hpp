@@ -239,7 +239,7 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
     }
 
     bool             use_sleep;
-    const hipError_t result = detail::is_sleep_scan_state_used(use_sleep);
+    const hipError_t result = detail::is_sleep_scan_state_used(stream, use_sleep);
     if(result != hipSuccess)
     {
         return result;

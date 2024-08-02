@@ -623,15 +623,15 @@ protected:
     LookbackScanState& scan_state_;
 };
 
-inline hipError_t is_sleep_scan_state_used(bool& use_sleep)
+inline hipError_t is_sleep_scan_state_used(const hipStream_t stream, bool& use_sleep)
 {
     hipDeviceProp_t prop;
-    int             deviceId;
-    if(const hipError_t error = hipGetDevice(&deviceId))
+    int             device_id;
+    if(const hipError_t error = get_device_from_stream(stream, device_id))
     {
         return error;
     }
-    else if(const hipError_t error = hipGetDeviceProperties(&prop, deviceId))
+    else if(const hipError_t error = hipGetDeviceProperties(&prop, device_id))
     {
         return error;
     }
