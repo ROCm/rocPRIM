@@ -21,15 +21,12 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_NTH_ELEMENT_HPP_
 #define ROCPRIM_DEVICE_DEVICE_NTH_ELEMENT_HPP_
 
-#include <cassert>
 #include <cstddef>
 #include <hip/amd_detail/amd_hip_runtime.h>
 #include <hip/driver_types.h>
 #include <iostream>
 #include <iterator>
 #include <rocprim/intrinsics/thread.hpp>
-#include <type_traits>
-#include <utility>
 
 #include "../detail/temp_storage.hpp"
 #include "../intrinsics.hpp"
@@ -78,49 +75,52 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
                                         unsigned char* oracles,
                                         size_t*        offset_rank)
 {
-    using block_scan_offsets = rocprim::block_scan<size_t, num_buckets>;
+    // Find the maximum number of threads in one block
+    constexpr size_t max_num_threads = 1024;
+    using block_scan_offsets = rocprim::block_scan<size_t, max_num_threads>;
 
     __shared__ typename block_scan_offsets::storage_type storage;
     __shared__ size_t bucket_offsets[num_buckets];
 
     auto idx = threadIdx.x + (threadIdx.y * blockDim.x);
 
+    size_t bucket_offset;
+    size_t bucket_size = threadIdx.x < num_buckets ? buckets[threadIdx.x] : 0;
+    size_t init        = 0;
+    block_scan_offsets().exclusive_scan(bucket_size, bucket_offset, init, storage);
+
+    rocprim::syncthreads();
+
     if (threadIdx.x < num_buckets)
     {
-        size_t bucket_size = buckets[threadIdx.x];
-        size_t init        = 0;
-        size_t bucket_offset;
-        block_scan_offsets().exclusive_scan(bucket_size, bucket_offset, init, storage);
         bucket_offsets[threadIdx.x] = bucket_offset;
     }
+
     rocprim::syncthreads();
 
+    size_t num_buckets_before;
     // Find offset and bucket size of nth element
-    if(idx < num_buckets)
+    using block_scan_find_nth = rocprim::block_scan<size_t, max_num_threads>;
+
+    __shared__ typename block_scan_offsets::storage_type storage_find;
+
+    bool in_nth = threadIdx.x < num_buckets ? (bucket_offsets[idx] <= rank) : 0;
+
+    block_scan_find_nth().inclusive_scan(in_nth, num_buckets_before, storage_find);
+
+    rocprim::syncthreads();
+    if(idx == (num_buckets - 1))
     {
-        using block_scan_find_nth = rocprim::block_scan<size_t, num_buckets>;
-
-        __shared__ typename block_scan_offsets::storage_type storage_find;
-
-        bool in_nth = (bucket_offsets[idx] <= rank);
-        size_t num_buckets_before;
-
-        block_scan_find_nth().inclusive_scan(in_nth, num_buckets_before, storage_find);
-        if (idx == (num_buckets-1))
-        {
-            auto nth_element = num_buckets_before - 1;
-            offset_rank[0] = bucket_offsets[nth_element];
-            offset_rank[1] = buckets[nth_element];
-        }
+        auto nth_element = num_buckets_before - 1;
+        offset_rank[0]   = bucket_offsets[nth_element];
+        offset_rank[1]   = buckets[nth_element];
     }
 
     rocprim::syncthreads();
 
-    auto bucket = oracles[idx];
+    auto bucket  = oracles[idx];
     auto element = keys[idx];
 
-    // Find the maximum number of threads in one block
-    constexpr size_t max_num_threads = 1024;
     using block_scan_local_offsets = rocprim::block_scan<size_t, max_num_threads>;
 
     __shared__ typename block_scan_local_offsets::storage_type storage_bucket;
@@ -129,7 +129,10 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
     {
         size_t temp;
         size_t current_bucket = bucket == i;
-        block_scan_local_offsets().exclusive_scan(current_bucket, temp, 0);
+        block_scan_local_offsets().exclusive_scan(current_bucket, temp, 0, storage_bucket);
+
+        rocprim::syncthreads();
+
         if (current_bucket)
         {
             index += temp;
