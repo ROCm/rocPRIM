@@ -11,6 +11,7 @@ Documentation for rocPRIM is available at
 * Added configuration autotuning to device partition (`rocprim::partition`, `rocprim::partition_two_way`, and `rocprim::partition_three_way`), device select (`rocprim::select`, `rocprim::unique`, and `rocprim::unique_by_key`), and device reduce by key (`rocprim::reduce_by_key`) for improved performance on selected architectures.
 * Added `rocprim::uninitialized_array` which provides uninitialized storage in local memory for user-defined types.
 * Added large segment support for `rocprim:segmented_reduce`.
+* Added a parallel `nth_element` device funcion based on the `std::nth_element`.
 
 ### Changes
 
