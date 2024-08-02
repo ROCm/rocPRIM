@@ -43,6 +43,7 @@ Documentation for rocPRIM is available at
 
 * Improved the performance of `warp_sort_shuffle` and `block_sort_bitonic`.
 * Created an optimized version of the `warp_exchange` functions `blocked_to_striped_shuffle` and `striped_to_blocked_shuffle` when the warpsize is equal to the items per thread.
+* Improved the performance of `device_transform` slightly.
 
 ### Fixes
 
