@@ -20,8 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef ROCPRIM_BENCHMARK_DEVICE_PARTIAL_SORT_PARALLEL_HPP_
-#define ROCPRIM_BENCHMARK_DEVICE_PARTIAL_SORT_PARALLEL_HPP_
+#ifndef ROCPRIM_BENCHMARK_DEVICE_PARTIAL_SORT_COPY_PARALLEL_HPP_
+#define ROCPRIM_BENCHMARK_DEVICE_PARTIAL_SORT_COPY_PARALLEL_HPP_
 
 #include "benchmark_utils.hpp"
 
@@ -40,11 +40,11 @@
 #include <cstddef>
 
 template<typename Key = int, typename Config = rocprim::default_config>
-struct device_partial_sort_benchmark : public config_autotune_interface
+struct device_partial_sort_copy_benchmark : public config_autotune_interface
 {
     bool small_n = false;
 
-    device_partial_sort_benchmark(bool SmallN)
+    device_partial_sort_copy_benchmark(bool SmallN)
     {
         small_n = SmallN;
     }
@@ -53,7 +53,7 @@ struct device_partial_sort_benchmark : public config_autotune_interface
     {
         using namespace std::string_literals;
         return bench_naming::format_name(
-            "{lvl:device,algo:partial_sort,nth:" + (small_n ? "small"s : "half"s)
+            "{lvl:device,algo:partial_sort_copy,nth:" + (small_n ? "small"s : "half"s)
             + ",key_type:" + std::string(Traits<Key>::name()) + ",cfg:default_config}");
     }
 
@@ -92,11 +92,11 @@ struct device_partial_sort_benchmark : public config_autotune_interface
         }
 
         key_type* d_keys_input;
-        key_type* d_keys_new_data;
+        key_type* d_keys_output;
         HIP_CHECK(hipMalloc(&d_keys_input, size * sizeof(*d_keys_input)));
-        HIP_CHECK(hipMalloc(&d_keys_new_data, size * sizeof(*d_keys_new_data)));
+        HIP_CHECK(hipMalloc(&d_keys_output, size * sizeof(*d_keys_output)));
 
-        HIP_CHECK(hipMemcpy(d_keys_new_data,
+        HIP_CHECK(hipMemcpy(d_keys_input,
                             keys_input.data(),
                             size * sizeof(*d_keys_input),
                             hipMemcpyHostToDevice));
@@ -104,32 +104,30 @@ struct device_partial_sort_benchmark : public config_autotune_interface
         rocprim::less<key_type> lesser_op;
         void*                   d_temporary_storage     = nullptr;
         size_t                  temporary_storage_bytes = 0;
-        HIP_CHECK(rocprim::partial_sort(d_temporary_storage,
-                                        temporary_storage_bytes,
-                                        d_keys_input,
-                                        middle,
-                                        size,
-                                        lesser_op,
-                                        stream,
-                                        false));
+        HIP_CHECK(rocprim::partial_sort_copy(d_temporary_storage,
+                                             temporary_storage_bytes,
+                                             d_keys_input,
+                                             d_keys_output,
+                                             middle,
+                                             size,
+                                             lesser_op,
+                                             stream,
+                                             false));
 
         HIP_CHECK(hipMalloc(&d_temporary_storage, temporary_storage_bytes));
 
         // Warm-up
         for(size_t i = 0; i < warmup_size; i++)
         {
-            HIP_CHECK(hipMemcpy(d_keys_input,
-                                d_keys_new_data,
-                                size * sizeof(*d_keys_input),
-                                hipMemcpyDeviceToDevice));
-            HIP_CHECK(rocprim::partial_sort(d_temporary_storage,
-                                            temporary_storage_bytes,
-                                            d_keys_input,
-                                            middle,
-                                            size,
-                                            lesser_op,
-                                            stream,
-                                            false));
+            HIP_CHECK(rocprim::partial_sort_copy(d_temporary_storage,
+                                                 temporary_storage_bytes,
+                                                 d_keys_input,
+                                                 d_keys_output,
+                                                 middle,
+                                                 size,
+                                                 lesser_op,
+                                                 stream,
+                                                 false));
         }
         HIP_CHECK(hipDeviceSynchronize());
 
@@ -140,31 +138,28 @@ struct device_partial_sort_benchmark : public config_autotune_interface
 
         for(auto _ : state)
         {
-            float elapsed_mseconds = 0;
+            // Record start event
+            HIP_CHECK(hipEventRecord(start, stream));
+
             for(size_t i = 0; i < batch_size; i++)
             {
-                HIP_CHECK(hipMemcpy(d_keys_input,
-                                    d_keys_new_data,
-                                    size * sizeof(*d_keys_input),
-                                    hipMemcpyDeviceToDevice));
-                // Record start event
-                HIP_CHECK(hipEventRecord(start, stream));
-                HIP_CHECK(rocprim::partial_sort(d_temporary_storage,
-                                                temporary_storage_bytes,
-                                                d_keys_input,
-                                                middle,
-                                                size,
-                                                lesser_op,
-                                                stream,
-                                                false));
-                // Record stop event and wait until it completes
-                HIP_CHECK(hipEventRecord(stop, stream));
-                HIP_CHECK(hipEventSynchronize(stop));
-                float elapsed_mseconds_current;
-                HIP_CHECK(hipEventElapsedTime(&elapsed_mseconds_current, start, stop));
-                elapsed_mseconds += elapsed_mseconds_current;
+                HIP_CHECK(rocprim::partial_sort_copy(d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_keys_input,
+                                                     d_keys_output,
+                                                     middle,
+                                                     size,
+                                                     lesser_op,
+                                                     stream,
+                                                     false));
             }
 
+            // Record stop event and wait until it completes
+            HIP_CHECK(hipEventRecord(stop, stream));
+            HIP_CHECK(hipEventSynchronize(stop));
+
+            float elapsed_mseconds;
+            HIP_CHECK(hipEventElapsedTime(&elapsed_mseconds, start, stop));
             state.SetIterationTime(elapsed_mseconds / 1000);
         }
 
@@ -177,8 +172,8 @@ struct device_partial_sort_benchmark : public config_autotune_interface
 
         HIP_CHECK(hipFree(d_temporary_storage));
         HIP_CHECK(hipFree(d_keys_input));
-        HIP_CHECK(hipFree(d_keys_new_data));
+        HIP_CHECK(hipFree(d_keys_output));
     }
 };
 
-#endif // ROCPRIM_BENCHMARK_DEVICE_PARTIAL_SORT_PARALLEL_HPP_
+#endif // ROCPRIM_BENCHMARK_DEVICE_PARTIAL_SORT_COPY_PARALLEL_HPP_
