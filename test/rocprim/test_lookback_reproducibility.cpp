@@ -78,23 +78,31 @@ TYPED_TEST_SUITE(RocprimLookbackReproducibilityTests, Suite);
 template<typename S, typename F>
 void test_reproducibility(S scan_op, F run_test)
 {
-    // Some algorithms change their tuning based on known operators.
-    // For to prevent this automatic detection from messing up our results
-    // with different scan operators, use this custom operator.
-    auto wrapped_scan_op = [scan_op](auto a, auto b) { return scan_op(a, b); };
+    bool* d_enable_sleep;
+    HIP_CHECK(hipMalloc(&d_enable_sleep, sizeof(*d_enable_sleep)));
 
     // Delay the operator by a semi-random amount to increase the likelyhood
     // of changing the number of lookback steps between the runs.
-    auto eepy_scan_op = [scan_op](auto a, auto b)
+    auto eepy_scan_op = [scan_op, d_enable_sleep](auto a, auto b)
     {
-        for(unsigned int i = 0; i < blockIdx.x * 3001 % 64; ++i)
+        if(*d_enable_sleep)
         {
-            __builtin_amdgcn_s_sleep(63);
+            for(unsigned int i = 0; i < blockIdx.x * 3001 % 64; ++i)
+            {
+                __builtin_amdgcn_s_sleep(63);
+            }
         }
         return scan_op(a, b);
     };
 
-    auto first  = run_test(wrapped_scan_op);
+    bool enable_sleep = false;
+    HIP_CHECK(
+        hipMemcpy(d_enable_sleep, &enable_sleep, sizeof(enable_sleep), hipMemcpyHostToDevice));
+    auto first = run_test(eepy_scan_op);
+
+    enable_sleep = true;
+    HIP_CHECK(
+        hipMemcpy(d_enable_sleep, &enable_sleep, sizeof(enable_sleep), hipMemcpyHostToDevice));
     auto second = run_test(eepy_scan_op);
     // We want the result to be bitwise equal, even if the inputs/outputs are floats.
     ASSERT_NO_FATAL_FAILURE(test_utils::assert_bit_eq(first, second));
