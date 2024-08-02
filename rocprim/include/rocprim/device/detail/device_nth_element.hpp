@@ -26,6 +26,7 @@
 
 #include "../../config.hpp"
 
+#include <hip/driver_types.h>
 #include <iostream>
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -178,8 +179,9 @@ ROCPRIM_KERNEL void kernel_build_searchtree(KeysIterator   keys,
     bool equality_bucket = false;
     if(idx > 0)
     {
-        equality_bucket = tree[idx - 1] == sample_buffer
-                          && (idx == num_splitters - 1 || compare_function(sample_buffer, tree[idx + 1]));
+        equality_bucket
+            = tree[idx - 1] == sample_buffer
+              && (idx == num_splitters - 1 || compare_function(sample_buffer, tree[idx + 1]));
     }
 
     equality_buckets[idx] = equality_bucket;
@@ -197,8 +199,14 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
                                                 BinaryFunction compare_function)
 {
     constexpr size_t num_splitters = num_buckets - 1;
+    using Key                      = typename std::iterator_traits<KeysIterator>::value_type;
 
-    using Key = typename std::iterator_traits<KeysIterator>::value_type;
+    struct storage_type_
+    {
+        Key search_tree[num_splitters];
+    };
+    using storage_type = detail::raw_storage<storage_type_>;
+    __shared__ storage_type storage;
 
     __shared__ size_t shared_buckets[num_buckets];
 
@@ -209,10 +217,10 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
         shared_buckets[threadIdx.x] = 0;
     }
 
-    __shared__ Key search_tree[num_splitters];
+    storage_type_& storage_ = storage.get();
     if(threadIdx.x < num_splitters)
     {
-        search_tree[threadIdx.x] = tree[threadIdx.x];
+        storage_.search_tree[threadIdx.x] = tree[threadIdx.x];
     }
 
     Key element;
@@ -229,7 +237,7 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
         size_t bucket = num_splitters;
         for(size_t i = 0; i < num_splitters; i++)
         {
-            if(compare_function(element, search_tree[i]))
+            if(compare_function(element, storage_.search_tree[i]))
             {
                 bucket = i;
                 break;
@@ -242,10 +250,11 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
         // for (size_t i = 0; i < tree_depth-1; i++)
         // {
         //     diff = diff / 2;
-        //     bucket += compare_function(element, search_tree[bucket]) ? -diff : diff;
+        //     bucket += compare_function(element, storage_.search_tree[bucket]) ? -diff : diff;
         // }
 
-        if(bucket > 0 && equality_buckets[bucket - 1] && element == search_tree[bucket - 1])
+        if(bucket > 0 && equality_buckets[bucket - 1]
+           && element == storage_.search_tree[bucket - 1])
         {
             bucket = bucket - 1;
         }
@@ -261,17 +270,6 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
     {
         buckets_per_block[threadIdx.x + blockIdx.x * num_buckets] = shared_buckets[threadIdx.x];
         detail::atomic_add(&buckets[threadIdx.x], shared_buckets[threadIdx.x]);
-    }
-}
-
-template<class KeysIterator>
-ROCPRIM_KERNEL void
-    kernel_copy_output_to_keys(KeysIterator keys, KeysIterator output, const size_t size)
-{
-    auto idx = threadIdx.x + (blockDim.x * blockIdx.x);
-    if(idx < size)
-    {
-        keys[idx] = output[idx];
     }
 }
 
@@ -357,9 +355,7 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
                                                            nth_element_data,
                                                            output);
 
-    kernel_copy_output_to_keys<<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
-                                                                                 output,
-                                                                                 size);
+    error = hipMemcpy(keys, output, sizeof(Key) * size, hipMemcpyDeviceToDevice);
 
     size_t h_nth_element_data[3];
     error = hipMemcpy(&h_nth_element_data,

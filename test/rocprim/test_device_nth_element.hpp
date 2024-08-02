@@ -72,7 +72,7 @@ using RocprimDeviceNthelementTestsParams = ::testing::Types<
     DeviceNthelementParams<unsigned short, int>,
     DeviceNthelementParams<signed char, test_utils::custom_test_type<float>>,
     DeviceNthelementParams<int>,
-    // DeviceNthelementParams<test_utils::custom_test_type<int>>,
+    DeviceNthelementParams<test_utils::custom_test_type<int>>,
     DeviceNthelementParams<unsigned long>,
     DeviceNthelementParams<long long>,
     DeviceNthelementParams<float, double>,
@@ -80,11 +80,11 @@ using RocprimDeviceNthelementTestsParams = ::testing::Types<
     DeviceNthelementParams<uint8_t, uint8_t>,
     DeviceNthelementParams<rocprim::half, rocprim::half, rocprim::less<rocprim::half>>,
     DeviceNthelementParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
-    // DeviceNthelementParams<short, test_utils::custom_test_type<int>>,
-    // DeviceNthelementParams<double, test_utils::custom_test_type<double>>,
-    // DeviceNthelementParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<double>>,
-    // DeviceNthelementParams<int, test_utils::custom_float_type>,
-    // DeviceNthelementParams<test_utils::custom_test_array_type<int, 4>>,
+    DeviceNthelementParams<short, test_utils::custom_test_type<int>>,
+    DeviceNthelementParams<double, test_utils::custom_test_type<double>>,
+    DeviceNthelementParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<double>>,
+    DeviceNthelementParams<int, test_utils::custom_float_type>,
+    DeviceNthelementParams<test_utils::custom_test_array_type<int, 4>>,
     // DeviceNthelementParams<int, int, ::rocprim::less<int>, true>, // Bug with graphs
     DeviceNthelementParams<int, float, ::rocprim::greater<int>>>;
 
