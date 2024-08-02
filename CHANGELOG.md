@@ -8,7 +8,7 @@ Documentation for rocPRIM is available at
 ### Additions
 
 * Option `--seed` to benchmarks to specify a seed for the generation of random inputs. The default behavior is to keep using a random seed per benchmark measurement.
-* Added configuration autotuning to device partition (`rocprim::partition`, `rocprim::partition_two_way`, and `rocprim::partition_three_way`) and device select (`rocprim::select`, `rocprim::unique`, and `rocprim::unique_by_key`) for improved performance on selected architectures.
+* Added configuration autotuning to device partition (`rocprim::partition`, `rocprim::partition_two_way`, and `rocprim::partition_three_way`), device select (`rocprim::select`, `rocprim::unique`, and `rocprim::unique_by_key`), and device reduce by key (`rocprim::reduce_by_key`) for improved performance on selected architectures.
 * Added `rocprim::uninitialized_array` which provides uninitialized storage in local memory for user-defined types.
 * Added large segment support for `rocprim:segmented_reduce`.
 

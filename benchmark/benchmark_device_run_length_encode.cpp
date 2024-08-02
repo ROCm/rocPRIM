@@ -39,8 +39,8 @@
 #include <string>
 #include <vector>
 
-#ifndef DEFAULT_N
-const size_t DEFAULT_N = 1024 * 1024 * 32;
+#ifndef DEFAULT_BYTES
+constexpr size_t DEFAULT_BYTES = size_t{2} << 30; // 2 GiB
 #endif
 
 namespace rp = rocprim;
@@ -48,12 +48,14 @@ namespace rp = rocprim;
 template<class T>
 void run_encode_benchmark(benchmark::State&   state,
                           size_t              max_length,
-                          size_t              size,
+                          size_t              bytes,
                           const managed_seed& seed,
                           hipStream_t         stream)
 {
     using key_type = T;
     using count_type = unsigned int;
+
+    const size_t size = bytes / sizeof(T);
 
     // Generate data
     std::vector<key_type> input(size);
@@ -169,13 +171,15 @@ void run_encode_benchmark(benchmark::State&   state,
 template<class T>
 void run_non_trivial_runs_benchmark(benchmark::State&   state,
                                     size_t              max_length,
-                                    size_t              size,
+                                    size_t              bytes,
                                     const managed_seed& seed,
                                     hipStream_t         stream)
 {
     using key_type = T;
     using offset_type = unsigned int;
     using count_type = unsigned int;
+
+    const size_t size = bytes / sizeof(T);
 
     // Generate data
     std::vector<key_type> input(size);
@@ -309,15 +313,16 @@ void add_encode_benchmarks(size_t                                        max_len
     using custom_float2 = custom_type<float, float>;
     using custom_double2 = custom_type<double, double>;
 
-    std::vector<benchmark::internal::Benchmark*> bs =
-    {
-        CREATE_ENCODE_BENCHMARK(int),
-        CREATE_ENCODE_BENCHMARK(long long),
-
+    std::vector<benchmark::internal::Benchmark*> bs = {
+        // all tuned types
         CREATE_ENCODE_BENCHMARK(int8_t),
-        CREATE_ENCODE_BENCHMARK(uint8_t),
+        CREATE_ENCODE_BENCHMARK(int16_t),
+        CREATE_ENCODE_BENCHMARK(int32_t),
+        CREATE_ENCODE_BENCHMARK(int64_t),
         CREATE_ENCODE_BENCHMARK(rocprim::half),
-
+        CREATE_ENCODE_BENCHMARK(float),
+        CREATE_ENCODE_BENCHMARK(double),
+        // custom types
         CREATE_ENCODE_BENCHMARK(custom_float2),
         CREATE_ENCODE_BENCHMARK(custom_double2),
     };
@@ -366,7 +371,7 @@ void add_non_trivial_runs_benchmarks(size_t                                     
 int main(int argc, char *argv[])
 {
     cli::Parser parser(argc, argv);
-    parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
+    parser.set_optional<size_t>("size", "size", DEFAULT_BYTES, "number of bytes");
     parser.set_optional<int>("trials", "trials", -1, "number of iterations");
     parser.set_optional<std::string>("name_format",
                                      "name_format",

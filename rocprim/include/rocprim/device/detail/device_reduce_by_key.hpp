@@ -21,6 +21,7 @@
 #ifndef ROCPRIM_DEVICE_DETAIL_DEVICE_REDUCE_BY_KEY_HPP_
 #define ROCPRIM_DEVICE_DETAIL_DEVICE_REDUCE_BY_KEY_HPP_
 
+#include "device_config_helper.hpp"
 #include "lookback_scan_state.hpp"
 #include "ordered_block_id.hpp"
 
@@ -531,12 +532,14 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                 const std::size_t              number_of_tiles_launch)
         -> std::enable_if_t<is_lookback_kernel_runnable<LookbackScanState>()>
 {
-    static constexpr unsigned int         block_size         = Config::block_size;
-    static constexpr unsigned int         items_per_thread   = Config::items_per_thread;
-    static constexpr unsigned int         tiles_per_block    = Config::tiles_per_block;
-    static constexpr block_load_method    load_keys_method   = Config::load_keys_method;
-    static constexpr block_load_method    load_values_method = Config::load_values_method;
-    static constexpr block_scan_algorithm scan_algorithm     = Config::scan_algorithm;
+    static constexpr reduce_by_key_config_params params = device_params<Config>();
+
+    static constexpr unsigned int         block_size       = params.kernel_config.block_size;
+    static constexpr unsigned int         items_per_thread = params.kernel_config.items_per_thread;
+    static constexpr unsigned int         tiles_per_block  = params.tiles_per_block;
+    static constexpr block_load_method    load_keys_method = params.load_keys_method;
+    static constexpr block_load_method    load_values_method = params.load_values_method;
+    static constexpr block_scan_algorithm scan_algorithm     = params.scan_algorithm;
     static constexpr unsigned int         items_per_tile     = block_size * items_per_thread;
 
     using key_type = reduce_by_key::value_type_t<KeyIterator>;

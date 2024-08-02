@@ -34,18 +34,17 @@
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_types.hpp"
 
-template<
-    class Key,
-    class Value,
-    class ReduceOp,
-    unsigned int MinSegmentLength,
-    unsigned int MaxSegmentLength,
-    class Aggregate = Value,
-    class KeyCompareFunction = ::rocprim::equal_to<Key>,
-    // Tests output iterator with void value_type (OutputIterator concept)
-    bool UseIdentityIterator = false,
-    bool UseGraphs = false
->
+template<class Key,
+         class Value,
+         class ReduceOp,
+         unsigned int MinSegmentLength,
+         unsigned int MaxSegmentLength,
+         class Aggregate          = Value,
+         class KeyCompareFunction = ::rocprim::equal_to<Key>,
+         // Tests output iterator with void value_type (OutputIterator concept)
+         bool UseIdentityIterator = false,
+         bool UseGraphs           = false,
+         typename Config          = rocprim::default_config>
 struct params
 {
     using key_type = Key;
@@ -57,6 +56,7 @@ struct params
     using key_compare_op = KeyCompareFunction;
     static constexpr bool use_identity_iterator = UseIdentityIterator;
     static constexpr bool use_graphs = UseGraphs;
+    using config                                     = Config;
 };
 
 template<class Params>
@@ -95,7 +95,8 @@ typedef ::testing::Types<
     params<float, custom_double2, rocprim::minimum<custom_double2>, 1, 10000>,
     params<custom_double2, custom_int2, rocprim::plus<custom_int2>, 1, 10>,
     params<unsigned long long, float, rocprim::minimum<float>, 1, 30>,
-    params<int, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
+    // with block size different than ROCPRIM_DEFAULT_MAX_BLOCK_SIZE and non-power-of-two items per thread
+    params<int, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100, rocprim::half, rocprim::equal_to<int>, false, false, rocprim::reduce_by_key_config<128, 3>>,
     // half should be supported, but is missing some key operators.
     // we should uncomment these, as soon as these are implemented and the tests compile and work as intended.
     //params<rocprim::half, rocprim::half, rocprim::minimum<rocprim::half>, 15, 100>,
@@ -143,6 +144,7 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
                                       std::uniform_int_distribution<int>,
                                       std::uniform_int_distribution<unsigned int>>::type>::type>::
         type;
+    using config = typename TestFixture::params::config;
 
     constexpr bool use_identity_iterator = TestFixture::params::use_identity_iterator;
     const bool debug_synchronous = false;
@@ -259,7 +261,7 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
 
             size_t temporary_storage_bytes;
 
-            HIP_CHECK(rocprim::reduce_by_key(
+            HIP_CHECK(rocprim::reduce_by_key<config>(
                 nullptr,
                 temporary_storage_bytes,
                 d_keys_input,
@@ -284,16 +286,18 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
                 graph = test_utils::createGraphHelper(stream);
             }
 
-            HIP_CHECK(
-                rocprim::reduce_by_key(
-                    d_temporary_storage, temporary_storage_bytes,
-                    d_keys_input, d_values_input, size,
-                    d_unique_output, d_aggregates_output,
-                    d_unique_count_output,
-                    reduce_op, key_compare_op,
-                    stream, debug_synchronous
-                )
-            );
+            HIP_CHECK(rocprim::reduce_by_key<config>(d_temporary_storage,
+                                                     temporary_storage_bytes,
+                                                     d_keys_input,
+                                                     d_values_input,
+                                                     size,
+                                                     d_unique_output,
+                                                     d_aggregates_output,
+                                                     d_unique_count_output,
+                                                     reduce_op,
+                                                     key_compare_op,
+                                                     stream,
+                                                     debug_synchronous));
 
             hipGraphExec_t graph_instance;
             if(TestFixture::params::use_graphs)

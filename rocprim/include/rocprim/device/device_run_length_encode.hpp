@@ -33,8 +33,9 @@
 #include "../iterator/discard_iterator.hpp"
 #include "../iterator/zip_iterator.hpp"
 
-#include "device_run_length_encode_config.hpp"
+#include "detail/device_config_helper.hpp"
 #include "device_reduce_by_key.hpp"
+#include "device_run_length_encode_config.hpp"
 #include "device_select.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -161,10 +162,13 @@ hipError_t run_length_encode(void * temporary_storage,
     using input_type = typename std::iterator_traits<InputIterator>::value_type;
     using count_type = unsigned int;
 
-    using config
-        = detail::default_or_custom_config<Config,
-                                           // type is irrelevant, select config is not used
-                                           detail::default_run_length_encode_config<empty_type>>;
+    // run_length_encode does not use a tuned reduce by key config, as using a constant iterator
+    //   instead of a device array has different performance characteristics
+    using config = detail::default_or_custom_config<
+        Config,
+        run_length_encode_config<
+            typename detail::default_reduce_by_key_config_base<input_type, count_type>::type,
+            default_config>>;
 
     return ::rocprim::reduce_by_key<typename config::reduce_by_key>(
         temporary_storage, storage_size,

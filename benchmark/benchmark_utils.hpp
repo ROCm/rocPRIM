@@ -495,6 +495,7 @@ template<unsigned int LogicalWarpSize>
 __device__ constexpr bool device_test_enabled_for_warp_size_v
     = ::rocprim::device_warp_size() >= LogicalWarpSize;
 
+/// \brief Get segments of uniform random size in [1, max_segment_length] with random key.
 template<typename T>
 std::vector<T>
     get_random_segments(const size_t size, const size_t max_segment_length, unsigned int seed)
@@ -520,6 +521,29 @@ std::vector<T>
         const size_t new_segment_length = segment_length_distribution(prng);
         const size_t new_segment_end    = std::min(size, keys_start_index + new_segment_length);
         const T      key                = key_distribution(prng);
+        std::fill(keys.begin() + keys_start_index, keys.begin() + new_segment_end, key);
+        keys_start_index += new_segment_length;
+    }
+    return keys;
+}
+
+/// \brief Get segments of uniform random size in [1, max_segment_length] with unique incrementing key.
+template<typename T>
+std::vector<T>
+    get_random_segments_iota(const size_t size, const size_t max_segment_length, unsigned int seed)
+{
+    engine_type                           prng(seed);
+    std::uniform_int_distribution<size_t> segment_length_distribution(1, max_segment_length);
+
+    std::vector<T> keys(size);
+
+    size_t segment_index    = 0;
+    size_t keys_start_index = 0;
+    while(keys_start_index < size)
+    {
+        const size_t new_segment_length = segment_length_distribution(prng);
+        const size_t new_segment_end    = std::min(size, keys_start_index + new_segment_length);
+        const T      key                = segment_index++;
         std::fill(keys.begin() + keys_start_index, keys.begin() + new_segment_end, key);
         keys_start_index += new_segment_length;
     }

@@ -942,6 +942,100 @@ struct default_partition_config_base
         ::rocprim::block_load_method::block_load_transpose,
         ::rocprim::block_scan_algorithm::using_warp_scan>;
 };
+
+struct reduce_by_key_config_params
+{
+    kernel_config_params kernel_config;
+    unsigned int         tiles_per_block;
+    block_load_method    load_keys_method;
+    block_load_method    load_values_method;
+    block_scan_algorithm scan_algorithm;
+};
+
+} // namespace detail
+
+/**
+ * \brief Configuration of device-level reduce-by-key operation.
+ * 
+ * \tparam BlockSize number of threads in a block.
+ * \tparam ItemsPerThread number of items processed by each thread per tile. 
+ * \tparam LoadKeysMethod method of loading keys
+ * \tparam LoadValuesMethod method of loading values
+ * \tparam ScanAlgorithm block level scan algorithm to use
+ * \tparam TilesPerBlock number of tiles (`BlockSize` * `ItemsPerThread` items) to process per block
+ * \tparam SizeLimit limit on the number of items for a single reduce_by_key kernel launch.
+ */
+template<unsigned int         BlockSize,
+         unsigned int         ItemsPerThread,
+         block_load_method    LoadKeysMethod   = block_load_method::block_load_transpose,
+         block_load_method    LoadValuesMethod = block_load_method::block_load_transpose,
+         block_scan_algorithm ScanAlgorithm    = block_scan_algorithm::using_warp_scan,
+         unsigned int         TilesPerBlock    = 1,
+         unsigned int         SizeLimit        = ROCPRIM_GRID_SIZE_LIMIT>
+struct reduce_by_key_config : public detail::reduce_by_key_config_params
+{
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    /// Number of threads in a block.
+    static constexpr unsigned int block_size = BlockSize;
+    /// Number of tiles (`BlockSize` * `ItemsPerThread` items) to process per block
+    static constexpr unsigned int tiles_per_block = TilesPerBlock;
+    /// Number of items processed by each thread per tile.
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+    /// A rocprim::block_load_method emum value indicating how the keys should be loaded.
+    /// Defaults to block_load_method::block_load_transpose
+    static constexpr block_load_method load_keys_method = LoadKeysMethod;
+    /// A rocprim::block_load_method emum value indicating how the values should be loaded.
+    /// Defaults to block_load_method::block_load_transpose
+    static constexpr block_load_method load_values_method = LoadValuesMethod;
+    /// A rocprim::block_scan_algorithm enum value indicating how the reduction should
+    /// be done. Defaults to block_scan_algorithm::using_warp_scan
+    static constexpr block_scan_algorithm scan_algorithm = ScanAlgorithm;
+    /// Maximum possible number of values. Defaults to ROCPRIM_GRID_SIZE_LIMIT.
+    static constexpr unsigned int size_limit = SizeLimit;
+
+    constexpr reduce_by_key_config()
+        : detail::reduce_by_key_config_params{
+            {BlockSize, ItemsPerThread, SizeLimit},
+            TilesPerBlock,
+            LoadKeysMethod,
+            LoadValuesMethod,
+            ScanAlgorithm
+    } {};
+#endif
+};
+
+namespace detail
+{
+
+template<class Key, class Value>
+struct default_reduce_by_key_config_base
+{
+    using small_config = reduce_by_key_config<256,
+                                              15,
+                                              block_load_method::block_load_transpose,
+                                              block_load_method::block_load_transpose,
+                                              block_scan_algorithm::using_warp_scan,
+                                              sizeof(Value) < 16 ? 1 : 2>;
+
+    static constexpr unsigned int size_memory_per_item = std::max(sizeof(Key), sizeof(Value));
+    static constexpr unsigned int item_scale
+        = static_cast<unsigned int>(ceiling_div(size_memory_per_item, 2 * sizeof(int)));
+    static constexpr unsigned int items_per_thread = std::max(1u, 15u / item_scale);
+
+    using large_config
+        = reduce_by_key_config<limit_block_size<256U,
+                                                items_per_thread * size_memory_per_item,
+                                                ROCPRIM_WARP_SIZE_64>::value,
+                               items_per_thread,
+                               block_load_method::block_load_transpose,
+                               block_load_method::block_load_transpose,
+                               block_scan_algorithm::using_warp_scan,
+                               2>;
+
+    using type = std::
+        conditional_t<std::max(sizeof(Key), sizeof(Value)) <= 16, small_config, large_config>;
+};
+
 } // namespace detail
 
 END_ROCPRIM_NAMESPACE
