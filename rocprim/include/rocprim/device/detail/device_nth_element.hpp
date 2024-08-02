@@ -31,6 +31,8 @@
 #include "../../intrinsics.hpp"
 #include "../../type_traits.hpp"
 
+#include "../device_transform.hpp"
+
 #include "device_config_helper.hpp"
 
 #include <hip/amd_detail/amd_hip_runtime.h>
@@ -175,11 +177,12 @@ ROCPRIM_KERNEL
 }
 
 template<class config, class KeysIterator, class BinaryFunction>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_find_splitters_impl(KeysIterator   keys,
-                                                                    KeysIterator   tree,
-                                                                    bool*          equality_buckets,
-                                                                    const size_t   size,
-                                                                    BinaryFunction compare_function)
+ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
+    kernel_find_splitters_impl(KeysIterator                                             keys,
+                               typename std::iterator_traits<KeysIterator>::value_type* tree,
+                               bool*          equality_buckets,
+                               const size_t   size,
+                               BinaryFunction compare_function)
 {
     constexpr nth_element_config_params params        = device_params<config>();
     constexpr unsigned int              num_splitters = params.number_of_buckets - 1;
@@ -216,23 +219,24 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void kernel_find_splitters_impl(KeysIterator
 }
 
 template<class config, class KeysIterator, class BinaryFunction>
-ROCPRIM_KERNEL __launch_bounds__(device_params<config>().number_of_buckets
-                                 - 1) void kernel_find_splitters(KeysIterator   keys,
-                                                                 KeysIterator   tree,
-                                                                 bool*          equality_buckets,
-                                                                 const size_t   size,
-                                                                 BinaryFunction compare_function)
+ROCPRIM_KERNEL __launch_bounds__(
+    device_params<config>().number_of_buckets
+    - 1) void kernel_find_splitters(KeysIterator                                             keys,
+                                    typename std::iterator_traits<KeysIterator>::value_type* tree,
+                                    bool*          equality_buckets,
+                                    const size_t   size,
+                                    BinaryFunction compare_function)
 {
     kernel_find_splitters_impl<config>(keys, tree, equality_buckets, size, compare_function);
 }
 
 template<class config, class KeysIterator, class BinaryFunction>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
-    kernel_count_bucket_sizes_impl(KeysIterator   keys,
-                                   KeysIterator   tree,
-                                   const size_t   size,
-                                   size_t*        buckets,
-                                   uint8_t*       oracles,
+    kernel_count_bucket_sizes_impl(KeysIterator                                             keys,
+                                   typename std::iterator_traits<KeysIterator>::value_type* tree,
+                                   const size_t                                             size,
+                                   size_t*                                                  buckets,
+                                   uint8_t*                                                 oracles,
                                    bool*          equality_buckets,
                                    BinaryFunction compare_function)
 {
@@ -353,13 +357,15 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 template<class config, class KeysIterator, class BinaryFunction>
 ROCPRIM_KERNEL __launch_bounds__(
     device_params<config>()
-        .kernel_config.block_size) void kernel_count_bucket_sizes(KeysIterator   keys,
-                                                                  KeysIterator   tree,
-                                                                  const size_t   size,
-                                                                  size_t*        buckets,
-                                                                  uint8_t*       oracles,
-                                                                  bool*          equality_buckets,
-                                                                  BinaryFunction compare_function)
+        .kernel_config
+        .block_size) void kernel_count_bucket_sizes(KeysIterator keys,
+                                                    typename std::iterator_traits<
+                                                        KeysIterator>::value_type* tree,
+                                                    const size_t                   size,
+                                                    size_t*                        buckets,
+                                                    uint8_t*                       oracles,
+                                                    bool*                          equality_buckets,
+                                                    BinaryFunction                 compare_function)
 {
     kernel_count_bucket_sizes_impl<config>(keys,
                                            tree,
@@ -436,7 +442,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                              uint8_t*                             oracles,
                              nth_element_onesweep_lookback_state* lookback_states,
                              n_th_element_iteration_data*         nth_element_data,
-                             KeysIterator                         keys_buffer)
+                             typename std::iterator_traits<KeysIterator>::value_type* keys_buffer)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
@@ -625,12 +631,12 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
 template<class config, unsigned int NumPartitions, class KeysIterator>
 ROCPRIM_KERNEL
     __launch_bounds__(device_params<config>().kernel_config.block_size) void kernel_copy_buckets(
-        KeysIterator                         keys,
-        const size_t                         size,
-        uint8_t*                             oracles,
-        nth_element_onesweep_lookback_state* lookback_states,
-        n_th_element_iteration_data*         nth_element_data,
-        KeysIterator                         keys_buffer)
+        KeysIterator                                             keys,
+        const size_t                                             size,
+        uint8_t*                                                 oracles,
+        nth_element_onesweep_lookback_state*                     lookback_states,
+        n_th_element_iteration_data*                             nth_element_data,
+        typename std::iterator_traits<KeysIterator>::value_type* keys_buffer)
 {
     kernel_copy_buckets_impl<config, NumPartitions>(keys,
                                                     size,
@@ -642,24 +648,26 @@ ROCPRIM_KERNEL
 
 template<class config, unsigned int NumPartitions, class KeysIterator, class BinaryFunction>
 ROCPRIM_INLINE hipError_t
-    nth_element_keys_impl(KeysIterator                         keys,
-                          KeysIterator                         keys_buffer,
-                          KeysIterator                         tree,
-                          size_t                               rank,
-                          size_t                               size,
-                          size_t*                              buckets,
-                          bool*                                equality_buckets,
-                          uint8_t*                             oracles,
-                          nth_element_onesweep_lookback_state* lookback_states,
-                          const unsigned int                   num_buckets,
-                          const unsigned int                   stop_recursion_size,
-                          const unsigned int                   num_threads_per_block,
-                          const unsigned int                   num_items_per_threads,
-                          n_th_element_iteration_data*         nth_element_data,
-                          BinaryFunction                       compare_function,
-                          hipStream_t                          stream,
-                          bool                                 debug_synchronous)
+    nth_element_keys_impl(KeysIterator                                             keys,
+                          typename std::iterator_traits<KeysIterator>::value_type* keys_buffer,
+                          typename std::iterator_traits<KeysIterator>::value_type* tree,
+                          size_t                                                   rank,
+                          size_t                                                   size,
+                          size_t*                                                  buckets,
+                          bool*                                                    equality_buckets,
+                          uint8_t*                                                 oracles,
+                          nth_element_onesweep_lookback_state*                     lookback_states,
+                          const unsigned int                                       num_buckets,
+                          const unsigned int           stop_recursion_size,
+                          const unsigned int           num_threads_per_block,
+                          const unsigned int           num_items_per_threads,
+                          n_th_element_iteration_data* nth_element_data,
+                          BinaryFunction               compare_function,
+                          hipStream_t                  stream,
+                          bool                         debug_synchronous)
 {
+    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+
     constexpr unsigned int num_partitions      = NumPartitions;
     const unsigned int     num_splitters       = num_buckets - 1;
     const unsigned int     num_items_per_block = num_threads_per_block * num_items_per_threads;
@@ -745,11 +753,12 @@ ROCPRIM_INLINE hipError_t
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_copy_buckets", size, start);
 
         // Copy the results in keys_buffer back to the keys
-        error = hipMemcpyAsync(keys,
-                               keys_buffer,
-                               sizeof(*keys) * size,
-                               hipMemcpyDeviceToDevice,
-                               stream);
+        error = transform(keys_buffer,
+                          keys,
+                          size,
+                          ::rocprim::identity<key_type>(),
+                          stream,
+                          debug_synchronous);
 
         if(error != hipSuccess)
         {
