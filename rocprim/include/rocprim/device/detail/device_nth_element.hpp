@@ -30,6 +30,7 @@
 #include <hip/amd_detail/amd_hip_runtime.h>
 #include <hip/driver_types.h>
 #include <iostream>
+#include <rocprim/block/block_radix_rank.hpp>
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -88,29 +89,39 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
                                         unsigned char* oracles,
                                         KeysIterator   output)
 {
-    using block_scan_local_offsets = rocprim::block_scan<unsigned short, num_threads_per_block>;
+    using block_rank_local_offset
+        = rocprim::block_radix_rank<num_threads_per_block, 8, block_radix_rank_algorithm::match>;
 
-    __shared__ typename block_scan_local_offsets::storage_type storage_bucket;
+    __shared__ typename block_rank_local_offset::storage_type storage_bucket;
+    __shared__ unsigned int                                   local_bucket_count[num_buckets];
 
     auto idx = threadIdx.x + (blockDim.x * blockIdx.x);
 
-    auto bucket  = idx < size ? oracles[idx] : 0;
+    unsigned char buckets[1];
+    buckets[0]   = idx < size ? oracles[idx] : 0;
     auto element = idx < size ? keys[idx] : Key(0);
 
-    size_t index = buckets_per_block_offsets[bucket * gridDim.x + blockIdx.x];
-    ROCPRIM_NO_UNROLL
-    for(size_t i = 0; i < num_buckets; i++)
-    {
-        unsigned short temp;
-        unsigned short current_bucket = bucket == i;
-        block_scan_local_offsets().exclusive_scan(current_bucket, temp, 0, storage_bucket);
+    size_t index = buckets_per_block_offsets[buckets[0] * gridDim.x + blockIdx.x];
 
-        if(current_bucket)
-        {
-            index += temp;
-        }
-        rocprim::syncthreads();
+    unsigned int ranks[1];
+    unsigned int digit_prefix[block_rank_local_offset::digits_per_thread];
+    unsigned int digit_counts[block_rank_local_offset::digits_per_thread];
+    block_rank_local_offset().rank_keys(
+        buckets,
+        ranks,
+        storage_bucket,
+        [](const int& key) { return key; },
+        digit_prefix,
+        digit_counts);
+
+    if(threadIdx.x < num_buckets)
+    {
+        local_bucket_count[threadIdx.x] = digit_prefix[0];
     }
+
+    rocprim::syncthreads();
+
+    index += (ranks[0] - local_bucket_count[buckets[0]]);
 
     if(idx < size)
     {
