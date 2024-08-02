@@ -71,7 +71,8 @@ template<class InputType,
          // scan-by-key primitives don't support output iterator with void value_type
          bool UseIdentityIteratorIfSupported = false,
          typename ConfigHelper               = default_config_helper,
-         bool UseGraphs                      = false>
+         bool UseGraphs                      = false,
+         bool Deterministic                  = false>
 struct DeviceScanParams
 {
     using input_type                            = InputType;
@@ -108,14 +109,33 @@ typedef ::testing::Types<
     DeviceScanParams<int, int, rocprim::plus<int>, false, size_limit_config_helper<512>>,
     DeviceScanParams<float, float, rocprim::maximum<float>>,
     DeviceScanParams<float, float, rocprim::plus<float>, false, size_limit_config_helper<1024>>,
+    DeviceScanParams<float,
+                     float,
+                     rocprim::plus<float>,
+                     false,
+                     size_limit_config_helper<1024>,
+                     false,
+                     true>,
     DeviceScanParams<int, int, rocprim::plus<int>, false, size_limit_config_helper<524288>>,
     DeviceScanParams<int, int, rocprim::plus<int>, false, size_limit_config_helper<1048576>>,
     DeviceScanParams<int8_t, int8_t, rocprim::maximum<int8_t>>,
     DeviceScanParams<uint8_t, uint8_t, rocprim::maximum<uint8_t>, false>,
     DeviceScanParams<rocprim::half, rocprim::half, rocprim::maximum<rocprim::half>>,
-    DeviceScanParams<rocprim::half, float, rocprim::plus<float>>,
+    DeviceScanParams<rocprim::half,
+                     float,
+                     rocprim::plus<float>,
+                     false,
+                     default_config_helper,
+                     false,
+                     true>,
     DeviceScanParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::maximum<rocprim::bfloat16>>,
-    DeviceScanParams<rocprim::bfloat16, float, rocprim::plus<float>>,
+    DeviceScanParams<rocprim::bfloat16,
+                     float,
+                     rocprim::plus<float>,
+                     false,
+                     default_config_helper,
+                     false,
+                     true>,
     // Large
     DeviceScanParams<int, double, rocprim::plus<int>>,
     DeviceScanParams<int, double, rocprim::plus<double>, false>,
@@ -123,12 +143,25 @@ typedef ::testing::Types<
     DeviceScanParams<unsigned int, unsigned long long, rocprim::plus<unsigned long long>>,
     DeviceScanParams<long long, long long, rocprim::maximum<long long>>,
     DeviceScanParams<double, double, rocprim::plus<double>, true>,
+    DeviceScanParams<double,
+                     double,
+                     rocprim::plus<double>,
+                     false,
+                     default_config_helper,
+                     true,
+                     true>,
     DeviceScanParams<signed char, long, rocprim::plus<long>>,
     DeviceScanParams<float, double, rocprim::minimum<double>>,
     DeviceScanParams<test_utils::custom_test_type<int>>,
     DeviceScanParams<test_utils::custom_test_type<double>,
                      test_utils::custom_test_type<double>,
                      rocprim::plus<test_utils::custom_test_type<double>>,
+                     true>,
+    DeviceScanParams<test_utils::custom_test_type<double>,
+                     test_utils::custom_test_type<double>,
+                     rocprim::plus<test_utils::custom_test_type<double>>,
+                     false,
+                     default_config_helper,
                      true>,
     DeviceScanParams<test_utils::custom_test_type<int>>,
     DeviceScanParams<test_utils::custom_test_array_type<long long, 5>>,
@@ -209,13 +242,14 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
     }
 
     // Run
-    HIP_CHECK(
-        rocprim::inclusive_scan(
-            d_temp_storage, temp_storage_size_bytes,
-            input_iterator, d_checking_output, 
-            0, scan_op, stream, debug_synchronous
-        )
-    );
+    HIP_CHECK(rocprim::inclusive_scan(d_temp_storage,
+                                      temp_storage_size_bytes,
+                                      input_iterator,
+                                      d_checking_output,
+                                      0,
+                                      scan_op,
+                                      stream,
+                                      debug_synchronous));
 
     hipGraphExec_t graph_instance;
     if(TestFixture::use_graphs)
@@ -907,7 +941,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             hipFree(d_input);
             hipFree(d_output);
             hipFree(d_temp_storage);
-            
+
             if (TestFixture::use_graphs)
             {
                 test_utils::cleanupGraphHelper(graph, graph_instance);
@@ -1607,7 +1641,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
                           << std::endl;
                 break;
             }
-            
+
             hipStream_t stream = 0; // default
             if (TestFixture::use_graphs)
             {
@@ -1699,7 +1733,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
                                       d_future_input,
                                       d_initial_value,
                                       2048,
-                                      rocprim::plus<T>(), 
+                                      rocprim::plus<T>(),
                                       stream));
 
             // Run
@@ -1734,7 +1768,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
             hipFree(d_future_input);
             hipFree(d_initial_value);
             hipFree(d_temp_storage);
-            
+
             if (TestFixture::use_graphs)
             {
                 test_utils::cleanupGraphHelper(graph, graph_instance);

@@ -61,6 +61,7 @@ template<bool Exclusive                = false,
          class ScanOp                  = rocprim::plus<Value>,
          class CompareOp               = rocprim::equal_to<Key>,
          unsigned int MaxSegmentLength = 1024,
+         bool         Deterministic    = false,
          class Config                  = rocprim::default_config>
 struct device_scan_by_key_benchmark : public config_autotune_interface
 {
@@ -88,17 +89,34 @@ struct device_scan_by_key_benchmark : public config_autotune_interface
                                 const bool        debug = false) const ->
         typename std::enable_if<excl, hipError_t>::type
     {
-        return rocprim::exclusive_scan_by_key<Config>(temporary_storage,
-                                                      storage_size,
-                                                      keys,
-                                                      input,
-                                                      output,
-                                                      initial_value,
-                                                      input_size,
-                                                      scan_op,
-                                                      compare_op,
-                                                      stream,
-                                                      debug);
+        if ROCPRIM_IF_CONSTEXPR(!Deterministic)
+        {
+            return rocprim::exclusive_scan_by_key<Config>(temporary_storage,
+                                                          storage_size,
+                                                          keys,
+                                                          input,
+                                                          output,
+                                                          initial_value,
+                                                          input_size,
+                                                          scan_op,
+                                                          compare_op,
+                                                          stream,
+                                                          debug);
+        }
+        else
+        {
+            return rocprim::deterministic_exclusive_scan_by_key<Config>(temporary_storage,
+                                                                        storage_size,
+                                                                        keys,
+                                                                        input,
+                                                                        output,
+                                                                        initial_value,
+                                                                        input_size,
+                                                                        scan_op,
+                                                                        compare_op,
+                                                                        stream,
+                                                                        debug);
+        }
     }
 
     template<bool excl = Exclusive>
@@ -115,16 +133,32 @@ struct device_scan_by_key_benchmark : public config_autotune_interface
                                 const bool        debug = false) const ->
         typename std::enable_if<!excl, hipError_t>::type
     {
-        return rocprim::inclusive_scan_by_key<Config>(temporary_storage,
-                                                      storage_size,
-                                                      keys,
-                                                      input,
-                                                      output,
-                                                      input_size,
-                                                      scan_op,
-                                                      compare_op,
-                                                      stream,
-                                                      debug);
+        if ROCPRIM_IF_CONSTEXPR(!Deterministic)
+        {
+            return rocprim::inclusive_scan_by_key<Config>(temporary_storage,
+                                                          storage_size,
+                                                          keys,
+                                                          input,
+                                                          output,
+                                                          input_size,
+                                                          scan_op,
+                                                          compare_op,
+                                                          stream,
+                                                          debug);
+        }
+        else
+        {
+            return rocprim::deterministic_inclusive_scan_by_key<Config>(temporary_storage,
+                                                                        storage_size,
+                                                                        keys,
+                                                                        input,
+                                                                        output,
+                                                                        input_size,
+                                                                        scan_op,
+                                                                        compare_op,
+                                                                        stream,
+                                                                        debug);
+        }
     }
 
     void run(benchmark::State&   state,
@@ -266,6 +300,7 @@ struct device_scan_by_key_benchmark_generator
                                              rocprim::plus<ValueType>,
                                              rocprim::equal_to<KeyType>,
                                              1024,
+                                             false,
                                              rocprim::scan_by_key_config<
                                                  block_size,
                                                  ItemsPerThread,
