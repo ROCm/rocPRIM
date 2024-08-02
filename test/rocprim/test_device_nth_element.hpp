@@ -36,17 +36,26 @@ TEST(RocprimDeviceNthElementTests, BasicTest)
     engine_type gen{std::random_device{}()};
 
     size_t storage_size;
-    size_t size = 20;
+    size_t size = 10;
     int    input[size];
     size_t nth = size/2;
     int*   d_input;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, size * sizeof(int)));
 
-    test_utils::generate_random_data_n(input, size, -10, 10, gen);
+    test_utils::generate_random_data_n(input, size, -100, 100, gen);
+
+    std::cout << "Input: " << std::endl;
+    for(int i = 0; i < size; i++)
+    {
+        std::cout << input[i] << ", ";
+    }
+    std::cout << std::endl;
 
     HIP_CHECK(hipMemcpy(d_input, input, size * sizeof(int), hipMemcpyHostToDevice));
 
     rocprim::nth_element_keys(nullptr, storage_size, d_input, nth, size);
+
+    std::cout << "Size: " << storage_size << std::endl;
 
     void* d_temp_storage;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, storage_size));
@@ -56,6 +65,13 @@ TEST(RocprimDeviceNthElementTests, BasicTest)
     int output[size];
 
     HIP_CHECK(hipMemcpy(output, d_input, size * sizeof(int), hipMemcpyHostToDevice));
+
+    std::cout << "Output: " << std::endl;
+    for(int i = 0; i < size; i++)
+    {
+        std::cout << output[i] << ", ";
+    }
+    std::cout << std::endl;
 
     auto value_nth = output[nth];
     for(int i = 0; i < size; i++)
