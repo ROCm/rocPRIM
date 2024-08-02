@@ -205,11 +205,16 @@
     #define ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH(w)
 #endif // __clang__
 
-/// \brief Disables warnings from using deprecated symbols until the next
-/// `ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP`.
-/// \note Track the usage of deprecated symbols in the project's issue tracker!
-#define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH \
-    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated-declarations")
-#define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP ROCPRIM_CLANG_SUPPRESS_WARNING_POP
+#ifdef ROCPRIM_DONT_SUPPRESS_DEPRECATIONS
+    #define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH
+    #define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP
+#else
+    /// \brief Disables warnings from using deprecated symbols until the next
+    /// `ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP`.
+    /// \note Track the usage of deprecated symbols in the project's issue tracker!
+    #define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH \
+        ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated-declarations")
+    #define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP ROCPRIM_CLANG_SUPPRESS_WARNING_POP
+#endif
 
 #endif // ROCPRIM_CONFIG_HPP_
