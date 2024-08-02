@@ -11,7 +11,7 @@ Partial Sort
 Configuring the kernel
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. doxygenstruct::  rocprim::nth_element_config
+.. doxygenstruct::  rocprim::partial_sort_config
 
 partial_sort
 ~~~~~~~~~~~~

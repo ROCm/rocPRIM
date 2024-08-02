@@ -39,6 +39,132 @@
 
 BEGIN_ROCPRIM_NAMESPACE
 
+namespace detail
+{
+
+template<class Config, class KeysIterator, class BinaryFunction>
+ROCPRIM_INLINE hipError_t nth_element_impl(
+    void*                                                    temporary_storage,
+    size_t&                                                  storage_size,
+    KeysIterator                                             keys,
+    size_t                                                   nth,
+    size_t                                                   size,
+    BinaryFunction                                           compare_function,
+    hipStream_t                                              stream,
+    bool                                                     debug_synchronous,
+    typename std::iterator_traits<KeysIterator>::value_type* keys_double_buffer = nullptr)
+{
+    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+    using config   = wrapped_nth_element_config<Config, key_type>;
+
+    detail::target_arch target_arch;
+    hipError_t          result = host_target_arch(stream, target_arch);
+    if(result != hipSuccess)
+    {
+        return result;
+    }
+    const detail::nth_element_config_params params
+        = detail::dispatch_target_arch<config>(target_arch);
+
+    constexpr unsigned int num_partitions        = 3;
+    const unsigned int     num_buckets           = params.number_of_buckets;
+    const unsigned int     num_splitters         = num_buckets - 1;
+    const unsigned int     stop_recursion_size   = params.stop_recursion_size;
+    const unsigned int     num_items_per_threads = params.kernel_config.items_per_thread;
+    const unsigned int     num_threads_per_block = params.kernel_config.block_size;
+    const unsigned int     num_items_per_block   = num_threads_per_block * num_items_per_threads;
+    const unsigned int     num_blocks            = detail::ceiling_div(size, num_items_per_block);
+
+    // oracles stores the bucket that correlates with the index
+    uint8_t*                                     oracles          = nullptr;
+    key_type*                                    tree             = nullptr;
+    size_t*                                      buckets          = nullptr;
+    detail::n_th_element_iteration_data*         nth_element_data = nullptr;
+    bool*                                        equality_buckets = nullptr;
+    detail::nth_element_onesweep_lookback_state* lookback_states  = nullptr;
+
+    key_type* keys_buffer = nullptr;
+
+    {
+        using namespace detail::temp_storage;
+
+        hipError_t partition_result;
+        if(keys_double_buffer == nullptr)
+        {
+            partition_result
+                = partition(temporary_storage,
+                            storage_size,
+                            make_linear_partition(
+                                ptr_aligned_array(&tree, num_splitters),
+                                ptr_aligned_array(&equality_buckets, num_buckets),
+                                ptr_aligned_array(&buckets, num_buckets),
+                                ptr_aligned_array(&oracles, size),
+                                ptr_aligned_array(&keys_buffer, size),
+                                ptr_aligned_array(&nth_element_data, 1),
+                                ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
+        }
+        else
+        {
+            partition_result
+                = partition(temporary_storage,
+                            storage_size,
+                            make_linear_partition(
+                                ptr_aligned_array(&tree, num_splitters),
+                                ptr_aligned_array(&equality_buckets, num_buckets),
+                                ptr_aligned_array(&buckets, num_buckets),
+                                ptr_aligned_array(&oracles, size),
+                                ptr_aligned_array(&nth_element_data, 1),
+                                ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
+            keys_buffer = keys_double_buffer;
+        }
+
+        if(partition_result != hipSuccess || temporary_storage == nullptr)
+        {
+            return partition_result;
+        }
+    }
+
+    if((size == 0) || (size == 1 && nth == 0))
+    {
+        return hipSuccess;
+    }
+
+    if(nth >= size)
+    {
+        return hipErrorInvalidValue;
+    }
+
+    if(debug_synchronous)
+    {
+        std::cout << "-----" << '\n';
+        std::cout << "size: " << size << '\n';
+        std::cout << "num_buckets: " << num_buckets << '\n';
+        std::cout << "num_threads_per_block: " << num_threads_per_block << '\n';
+        std::cout << "num_blocks: " << num_blocks << '\n';
+        std::cout << "storage_size: " << storage_size << '\n';
+    }
+
+    return detail::nth_element_keys_impl<config, num_partitions>(keys,
+                                                                 keys_buffer,
+                                                                 tree,
+                                                                 nth,
+                                                                 size,
+                                                                 buckets,
+                                                                 equality_buckets,
+                                                                 oracles,
+                                                                 lookback_states,
+                                                                 num_buckets,
+                                                                 stop_recursion_size,
+                                                                 num_threads_per_block,
+                                                                 num_items_per_threads,
+                                                                 nth_element_data,
+                                                                 compare_function,
+                                                                 stream,
+                                                                 debug_synchronous);
+}
+
+} // namespace detail
+
 /// \addtogroup devicemodule
 /// @{
 
@@ -127,91 +253,15 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
                                       hipStream_t    stream            = 0,
                                       bool           debug_synchronous = false)
 {
-    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
-    using config   = detail::wrapped_nth_element_config<Config, key_type>;
-
-    detail::target_arch target_arch;
-    hipError_t          result = host_target_arch(stream, target_arch);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-    const detail::nth_element_config_params params
-        = detail::dispatch_target_arch<config>(target_arch);
-
-    constexpr unsigned int num_partitions        = 3;
-    const unsigned int     num_buckets           = params.number_of_buckets;
-    const unsigned int     num_splitters         = num_buckets - 1;
-    const unsigned int     stop_recursion_size   = params.stop_recursion_size;
-    const unsigned int     num_items_per_threads = params.kernel_config.items_per_thread;
-    const unsigned int     num_threads_per_block = params.kernel_config.block_size;
-    const unsigned int     num_items_per_block   = num_threads_per_block * num_items_per_threads;
-    const unsigned int     num_blocks            = detail::ceiling_div(size, num_items_per_block);
-
-    key_type*                                    tree             = nullptr;
-    size_t*                                      buckets          = nullptr;
-    detail::n_th_element_iteration_data*         nth_element_data = nullptr;
-    bool*                                        equality_buckets = nullptr;
-    detail::nth_element_onesweep_lookback_state* lookback_states  = nullptr;
-
-    key_type* keys_buffer = nullptr;
-
-    {
-        using namespace detail::temp_storage;
-
-        const hipError_t partition_result
-            = partition(temporary_storage,
-                        storage_size,
-                        make_linear_partition(
-                            ptr_aligned_array(&tree, num_splitters),
-                            ptr_aligned_array(&equality_buckets, num_buckets),
-                            ptr_aligned_array(&buckets, num_buckets),
-                            ptr_aligned_array(&keys_buffer, size),
-                            ptr_aligned_array(&nth_element_data, 1),
-                            ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
-
-        if(partition_result != hipSuccess || temporary_storage == nullptr)
-        {
-            return partition_result;
-        }
-    }
-
-    if((size == 0) || (size == 1 && nth == 0))
-    {
-        return hipSuccess;
-    }
-
-    if(nth >= size)
-    {
-        return hipErrorInvalidValue;
-    }
-
-    if(debug_synchronous)
-    {
-        std::cout << "-----" << '\n';
-        std::cout << "size: " << size << '\n';
-        std::cout << "num_buckets: " << num_buckets << '\n';
-        std::cout << "num_threads_per_block: " << num_threads_per_block << '\n';
-        std::cout << "num_blocks: " << num_blocks << '\n';
-        std::cout << "storage_size: " << storage_size << '\n';
-    }
-
-    return detail::nth_element_keys_impl<config, num_partitions>(keys,
-                                                                 keys_buffer,
-                                                                 tree,
-                                                                 nth,
-                                                                 size,
-                                                                 buckets,
-                                                                 equality_buckets,
-                                                                 lookback_states,
-                                                                 num_buckets,
-                                                                 stop_recursion_size,
-                                                                 num_threads_per_block,
-                                                                 num_items_per_threads,
-                                                                 nth_element_data,
-                                                                 compare_function,
-                                                                 stream,
-                                                                 debug_synchronous);
+    return detail::nth_element_impl<Config>(temporary_storage,
+                                            storage_size,
+                                            keys,
+                                            nth,
+                                            size,
+                                            compare_function,
+                                            stream,
+                                            debug_synchronous,
+                                            nullptr);
 }
 
 /// \brief Rearrange elements smaller than the n-th before and bigger than n-th after the n-th element.

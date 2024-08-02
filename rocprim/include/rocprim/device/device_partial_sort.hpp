@@ -29,7 +29,8 @@
 
 #include "config_types.hpp"
 #include "device_merge_sort.hpp"
-#include "device_nth_element_config.hpp"
+#include "device_nth_element.hpp"
+#include "device_partial_sort_config.hpp"
 #include "device_transform.hpp"
 
 #include <iostream>
@@ -57,66 +58,58 @@ hipError_t partial_sort_impl(void*          temporary_storage,
                              bool           debug_synchronous)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
-    using config   = wrapped_nth_element_config<Config, key_type>;
+    using config
+        = detail::default_or_custom_config<Config, detail::default_partial_sort_config<key_type>>;
+    using config_merge_sort  = typename config::merge_sort;
+    using config_nth_element = typename config::nth_element;
 
-    target_arch target_arch;
-    hipError_t  result = host_target_arch(stream, target_arch);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-    const nth_element_config_params params = dispatch_target_arch<config>(target_arch);
-
-    constexpr unsigned int num_partitions        = 3;
-    const unsigned int     num_buckets           = params.number_of_buckets;
-    const unsigned int     num_splitters         = num_buckets - 1;
-    const unsigned int     stop_recursion_size   = params.stop_recursion_size;
-    const unsigned int     num_items_per_threads = params.kernel_config.items_per_thread;
-    const unsigned int     num_threads_per_block = params.kernel_config.block_size;
-    const unsigned int     num_items_per_block   = num_threads_per_block * num_items_per_threads;
-    const unsigned int     num_blocks            = ceiling_div(size, num_items_per_block);
-
-    size_t storage_size_merge_sort{};
+    size_t storage_size_nth_element{};
     // non-null placeholder so that no buffer is allocated for keys
     key_type* keys_buffer_placeholder = reinterpret_cast<key_type*>(1);
 
-    result = merge_sort_impl<default_config>(nullptr,
-                                             storage_size_merge_sort,
-                                             keys,
-                                             keys,
-                                             static_cast<empty_type*>(nullptr), // values_input
-                                             static_cast<empty_type*>(nullptr), // values_output
-                                             middle,
-                                             compare_function,
-                                             stream,
-                                             debug_synchronous,
-                                             keys_buffer_placeholder, // keys_buffer
-                                             static_cast<empty_type*>(nullptr)); // values_buffer
+    hipError_t result = nth_element_impl<config_nth_element>(nullptr,
+                                                             storage_size_nth_element,
+                                                             keys,
+                                                             middle,
+                                                             size,
+                                                             compare_function,
+                                                             stream,
+                                                             debug_synchronous,
+                                                             keys_buffer_placeholder);
     if(result != hipSuccess)
     {
         return result;
     }
 
-    key_type*                            tree                         = nullptr;
-    size_t*                              buckets                      = nullptr;
-    n_th_element_iteration_data*         nth_element_data             = nullptr;
-    uint8_t*                             oracles                      = nullptr;
-    bool*                                equality_buckets             = nullptr;
-    nth_element_onesweep_lookback_state* lookback_states              = nullptr;
-    key_type*                            keys_buffer                  = nullptr;
-    void*                                temporary_storage_merge_sort = nullptr;
+    size_t storage_size_merge_sort{};
+
+    result = merge_sort_impl<config_merge_sort>(nullptr,
+                                                storage_size_merge_sort,
+                                                keys,
+                                                keys,
+                                                static_cast<empty_type*>(nullptr), // values_input
+                                                static_cast<empty_type*>(nullptr), // values_output
+                                                middle,
+                                                compare_function,
+                                                stream,
+                                                debug_synchronous,
+                                                keys_buffer_placeholder, // keys_buffer
+                                                static_cast<empty_type*>(nullptr)); // values_buffer
+    if(result != hipSuccess)
+    {
+        return result;
+    }
+
+    void*     temporary_storage_nth_element = nullptr;
+    void*     temporary_storage_merge_sort  = nullptr;
+    key_type* keys_buffer                   = nullptr;
 
     const hipError_t partition_result = temp_storage::partition(
         temporary_storage,
         storage_size,
         temp_storage::make_linear_partition(
-            temp_storage::ptr_aligned_array(&tree, num_splitters),
-            temp_storage::ptr_aligned_array(&equality_buckets, num_buckets),
-            temp_storage::ptr_aligned_array(&buckets, num_buckets),
-            temp_storage::ptr_aligned_array(&oracles, size),
             temp_storage::ptr_aligned_array(&keys_buffer, size),
-            temp_storage::ptr_aligned_array(&nth_element_data, 1),
-            temp_storage::ptr_aligned_array(&lookback_states, num_partitions * num_blocks),
+            temp_storage::make_partition(&temporary_storage_nth_element, storage_size_nth_element),
             temp_storage::make_partition(&temporary_storage_merge_sort, storage_size_merge_sort)));
 
     if(partition_result != hipSuccess || temporary_storage == nullptr)
@@ -134,50 +127,35 @@ hipError_t partial_sort_impl(void*          temporary_storage,
         return hipErrorInvalidValue;
     }
 
-    if(debug_synchronous)
+    if(middle < size)
     {
-        std::cout << "-----" << '\n';
-        std::cout << "size: " << size << '\n';
-        std::cout << "num_buckets: " << num_buckets << '\n';
-        std::cout << "num_threads_per_block: " << num_threads_per_block << '\n';
-        std::cout << "num_blocks: " << num_blocks << '\n';
-        std::cout << "storage_size: " << storage_size << '\n';
+        result = nth_element_impl<config_nth_element>(temporary_storage_nth_element,
+                                                      storage_size_nth_element,
+                                                      keys,
+                                                      middle,
+                                                      size,
+                                                      compare_function,
+                                                      stream,
+                                                      debug_synchronous,
+                                                      keys_buffer);
+        if(result != hipSuccess)
+        {
+            return result;
+        }
     }
 
-    result = nth_element_keys_impl<config, num_partitions>(keys,
-                                                           keys_buffer,
-                                                           tree,
-                                                           middle,
-                                                           size,
-                                                           buckets,
-                                                           equality_buckets,
-                                                           oracles,
-                                                           lookback_states,
-                                                           num_buckets,
-                                                           stop_recursion_size,
-                                                           num_threads_per_block,
-                                                           num_items_per_threads,
-                                                           nth_element_data,
-                                                           compare_function,
-                                                           stream,
-                                                           debug_synchronous);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-
-    return merge_sort_impl<default_config>(temporary_storage_merge_sort,
-                                           storage_size_merge_sort,
-                                           keys,
-                                           keys,
-                                           static_cast<empty_type*>(nullptr), // values_input
-                                           static_cast<empty_type*>(nullptr), // values_output
-                                           middle,
-                                           compare_function,
-                                           stream,
-                                           debug_synchronous,
-                                           keys_buffer, // keys_buffer
-                                           static_cast<empty_type*>(nullptr)); // values_buffer
+    return merge_sort_impl<config_merge_sort>(temporary_storage_merge_sort,
+                                              storage_size_merge_sort,
+                                              keys,
+                                              keys,
+                                              static_cast<empty_type*>(nullptr), // values_input
+                                              static_cast<empty_type*>(nullptr), // values_output
+                                              middle,
+                                              compare_function,
+                                              stream,
+                                              debug_synchronous,
+                                              keys_buffer, // keys_buffer
+                                              static_cast<empty_type*>(nullptr)); // values_buffer
 }
 
 } // namespace detail
@@ -191,7 +169,7 @@ hipError_t partial_sort_impl(void*          temporary_storage,
 /// * Accepts custom compare_functions for nth_element across the device.
 /// * Streams in graph capture mode are not supported
 ///
-/// \tparam Config [optional] configuration of the primitive. It has to be `nth_element_config`.
+/// \tparam Config [optional] configuration of the primitive. It has to be `partial_sort_config`.
 /// \tparam KeysInputIterator [inferred] random-access iterator type of the input range. Must meet the
 ///   requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam KeysOutputIterator [inferred] random-access iterator type of the output range. Must meet the
@@ -305,7 +283,7 @@ hipError_t partial_sort_copy(void*              temporary_storage,
 /// * Accepts custom compare_functions for nth_element across the device.
 /// * Streams in graph capture mode are not supported
 ///
-/// \tparam Config [optional] configuration of the primitive. It has to be `nth_element_config`.
+/// \tparam Config [optional] configuration of the primitive. It has to be `partial_sort_config`.
 /// \tparam KeysIterator [inferred] random-access iterator type of the input range. Must meet the
 ///   requirements of a C++ InputIterator concept. It can be a simple pointer type.
 /// \tparam CompareFunction [inferred] Type of binary function that accepts two arguments of the

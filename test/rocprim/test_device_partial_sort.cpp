@@ -88,7 +88,13 @@ using RocprimDevicePartialSortTestsParams = ::testing::Types<
     DevicePartialSortParams<test_utils::custom_test_type<float>>,
     DevicePartialSortParams<test_utils::custom_float_type>,
     DevicePartialSortParams<test_utils::custom_test_array_type<int, 4>>,
-    DevicePartialSortParams<int, ::rocprim::less<int>, rocprim::default_config, false, true>>;
+    DevicePartialSortParams<int, ::rocprim::less<int>, rocprim::default_config, false, true>,
+    DevicePartialSortParams<
+        int,
+        ::rocprim::less<int>,
+        rocprim::partial_sort_config<
+            rocprim::
+                nth_element_config<128, 4, 32, 16, rocprim::block_radix_rank_algorithm::basic>>>>;
 
 TYPED_TEST_SUITE(RocprimDevicePartialSortTests, RocprimDevicePartialSortTestsParams);
 
