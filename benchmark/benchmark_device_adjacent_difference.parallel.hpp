@@ -138,7 +138,7 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
     }
 
     void run(benchmark::State& state,
-             const std::size_t size,
+             const std::size_t bytes,
              const hipStream_t stream) const override
     {
         using output_type = T;
@@ -146,6 +146,7 @@ struct device_adjacent_difference_benchmark : public config_autotune_interface
         static constexpr bool debug_synchronous = false;
 
         // Generate data
+        const size_t         size  = bytes / sizeof(T);
         const std::vector<T> input = get_random_data<T>(size, 1, 100);
 
         T*           d_input;

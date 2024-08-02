@@ -40,8 +40,8 @@
 
 #include <cstddef>
 
-#ifndef DEFAULT_N
-constexpr std::size_t DEFAULT_N = 1024 * 1024 * 256;
+#ifndef DEFAULT_BYTES
+constexpr std::size_t DEFAULT_BYTES = 1024LL * 1024LL * 1024LL * 2LL;
 #endif
 
 #define CREATE_BENCHMARK(T, left, in_place)                                     \
@@ -61,7 +61,7 @@ constexpr std::size_t DEFAULT_N = 1024 * 1024 * 256;
 int main(int argc, char* argv[])
 {
     cli::Parser parser(argc, argv);
-    parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
+    parser.set_optional<size_t>("size", "size", DEFAULT_BYTES, "size in bytes");
     parser.set_optional<int>("trials", "trials", -1, "number of iterations");
     parser.set_optional<std::string>("name_format",
                                      "name_format",
