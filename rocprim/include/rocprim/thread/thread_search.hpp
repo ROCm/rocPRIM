@@ -30,6 +30,8 @@
 #ifndef ROCPRIM_THREAD_THREAD_SEARCH_HPP_
 #define ROCPRIM_THREAD_THREAD_SEARCH_HPP_
 
+#include "../detail/merge_path.hpp"
+
 #include "../config.hpp"
 #include "../functional.hpp"
 
@@ -44,39 +46,23 @@ BEGIN_ROCPRIM_NAMESPACE
 /// @{
 
 /// \brief Computes the begin offsets into A and B for the specific diagonal
-template <
-    typename AIteratorT,
-    typename BIteratorT,
-    typename OffsetT,
-    typename CoordinateT>
-ROCPRIM_HOST_DEVICE inline void merge_path_search(
-    OffsetT         diagonal,
-    AIteratorT      a,
-    BIteratorT      b,
-    OffsetT         a_len,
-    OffsetT         b_len,
-    CoordinateT&    path_coordinate)
+template<class AIteratorT,
+         class BIteratorT,
+         class OffsetT,
+         class CoordinateT,
+         class BinaryFunction
+         = rocprim::less<typename std::iterator_traits<AIteratorT>::value_type>>
+ROCPRIM_HOST_DEVICE inline void merge_path_search(OffsetT        diagonal,
+                                                  AIteratorT     a,
+                                                  BIteratorT     b,
+                                                  OffsetT        a_len,
+                                                  OffsetT        b_len,
+                                                  CoordinateT&   path_coordinate,
+                                                  BinaryFunction compare_function
+                                                  = BinaryFunction())
 {
-    OffsetT split_min = ::rocprim::max(diagonal - b_len, static_cast<OffsetT>(0));
-    OffsetT split_max = ::rocprim::min(diagonal, a_len);
-
-    while (split_min < split_max)
-    {
-        OffsetT split_pivot = (split_min + split_max) >> 1;
-        if (a[split_pivot] <= b[diagonal - split_pivot - 1])
-        {
-            // Move candidate split range up A, down B
-            split_min = split_pivot + 1;
-        }
-        else
-        {
-            // Move candidate split range up B, down A
-            split_max = split_pivot;
-        }
-    }
-
-    path_coordinate.x = ::rocprim::min(split_min, a_len);
-    path_coordinate.y = diagonal - split_min;
+    path_coordinate.x = rocprim::detail::merge_path(a, b, a_len, b_len, diagonal, compare_function);
+    path_coordinate.y = diagonal - path_coordinate.x;
 }
 
 /// \brief Returns the offset of the first value within \p input which does not compare less than \p val
