@@ -71,8 +71,13 @@ constexpr unsigned int merge_sort_items_per_thread(const unsigned int item_scale
     {
         return 4;
     }
-    return 2;
+    else if(item_scale <= 256)
+    {
+        return 2;
+    }
+    return 1;
 }
+
 constexpr unsigned int merge_sort_block_size(const unsigned int item_scale)
 {
     if(item_scale <= 32)
