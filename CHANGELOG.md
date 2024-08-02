@@ -12,6 +12,7 @@ Documentation for rocPRIM is available at
 * Added `rocprim::uninitialized_array` which provides uninitialized storage in local memory for user-defined types.
 * Added large segment support for `rocprim:segmented_reduce`.
 * Added a parallel `nth_element` device function similar to `std::nth_element`, this function rearranges elements smaller than the n-th before and bigger than the n-th after the n-th element.
+* Added deterministic (bitwise reproducible) algorithm variants `rocprim::deterministic_inclusive_scan`, `rocprim::deterministic_exclusive_scan`, `rocprim::deterministic_inclusive_scan_by_key`, `rocprim::deterministic_exclusive_scan_by_key`, and `rocprim::deterministic_reduce_by_key`. These provide run-to-run stable results with non-associative operators such as float operations, at the cost of reduced performance.
 
 ### Changes
 
@@ -50,10 +51,10 @@ Documentation for rocPRIM is available at
 * New `rocprim::batch_copy` function added. Similar to `rocprim::batch_memcpy`, but copies by element, not with memcpy.
 * Added more test cases, to better cover supported data types.
 * Updated some tests to work with supported data types.
-* An optional `decomposer` argument for all member functions of `rocprim::block_radix_sort` and all functions of `device_radix_sort`. 
+* An optional `decomposer` argument for all member functions of `rocprim::block_radix_sort` and all functions of `device_radix_sort`.
   To sort keys of an user-defined type, a decomposer functor should be passed. The decomposer should produce a `rocprim::tuple`
   of references to arithmetic types from the key.
-* New `rocprim::predicate_iterator` which acts as a proxy for an underlying iterator based on a predicate. 
+* New `rocprim::predicate_iterator` which acts as a proxy for an underlying iterator based on a predicate.
   It iterates over proxies that holds the references to the underlying values, but only allow reading and writing if the predicate is `true`.
   It can be instantiated with:
   * `rocprim::make_predicate_iterator`
