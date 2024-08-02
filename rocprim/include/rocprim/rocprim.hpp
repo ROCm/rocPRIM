@@ -37,6 +37,12 @@
 #include "iterator.hpp"
 
 #include "thread/radix_key_codec.hpp"
+#include "thread/thread_load.hpp"
+#include "thread/thread_operators.hpp"
+#include "thread/thread_reduce.hpp"
+#include "thread/thread_scan.hpp"
+#include "thread/thread_search.hpp"
+#include "thread/thread_store.hpp"
 
 #include "warp/warp_reduce.hpp"
 #include "warp/warp_scan.hpp"

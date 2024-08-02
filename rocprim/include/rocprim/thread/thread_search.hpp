@@ -27,8 +27,8 @@
  *
  ******************************************************************************/
 
-#ifndef ROCPRIM_THREAD_THREAD_SCAN_HPP_
-#define ROCPRIM_THREAD_THREAD_SCAN_HPP_
+#ifndef ROCPRIM_THREAD_THREAD_SEARCH_HPP_
+#define ROCPRIM_THREAD_THREAD_SEARCH_HPP_
 
 #include "../config.hpp"
 #include "../functional.hpp"
@@ -178,4 +178,4 @@ ROCPRIM_DEVICE ROCPRIM_INLINE OffsetT static_upper_bound(InputIteratorT input,
 
 END_ROCPRIM_NAMESPACE
 
-#endif // ROCPRIM_THREAD_THREAD_SCAN_HPP_
+#endif // ROCPRIM_THREAD_THREAD_SEARCH_HPP_
