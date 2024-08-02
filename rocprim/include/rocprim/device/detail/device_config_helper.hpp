@@ -1044,20 +1044,27 @@ namespace detail
 
 struct nth_element_config_params
 {
-    unsigned int                 BlockSize;
-    unsigned int                 ItemsPerThread;
-    unsigned int                 MinimumSize;
-    unsigned int                 NumberOfBuckets;
-    block_radix_rank_algorithm   RadixRankAlgorithm;
+    unsigned int               BlockSize;
+    unsigned int               ItemsPerThread;
+    unsigned int               MinimumSize;
+    unsigned int               NumberOfBuckets;
+    block_radix_rank_algorithm RadixRankAlgorithm;
 };
 
 } // namespace detail
 
-template<unsigned int                 BlockSize,
-         unsigned int                 ItemsPerThread,
-         unsigned int                 MinimumSize,
-         unsigned int                 NumberOfBuckets,
-         block_radix_rank_algorithm   RadixRankAlgorithm>
+/// \brief Configuration of device-level nth_element
+///
+/// \tparam BlockSize - number of threads in a block.
+/// \tparam ItemsPerThread - number of items processed by each thread.
+/// \tparam MinimumSize - the size from where recursion is stopped to do a block sort
+/// \tparam NumberOfBuckets - the number of buckets that are used in the algorithm
+/// \tparam RadixRankAlgorithm - algorithm for radix rank
+template<unsigned int               BlockSize,
+         unsigned int               ItemsPerThread,
+         unsigned int               MinimumSize,
+         unsigned int               NumberOfBuckets,
+         block_radix_rank_algorithm RadixRankAlgorithm>
 struct nth_element_config : public detail::nth_element_config_params
 {
     constexpr nth_element_config()
@@ -1072,11 +1079,7 @@ namespace detail
 template<typename Type>
 struct default_nth_element_config_base
 {
-    using type = nth_element_config<512,
-                                    16,
-                                    64,
-                                    64,
-                                    block_radix_rank_algorithm::match>;
+    using type = nth_element_config<512, 16, 64, 64, block_radix_rank_algorithm::match>;
 };
 
 } // namespace detail

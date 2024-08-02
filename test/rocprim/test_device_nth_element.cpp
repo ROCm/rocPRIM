@@ -28,6 +28,4 @@
 #include "test_utils_types.hpp"
 
 // Start stamping out tests
-
 #include "test_device_nth_element.hpp"
-

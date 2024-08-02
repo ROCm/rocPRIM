@@ -24,8 +24,8 @@
 #include "../block/block_radix_rank.hpp"
 
 #include "config_types.hpp"
-#include "detail/device_config_helper.hpp"
 
+#include "detail/device_config_helper.hpp"
 
 /// \addtogroup primitivesmodule_deviceconfigs
 /// @{
@@ -54,13 +54,21 @@ struct wrapped_nth_element_config<default_config, Type>
     struct architecture_config
     {
         static constexpr nth_element_config_params params
-            = {512,
-               16,
-               64,
-               64,
-               block_radix_rank_algorithm::match};
+            = {512, 8, 64, 64, block_radix_rank_algorithm::match};
     };
 };
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+template<typename NthElementConfig, typename Type>
+template<target_arch Arch>
+constexpr nth_element_config_params
+    wrapped_nth_element_config<NthElementConfig, Type>::architecture_config<Arch>::params;
+
+template<typename Type>
+template<target_arch Arch>
+constexpr nth_element_config_params
+    wrapped_nth_element_config<default_config, Type>::architecture_config<Arch>::params;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 } // namespace detail
 

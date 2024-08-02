@@ -78,7 +78,7 @@ using RocprimDeviceNthelementTestsParams = ::testing::Types<
     DeviceNthelementParams<test_utils::custom_test_type<float>>,
     DeviceNthelementParams<test_utils::custom_float_type>,
     DeviceNthelementParams<test_utils::custom_test_array_type<int, 4>>,
-    // DeviceNthelementParams<int, ::rocprim::less<int>, true>, // Bug with graphs
+    // DeviceNthelementParams<int, ::rocprim::less<int>, true>, // Graphs currently do not work
     DeviceNthelementParams<int, ::rocprim::greater<int>>>;
 
 TYPED_TEST_SUITE(RocprimDeviceNthelementTests, RocprimDeviceNthelementTestsParams);
@@ -112,13 +112,13 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
 
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-            in_place = !in_place;
+            in_place           = !in_place;
             size_t nth_element = 0;
-            if (size > 0)
+            if(size > 0)
             {
                 nth_element = rand() % size;
             }
-            
+
             SCOPED_TRACE(testing::Message() << "with nth_element = " << nth_element);
 
             // Generate data
