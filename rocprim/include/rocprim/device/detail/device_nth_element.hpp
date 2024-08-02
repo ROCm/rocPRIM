@@ -26,6 +26,7 @@
 
 #include "../../config.hpp"
 
+#include <hip/amd_detail/amd_hip_runtime.h>
 #include <hip/driver_types.h>
 #include <iostream>
 
@@ -80,15 +81,15 @@ template<size_t num_buckets,
          size_t num_threads_per_block,
          class KeysIterator,
          class Key = typename std::iterator_traits<KeysIterator>::value_type>
-ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator    keys,
-                                        const size_t    rank,
-                                        const size_t    size,
-                                        size_t*         buckets,
-                                        unsigned short* buckets_per_block,
-                                        bool*           equality_buckets,
-                                        unsigned char*  oracles,
-                                        size_t*         nth_element_data,
-                                        KeysIterator    output)
+ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
+                                        const size_t   rank,
+                                        const size_t   size,
+                                        size_t*        buckets,
+                                        size_t*        buckets_per_block,
+                                        bool*          equality_buckets,
+                                        unsigned char* oracles,
+                                        size_t*        nth_element_data,
+                                        KeysIterator   output)
 {
     using block_scan_offsets = rocprim::block_scan<size_t, num_threads_per_block>;
 
@@ -104,11 +105,7 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator    keys,
 
     if(threadIdx.x < num_buckets)
     {
-        // TODO create this with scan or different kernel
-        for(size_t i = 0; i < blockIdx.x; i++)
-        {
-            bucket_offset += buckets_per_block[threadIdx.x + i * num_buckets];
-        }
+        bucket_offset += buckets_per_block[threadIdx.x * gridDim.x + blockIdx.x];
         bucket_offsets[threadIdx.x] = bucket_offset;
     }
 
@@ -195,15 +192,15 @@ ROCPRIM_KERNEL void kernel_build_searchtree(KeysIterator   keys,
 }
 
 template<size_t num_buckets, size_t num_threads_per_block, class KeysIterator, class BinaryFunction>
-ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator    keys,
-                                                KeysIterator    tree,
-                                                const size_t    size,
-                                                size_t*         buckets,
-                                                unsigned short* buckets_per_block,
-                                                bool*           equality_buckets,
-                                                unsigned char*  oracles,
-                                                const size_t    tree_depth,
-                                                BinaryFunction  compare_function)
+ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator   keys,
+                                                KeysIterator   tree,
+                                                const size_t   size,
+                                                size_t*        buckets,
+                                                size_t*        buckets_per_block,
+                                                bool*          equality_buckets,
+                                                unsigned char* oracles,
+                                                const size_t   tree_depth,
+                                                BinaryFunction compare_function)
 {
     constexpr size_t num_splitters = num_buckets - 1;
     using Key                      = typename std::iterator_traits<KeysIterator>::value_type;
@@ -268,8 +265,21 @@ ROCPRIM_KERNEL void kernel_traversal_searchtree(KeysIterator    keys,
 
     if(threadIdx.x < num_buckets)
     {
-        buckets_per_block[threadIdx.x + blockIdx.x * num_buckets] = shared_buckets[threadIdx.x];
+        buckets_per_block[threadIdx.x * gridDim.x + blockIdx.x] = shared_buckets[threadIdx.x];
         detail::atomic_add(&buckets[threadIdx.x], shared_buckets[threadIdx.x]);
+    }
+}
+
+template<size_t num_threads_per_block>
+ROCPRIM_KERNEL void kernel_block_offset(size_t* buckets_per_block, const size_t num_blocks)
+{
+    size_t counter = 0;
+    for(size_t i = 0; i < num_blocks; i++)
+    {
+        size_t idx             = i + threadIdx.x * num_blocks;
+        size_t offset          = buckets_per_block[idx];
+        buckets_per_block[idx] = counter;
+        counter += offset;
     }
 }
 
@@ -279,21 +289,21 @@ template<size_t num_buckets,
          class KeysIterator,
          class Key = typename std::iterator_traits<KeysIterator>::value_type,
          class BinaryFunction>
-ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
-                                                KeysIterator    output,
-                                                KeysIterator    tree,
-                                                const size_t    rank,
-                                                const size_t    size,
-                                                size_t*         buckets,
-                                                unsigned short* buckets_per_block,
-                                                bool*           equality_buckets,
-                                                unsigned char*  oracles,
-                                                const size_t    tree_depth,
-                                                size_t*         nth_element_data,
-                                                BinaryFunction  compare_function,
-                                                hipStream_t     stream,
-                                                bool            debug_synchronous,
-                                                const size_t    recursion)
+ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator   keys,
+                                                KeysIterator   output,
+                                                KeysIterator   tree,
+                                                const size_t   rank,
+                                                const size_t   size,
+                                                size_t*        buckets,
+                                                size_t*        buckets_per_block,
+                                                bool*          equality_buckets,
+                                                unsigned char* oracles,
+                                                const size_t   tree_depth,
+                                                size_t*        nth_element_data,
+                                                BinaryFunction compare_function,
+                                                hipStream_t    stream,
+                                                bool           debug_synchronous,
+                                                const size_t   recursion)
 {
     constexpr size_t num_splitters = num_buckets - 1;
     const size_t     num_blocks    = (size / num_threads_per_block) + 1;
@@ -329,7 +339,8 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
 
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+    if(debug_synchronous)
+        start = std::chrono::high_resolution_clock::now();
     // Currently launches power of 2 minus 1 threads
     kernel_build_searchtree<num_splitters><<<1, num_splitters, 0, stream>>>(keys,
                                                                             tree,
@@ -338,7 +349,8 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
                                                                             compare_function,
                                                                             recursion);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_build_searchtree", size, start);
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+    if(debug_synchronous)
+        start = std::chrono::high_resolution_clock::now();
     kernel_traversal_searchtree<num_buckets, num_threads_per_block>
         <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
                                                            tree,
@@ -350,7 +362,13 @@ ROCPRIM_INLINE hipError_t nth_element_keys_impl(KeysIterator    keys,
                                                            tree_depth,
                                                            compare_function);
     ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_traversal_searchtree", size, start);
-    if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
+    if(debug_synchronous)
+        start = std::chrono::high_resolution_clock::now();
+    kernel_block_offset<num_threads_per_block>
+        <<<1, num_buckets, 0, stream>>>(buckets_per_block, num_blocks);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_block_offset", size, start);
+    if(debug_synchronous)
+        start = std::chrono::high_resolution_clock::now();
     kernel_copy_buckets<num_buckets, num_threads_per_block>
         <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
                                                            rank,
