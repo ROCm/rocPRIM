@@ -190,4 +190,26 @@
     #define ROCPRIM_WAVEFRONT_SIZE __AMDGCN_WAVEFRONT_SIZE
 #endif
 
+// Helper macros to disable warnings in clang
+#ifdef __clang__
+    #define ROCPRIM_PRAGMA_TO_STR(x) _Pragma(#x)
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING_PUSH _Pragma("clang diagnostic push")
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING(w) ROCPRIM_PRAGMA_TO_STR(clang diagnostic ignored w)
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING_POP _Pragma("clang diagnostic pop")
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH(w) \
+        ROCPRIM_CLANG_SUPPRESS_WARNING_PUSH ROCPRIM_CLANG_SUPPRESS_WARNING(w)
+#else // __clang__
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING_PUSH
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING(w)
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING_POP
+    #define ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH(w)
+#endif // __clang__
+
+/// \brief Disables warnings from using deprecated symbols until the next
+/// `ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP`.
+/// \note Track the usage of deprecated symbols in the project's issue tracker!
+#define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH \
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated-declarations")
+#define ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP ROCPRIM_CLANG_SUPPRESS_WARNING_POP
+
 #endif // ROCPRIM_CONFIG_HPP_

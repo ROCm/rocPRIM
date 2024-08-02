@@ -905,10 +905,12 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     >;
 
     // Memory required for 2-phase scatter
-    using exchange_keys_storage_type = key_type[items_per_block];
-    using raw_exchange_keys_storage_type = typename detail::raw_storage<exchange_keys_storage_type>;
+    using exchange_keys_storage_type   = key_type[items_per_block];
     using exchange_values_storage_type = value_type[items_per_block];
+    ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH
+    using raw_exchange_keys_storage_type = typename detail::raw_storage<exchange_keys_storage_type>;
     using raw_exchange_values_storage_type = typename detail::raw_storage<exchange_values_storage_type>;
+    ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP
 
     using is_selected_type = std::conditional_t<
         sizeof...(UnaryPredicates) == 1,

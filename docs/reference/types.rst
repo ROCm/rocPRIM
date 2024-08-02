@@ -35,3 +35,9 @@ Tuple
   :members:
 .. doxygenstruct:: rocprim::tuple_element
   :members:
+
+Uninitialized Array
+===================
+
+.. doxygenclass:: rocprim::uninitialized_array
+  :members:

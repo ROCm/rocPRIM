@@ -193,7 +193,9 @@ struct discontinuity_helper
 template<typename ValueType, unsigned int BlockSize, unsigned int ItemsPerThread>
 struct scatter_helper
 {
+    ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH
     using storage_type = detail::raw_storage<ValueType[BlockSize * ItemsPerThread]>;
+    ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP
 
     template<typename ValueIterator, typename Flag, typename ValueFunction, typename IndexFunction>
     ROCPRIM_DEVICE void scatter(ValueIterator   tile_values,

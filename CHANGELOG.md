@@ -9,6 +9,7 @@ Documentation for rocPRIM is available at
 
 * Option `--seed` to benchmarks to specify a seed for the generation of random inputs. The default behavior is to keep using a random seed per benchmark measurement.
 * Added configuration autotuning to device partition (`rocprim::partition`, `rocprim::partition_two_way`, and `rocprim::partition_three_way`) and device select (`rocprim::select`, `rocprim::unique`, and `rocprim::unique_by_key`) for improved performance on selected architectures.
+* Added `rocprim::uninitialized_array` which provides uninitialized storage in local memory for user-defined types.
 
 ### Changes
 
@@ -20,6 +21,8 @@ Documentation for rocPRIM is available at
 * Fixed an issue where while running rtest.py on windows and passing in an absolute path to `--install_dir` causes a `FileNotFound` error.
 * rocPRIM functions are no longer forcefully inlined on Windows, significantly reducing the build
   time in debug builds.
+* `block_load`, `block_store`, `block_shuffle`, `block_exchange` and `warp_exchange` now use placement `new` instead of copy
+  assignment (`operator=`) when writing to local memory. This fixes the behavior of custom types with non-trivial copy assignments.
 
 ### Deprecations
 

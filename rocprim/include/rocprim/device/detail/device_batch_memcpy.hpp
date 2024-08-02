@@ -472,8 +472,9 @@ private:
                 } copy_tlev;
             } shared;
         };
-
+        ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH
         using storage_type = rocprim::detail::raw_storage<storage>;
+        ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP
 
         ROCPRIM_DEVICE ROCPRIM_INLINE non_blev_memcpy() {}
 
