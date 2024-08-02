@@ -55,3 +55,4 @@ Active threads
 .. doxygenfunction:: rocprim::group_elect(lane_mask_type mask)
 .. doxygenfunction:: rocprim::masked_bit_count (lane_mask_type x, unsigned int add=0)
 .. doxygenfunction:: rocprim::match_any(unsigned int label, bool valid = true)
+.. doxygenfunction:: rocprim::match_any(unsigned int label, unsigned int label_bits, bool valid = true)
