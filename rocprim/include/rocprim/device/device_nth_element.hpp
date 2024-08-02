@@ -226,8 +226,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
                                                  nth_element_data,
                                                  compare_function,
                                                  stream,
-                                                 debug_synchronous,
-                                                 0);
+                                                 debug_synchronous);
 }
 
 /// @}

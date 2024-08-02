@@ -565,8 +565,8 @@ ROCPRIM_INLINE hipError_t
     nth_element_keys_impl(KeysIterator                         keys,
                           KeysIterator                         output,
                           KeysIterator                         tree,
-                          const size_t                         rank,
-                          const size_t                         size,
+                          size_t                               rank,
+                          size_t                               size,
                           size_t*                              buckets,
                           bool*                                equality_buckets,
                           uint8_t*                             oracles,
@@ -578,22 +578,13 @@ ROCPRIM_INLINE hipError_t
                           n_th_element_iteration_data*         nth_element_data,
                           BinaryFunction                       compare_function,
                           hipStream_t                          stream,
-                          bool                                 debug_synchronous,
-                          const size_t                         recursion)
+                          bool                                 debug_synchronous)
 {
     using key_type = typename std::iterator_traits<KeysIterator>::value_type;
 
     const unsigned int num_splitters       = num_buckets - 1;
     const unsigned int num_items_per_block = num_threads_per_block * num_items_per_threads;
-    const unsigned int num_blocks          = ceiling_div(size, num_items_per_block);
-
-    if(debug_synchronous)
-    {
-        std::cout << "-----" << '\n';
-        std::cout << "size: " << size << '\n';
-        std::cout << "rank: " << rank << '\n';
-        std::cout << "recursion level: " << recursion << '\n';
-    }
+    size_t             iteration           = 0;
 
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
@@ -606,119 +597,117 @@ ROCPRIM_INLINE hipError_t
         }
     };
 
-    if(size < stop_recursion_size)
+    while(size >= stop_recursion_size)
     {
+        const unsigned int num_blocks = ceiling_div(size, num_items_per_block);
+
+        if(debug_synchronous)
+        {
+            std::cout << "-----" << '\n';
+            std::cout << "size: " << size << '\n';
+            std::cout << "rank: " << rank << '\n';
+            std::cout << "iteration: " << iteration++ << '\n';
+        }
+
+        hipError_t error = hipMemsetAsync(buckets, 0, sizeof(*buckets) * num_buckets, stream);
+
+        if(error != hipSuccess)
+        {
+            return error;
+        }
+
+        error
+            = hipMemsetAsync(equality_buckets, 0, sizeof(*equality_buckets) * num_buckets, stream);
+
+        if(error != hipSuccess)
+        {
+            return error;
+        }
+
+        // Reset lookback scan states to zero, indicating empty prefix.
+        error
+            = hipMemsetAsync(lookback_states, 0, sizeof(*lookback_states) * 3 * num_blocks, stream);
+        if(error != hipSuccess)
+        {
+            return error;
+        }
+
         start_timer();
-        kernel_block_sort<config>
-            <<<1, stop_recursion_size, 0, stream>>>(keys, size, compare_function);
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_block_sort", size, start);
-        return hipSuccess;
-    }
+        kernel_find_splitters<config>
+            <<<1, num_splitters, 0, stream>>>(keys, tree, equality_buckets, size, compare_function);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_find_splitters", size, start);
 
-    hipError_t error = hipMemsetAsync(buckets, 0, sizeof(*buckets) * num_buckets, stream);
+        start_timer();
+        kernel_count_bucket_sizes<config>
+            <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
+                                                               tree,
+                                                               size,
+                                                               buckets,
+                                                               oracles,
+                                                               equality_buckets,
+                                                               compare_function);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_count_bucket_sizes", size, start);
 
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+        start_timer();
+        kernel_find_nth_element_bucket<config>
+            <<<1, num_buckets, 0, stream>>>(buckets, nth_element_data, equality_buckets, rank);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_find_nth_element_bucket", size, start);
 
-    error = hipMemsetAsync(equality_buckets, 0, sizeof(*equality_buckets) * num_buckets, stream);
+        start_timer();
+        kernel_copy_buckets<config>
+            <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
+                                                               size,
+                                                               oracles,
+                                                               lookback_states,
+                                                               nth_element_data,
+                                                               output);
+        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_copy_buckets", size, start);
 
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+        error = hipMemcpyAsync(keys, output, sizeof(*keys) * size, hipMemcpyDeviceToDevice, stream);
 
-    // Reset lookback scan states to zero, indicating empty prefix.
-    error = hipMemsetAsync(lookback_states, 0, sizeof(*lookback_states) * 3 * num_blocks, stream);
-    if(error != hipSuccess)
-    {
-        return error;
+        if(error != hipSuccess)
+        {
+            return error;
+        }
+
+        n_th_element_iteration_data h_nth_element_data;
+        error = hipMemcpyAsync(&h_nth_element_data,
+                               nth_element_data,
+                               sizeof(h_nth_element_data),
+                               hipMemcpyDeviceToHost,
+                               stream);
+        if(error != hipSuccess)
+        {
+            return error;
+        }
+
+        error = hipStreamSynchronize(stream);
+
+        if(error != hipSuccess)
+        {
+            return error;
+        }
+
+        size_t offset          = h_nth_element_data.offset;
+        size_t bucket_size     = h_nth_element_data.size;
+        bool   equality_bucket = h_nth_element_data.equality_bucket;
+
+        // If all values are the same it is already sorted
+        if(equality_bucket)
+        {
+            return hipSuccess;
+        }
+
+        size = bucket_size;
+        // rank is the n from the nth-element, but it reduces based on the previous iteration
+        rank = rank - offset;
+        keys = keys + offset;
     }
 
     start_timer();
-    kernel_find_splitters<config>
-        <<<1, num_splitters, 0, stream>>>(keys, tree, equality_buckets, size, compare_function);
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_find_splitters", size, start);
-
-    start_timer();
-    kernel_count_bucket_sizes<config>
-        <<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
-                                                           tree,
-                                                           size,
-                                                           buckets,
-                                                           oracles,
-                                                           equality_buckets,
-                                                           compare_function);
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_count_bucket_sizes", size, start);
-
-    start_timer();
-    kernel_find_nth_element_bucket<config>
-        <<<1, num_buckets, 0, stream>>>(buckets, nth_element_data, equality_buckets, rank);
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_find_nth_element_bucket", size, start);
-
-    start_timer();
-    kernel_copy_buckets<config><<<num_blocks, num_threads_per_block, 0, stream>>>(keys,
-                                                                                  size,
-                                                                                  oracles,
-                                                                                  lookback_states,
-                                                                                  nth_element_data,
-                                                                                  output);
-    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_copy_buckets", size, start);
-
-    error = hipMemcpyAsync(keys, output, sizeof(*keys) * size, hipMemcpyDeviceToDevice, stream);
-
-    if(error != hipSuccess)
-    {
-        return error;
-    }
-
-    n_th_element_iteration_data h_nth_element_data;
-    error = hipMemcpyAsync(&h_nth_element_data,
-                           nth_element_data,
-                           sizeof(h_nth_element_data),
-                           hipMemcpyDeviceToHost,
-                           stream);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
-
-    error = hipStreamSynchronize(stream);
-
-    if(error != hipSuccess)
-    {
-        return error;
-    }
-
-    size_t offset          = h_nth_element_data.offset;
-    size_t bucket_size     = h_nth_element_data.size;
-    bool   equality_bucket = h_nth_element_data.equality_bucket;
-
-    // If all values are the same it is already sorted
-    if(equality_bucket)
-    {
-        return hipSuccess;
-    }
-
-    return nth_element_keys_impl<config>(keys + offset,
-                                         output,
-                                         tree,
-                                         rank - offset,
-                                         bucket_size,
-                                         buckets,
-                                         equality_buckets,
-                                         oracles,
-                                         lookback_states,
-                                         num_buckets,
-                                         stop_recursion_size,
-                                         num_threads_per_block,
-                                         num_items_per_threads,
-                                         nth_element_data,
-                                         compare_function,
-                                         stream,
-                                         debug_synchronous,
-                                         recursion + 1);
+    kernel_block_sort<config><<<1, stop_recursion_size, 0, stream>>>(keys, size, compare_function);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("kernel_block_sort", size, start);
+    return hipSuccess;
 }
 
 #undef ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR
