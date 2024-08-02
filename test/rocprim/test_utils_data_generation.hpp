@@ -57,21 +57,18 @@ struct is_valid_for_int_distribution :
                            > {};
 namespace detail
 {
-    template<class T>
-    struct numeric_limits_custom_test_type : public std::numeric_limits<typename T::value_type>
-    {
-    };
-}
-
-// Numeric limits which also supports custom_test_type<U> classes
 template<class T>
-struct numeric_limits : public std::conditional<
-                            is_custom_test_type<T>::value,
-                            detail::numeric_limits_custom_test_type<T>,
-                            std::numeric_limits<T>
-                            >::type
-{
-};
+struct numeric_limits_custom_test_type : public std::numeric_limits<typename T::value_type>
+{};
+} // namespace detail
+
+// Numeric limits which also supports custom_test_type<U> and custom_test_array_type<U> classes
+template<class T>
+struct numeric_limits
+    : public std::conditional<is_custom_test_type<T>::value || is_custom_test_array_type<T>::value,
+                              detail::numeric_limits_custom_test_type<T>,
+                              std::numeric_limits<T>>::type
+{};
 
 template<> struct numeric_limits<test_utils::half> : public std::numeric_limits<test_utils::half> {
 public:

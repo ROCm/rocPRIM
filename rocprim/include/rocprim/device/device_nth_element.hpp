@@ -132,11 +132,11 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     const detail::nth_element_config_params params
         = detail::dispatch_target_arch<config>(target_arch);
 
-    const unsigned int num_buckets           = params.NumberOfBuckets;
+    const unsigned int num_buckets           = params.number_of_buckets;
     const unsigned int num_splitters         = num_buckets - 1;
-    const unsigned int min_size              = num_buckets;
-    const unsigned int num_items_per_threads = params.ItemsPerThread;
-    const unsigned int num_threads_per_block = params.BlockSize;
+    const unsigned int stop_recursion_size   = num_buckets;
+    const unsigned int num_items_per_threads = params.kernel_config.items_per_thread;
+    const unsigned int num_threads_per_block = params.kernel_config.block_size;
     const unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
     const unsigned int num_blocks = (size + num_items_per_block - 1) / num_items_per_block;
 
@@ -202,7 +202,7 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
                                           oracles,
                                           lookback_states,
                                           num_buckets,
-                                          min_size,
+                                          stop_recursion_size,
                                           num_threads_per_block,
                                           num_items_per_threads,
                                           tree_depth,

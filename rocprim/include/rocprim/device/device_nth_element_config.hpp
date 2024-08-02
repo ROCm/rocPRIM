@@ -42,7 +42,7 @@ struct wrapped_nth_element_config
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr nth_element_config_params params = NthElementConfig();
+        static constexpr nth_element_config_params params = NthElementConfig{};
     };
 };
 
@@ -54,7 +54,7 @@ struct wrapped_nth_element_config<default_config, Type>
     struct architecture_config
     {
         static constexpr nth_element_config_params params
-            = {512, 8, 64, 64, block_radix_rank_algorithm::match};
+            = {64, 64, block_radix_rank_algorithm::match, kernel_config<512, 8>()};
     };
 };
 

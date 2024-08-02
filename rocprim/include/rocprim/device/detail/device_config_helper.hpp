@@ -22,6 +22,7 @@
 #define ROCPRIM_DEVICE_DETAIL_CONFIG_HELPER_HPP_
 
 #include <cstddef>
+#include <rocprim/type_traits.hpp>
 #include <type_traits>
 
 #include "../../config.hpp"
@@ -1044,45 +1045,51 @@ namespace detail
 
 struct nth_element_config_params
 {
-    unsigned int               BlockSize;
-    unsigned int               ItemsPerThread;
-    unsigned int               MinimumSize;
-    unsigned int               NumberOfBuckets;
-    block_radix_rank_algorithm RadixRankAlgorithm;
+    unsigned int               stop_recursion_size;
+    unsigned int               number_of_buckets;
+    block_radix_rank_algorithm radix_rank_algorithm;
+    kernel_config_params       kernel_config;
 };
 
 } // namespace detail
 
 /// \brief Configuration of device-level nth_element
 ///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam MinimumSize - the size from where recursion is stopped to do a block sort
-/// \tparam NumberOfBuckets - the number of buckets that are used in the algorithm
-/// \tparam RadixRankAlgorithm - algorithm for radix rank
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+/// \tparam StopRecursionSize the size from where recursion is stopped to do a block sort
+/// \tparam NumberOfBuckets the number of buckets that are used in the algorithm
+/// \tparam RadixRankAlgorithm algorithm for radix rank
 template<unsigned int               BlockSize,
          unsigned int               ItemsPerThread,
-         unsigned int               MinimumSize,
+         unsigned int               StopRecursionSize,
          unsigned int               NumberOfBuckets,
-         block_radix_rank_algorithm RadixRankAlgorithm>
+         block_radix_rank_algorithm RadixRankAlgorithm,
+         unsigned int               SizeLimit = ROCPRIM_GRID_SIZE_LIMIT>
 struct nth_element_config : public detail::nth_element_config_params
 {
+    // It needs enough splitters to choose from the input
+    static_assert(StopRecursionSize >= NumberOfBuckets,
+                  "StopRecursionSize should be larger or equal than the NumberOfBuckets");
+    // It loads in shared memory for the NumberOfBuckets for every thread
+    static_assert(BlockSize >= NumberOfBuckets,
+                  "BlockSize should be larger or equal than the NumberOfBuckets");
+    // It assumes the NumberOfBuckets of buckets is a power of two in the traversal
+    static_assert(detail::is_power_of_two(NumberOfBuckets), "NumberOfBuckets is a power of two");
+    // The buckets are stored in a uint8_t
+    static_assert(NumberOfBuckets <= 256, "NumberOfBuckets should be smaller or equal than 256");
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
     constexpr nth_element_config()
         : detail::nth_element_config_params{
-            BlockSize, ItemsPerThread, MinimumSize, NumberOfBuckets, RadixRankAlgorithm}
+            StopRecursionSize,
+            NumberOfBuckets,
+            RadixRankAlgorithm,
+            {BlockSize, ItemsPerThread, SizeLimit}
+    }
     {}
+#endif
 };
-
-namespace detail
-{
-
-template<typename Type>
-struct default_nth_element_config_base
-{
-    using type = nth_element_config<512, 16, 64, 64, block_radix_rank_algorithm::match>;
-};
-
-} // namespace detail
 
 END_ROCPRIM_NAMESPACE
 
