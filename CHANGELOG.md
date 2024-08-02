@@ -5,9 +5,14 @@ Documentation for rocPRIM is available at
 
 ## Unreleased rocPRIM-3.3.0 for ROCm 6.3.0
 
+### Added
+
+* Option `--seed` to benchmarks to specify a seed for the generation of random inputs. The default behavior is to keep using a random seed per benchmark measurement.
+
 ### Changes
 
 * Modified the input size in device adjacent difference benchmarks. Observed performance with these benchmarks might be different.
+* Changed the default seed for `device_benchmark_segmented_reduce`.
 
 ### Fixes
 

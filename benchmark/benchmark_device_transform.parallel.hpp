@@ -69,16 +69,17 @@ struct device_transform_benchmark : public config_autotune_interface
     static constexpr unsigned int batch_size  = 10;
     static constexpr unsigned int warmup_size = 5;
 
-    void run(benchmark::State& state,
-             const std::size_t size,
-             const hipStream_t stream) const override
+    void run(benchmark::State&   state,
+             size_t              size,
+             const managed_seed& seed,
+             hipStream_t         stream) const override
     {
         using output_type = T;
 
         static constexpr bool debug_synchronous = false;
 
         // Generate data
-        const std::vector<T> input = get_random_data<T>(size, 1, 100);
+        const std::vector<T> input = get_random_data<T>(size, 1, 100, seed.get_0());
 
         T*           d_input;
         output_type* d_output = nullptr;

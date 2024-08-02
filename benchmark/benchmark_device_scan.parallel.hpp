@@ -115,12 +115,13 @@ struct device_scan_benchmark : public config_autotune_interface
                                                debug);
     }
 
-    void run_benchmark(benchmark::State& state,
-                       size_t            size,
-                       const hipStream_t stream,
-                       ScanOp            scan_op) const
+    void run(benchmark::State&   state,
+             size_t              size,
+             const managed_seed& seed,
+             hipStream_t         stream) const override
     {
-        std::vector<T> input         = get_random_data<T>(size, T(0), T(1000));
+        ScanOp         scan_op{};
+        std::vector<T> input         = get_random_data<T>(size, T(0), T(1000), seed.get_0());
         T              initial_value = T(123);
         T*             d_input;
         T*             d_output;
@@ -200,11 +201,6 @@ struct device_scan_benchmark : public config_autotune_interface
         HIP_CHECK(hipFree(d_input));
         HIP_CHECK(hipFree(d_output));
         HIP_CHECK(hipFree(d_temp_storage));
-    }
-
-    void run(benchmark::State& state, size_t size, hipStream_t stream) const override
-    {
-        run_benchmark(state, size, stream, ScanOp());
     }
 };
 

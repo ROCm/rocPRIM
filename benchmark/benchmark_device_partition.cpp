@@ -48,26 +48,26 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
 #endif
 
 template<class T, class FlagType>
-void run_flagged_benchmark(benchmark::State& state,
-                           size_t size,
-                           const hipStream_t stream,
-                           float true_probability)
+void run_flagged_benchmark(benchmark::State&   state,
+                           size_t              size,
+                           const managed_seed& seed,
+                           const hipStream_t   stream,
+                           float               true_probability)
 {
     size = (size * sizeof(int)) / sizeof(T);
 
     std::vector<T> input;
-    std::vector<FlagType> flags = get_random_data01<FlagType>(size, true_probability);
+    std::vector<FlagType> flags = get_random_data01<FlagType>(size, true_probability, seed.get_0());
     if(std::is_floating_point<T>::value)
     {
-        input = get_random_data<T>(size, T(-1000), T(1000));
+        input = get_random_data<T>(size, T(-1000), T(1000), seed.get_1());
     }
     else
     {
-        input = get_random_data<T>(
-            size,
-            std::numeric_limits<T>::min(),
-            std::numeric_limits<T>::max()
-        );
+        input = get_random_data<T>(size,
+                                   std::numeric_limits<T>::min(),
+                                   std::numeric_limits<T>::max(),
+                                   seed.get_1());
     }
 
     T * d_input;
@@ -179,10 +179,11 @@ void run_flagged_benchmark(benchmark::State& state,
 }
 
 template<class T>
-void run_if_benchmark(benchmark::State& state,
-                      size_t size,
-                      const hipStream_t stream,
-                      float true_probability)
+void run_if_benchmark(benchmark::State&   state,
+                      size_t              size,
+                      const managed_seed& seed,
+                      const hipStream_t   stream,
+                      float               true_probability)
 {
     auto select_op = [true_probability] __device__ (const T& value) -> bool
     {
@@ -190,7 +191,7 @@ void run_if_benchmark(benchmark::State& state,
         return false;
     };
 
-    std::vector<T> input = get_random_data<T>(size, T(0), T(127));
+    std::vector<T> input = get_random_data<T>(size, T(0), T(127), seed.get_0());
     T * d_input;
     T * d_output;
     unsigned int * d_selected_count_output;
@@ -290,15 +291,16 @@ void run_if_benchmark(benchmark::State& state,
 }
 
 template<class T>
-void run_two_way_benchmark(benchmark::State& state,
-                           size_t            size,
-                           const hipStream_t stream,
-                           float             probability)
+void run_two_way_benchmark(benchmark::State&   state,
+                           size_t              size,
+                           const managed_seed& seed,
+                           const hipStream_t   stream,
+                           float               probability)
 {
     auto predicate
         = [probability] __device__(const T& value) { return value < T(127 * probability); };
 
-    std::vector<T> input = get_random_data<T>(size, T(0), T(127));
+    std::vector<T> input = get_random_data<T>(size, T(0), T(127), seed.get_0());
     T*             d_input;
     T*             d_output_selected;
     T*             d_output_rejected;
@@ -390,11 +392,12 @@ void run_two_way_benchmark(benchmark::State& state,
 }
 
 template<class T>
-void run_three_way_benchmark(benchmark::State& state,
-                             size_t size,
-                             const hipStream_t stream,
-                             float first_probability,
-                             float second_probability)
+void run_three_way_benchmark(benchmark::State&   state,
+                             size_t              size,
+                             const managed_seed& seed,
+                             const hipStream_t   stream,
+                             float               first_probability,
+                             float               second_probability)
 {
     auto first_select_op = [first_probability] __device__ (const T& value)
     {
@@ -405,7 +408,7 @@ void run_three_way_benchmark(benchmark::State& state,
         return value < T(127 * second_probability);
     };
 
-    std::vector<T> input = get_random_data<T>(size, T(0), T(127));
+    std::vector<T> input = get_random_data<T>(size, T(0), T(127), seed.get_0());
     T * d_input;
     T * d_output_first;
     T * d_output_second;
@@ -527,6 +530,7 @@ void run_three_way_benchmark(benchmark::State& state,
             .c_str(),                                                               \
         run_flagged_benchmark<T, F>,                                                \
         size,                                                                       \
+        seed,                                                                       \
         stream,                                                                     \
         p)
 
@@ -537,6 +541,7 @@ void run_three_way_benchmark(benchmark::State& state,
             .c_str(),                                                                   \
         run_if_benchmark<T>,                                                            \
         size,                                                                           \
+        seed,                                                                           \
         stream,                                                                         \
         p)
 
@@ -547,6 +552,7 @@ void run_three_way_benchmark(benchmark::State& state,
             .c_str(),                                                                        \
         run_two_way_benchmark<T>,                                                            \
         size,                                                                                \
+        seed,                                                                                \
         stream,                                                                              \
         p)
 
@@ -558,6 +564,7 @@ void run_three_way_benchmark(benchmark::State& state,
             .c_str(),                                                                         \
         run_three_way_benchmark<T>,                                                           \
         size,                                                                                 \
+        seed,                                                                                 \
         stream,                                                                               \
         p1,                                                                                   \
         p2)
@@ -599,6 +606,7 @@ int main(int argc, char *argv[])
                                      "name_format",
                                      "human",
                                      "either: json,human,txt");
+    parser.set_optional<std::string>("seed", "seed", "random", get_seed_message());
     parser.run_and_exit_if_error();
 
     // Parse argv
@@ -606,6 +614,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
     bench_naming::set_format(parser.get<std::string>("name_format"));
+    const std::string  seed_type = parser.get<std::string>("seed");
+    const managed_seed seed(seed_type);
 
     // HIP
     hipStream_t stream = 0; // default
@@ -613,6 +623,7 @@ int main(int argc, char *argv[])
     // Benchmark info
     add_common_benchmark_info();
     benchmark::AddCustomContext("size", std::to_string(size));
+    benchmark::AddCustomContext("seed", seed_type);
 
     using custom_double2 = custom_type<double, double>;
     using custom_int_double = custom_type<int, double>;

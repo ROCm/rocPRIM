@@ -127,14 +127,18 @@ struct device_scan_by_key_benchmark : public config_autotune_interface
                                                       debug);
     }
 
-    void run(benchmark::State& state, size_t size, hipStream_t stream) const override
+    void run(benchmark::State&   state,
+             size_t              size,
+             const managed_seed& seed,
+             hipStream_t         stream) const override
     {
         constexpr bool debug = false;
 
         const std::vector<Key> keys
-            = get_random_segments<Key>(size, MaxSegmentLength, std::random_device{}());
+            = get_random_segments<Key>(size, MaxSegmentLength, seed.get_0());
 
-        const std::vector<Value> input = get_random_data<Value>(size, Value(0), Value(1000));
+        const std::vector<Value> input
+            = get_random_data<Value>(size, Value(0), Value(1000), seed.get_1());
 
         ScanOp    scan_op{};
         CompareOp compare_op{};

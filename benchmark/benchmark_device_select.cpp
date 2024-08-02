@@ -47,24 +47,24 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
 #endif
 
 template<class T, class FlagType>
-void run_flagged_benchmark(benchmark::State& state,
-                           size_t size,
-                           const hipStream_t stream,
-                           float true_probability)
+void run_flagged_benchmark(benchmark::State&   state,
+                           size_t              size,
+                           const managed_seed& seed,
+                           hipStream_t         stream,
+                           float               true_probability)
 {
     std::vector<T> input;
-    std::vector<FlagType> flags = get_random_data01<FlagType>(size, true_probability);
+    std::vector<FlagType> flags = get_random_data01<FlagType>(size, true_probability, seed.get_0());
     if(std::is_floating_point<T>::value)
     {
-        input = get_random_data<T>(size, T(-1000), T(1000));
+        input = get_random_data<T>(size, T(-1000), T(1000), seed.get_1());
     }
     else
     {
-        input = get_random_data<T>(
-            size,
-            std::numeric_limits<T>::min(),
-            std::numeric_limits<T>::max()
-        );
+        input = get_random_data<T>(size,
+                                   std::numeric_limits<T>::min(),
+                                   std::numeric_limits<T>::max(),
+                                   seed.get_1());
     }
 
     T * d_input;
@@ -177,12 +177,13 @@ void run_flagged_benchmark(benchmark::State& state,
 }
 
 template<class T>
-void run_selectop_benchmark(benchmark::State& state,
-                            size_t size,
-                            const hipStream_t stream,
-                            float true_probability)
+void run_selectop_benchmark(benchmark::State&   state,
+                            size_t              size,
+                            const managed_seed& seed,
+                            hipStream_t         stream,
+                            float               true_probability)
 {
-    std::vector<T> input = get_random_data<T>(size, T(0), T(1000));
+    std::vector<T> input = get_random_data<T>(size, T(0), T(1000), seed.get_0());
 
     auto select_op = [true_probability] __device__ (const T& value) -> bool
     {
@@ -291,17 +292,18 @@ void run_selectop_benchmark(benchmark::State& state,
 }
 
 template<class T>
-void run_unique_benchmark(benchmark::State& state,
-                          size_t size,
-                          const hipStream_t stream,
-                          float discontinuity_probability)
+void run_unique_benchmark(benchmark::State&   state,
+                          size_t              size,
+                          const managed_seed& seed,
+                          hipStream_t         stream,
+                          float               discontinuity_probability)
 {
     using op_type = typename std::conditional<std::is_same<T, rocprim::half>::value, half_plus, rocprim::plus<T>>::type;
     op_type op;
 
     std::vector<T> input(size);
     {
-        auto input01 = get_random_data01<T>(size, discontinuity_probability);
+        auto input01 = get_random_data01<T>(size, discontinuity_probability, seed.get_0());
         auto acc = input01[0];
         input[0] = acc;
         for(size_t i = 1; i < input01.size(); i++)
@@ -410,11 +412,12 @@ void run_unique_benchmark(benchmark::State& state,
     hipFree(d_temp_storage);
 }
 
-template <typename Key, typename Value>
-void run_unique_by_key_benchmark(benchmark::State& state,
-                                 size_t            size,
-                                 const hipStream_t stream,
-                                 float             discontinuity_probability)
+template<typename Key, typename Value>
+void run_unique_by_key_benchmark(benchmark::State&   state,
+                                 size_t              size,
+                                 const managed_seed& seed,
+                                 const hipStream_t   stream,
+                                 float               discontinuity_probability)
 {
     using op_type = typename std::
         conditional_t<std::is_same<Key, rocprim::half>::value, half_plus, rocprim::plus<Key>>;
@@ -422,7 +425,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
 
     std::vector<Key> input_keys(size);
     {
-        auto input01  = get_random_data01<Key>(size, discontinuity_probability);
+        auto input01  = get_random_data01<Key>(size, discontinuity_probability, seed.get_0());
         auto acc      = input01[0];
         input_keys[0] = acc;
         for(size_t i = 1; i < input01.size(); i++)
@@ -430,7 +433,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
             input_keys[i] = op(acc, input01[i]);
         }
     }
-    const auto                input_values = get_random_data<Value>(size, -1000, 1000);
+    const auto input_values = get_random_data<Value>(size, -1000, 1000, seed.get_1());
     std::vector<unsigned int> selected_count_output(1);
     auto                      equality_op = rocprim::equal_to<Key>();
 
@@ -546,6 +549,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
             .c_str(),                                                                         \
         run_flagged_benchmark<T, F>,                                                          \
         size,                                                                                 \
+        seed,                                                                                 \
         stream,                                                                               \
         p)
 
@@ -556,6 +560,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
             .c_str(),                                                               \
         run_selectop_benchmark<T>,                                                  \
         size,                                                                       \
+        seed,                                                                       \
         stream,                                                                     \
         p)
 
@@ -567,6 +572,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
             .c_str(),                                                                   \
         run_unique_benchmark<T>,                                                        \
         size,                                                                           \
+        seed,                                                                           \
         stream,                                                                         \
         p)
 
@@ -577,6 +583,7 @@ void run_unique_by_key_benchmark(benchmark::State& state,
                                      .c_str(),                                                    \
                                  run_unique_by_key_benchmark<K, V>,                               \
                                  size,                                                            \
+                                 seed,                                                            \
                                  stream,                                                          \
                                  p)
 
@@ -613,6 +620,7 @@ int main(int argc, char *argv[])
                                      "name_format",
                                      "human",
                                      "either: json,human,txt");
+    parser.set_optional<std::string>("seed", "seed", "random", get_seed_message());
     parser.run_and_exit_if_error();
 
     // Parse argv
@@ -620,6 +628,8 @@ int main(int argc, char *argv[])
     const size_t size = parser.get<size_t>("size");
     const int trials = parser.get<int>("trials");
     bench_naming::set_format(parser.get<std::string>("name_format"));
+    const std::string  seed_type = parser.get<std::string>("seed");
+    const managed_seed seed(seed_type);
 
     // HIP
     hipStream_t stream = 0; // default
@@ -627,6 +637,7 @@ int main(int argc, char *argv[])
     // Benchmark info
     add_common_benchmark_info();
     benchmark::AddCustomContext("size", std::to_string(size));
+    benchmark::AddCustomContext("seed", seed_type);
 
     using custom_double2 = custom_type<double, double>;
     using custom_int_double = custom_type<int, double>;

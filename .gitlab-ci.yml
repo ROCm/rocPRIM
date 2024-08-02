@@ -552,6 +552,7 @@ autotune:execute-tuning:
       --benchmark_filter_regex="${AUTOTUNE_ALGORITHM_REGEX}"
       --size="${AUTOTUNE_SIZE}"
       --trials="${AUTOTUNE_TRIALS}"
+      --seed=82589933
 
 autotune:generate-config:
   image: python:3.10.5-buster

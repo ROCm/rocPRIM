@@ -54,6 +54,49 @@
 #define TUNING_SHARED_MEMORY_MAX 65536u
 // Support half operators on host side
 
+inline const char* get_seed_message()
+{
+    return "seed for input generation, either an unsigned integer value for determinisic results "
+           "or 'random' for different inputs for each repetition";
+}
+
+/// \brief Provides a sequence of seeds.
+class managed_seed
+{
+public:
+    /// \param[in] seed_string Either "random" to get random seeds,
+    ///   or an unsigned integer to get (a sequence) of deterministic seeds.
+    managed_seed(const std::string& seed_string)
+    {
+        is_random = seed_string == "random";
+        if(!is_random)
+        {
+            const unsigned int seed = std::stoul(seed_string);
+            std::seed_seq      seq{seed};
+            seq.generate(seeds.begin(), seeds.end());
+        }
+    }
+
+    unsigned int get_0() const
+    {
+        return is_random ? std::random_device{}() : seeds[0];
+    }
+
+    unsigned int get_1() const
+    {
+        return is_random ? std::random_device{}() : seeds[1];
+    }
+
+    unsigned int get_2() const
+    {
+        return is_random ? std::random_device{}() : seeds[2];
+    }
+
+private:
+    std::array<unsigned int, 3> seeds;
+    bool                        is_random;
+};
+
 ROCPRIM_HOST inline
 rocprim::native_half half_to_native(const rocprim::half& x)
 {
@@ -123,7 +166,7 @@ struct is_valid_for_int_distribution :
 template<typename Iterator>
 using it_value_t = typename std::iterator_traits<Iterator>::value_type;
 
-using engine_type = std::default_random_engine;
+using engine_type = std::minstd_rand;
 
 // generate_random_data_n() generates only part of sequence and replicates it,
 // because benchmarks usually do not need "true" random sequence.
@@ -174,29 +217,20 @@ inline auto generate_random_data_n(OutputIterator it,
 }
 
 template<class T>
-inline std::vector<T> get_random_data01(size_t size, float p, size_t max_random_size = 1024 * 1024)
+inline std::vector<T>
+    get_random_data01(size_t size, float p, unsigned int seed, size_t max_random_size = 1024 * 1024)
 {
-    engine_type gen{std::random_device{}()};
+    engine_type                 gen(seed);
     std::bernoulli_distribution distribution(p);
-    std::vector<T> data(size);
-    std::generate(
-        data.begin(), data.begin() + std::min(size, max_random_size),
-        [&]() { return distribution(gen); }
-    );
+    std::vector<T>              data(size);
+    std::generate(data.begin(),
+                  data.begin() + std::min(size, max_random_size),
+                  [&]() { return distribution(gen); });
     for(size_t i = max_random_size; i < size; i += max_random_size)
     {
         std::copy_n(data.begin(), std::min(size - i, max_random_size), data.begin() + i);
     }
     return data;
-}
-
-template<class T>
-inline T get_random_value(T min, T max)
-{
-    T           result;
-    engine_type gen{std::random_device{}()};
-    generate_random_data_n(&result, 1, min, max, gen);
-    return result;
 }
 
 template<class T, class U = T>
@@ -315,11 +349,11 @@ inline auto generate_random_data_n(OutputIterator             it,
 }
 
 template<class T, class U, class V>
-inline std::vector<T>
-    get_random_data(size_t size, U min, V max, size_t max_random_size = 1024 * 1024)
+inline std::vector<T> get_random_data(
+    size_t size, U min, V max, unsigned int seed, size_t max_random_size = 1024 * 1024)
 {
     std::vector<T> data(size);
-    engine_type    gen{std::random_device{}()};
+    engine_type    gen(seed);
     generate_random_data_n(data.begin(), size, min, max, gen, max_random_size);
     return data;
 }
@@ -337,11 +371,11 @@ __device__ constexpr bool device_test_enabled_for_warp_size_v
 
 template<typename T>
 std::vector<T>
-    get_random_segments(const size_t size, const size_t max_segment_length, const int seed_value)
+    get_random_segments(const size_t size, const size_t max_segment_length, unsigned int seed)
 {
     static_assert(rocprim::is_arithmetic<T>::value, "Key type must be arithmetic");
 
-    std::default_random_engine            prng(seed_value);
+    engine_type                           prng(seed);
     std::uniform_int_distribution<size_t> segment_length_distribution(max_segment_length);
     // std::uniform_real_distribution cannot handle rocprim::half, use float instead
     using dis_type =
@@ -393,13 +427,16 @@ void static_for_each(Args&&... args)
                                                                  std::forward<Args>(args)...);
 }
 
-#define REGISTER_BENCHMARK(benchmarks, size, stream, instance)                     \
-    benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(      \
-        instance.name().c_str(),                                                   \
-        [instance](benchmark::State& state, size_t size, const hipStream_t stream) \
-        { instance.run(state, size, stream); },                                    \
-        size,                                                                      \
-        stream);                                                                   \
+#define REGISTER_BENCHMARK(benchmarks, size, seed, stream, instance)                     \
+    benchmark::internal::Benchmark* benchmark = benchmark::RegisterBenchmark(            \
+        instance.name().c_str(),                                                         \
+        [instance](benchmark::State&   state,                                            \
+                   size_t              _size,                                            \
+                   const managed_seed& _seed,                                            \
+                   hipStream_t         _stream) { instance.run(state, _size, _seed, _stream); }, \
+        size,                                                                            \
+        seed,                                                                            \
+        stream);                                                                         \
     benchmarks.emplace_back(benchmark)
 
 struct config_autotune_interface
@@ -409,8 +446,8 @@ struct config_autotune_interface
     {
         return name();
     };
-    virtual ~config_autotune_interface()                           = default;
-    virtual void run(benchmark::State&, size_t, hipStream_t) const = 0;
+    virtual ~config_autotune_interface()                                                = default;
+    virtual void run(benchmark::State&, size_t, const managed_seed&, hipStream_t) const = 0;
 };
 
 struct config_autotune_register
@@ -435,10 +472,11 @@ struct config_autotune_register
 
     // Register a subset of all created benchmarks for the current parallel instance and add to vector.
     static void register_benchmark_subset(std::vector<benchmark::internal::Benchmark*>& benchmarks,
-                                          int               parallel_instance_index,
-                                          int               parallel_instance_count,
-                                          size_t            size,
-                                          const hipStream_t stream)
+                                          int                 parallel_instance_index,
+                                          int                 parallel_instance_count,
+                                          size_t              size,
+                                          const managed_seed& seed,
+                                          hipStream_t         stream)
     {
         std::vector<std::unique_ptr<config_autotune_interface>>& configs = vector();
         // sorting to get a consistent order because order of initialization of static variables is undefined by the C++ standard.
@@ -455,9 +493,13 @@ struct config_autotune_register
             config_autotune_interface*                  tuning_benchmark = uniq_ptr.get();
             benchmark::internal::Benchmark*             benchmark = benchmark::RegisterBenchmark(
                 tuning_benchmark->name().c_str(),
-                [tuning_benchmark](benchmark::State& state, size_t size, const hipStream_t stream)
-                { tuning_benchmark->run(state, size, stream); },
+                [tuning_benchmark](benchmark::State&   state,
+                                   size_t              size,
+                                   const managed_seed& seed,
+                                   hipStream_t         stream)
+                { tuning_benchmark->run(state, size, seed, stream); },
                 size,
+                seed,
                 stream);
             benchmarks.emplace_back(benchmark);
         }
