@@ -60,7 +60,7 @@ struct DeviceBatchMemcpyParams
 };
 
 template<class Params>
-struct DeviceBatchMemcpyTests : public ::testing::Test
+struct RocprimDeviceBatchMemcpyTests : public ::testing::Test
 {
     using value_type                      = typename Params::value_type;
     using size_type                       = typename Params::size_type;
@@ -108,9 +108,9 @@ typedef ::testing::Types<
     // size_type: int64_t
     DeviceBatchMemcpyParams<uint8_t, int64_t, true, true, 1024, 64 * 1024>,
     DeviceBatchMemcpyParams<uint8_t, int64_t, true, true, 1024, 128 * 1024>>
-    DeviceBatchMemcpyTestsParams;
+    RocprimDeviceBatchMemcpyTestsParams;
 
-TYPED_TEST_SUITE(DeviceBatchMemcpyTests, DeviceBatchMemcpyTestsParams);
+TYPED_TEST_SUITE(RocprimDeviceBatchMemcpyTests, RocprimDeviceBatchMemcpyTestsParams);
 
 // Used for generating offsets. We generate a permutation map and then derive
 // offsets via a sum scan over the sizes in the order of the permutation. This
@@ -310,7 +310,7 @@ void check_result(ContainerMemCpy& /*h_input_for_memcpy*/,
     }
 }
 
-TYPED_TEST(DeviceBatchMemcpyTests, SizeAndTypeVariation)
+TYPED_TEST(RocprimDeviceBatchMemcpyTests, SizeAndTypeVariation)
 {
     using value_type         = typename TestFixture::value_type;
     using buffer_size_type   = typename TestFixture::size_type;
