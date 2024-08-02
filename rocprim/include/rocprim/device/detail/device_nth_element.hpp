@@ -132,14 +132,14 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
     auto bucket  = idx < size ? oracles[idx] : 0;
     auto element = idx < size ? keys[idx] : Key(0);
 
-    using block_scan_local_offsets = rocprim::block_scan<size_t, num_threads_per_block>;
+    using block_scan_local_offsets = rocprim::block_scan<unsigned short, num_threads_per_block>;
 
     __shared__ typename block_scan_local_offsets::storage_type storage_bucket;
     size_t                                                     index = bucket_offsets[bucket];
     for(size_t i = 0; i < num_buckets; i++)
     {
-        size_t temp;
-        size_t current_bucket = bucket == i;
+        unsigned short temp;
+        unsigned short current_bucket = bucket == i;
         block_scan_local_offsets().exclusive_scan(current_bucket, temp, 0, storage_bucket);
 
         if(current_bucket)
