@@ -236,8 +236,11 @@ add_rocprim_test("rocprim.basic_test" "test_basic.cpp;detail/get_rocprim_version
 
 add_rocprim_test("rocprim.arg_index_iterator" test_arg_index_iterator.cpp)
 add_rocprim_test("rocprim.temporary_storage_partitioning" test_temporary_storage_partitioning.cpp)
-add_rocprim_test_parallel("rocprim.block_adjacent_difference" test_block_adjacent_difference.cpp.in)
-add_rocprim_test_parallel("rocprim.block_discontinuity" test_block_discontinuity.cpp.in)
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # clang++ from ROCm 6.1+ takes too long to build these tests in Debug mode (which passes -O0)
+  add_rocprim_test_parallel("rocprim.block_adjacent_difference" test_block_adjacent_difference.cpp.in)
+  add_rocprim_test_parallel("rocprim.block_discontinuity" test_block_discontinuity.cpp.in)
+endif()
 add_rocprim_test("rocprim.block_exchange" test_block_exchange.cpp)
 add_rocprim_test("rocprim.block_histogram" test_block_histogram.cpp)
 add_rocprim_test("rocprim.block_load_store" test_block_load_store.cpp)

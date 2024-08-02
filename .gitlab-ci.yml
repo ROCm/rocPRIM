@@ -197,9 +197,8 @@ build:cmake-minimum:
     - .cmake-minimum
     - .build:common
   parallel:
-    # Debug builds disabled due to excessive build times for debug test builds
     matrix:
-      - BUILD_TYPE: Release
+      - BUILD_TYPE: [Debug, Release]
         BUILD_TARGET: [BENCHMARK, TEST]
 
 build:package:
