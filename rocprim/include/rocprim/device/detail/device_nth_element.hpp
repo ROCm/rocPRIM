@@ -88,16 +88,17 @@ ROCPRIM_KERNEL void kernel_copy_buckets(KeysIterator   keys,
                                         unsigned char* oracles,
                                         KeysIterator   output)
 {
+    using block_scan_local_offsets = rocprim::block_scan<unsigned short, num_threads_per_block>;
+
+    __shared__ typename block_scan_local_offsets::storage_type storage_bucket;
 
     auto idx = threadIdx.x + (blockDim.x * blockIdx.x);
 
     auto bucket  = idx < size ? oracles[idx] : 0;
     auto element = idx < size ? keys[idx] : Key(0);
 
-    using block_scan_local_offsets = rocprim::block_scan<unsigned short, num_threads_per_block>;
-
-    __shared__ typename block_scan_local_offsets::storage_type storage_bucket;
     size_t index = buckets_per_block_offsets[bucket * gridDim.x + blockIdx.x];
+    ROCPRIM_NO_UNROLL
     for(size_t i = 0; i < num_buckets; i++)
     {
         unsigned short temp;
@@ -242,27 +243,31 @@ ROCPRIM_KERNEL void kernel_block_offset(size_t*      buckets_per_block_offsets,
                                         const size_t num_blocks)
 
 {
-    using block_scan_offsets = rocprim::block_scan<size_t, num_buckets>;
+    using block_scan_offsets  = rocprim::block_scan<size_t, num_buckets>;
+    using block_scan_find_nth = rocprim::block_scan<size_t, num_buckets>;
+
     __shared__ size_t bucket_offsets[num_buckets];
 
-    __shared__ typename block_scan_offsets::storage_type storage;
-    size_t                                               bucket_offset;
-    size_t                                               bucket_size = buckets[threadIdx.x];
-    block_scan_offsets().exclusive_scan(bucket_size, bucket_offset, 0, storage);
+    __shared__ union
+    {
+        typename block_scan_offsets::storage_type  bucket_offset;
+        typename block_scan_find_nth::storage_type find_nth;
+    } storage;
+
+    size_t bucket_offset;
+    size_t bucket_size = buckets[threadIdx.x];
+    block_scan_offsets().exclusive_scan(bucket_size, bucket_offset, 0, storage.bucket_offset);
 
     bucket_offsets[threadIdx.x] = bucket_offset;
 
     rocprim::syncthreads();
 
     size_t num_buckets_before;
+
     // Find the data of the nth element
-    using block_scan_find_nth = rocprim::block_scan<size_t, num_buckets>;
-
-    __shared__ typename block_scan_find_nth::storage_type storage_find;
-
     bool in_nth = bucket_offset <= rank;
 
-    block_scan_find_nth().inclusive_scan(in_nth, num_buckets_before, storage_find);
+    block_scan_find_nth().inclusive_scan(in_nth, num_buckets_before, storage.find_nth);
 
     if(threadIdx.x == (num_buckets - 1))
     {
@@ -272,10 +277,13 @@ ROCPRIM_KERNEL void kernel_block_offset(size_t*      buckets_per_block_offsets,
         nth_element_data[2] = equality_buckets[nth_element];
     }
 
-    size_t counter = bucket_offset;
-    for(size_t i = 0; i < num_blocks; i++)
+    size_t       counter      = bucket_offset;
+    const size_t block_offset = threadIdx.x * num_blocks;
+    const size_t max = block_offset + num_blocks;
+
+    ROCPRIM_UNROLL
+    for(size_t idx = block_offset; idx < max; idx++)
     {
-        size_t idx                     = i + threadIdx.x * num_blocks;
         size_t offset                  = buckets_per_block_offsets[idx];
         buckets_per_block_offsets[idx] = counter;
         counter += offset;
