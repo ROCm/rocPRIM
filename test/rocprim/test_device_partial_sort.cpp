@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 // required test headers
+#include "indirect_iterator.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
@@ -44,46 +45,50 @@
 
 // Params for tests
 template<class KeyType,
-         class CompareFunction = ::rocprim::less<KeyType>,
-         class Config          = ::rocprim::default_config,
-         bool UseGraphs        = false>
+         class CompareFunction    = ::rocprim::less<KeyType>,
+         class Config             = ::rocprim::default_config,
+         bool UseGraphs           = false,
+         bool UseIndirectIterator = false>
 struct DevicePartialSortParams
 {
-    using key_type                   = KeyType;
-    using compare_function           = CompareFunction;
-    using config                     = Config;
-    static constexpr bool use_graphs = UseGraphs;
+    using key_type                              = KeyType;
+    using compare_function                      = CompareFunction;
+    using config                                = Config;
+    static constexpr bool use_graphs            = UseGraphs;
+    static constexpr bool use_indirect_iterator = UseIndirectIterator;
 };
 
 template<class Params>
 class RocprimDevicePartialSortTests : public ::testing::Test
 {
 public:
-    using key_type               = typename Params::key_type;
-    using compare_function       = typename Params::compare_function;
-    using config                 = typename Params::config;
-    const bool debug_synchronous = false;
-    bool       use_graphs        = Params::use_graphs;
+    using key_type                              = typename Params::key_type;
+    using compare_function                      = typename Params::compare_function;
+    using config                                = typename Params::config;
+    const bool            debug_synchronous     = false;
+    static constexpr bool use_graphs            = Params::use_graphs;
+    static constexpr bool use_indirect_iterator = Params::use_indirect_iterator;
 };
 
 // TODO add custom config
 // TODO no graph support
-using RocprimDevicePartialSortTestsParams
-    = ::testing::Types<DevicePartialSortParams<unsigned short>,
-                       DevicePartialSortParams<char>,
-                       DevicePartialSortParams<int>,
-                       DevicePartialSortParams<test_utils::custom_test_type<int>>,
-                       DevicePartialSortParams<unsigned long>,
-                       DevicePartialSortParams<long long, ::rocprim::greater<long long>>,
-                       DevicePartialSortParams<float>,
-                       DevicePartialSortParams<int8_t>,
-                       DevicePartialSortParams<uint8_t>,
-                       DevicePartialSortParams<rocprim::half>,
-                       DevicePartialSortParams<rocprim::bfloat16>,
-                       DevicePartialSortParams<double>,
-                       DevicePartialSortParams<test_utils::custom_test_type<float>>,
-                       DevicePartialSortParams<test_utils::custom_float_type>,
-                       DevicePartialSortParams<test_utils::custom_test_array_type<int, 4>>>;
+using RocprimDevicePartialSortTestsParams = ::testing::Types<
+    DevicePartialSortParams<unsigned short>,
+    DevicePartialSortParams<char>,
+    DevicePartialSortParams<int>,
+    DevicePartialSortParams<test_utils::custom_test_type<int>>,
+    DevicePartialSortParams<unsigned long>,
+    DevicePartialSortParams<long long, ::rocprim::greater<long long>>,
+    DevicePartialSortParams<float>,
+    DevicePartialSortParams<int8_t>,
+    DevicePartialSortParams<uint8_t>,
+    DevicePartialSortParams<rocprim::half>,
+    DevicePartialSortParams<rocprim::bfloat16>,
+    DevicePartialSortParams<double>,
+    DevicePartialSortParams<test_utils::custom_test_type<float>>,
+    DevicePartialSortParams<test_utils::custom_float_type>,
+    DevicePartialSortParams<test_utils::custom_test_array_type<int, 4>>,
+    DevicePartialSortParams<int, ::rocprim::less<int>, rocprim::default_config, false, true>>;
 
 TYPED_TEST_SUITE(RocprimDevicePartialSortTests, RocprimDevicePartialSortTestsParams);
 
@@ -93,10 +98,11 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    using key_type               = typename TestFixture::key_type;
-    using compare_function       = typename TestFixture::compare_function;
-    using config                 = typename TestFixture::config;
-    const bool debug_synchronous = TestFixture::debug_synchronous;
+    using key_type                              = typename TestFixture::key_type;
+    using compare_function                      = typename TestFixture::compare_function;
+    using config                                = typename TestFixture::config;
+    const bool            debug_synchronous     = TestFixture::debug_synchronous;
+    static constexpr bool use_indirect_iterator = TestFixture::use_indirect_iterator;
 
     bool in_place = false;
 
@@ -161,6 +167,9 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                         test_common_utils::hipMallocHelper(&d_output, size * sizeof(key_type)));
                 }
 
+                const auto input_it
+                    = test_utils::wrap_in_indirect_iterator<use_indirect_iterator>(d_input);
+
                 compare_function compare_op;
 
                 // Allocate temporary storage
@@ -169,7 +178,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                 {
                     HIP_CHECK(rocprim::partial_sort<config>(nullptr,
                                                             temp_storage_size_bytes,
-                                                            d_input,
+                                                            input_it,
                                                             middle,
                                                             size,
                                                             compare_op,
@@ -180,7 +189,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                 {
                     HIP_CHECK(rocprim::partial_sort_copy<config>(nullptr,
                                                                  temp_storage_size_bytes,
-                                                                 d_input,
+                                                                 input_it,
                                                                  d_output,
                                                                  middle,
                                                                  size,
@@ -203,7 +212,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                 {
                     HIP_CHECK(rocprim::partial_sort<config>(d_temp_storage,
                                                             temp_storage_size_bytes,
-                                                            d_input,
+                                                            input_it,
                                                             middle,
                                                             size,
                                                             compare_op,
@@ -214,7 +223,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                 {
                     HIP_CHECK(rocprim::partial_sort_copy<config>(d_temp_storage,
                                                                  temp_storage_size_bytes,
-                                                                 d_input,
+                                                                 input_it,
                                                                  d_output,
                                                                  middle,
                                                                  size,
