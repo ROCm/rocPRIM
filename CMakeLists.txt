@@ -45,6 +45,7 @@ endif()
 # Build options
 option(BUILD_TEST "Build tests (requires googletest)" OFF)
 option(BUILD_BENCHMARK "Build benchmarks" OFF)
+option(BUILD_NAIVE_BENCHMARK "Build naive benchmarks" OFF)
 option(BUILD_EXAMPLE "Build examples" OFF)
 option(BUILD_DOCS "Build documentation (requires sphinx)" OFF)
 option(USE_HIP_CPU "Prefer HIP-CPU runtime instead of HW acceleration" OFF)

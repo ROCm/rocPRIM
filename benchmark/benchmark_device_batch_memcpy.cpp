@@ -432,8 +432,7 @@ void run_benchmark(benchmark::State&   state,
 }
 
 // Naive implementation used for comparison
-#define BENCHMARK_BATCH_MEMCPY_NAIVE
-#ifdef BENCHMARK_BATCH_MEMCPY_NAIVE
+#ifdef BUILD_NAIVE_BENCHMARK
 
 template<typename OffsetType, int32_t BlockSize>
 __launch_bounds__(BlockSize) __global__
@@ -545,7 +544,7 @@ void run_naive_benchmark(benchmark::State&   state,
                                     true>(state, seed, stream, num_tlev, num_wlev, num_blev); \
             })
 
-#endif
+#endif // BUILD_NAIVE_BENCHMARK
 
 #define CREATE_BENCHMARK(item_size, item_alignment, size_type, num_tlev, num_wlev, num_blev)      \
     benchmark::RegisterBenchmark(                                                                 \
@@ -572,7 +571,7 @@ void run_naive_benchmark(benchmark::State&   state,
                 num_blev);                                                                        \
         })
 
-#ifndef BENCHMARK_BATCH_MEMCPY_NAIVE
+#ifndef BUILD_NAIVE_BENCHMARK
     #define BENCHMARK_TYPE(item_size, item_alignment)                            \
         CREATE_BENCHMARK(item_size, item_alignment, uint32_t, 100000, 0, 0),     \
             CREATE_BENCHMARK(item_size, item_alignment, uint32_t, 0, 100000, 0), \
@@ -588,7 +587,7 @@ void run_naive_benchmark(benchmark::State&   state,
             CREATE_NAIVE_BENCHMARK(item_size, item_alignment, uint32_t, 0, 100000, 0), \
             CREATE_NAIVE_BENCHMARK(item_size, item_alignment, uint32_t, 0, 0, 1000),   \
             CREATE_NAIVE_BENCHMARK(item_size, item_alignment, uint32_t, 1000, 1000, 1000)
-#endif
+#endif //BUILD_NAIVE_BENCHMARK
 
 int32_t main(int32_t argc, char* argv[])
 {

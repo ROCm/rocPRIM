@@ -59,6 +59,10 @@ function(add_rocprim_benchmark BENCHMARK_SOURCE)
     add_executable(${BENCHMARK_TARGET} ${BENCHMARK_SOURCE})
   endif()
 
+  if(BUILD_NAIVE_BENCHMARK)
+    target_compile_definitions(${BENCHMARK_TARGET} PUBLIC BUILD_NAIVE_BENCHMARK)
+  endif()
+
   target_link_libraries(${BENCHMARK_TARGET}
     PRIVATE
       rocprim
