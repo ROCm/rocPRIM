@@ -82,10 +82,11 @@ template<typename T>
 struct match_prefix_underlying_type
 {
     using value_and_prefix = tuple<T, prefix_flag>;
-    using type = select_type<select_type_case<sizeof(value_and_prefix) <= 2, unsigned short>,
-                             select_type_case<sizeof(value_and_prefix) <= 4, unsigned int>,
-                             select_type_case<sizeof(value_and_prefix) <= 8, unsigned long long>,
-                             void>;
+    using type
+        = select_type<select_type_case<sizeof(value_and_prefix) <= sizeof(uint16_t), uint16_t>,
+                      select_type_case<sizeof(value_and_prefix) <= sizeof(uint32_t), uint32_t>,
+                      select_type_case<sizeof(value_and_prefix) <= sizeof(uint64_t), uint64_t>,
+                      void>;
 };
 
 // In the original implementation, lookback scan is not deterministic
