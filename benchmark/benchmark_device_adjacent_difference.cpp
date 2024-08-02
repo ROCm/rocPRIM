@@ -41,7 +41,7 @@
 #include <cstddef>
 
 #ifndef DEFAULT_N
-constexpr std::size_t DEFAULT_N = 1024 * 1024 * 128;
+constexpr std::size_t DEFAULT_N = 1024 * 1024 * 256;
 #endif
 
 #define CREATE_BENCHMARK(T, left, in_place)                                     \
