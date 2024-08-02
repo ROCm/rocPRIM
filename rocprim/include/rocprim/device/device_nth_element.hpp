@@ -117,7 +117,6 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \endparblock
 template<class Config = default_config,
          class KeysIterator,
-         class Key = typename std::iterator_traits<KeysIterator>::value_type,
          class BinaryFunction
          = ::rocprim::less<typename std::iterator_traits<KeysIterator>::value_type>>
 ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
@@ -130,7 +129,9 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
                                       hipStream_t    stream            = 0,
                                       bool           debug_synchronous = false)
 {
-    using config = detail::wrapped_nth_element_config<Config, Key>;
+    using key_type = typename std::iterator_traits<KeysIterator>::value_type;
+    using config   = detail::wrapped_nth_element_config<Config, key_type>;
+
     detail::target_arch target_arch;
     hipError_t          result = host_target_arch(stream, target_arch);
     if(result != hipSuccess)
@@ -146,16 +147,16 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     const unsigned int num_items_per_threads = params.kernel_config.items_per_thread;
     const unsigned int num_threads_per_block = params.kernel_config.block_size;
     const unsigned int num_items_per_block   = num_threads_per_block * num_items_per_threads;
-    const unsigned int num_blocks = (size + num_items_per_block - 1) / num_items_per_block;
+    const unsigned int num_blocks            = detail::ceiling_div(size, num_items_per_block);
 
-    Key*                             tree             = nullptr;
+    key_type*                        tree             = nullptr;
     size_t*                          buckets          = nullptr;
     detail::nth_element_data_type*   nth_element_data = nullptr;
-    unsigned char*                   oracles          = nullptr;
+    uint8_t*                         oracles          = nullptr;
     bool*                            equality_buckets = nullptr;
     detail::onesweep_lookback_state* lookback_states  = nullptr;
 
-    Key* output = nullptr;
+    key_type* output = nullptr;
 
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
@@ -182,17 +183,20 @@ ROCPRIM_INLINE hipError_t nth_element(void*          temporary_storage,
     if(debug_synchronous)
     {
         std::cout << "-----" << '\n';
-        std::cout << "size: " << size << std::endl;
-        std::cout << "num_buckets: " << num_buckets << std::endl;
-        std::cout << "num_threads_per_block: " << num_threads_per_block << std::endl;
-        std::cout << "num_blocks: " << num_blocks << std::endl;
-        std::cout << "storage_size: " << storage_size << std::endl;
+        std::cout << "size: " << size << '\n';
+        std::cout << "num_buckets: " << num_buckets << '\n';
+        std::cout << "num_threads_per_block: " << num_threads_per_block << '\n';
+        std::cout << "num_blocks: " << num_blocks << '\n';
+        std::cout << "storage_size: " << storage_size << '\n';
     }
 
     if(keys_input != keys_output)
     {
-        hipError_t error
-            = hipMemcpy(keys_output, keys_input, sizeof(Key) * size, hipMemcpyDeviceToDevice);
+        hipError_t error = hipMemcpyAsync(keys_output,
+                                          keys_input,
+                                          sizeof(key_type) * size,
+                                          hipMemcpyDeviceToDevice,
+                                          stream);
         if(error != hipSuccess)
         {
             return error;
