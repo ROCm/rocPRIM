@@ -220,6 +220,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
     }
 }
 
+// This test also ensures that merge_sort is stable
 TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
