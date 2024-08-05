@@ -651,6 +651,13 @@ inline hipError_t merge_sort_impl(
 /// if \p temporary_storage in a null pointer.
 /// * Accepts custom compare_functions for sorting across the device.
 ///
+/// \par Stability
+/// \p merge_sort is \b stable: it preserves the relative ordering of equivalent keys.
+/// That is, given two keys \p a and \p b and a binary boolean operation \p op such that:
+///   * \p a precedes \p b in the input keys, and
+///   * op(a, b) and op(b, a) are both false,
+/// then it is \b guaranteed that \p a will precede \p b as well in the output (ordered) keys.
+///
 /// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `merge_sort_config`.
 /// \tparam KeysInputIterator - random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
@@ -742,6 +749,13 @@ hipError_t merge_sort(void * temporary_storage,
 /// * Returns the required size of \p temporary_storage in \p storage_size
 /// if \p temporary_storage in a null pointer.
 /// * Accepts custom compare_functions for sorting across the device.
+///
+/// \par Stability
+/// \p merge_sort is \b stable: it preserves the relative ordering of equivalent keys.
+/// That is, given two keys \p a and \p b and a binary boolean operation \p op such that:
+///   * \p a precedes \p b in the input keys, and
+///   * op(a, b) and op(b, a) are both false,
+/// then it is \b guaranteed that \p a will precede \p b as well in the output (ordered) keys.
 ///
 /// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `merge_sort_config`.
 /// \tparam KeysInputIterator - random-access iterator type of the input range. Must meet the
