@@ -161,7 +161,7 @@ void merge_keys(unsigned int       flat_id,
                                           range_local.begin2 + diag - partition,
                                           range_local.end2};
 
-    serial_merge(keys_shared, key_inputs, index, range_partition, compare_function);
+    serial_merge<true>(keys_shared, key_inputs, index, range_partition, compare_function);
 }
 
 template<

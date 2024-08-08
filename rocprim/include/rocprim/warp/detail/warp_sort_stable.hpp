@@ -24,6 +24,7 @@
 #include <type_traits>
 
 #include "../../config.hpp"
+#include "../../detail/merge_path.hpp"
 #include "../../detail/various.hpp"
 
 #include "../../functional.hpp"
@@ -161,7 +162,7 @@ private:
                 keys2_end,
             };
 
-            serial_merge(shared_keys, thread_keys, range, compare_function);
+            serial_merge<true>(shared_keys, thread_keys, range, compare_function);
 
             wave_barrier();
         }
@@ -222,12 +223,12 @@ private:
                 keys2_end,
             };
 
-            serial_merge(shared_keys,
-                         thread_keys,
-                         shared_values,
-                         thread_values,
-                         range,
-                         compare_function);
+            serial_merge<true>(shared_keys,
+                               thread_keys,
+                               shared_values,
+                               thread_values,
+                               range,
+                               compare_function);
 
             wave_barrier();
         }
