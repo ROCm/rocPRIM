@@ -10,6 +10,9 @@ Documentation for rocPRIM is available at
 
 * Fixed an issue where while running rtest.py on windows and passing in an absolute path to `--install_dir` causes a `FileNotFound` error.
 
+### Additions
+* New option for install directory to run filtered set of tests for smoke test. 
+  Use ./install -c --smoketest to build the tests and run the filtered set of tests
 
 ## Unreleased rocPRIM-3.2.0 for ROCm 6.2.0
 
