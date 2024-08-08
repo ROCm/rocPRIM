@@ -7,6 +7,8 @@ Documentation for rocPRIM is available at
 
 ### Additions
 
+* New option for install directory to run filtered set of tests for smoke test. 
+  Use ./install -c --smoketest to build the tests and run the filtered set of tests
 * Option `--seed` to benchmarks to specify a seed for the generation of random inputs. The default behavior is to keep using a random seed per benchmark measurement.
 * Added configuration autotuning to device partition (`rocprim::partition`, `rocprim::partition_two_way`, and `rocprim::partition_three_way`), device select (`rocprim::select`, `rocprim::unique`, and `rocprim::unique_by_key`), and device reduce by key (`rocprim::reduce_by_key`) for improved performance on selected architectures.
 * Added `rocprim::uninitialized_array` which provides uninitialized storage in local memory for user-defined types.
@@ -37,10 +39,6 @@ Documentation for rocPRIM is available at
 * `rocprim::thread_load` and `rocprim::thread_store`, use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
 
 * Fixed an issue where while running rtest.py on windows and passing in an absolute path to `--install_dir` causes a `FileNotFound` error.
-
-### Additions
-* New option for install directory to run filtered set of tests for smoke test. 
-  Use ./install -c --smoketest to build the tests and run the filtered set of tests
 
 ## Unreleased rocPRIM-3.2.0 for ROCm 6.2.0
 
