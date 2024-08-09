@@ -21,7 +21,7 @@ Documentation for rocPRIM is available at
 * Changed the default seed for `device_benchmark_segmented_reduce`.
 
 ### Fixes
-
+* Fixed an issue in rtest.py where if the build folder was made without release or debug directory it would crash the program
 * Fixed an issue where while running rtest.py on windows and passing in an absolute path to `--install_dir` causes a `FileNotFound` error.
 * rocPRIM functions are no longer forcefully inlined on Windows, significantly reducing the build
   time in debug builds.
