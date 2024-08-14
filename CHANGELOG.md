@@ -3,6 +3,18 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
+## (Unreleased) rocPRIM 3.4.0 for ROCm 6.4.0
+
+### Added
+
+### Changed
+
+### Resolved issues
+
+* Fixed an issue where `rocprim::partial_sort_copy` would yield a compile error if the input iterator is const.
+
+### Upcoming changes
+
 ## (Unreleased) rocPRIM-3.3.0 for ROCm 6.3.0
 
 ### Added
