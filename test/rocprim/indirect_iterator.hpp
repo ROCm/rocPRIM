@@ -163,14 +163,14 @@ private:
     T* ptr_;
 };
 
-template<bool Wrap, class T>
+template<bool Wrap, typename T>
 inline auto wrap_in_indirect_iterator(T* ptr) ->
     typename std::enable_if<Wrap, indirect_iterator<T>>::type
 {
     return indirect_iterator<T>(ptr);
 }
 
-template<bool Wrap, class T>
+template<bool Wrap, typename T>
 inline auto wrap_in_indirect_iterator(T* ptr) -> typename std::enable_if<!Wrap, T*>::type
 {
     return ptr;
