@@ -465,6 +465,7 @@ benchmark:
   variables:
     BENCHMARK_FILENAME_REGEX: ^benchmark
     BENCHMARK_ALGORITHM_REGEX: ""
+    BENCHMARK_SEED: random
   script:
     - 'printf "CI Variables used in benchmarks:\nBENCHMARK_RESULT_DIR: %s\nBENCHMARK_FILENAME_REGEX: %s\nBENCHMARK_ALGORITHM_REGEX: %s \n" "$BENCHMARK_RESULT_DIR" "$BENCHMARK_FILENAME_REGEX" "$BENCHMARK_ALGORITHM_REGEX"'
     - cd "${CI_PROJECT_DIR}"
@@ -476,6 +477,7 @@ benchmark:
       --benchmark_output_dir "${BENCHMARK_RESULT_DIR}"
       --benchmark_filename_regex "${BENCHMARK_FILENAME_REGEX}"
       --benchmark_filter_regex "${BENCHMARK_ALGORITHM_REGEX}"
+      --seed "${BENCHMARK_SEED}"
   artifacts:
     paths:
       - ${BENCHMARK_RESULT_DIR}
