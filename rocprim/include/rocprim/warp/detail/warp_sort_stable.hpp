@@ -162,7 +162,7 @@ private:
                 keys2_end,
             };
 
-            serial_merge<true>(shared_keys, thread_keys, range, compare_function);
+            serial_merge<false>(shared_keys, thread_keys, range, compare_function);
 
             wave_barrier();
         }
@@ -223,12 +223,12 @@ private:
                 keys2_end,
             };
 
-            serial_merge<true>(shared_keys,
-                               thread_keys,
-                               shared_values,
-                               thread_values,
-                               range,
-                               compare_function);
+            serial_merge<false>(shared_keys,
+                                thread_keys,
+                                shared_values,
+                                thread_values,
+                                range,
+                                compare_function);
 
             wave_barrier();
         }

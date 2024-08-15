@@ -387,7 +387,7 @@ private:
             range_t<>          range_local
                 = {keys1_beg_local + keys1_beg, keys1_end, keys2_beg_local + keys1_end, keys2_end};
 
-            serial_merge<true>(keys_shared, thread_keys, range_local, compare_function);
+            serial_merge<false>(keys_shared, thread_keys, range_local, compare_function);
             ::rocprim::syncthreads();
         }
     }
@@ -429,12 +429,12 @@ private:
             range_t<>          range_local
                 = {keys1_beg_local + keys1_beg, keys1_end, keys2_beg_local + keys1_end, keys2_end};
 
-            serial_merge<true>(keys_shared,
-                               thread_keys,
-                               values_shared,
-                               thread_values,
-                               range_local,
-                               compare_function);
+            serial_merge<false>(keys_shared,
+                                thread_keys,
+                                values_shared,
+                                thread_values,
+                                range_local,
+                                compare_function);
             ::rocprim::syncthreads();
         }
     }
