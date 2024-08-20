@@ -136,9 +136,9 @@ struct device_partition_flag_benchmark : public config_autotune_interface
              const hipStream_t   stream) const override
     {
         std::vector<DataType> input = get_random_data<DataType>(size,
-                                        generate_limits<DataType>::min(),
-                                        generate_limits<DataType>::max(),
-                                        seed.get_0());
+                                                                generate_limits<DataType>::min(),
+                                                                generate_limits<DataType>::max(),
+                                                                seed.get_0());
 
         std::vector<FlagType> flags_0;
         std::vector<FlagType> flags_1;
@@ -391,9 +391,9 @@ struct device_partition_two_way_flag_benchmark : public config_autotune_interfac
              const hipStream_t   stream) const override
     {
         std::vector<DataType> input = get_random_data<DataType>(size,
-                                        generate_limits<DataType>::min(),
-                                        generate_limits<DataType>::max(),
-                                        seed.get_0());
+                                                                generate_limits<DataType>::min(),
+                                                                generate_limits<DataType>::max(),
+                                                                seed.get_0());
 
         std::vector<FlagType> flags_0;
         std::vector<FlagType> flags_1;
