@@ -98,18 +98,10 @@ struct device_select_flag_benchmark : public config_autotune_interface
              const managed_seed& seed,
              hipStream_t         stream) const override
     {
-        std::vector<DataType> input;
-        if(std::is_floating_point<DataType>::value)
-        {
-            input = get_random_data<DataType>(size, DataType(-1000), DataType(1000), seed.get_0());
-        }
-        else
-        {
-            input = get_random_data<DataType>(size,
-                                              std::numeric_limits<DataType>::min(),
-                                              std::numeric_limits<DataType>::max(),
-                                              seed.get_0());
-        }
+        std::vector<DataType> input= get_random_data<DataType>(size,
+                                                                 generate_limits<DataType>::min(),
+                                                                 generate_limits<DataType>::max(),
+                                                                 seed.get_0());
 
         std::vector<FlagType> flags_0;
         std::vector<FlagType> flags_1;
