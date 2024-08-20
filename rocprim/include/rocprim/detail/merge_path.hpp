@@ -34,18 +34,21 @@ namespace detail
 template<class OffsetT = unsigned int>
 struct range_t
 {
-    OffsetT                begin1;
-    OffsetT                end1;
-    OffsetT                begin2;
-    OffsetT                end2;
+    OffsetT begin1;
+    OffsetT end1;
+    OffsetT begin2;
+    OffsetT end2;
 
+    /// \brief Number of elements in first range.
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    constexpr unsigned int count1() const
+    constexpr OffsetT count1() const
     {
         return end1 - begin1;
     }
 
-    ROCPRIM_DEVICE ROCPRIM_INLINE constexpr unsigned int count2() const
+    /// \brief Number of elements in second range.
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    constexpr OffsetT count2() const
     {
         return end2 - begin2;
     }
