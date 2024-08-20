@@ -87,12 +87,17 @@ ROCPRIM_HOST_DEVICE ROCPRIM_INLINE OffsetT merge_path(KeysInputIterator1 keys_in
     return begin;
 }
 
-template<unsigned int ItemsPerThread, bool AllowUnsafe, class KeyType, class BinaryFunction, class OutputFunction, class OffsetT>
-ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
-void serial_merge(KeyType*       keys_shared,
-                  range_t<OffsetT> range,
-                  BinaryFunction compare_function,
-                  OutputFunction output_function)
+template<unsigned int ItemsPerThread,
+         bool         AllowUnsafe,
+         class KeyType,
+         class BinaryFunction,
+         class OutputFunction,
+         class OffsetT>
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void serial_merge(KeyType*                keys_shared,
+                  const range_t<OffsetT>& range,
+                  BinaryFunction          compare_function,
+                  OutputFunction          output_function)
 {
     // Pre condition, we're including some edge cases too.
     assert(range.begin1 <= range.end1);
@@ -169,17 +174,18 @@ ROCPRIM_DEVICE ROCPRIM_INLINE
 void serial_merge(KeyType* keys_shared,
                   KeyType (&outputs)[ItemsPerThread],
                   unsigned int (&indices)[ItemsPerThread],
-                  range_t<OffsetT> range,
-                  BinaryFunction   compare_function)
+                  const range_t<OffsetT>& range,
+                  BinaryFunction          compare_function)
 {
-    serial_merge<ItemsPerThread, AllowUnsafe>(keys_shared,
-                                              range,
-                                              compare_function,
-                                              [&](OffsetT i, KeyType key, OffsetT index)
-                                              {
-                                                  outputs[i] = key;
-                                                  indices[i] = index;
-                                              });
+    serial_merge<ItemsPerThread, AllowUnsafe>(
+        keys_shared,
+        range,
+        compare_function,
+        [&](const OffsetT& i, const KeyType& key, const OffsetT& index)
+        {
+            outputs[i] = key;
+            indices[i] = index;
+        });
 }
 
 template<bool AllowUnsafe = false,
@@ -190,14 +196,14 @@ template<bool AllowUnsafe = false,
 ROCPRIM_DEVICE ROCPRIM_INLINE
 void serial_merge(KeyType* keys_shared,
                   KeyType (&outputs)[ItemsPerThread],
-                  range_t<OffsetT> range,
-                  BinaryFunction   compare_function)
+                  const range_t<OffsetT>& range,
+                  BinaryFunction          compare_function)
 {
-    serial_merge<ItemsPerThread, AllowUnsafe>(keys_shared,
-                                              range,
-                                              compare_function,
-                                              [&](OffsetT i, KeyType key, OffsetT)
-                                              { outputs[i] = key; });
+    serial_merge<ItemsPerThread, AllowUnsafe>(
+        keys_shared,
+        range,
+        compare_function,
+        [&](const OffsetT& i, const KeyType& key, const OffsetT&) { outputs[i] = key; });
 }
 
 template<bool AllowUnsafe = false,
@@ -211,17 +217,18 @@ void serial_merge(KeyType* keys_shared,
                   KeyType (&outputs)[ItemsPerThread],
                   ValueType* values_shared,
                   ValueType (&values)[ItemsPerThread],
-                  range_t<OffsetT> range,
-                  BinaryFunction   compare_function)
+                  const range_t<OffsetT>& range,
+                  BinaryFunction          compare_function)
 {
-    serial_merge<ItemsPerThread, AllowUnsafe>(keys_shared,
-                                              range,
-                                              compare_function,
-                                              [&](OffsetT i, KeyType key, OffsetT index)
-                                              {
-                                                  outputs[i] = key;
-                                                  values[i]  = values_shared[index];
-                                              });
+    serial_merge<ItemsPerThread, AllowUnsafe>(
+        keys_shared,
+        range,
+        compare_function,
+        [&](const OffsetT& i, const KeyType& key, const OffsetT& index)
+        {
+            outputs[i] = key;
+            values[i]  = values_shared[index];
+        });
 }
 
 } // end namespace detail
