@@ -384,8 +384,11 @@ private:
                                                             diag0_local,
                                                             compare_function);
             const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
-            range_t<>          range_local
-                = {keys1_beg_local + keys1_beg, keys1_end, keys2_beg_local + keys1_end, keys2_end};
+
+            range_t<> range_local{keys1_beg_local + keys1_beg,
+                                  keys1_end,
+                                  keys2_beg_local + keys1_end,
+                                  keys2_end};
 
             serial_merge<false>(keys_shared, thread_keys, range_local, compare_function);
             ::rocprim::syncthreads();
@@ -426,8 +429,11 @@ private:
                                                             diag0_local,
                                                             compare_function);
             const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
-            range_t<>          range_local
-                = {keys1_beg_local + keys1_beg, keys1_end, keys2_beg_local + keys1_end, keys2_end};
+
+            range_t<> range_local{keys1_beg_local + keys1_beg,
+                                  keys1_end,
+                                  keys2_beg_local + keys1_end,
+                                  keys2_end};
 
             serial_merge<false>(keys_shared,
                                 thread_keys,
