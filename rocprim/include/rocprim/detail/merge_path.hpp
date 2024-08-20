@@ -126,7 +126,7 @@ void serial_merge(KeyType*                keys_shared,
     }
 
     ROCPRIM_UNROLL
-    for(OffsetT i = 0; i < ItemsPerThread; ++i)
+    for(unsigned int i = 0; i < ItemsPerThread; ++i)
     {
         // If we don't have any in b, we always take from a. Then, if we don't
         // have any in a, we take from b. Otherwise we take the smallest item.
@@ -181,7 +181,7 @@ void serial_merge(KeyType* keys_shared,
         keys_shared,
         range,
         compare_function,
-        [&](const OffsetT& i, const KeyType& key, const OffsetT& index)
+        [&](const unsigned int& i, const KeyType& key, const OffsetT& index)
         {
             outputs[i] = key;
             indices[i] = index;
@@ -203,7 +203,7 @@ void serial_merge(KeyType* keys_shared,
         keys_shared,
         range,
         compare_function,
-        [&](const OffsetT& i, const KeyType& key, const OffsetT&) { outputs[i] = key; });
+        [&](const unsigned int& i, const KeyType& key, const OffsetT&) { outputs[i] = key; });
 }
 
 template<bool AllowUnsafe = false,
@@ -224,7 +224,7 @@ void serial_merge(KeyType* keys_shared,
         keys_shared,
         range,
         compare_function,
-        [&](const OffsetT& i, const KeyType& key, const OffsetT& index)
+        [&](const unsigned int& i, const KeyType& key, const OffsetT& index)
         {
             outputs[i] = key;
             values[i]  = values_shared[index];
