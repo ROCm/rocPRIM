@@ -3,10 +3,8 @@
 #include "../test_utils_assertions.hpp"
 #include "../test_utils_data_generation.hpp"
 
+#include <rocprim/block/block_store_func.hpp>
 #include <rocprim/detail/merge_path.hpp>
-#include <rocprim/rocprim.hpp>
-
-#include <hip/driver_types.h>
 
 template<int IPT, class T, class Op>
 __global__

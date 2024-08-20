@@ -231,8 +231,7 @@ endfunction()
 # Tests
 # ****************************************************************************
 
-# add_subdirectory("internal")
-
+# Internal test to check internal behaviour
 add_rocprim_test("rocprim.internal_merge_path" "internal/test_internal_merge_path.cpp")
 
 # HIP basic test, which also checks if there are no linkage problems when there are multiple sources
