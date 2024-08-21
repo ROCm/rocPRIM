@@ -1082,6 +1082,32 @@ struct nth_element_config : public detail::nth_element_config_params
 #endif
 };
 
+namespace detail
+{
+
+struct find_first_of_config_params
+{
+    kernel_config_params kernel_config;
+};
+
+} // namespace detail
+
+/// \brief Configuration of device-level find_first_of
+///
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+template<unsigned int BlockSize, unsigned int ItemsPerThread>
+struct find_first_of_config : public detail::find_first_of_config_params
+{
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    constexpr find_first_of_config()
+        : detail::find_first_of_config_params{
+              {BlockSize, ItemsPerThread, ROCPRIM_GRID_SIZE_LIMIT}
+    }
+    {}
+#endif
+};
+
 END_ROCPRIM_NAMESPACE
 
 /// @}
