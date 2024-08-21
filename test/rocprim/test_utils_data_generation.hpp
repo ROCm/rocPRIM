@@ -265,6 +265,10 @@ inline OutputIter segmented_generate_n(OutputIter it, size_t size, Generator&& g
             std::generate_n(it + segment_size * segment_index, segment_size, gen);
         }
     }
+    // Generate the remaining items
+    std::generate_n(it + segment_size * random_data_generation_segments,
+                    size - segment_size * random_data_generation_segments,
+                    gen);
     return it + size;
 }
 
