@@ -201,6 +201,7 @@ namespace detail
         unsigned int indices[ItemsPerThread];
 
         serial_merge<false>(keys_shared, keys, indices, range_local, compare_function);
+        rocprim::syncthreads();
 
         if ROCPRIM_IF_CONSTEXPR(with_values){
             reg_to_shared<BlockSize, ItemsPerThread>(values_shared, values);
@@ -336,6 +337,7 @@ namespace detail
         unsigned int indices[ItemsPerThread];
 
         serial_merge<false>(keys_shared, keys, indices, range_local, compare_function);
+        rocprim::syncthreads();
 
         if ROCPRIM_IF_CONSTEXPR(with_values)
         {
