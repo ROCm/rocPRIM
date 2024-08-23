@@ -179,7 +179,7 @@ private:
         );
 
         // Final reduction across warps is only required if there is more than 1 warp
-        if (warps_no_ > 1)
+        if ROCPRIM_IF_CONSTEXPR (warps_no_ > 1)
         {
             // i-th warp will have its partial stored in storage_.warp_partials[i-1]
             if(lane_id == 0)
@@ -249,7 +249,7 @@ private:
         );
 
         // Final reduction across warps is only required if there is more than 1 warp
-        if (warps_no_ > 1)
+        if ROCPRIM_IF_CONSTEXPR (warps_no_ > 1)
         {
             // i-th warp will have its partial stored in storage_.warp_partials[i-1]
             if(lane_id == 0)
