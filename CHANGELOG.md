@@ -3,7 +3,12 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
-## Unreleased rocPRIM-3.2.0 for ROCm 6.2.0
+## rocPRIM-3.2.1 for ROCm 6.2.1
+
+### Optimizations
+* Improved performance of block_reduce_warp_reduce when warp size == block size.
+
+## rocPRIM-3.2.0 for ROCm 6.2.0
 
 ### Additions
 
