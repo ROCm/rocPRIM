@@ -31,6 +31,12 @@ Documentation for rocPRIM is available at
 * Fixed a bug for `rocprim::merge_path_search` where using `unsigned` offsets would output wrong results.
 * Fixed a bug for `rocprim::thread_load` and `rocprim::thread_store` where `float` and `double` were not casted to the correct type resulting in wrong results.
 * Fix tests failing when compiling with `-D_GLIBCXX_ASSERTIONS=ON`.
+* Fixed a bug for algorithms that use an internal serial merge routine that causes a memory access fault. This may result in a performance drop when using:
+  * block sort,
+  * device merge sort (block merge),
+  * device merge,
+  * device partial sort, and/or
+  * device sort (merge sort).
 
 ### Deprecations
 
