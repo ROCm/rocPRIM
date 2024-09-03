@@ -12,6 +12,8 @@ Documentation for rocPRIM is available at
 ### Resolved issues
 
 * Fixed an issue where `rocprim::partial_sort_copy` would yield a compile error if the input iterator is const.
+* Fixed incorrect 128-bit signed and unsigned integers type traits.
+* Fixed compilation issue when `rocprim::radix_key_codec<...>` is specialized with a 128-bit integer.
 
 ### Upcoming changes
 
