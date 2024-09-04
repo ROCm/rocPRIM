@@ -145,7 +145,7 @@ struct select_block_sort_impl<block_sort_algorithm::stable_merge_sort>
 /// \par Examples
 /// \parblock
 /// In the examples sort is performed on a block of 256 threads, each thread provides
-/// 8 \p int value, results are returned using the same variable as for input.
+/// 8 \p int values, results are returned using the same variable as for input.
 ///
 /// \code{.cpp}
 /// __global__ void example_kernel(...)
@@ -241,7 +241,7 @@ public:
     /// \par Examples
     /// \parblock
     /// In the examples sort is performed on a block of 256 threads, each thread provides
-    /// 8 \p int value, results are returned using the same variable as for input.
+    /// 8 \p int values, results are returned using the same variable as for input.
     ///
     /// \code{.cpp}
     /// __global__ void example_kernel(...)
@@ -333,7 +333,7 @@ public:
     ///
     /// \parblock
     /// In the examples sort is performed on a block of 256 threads, each thread provides
-    /// 8 \p int key and one \p int value, results are returned using the same variable as for input.
+    /// 8 \p int keys and one \p int value, results are returned using the same variable as for input.
     ///
     /// \code{.cpp}
     /// __global__ void example_kernel(...)
