@@ -241,14 +241,14 @@ public:
     /// \par Examples
     /// \parblock
     /// In the examples sort is performed on a block of 256 threads, each thread provides
-    /// 8 \p int values, results are returned using the same variable as for input.
+    /// one \p int value, results are returned using the same variable as for input.
     ///
     /// \code{.cpp}
     /// __global__ void example_kernel(...)
     /// {
-    ///     // specialize block_sort for int, block of 256 threads, and 8 items per threads
+    ///     // specialize block_sort for int, block of 256 threads
     ///     // key-only sort
-    ///     using block_sort_int = rocprim::block_sort<int, 256, 8>;
+    ///     using block_sort_int = rocprim::block_sort<int, 256>;
     ///     // allocate storage in shared memory
     ///     __shared__ block_sort_int::storage_type storage;
     ///
