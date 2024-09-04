@@ -156,7 +156,7 @@ struct select_block_sort_impl<block_sort_algorithm::stable_merge_sort>
 ///     // allocate storage in shared memory
 ///     __shared__ block_sort_int::storage_type storage;
 ///
-///     int input[8];
+///     int input[8] = ...;
 ///     // execute block sort (ascending)
 ///     block_sort_int().sort(
 ///         input,
@@ -343,7 +343,7 @@ public:
     ///     // allocate storage in shared memory
     ///     __shared__ block_sort_int::storage_type storage;
     ///
-    ///     int key = ...;
+    ///     int key[8] = ...;
     ///     int value = ...;
     ///     // execute block sort (ascending)
     ///     block_sort_int().sort(
