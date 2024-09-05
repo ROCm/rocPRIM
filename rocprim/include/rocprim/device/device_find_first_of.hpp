@@ -24,6 +24,7 @@
 #include "../config.hpp"
 #include "../detail/temp_storage.hpp"
 #include "config_types.hpp"
+#include "detail/ordered_block_id.hpp"
 #include "device_find_first_of_config.hpp"
 #include "device_transform.hpp"
 
@@ -57,25 +58,23 @@ namespace detail
     }                                                                                            \
     while(0)
 
-#define RETURN_ON_ERROR(...)              \
-    do                                    \
-    {                                     \
-        hipError_t error = (__VA_ARGS__); \
-        if(error != hipSuccess)           \
-        {                                 \
-            return error;                 \
-        }                                 \
-    }                                     \
-    while(0)
+ROCPRIM_KERNEL
+static void
+    init_find_first_of_kernel(size_t* output, size_t size, ordered_block_id<size_t> ordered_bid)
+{
+    *output = size;
+    ordered_bid.reset();
+}
 
 template<class Config, class InputIterator1, class InputIterator2, class BinaryFunction>
 ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().kernel_config.block_size)
-void find_first_of_kernel(InputIterator1 input,
-                          InputIterator2 keys,
-                          size_t*        output,
-                          size_t         size,
-                          size_t         keys_size,
-                          BinaryFunction compare_function)
+void find_first_of_kernel(InputIterator1           input,
+                          InputIterator2           keys,
+                          size_t*                  output,
+                          size_t                   size,
+                          size_t                   keys_size,
+                          ordered_block_id<size_t> ordered_bid,
+                          BinaryFunction           compare_function)
 {
     constexpr find_first_of_config_params params = device_params<Config>();
 
@@ -87,14 +86,14 @@ void find_first_of_kernel(InputIterator1 input,
     using type     = typename std::iterator_traits<InputIterator1>::value_type;
     using key_type = typename std::iterator_traits<InputIterator2>::value_type;
 
-    const unsigned int thread_id        = ::rocprim::detail::block_thread_id<0>();
-    const unsigned int block_id         = ::rocprim::detail::block_id<0>();
-    const unsigned int number_of_blocks = ::rocprim::detail::grid_size<0>();
+    const unsigned int thread_id = ::rocprim::detail::block_thread_id<0>();
 
     ROCPRIM_SHARED_MEMORY struct
     {
         unsigned int block_first_index;
-        size_t       grid_first_index;
+        size_t       global_first_index;
+
+        typename decltype(ordered_bid)::storage_type ordered_bid;
     } storage;
 
     if(thread_id == 0)
@@ -103,26 +102,27 @@ void find_first_of_kernel(InputIterator1 input,
     }
     syncthreads();
 
-    size_t block_offset = block_id * items_per_block;
-    for(; block_offset < size; block_offset += number_of_blocks * items_per_block)
+    while(true)
     {
         if(thread_id == 0)
         {
-            storage.grid_first_index = atomic_load(output);
+            storage.global_first_index = atomic_load(output);
         }
-        syncthreads();
-        if(storage.grid_first_index < block_offset)
+        const size_t block_id     = ordered_bid.get(thread_id, storage.ordered_bid);
+        const size_t block_offset = block_id * items_per_block;
+        // ordered_bid.get() calls syncthreads(), it is safe to read global_first_index
+
+        // Exit if all input has been processed or one of previous blocks has found a match
+        if(block_offset >= storage.global_first_index)
         {
-            // No need to continue if one of previous blocks (or this one) has found a match
             break;
         }
-
-        type items[items_per_thread];
 
         unsigned int thread_first_index = identity;
 
         if(block_offset + items_per_block <= size)
         {
+            type items[items_per_thread];
             block_load_direct_striped<block_size>(thread_id, input + block_offset, items);
             for(size_t key_index = 0; key_index < keys_size; ++key_index)
             {
@@ -140,6 +140,8 @@ void find_first_of_kernel(InputIterator1 input,
         else
         {
             const unsigned int valid = size - block_offset;
+
+            type items[items_per_thread];
             block_load_direct_striped<block_size>(thread_id, input + block_offset, items, valid);
             for(size_t key_index = 0; key_index < keys_size; ++key_index)
             {
@@ -162,9 +164,13 @@ void find_first_of_kernel(InputIterator1 input,
             atomic_min(&storage.block_first_index, thread_first_index * block_size + thread_id);
         }
         syncthreads();
-        if(thread_id == 0 && storage.block_first_index != identity)
+        if(storage.block_first_index != identity)
         {
-            atomic_min(output, block_offset + storage.block_first_index);
+            if(thread_id == 0)
+            {
+                atomic_min(output, block_offset + storage.block_first_index);
+            }
+            break;
         }
     }
 }
@@ -201,51 +207,73 @@ hipError_t find_first_of_impl(void*          temporary_storage,
     const unsigned int items_per_thread = params.kernel_config.items_per_thread;
     const unsigned int items_per_block  = block_size * items_per_thread;
 
-    if(temporary_storage == nullptr)
+    using ordered_bid_type = ordered_block_id<size_t>;
+
+    // As output can be an arbitrary iterator, we need to use an intermediate buffer to do atomic
+    // operations with it
+    size_t*                    tmp_output          = nullptr;
+    ordered_bid_type::id_type* ordered_bid_storage = nullptr;
+
+    // Calculate required temporary storage
+    result = temp_storage::partition(
+        temporary_storage,
+        storage_size,
+        temp_storage::make_linear_partition(
+            temp_storage::ptr_aligned_array(&tmp_output, 1),
+            temp_storage::make_partition(&ordered_bid_storage,
+                                         ordered_bid_type::get_temp_storage_layout())));
+    if(result != hipSuccess || temporary_storage == nullptr)
     {
-        storage_size = sizeof(size_t);
-        return hipSuccess;
+        return result;
     }
 
-    size_t* tmp_output = reinterpret_cast<size_t*>(temporary_storage);
+    auto ordered_bid = ordered_bid_type::create(ordered_bid_storage);
 
-    RETURN_ON_ERROR(
-        hipMemcpyAsync(tmp_output, &size, sizeof(*tmp_output), hipMemcpyHostToDevice, stream));
+    std::chrono::steady_clock::time_point start;
 
-    if(size > 0)
+    if(debug_synchronous)
     {
-        std::chrono::steady_clock::time_point start;
+        start = std::chrono::steady_clock::now();
+    }
+    init_find_first_of_kernel<<<1, 1, 0, stream>>>(tmp_output, size, ordered_bid);
+    ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_find_first_of_kernel", 1, start);
+
+    if(size > 0 && keys_size > 0)
+    {
+        auto kernel = find_first_of_kernel<config, InputIterator1, InputIterator2, BinaryFunction>;
+
+        const size_t shared_memory_size = 0;
+
+        // Choose minimum grid size needed to achieve the highest occupancy
+        int min_grid_size, max_block_size;
+        result = hipOccupancyMaxPotentialBlockSize(&min_grid_size,
+                                                   &max_block_size,
+                                                   kernel,
+                                                   shared_memory_size,
+                                                   int(block_size));
+        if(result != hipSuccess)
+        {
+            return result;
+        }
+
+        const size_t num_blocks
+            = std::min(size_t(min_grid_size), ceiling_div(size, items_per_block));
+
         if(debug_synchronous)
         {
             start = std::chrono::steady_clock::now();
         }
-
-        const size_t shared_memory_size = 0;
-        auto kernel = find_first_of_kernel<config, InputIterator1, InputIterator2, BinaryFunction>;
-
-        // Choose minimum grid size needed to achieve the highest occupancy
-        int min_grid_size, max_block_size;
-        RETURN_ON_ERROR(hipOccupancyMaxPotentialBlockSize(&min_grid_size,
-                                                          &max_block_size,
-                                                          kernel,
-                                                          shared_memory_size,
-                                                          int(block_size)));
-        const size_t num_blocks
-            = std::min(size_t(min_grid_size), ceiling_div(size, items_per_block));
-
         kernel<<<num_blocks, block_size, shared_memory_size, stream>>>(input,
                                                                        keys,
                                                                        tmp_output,
                                                                        size,
                                                                        keys_size,
+                                                                       ordered_bid,
                                                                        compare_function);
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("find_first_of_kernel", size, start);
     }
 
-    RETURN_ON_ERROR(
-        transform(tmp_output, output, 1, ::rocprim::identity<void>(), stream, debug_synchronous));
-
-    return hipSuccess;
+    return transform(tmp_output, output, 1, ::rocprim::identity<void>(), stream, debug_synchronous);
 }
 
 } // namespace detail
@@ -289,8 +317,6 @@ hipError_t find_first_of_impl(void*          temporary_storage,
 ///   The signature of the function should be equivalent to the following:
 ///   <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
 ///   <tt>const &</tt>, but function object must not modify the objects passed to it.
-///   The comparator must meet the C++ named requirement Compare.
-///   The default value is `BinaryFunction()`.
 /// \param [in] stream [optional] HIP stream object. Default is `0` (default stream).
 /// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
 ///   launch is forced in order to check for errors. Default value is `false`.
@@ -329,7 +355,7 @@ hipError_t find_first_of_impl(void*          temporary_storage,
 ///     temporary_storage_ptr, temporary_storage_size_bytes,
 ///     input, keys, output, size, keys_size
 /// );
-/// // possible output: [ 2 ]
+/// // output: [ 2 ]
 /// \endcode
 /// \endparblock
 template<class Config = default_config,
