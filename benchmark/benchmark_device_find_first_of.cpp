@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "benchmark_device_find_first_of.hpp"
+#include "benchmark_device_find_first_of.parallel.hpp"
 #include "benchmark_utils.hpp"
 
 // CmdParser
@@ -35,8 +35,8 @@
 #include <cstddef>
 #include <string>
 
-#ifndef DEFAULT_N
-const size_t DEFAULT_N = 1024 * 1024 * 32;
+#ifndef DEFAULT_BYTES
+constexpr size_t DEFAULT_BYTES = size_t{1} << 27; // 128 MiB
 #endif
 
 #define CREATE_BENCHMARK_FIND_FIRST_OF(TYPE, KEYS_SIZE, FIRST_OCCURENCE)                 \
@@ -55,9 +55,10 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
 
 #define CREATE_BENCHMARK(TYPE)         \
     {                                  \
+        CREATE_BENCHMARK0(TYPE, 1)    \
         CREATE_BENCHMARK0(TYPE, 10)    \
-        CREATE_BENCHMARK0(TYPE, 128)   \
-        CREATE_BENCHMARK0(TYPE, 1024)  \
+        CREATE_BENCHMARK0(TYPE, 100)   \
+        CREATE_BENCHMARK0(TYPE, 1000)  \
         CREATE_BENCHMARK0(TYPE, 10000) \
     }
 // clang-format on
@@ -65,13 +66,24 @@ const size_t DEFAULT_N = 1024 * 1024 * 32;
 int main(int argc, char* argv[])
 {
     cli::Parser parser(argc, argv);
-    parser.set_optional<size_t>("size", "size", DEFAULT_N, "number of values");
+    parser.set_optional<size_t>("size", "size", DEFAULT_BYTES, "number of bytes");
     parser.set_optional<int>("trials", "trials", -1, "number of iterations");
     parser.set_optional<std::string>("name_format",
                                      "name_format",
                                      "human",
                                      "either: json,human,txt");
     parser.set_optional<std::string>("seed", "seed", "random", get_seed_message());
+#ifdef BENCHMARK_CONFIG_TUNING
+    // optionally run an evenly split subset of benchmarks, when making multiple program invocations
+    parser.set_optional<int>("parallel_instance",
+                             "parallel_instance",
+                             0,
+                             "parallel instance index");
+    parser.set_optional<int>("parallel_instances",
+                             "parallel_instances",
+                             1,
+                             "total parallel instances");
+#endif
     parser.run_and_exit_if_error();
 
     // Parse argv
@@ -92,16 +104,29 @@ int main(int argc, char* argv[])
 
     // Add benchmarks
     std::vector<benchmark::internal::Benchmark*> benchmarks{};
+#ifdef BENCHMARK_CONFIG_TUNING
+    const int parallel_instance  = parser.get<int>("parallel_instance");
+    const int parallel_instances = parser.get<int>("parallel_instances");
+    config_autotune_register::register_benchmark_subset(benchmarks,
+                                                        parallel_instance,
+                                                        parallel_instances,
+                                                        size,
+                                                        seed,
+                                                        stream);
+#else // BENCHMARK_CONFIG_TUNING
     CREATE_BENCHMARK(int8_t)
     CREATE_BENCHMARK(int16_t)
     CREATE_BENCHMARK(int32_t)
+    CREATE_BENCHMARK(float)
     CREATE_BENCHMARK(int64_t)
+    CREATE_BENCHMARK(double)
 
     using custom_int2            = custom_type<int, int>;
     using custom_longlong_double = custom_type<long long, double>;
 
     CREATE_BENCHMARK(custom_int2)
     CREATE_BENCHMARK(custom_longlong_double)
+#endif // BENCHMARK_CONFIG_TUNING
 
     // Use manual timing
     for(auto& b : benchmarks)

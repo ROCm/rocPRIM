@@ -1087,7 +1087,7 @@ namespace detail
 
 struct find_first_of_config_params
 {
-    kernel_config_params kernel_config;
+    kernel_config_params kernel_config{};
 };
 
 } // namespace detail
@@ -1102,11 +1102,25 @@ struct find_first_of_config : public detail::find_first_of_config_params
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     constexpr find_first_of_config()
         : detail::find_first_of_config_params{
-              {BlockSize, ItemsPerThread, ROCPRIM_GRID_SIZE_LIMIT}
+            {BlockSize, ItemsPerThread, 0}
     }
     {}
 #endif
 };
+
+namespace detail
+{
+
+template<class Value>
+struct default_find_first_of_config_base
+{
+    static constexpr unsigned int item_scale
+        = ::rocprim::detail::ceiling_div<unsigned int>(sizeof(Value), sizeof(int));
+
+    using type = find_first_of_config<256, ::rocprim::max(1u, 16u / item_scale)>;
+};
+
+} // namespace detail
 
 END_ROCPRIM_NAMESPACE
 
