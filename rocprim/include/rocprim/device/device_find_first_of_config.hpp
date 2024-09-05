@@ -22,7 +22,7 @@
 #define ROCPRIM_DEVICE_DEVICE_FIND_FIRST_OF_CONFIG_HPP_
 
 #include "config_types.hpp"
-
+#include "detail/config/device_find_first_of.hpp"
 #include "detail/device_config_helper.hpp"
 
 /// \addtogroup primitivesmodule_deviceconfigs
@@ -51,7 +51,8 @@ struct wrapped_find_first_of_config<default_config, Type>
     template<target_arch Arch>
     struct architecture_config
     {
-        static constexpr find_first_of_config_params params = {kernel_config<256, 4>()};
+        static constexpr find_first_of_config_params params
+            = default_find_first_of_config<static_cast<unsigned int>(Arch), Type>();
     };
 };
 
