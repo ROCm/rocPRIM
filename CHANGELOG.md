@@ -7,6 +7,8 @@ Documentation for rocPRIM is available at
 
 ### Added
 
+* Added the parallel `find_first_of` device function with autotuned configurations, this function is similar to `std::find_first_of`, it searches for the first occurrence of any of the provided elements.
+
 ### Changed
 
 ### Resolved issues
