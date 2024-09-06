@@ -18,6 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#include <chrono>
+#include <thread>
+
 #include "common_test_header.hpp"
 
 // required rocprim headers
@@ -51,7 +54,9 @@ bool test_func(int block_count, int thread_count)
     std::vector<unsigned int> h_vec(block_count);
     HIP_CHECK(hipMalloc(&d_flags, block_count * sizeof(unsigned int)));
     test_kernel<<<block_count, thread_count>>>(d_flags);
-    hipDeviceSynchronize();
+
+    HIP_CHECK(hipGetLastError());
+    HIP_CHECK(hipDeviceSynchronize());
     HIP_CHECK(hipMemcpy(h_vec.data(),
                         d_flags,
                         block_count * sizeof(unsigned int),
@@ -69,9 +74,22 @@ bool test_func(int block_count, int thread_count)
 
 TEST(OrderedBlockId, Deadlock)
 {
+    // timer
+    std::thread(
+        [&]
+        {
+            std::this_thread::sleep_for(std::chrono::seconds(60));
+            FAIL();
+        })
+        .detach();
+
     EXPECT_TRUE(test_func(1, 1));
-    EXPECT_TRUE(test_func(3, 3));
     EXPECT_TRUE(test_func(10, 10));
     EXPECT_TRUE(test_func(100, 100));
     EXPECT_TRUE(test_func(1000, 1000));
+    EXPECT_TRUE(test_func(3000, 1024));
+    EXPECT_TRUE(test_func(5000, 1024));
+    EXPECT_TRUE(test_func(10000, 1024));
+
+    SUCCEED();
 }
