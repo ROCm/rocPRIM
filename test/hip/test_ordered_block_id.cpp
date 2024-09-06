@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,38 +18,49 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-
 #include "common_test_header.hpp"
 
 // required rocprim headers
 #include <rocprim/intrinsics/atomic.hpp>
 
-
-__global__ void test_kernel(unsigned int* flags) {
-  const auto bid = blockIdx.x;
-  const auto tid = threadIdx.x;
-  if (bid != 0) {
-    if (tid == 0) {
-      while (rocprim::detail::atomic_load(&flags[bid - 1]) != 1) {
-        continue;
-      }
+__global__
+void test_kernel(unsigned int* flags)
+{
+    const auto bid = blockIdx.x;
+    const auto tid = threadIdx.x;
+    if(bid != 0)
+    {
+        if(tid == 0)
+        {
+            while(rocprim::detail::atomic_load(&flags[bid - 1]) != 1)
+            {
+                continue;
+            }
+        }
     }
-  }
-  if (tid == 0) {
-    rocprim::detail::atomic_store(&flags[bid], 1);
-  }
+    if(tid == 0)
+    {
+        rocprim::detail::atomic_store(&flags[bid], 1);
+    }
 }
 
-__host__ bool test_func(int block_count,int thread_count){
-    unsigned int* d_flags;
+__host__
+bool test_func(int block_count, int thread_count)
+{
+    unsigned int*             d_flags;
     std::vector<unsigned int> h_vec(block_count);
     HIP_CHECK(hipMalloc(&d_flags, block_count * sizeof(unsigned int)));
-    test_kernel<<<block_count,thread_count>>>(d_flags);
+    test_kernel<<<block_count, thread_count>>>(d_flags);
     hipDeviceSynchronize();
-    HIP_CHECK(hipMemcpy(h_vec.data(),d_flags,block_count * sizeof(unsigned int),hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(h_vec.data(),
+                        d_flags,
+                        block_count * sizeof(unsigned int),
+                        hipMemcpyDeviceToHost));
     HIP_CHECK(hipFree(d_flags));
-    for(const auto i: h_vec){
-        if(i!=1){
+    for(const auto i : h_vec)
+    {
+        if(i != 1)
+        {
             return false;
         }
     }
@@ -58,12 +69,9 @@ __host__ bool test_func(int block_count,int thread_count){
 
 TEST(OrderedBlockId, Deadlock)
 {
-    EXPECT_TRUE(test_func(1,1));
-    EXPECT_TRUE(test_func(3,3));
-    EXPECT_TRUE(test_func(10,10));
-    EXPECT_TRUE(test_func(100,100));
-    EXPECT_TRUE(test_func(1000,1000));
+    EXPECT_TRUE(test_func(1, 1));
+    EXPECT_TRUE(test_func(3, 3));
+    EXPECT_TRUE(test_func(10, 10));
+    EXPECT_TRUE(test_func(100, 100));
+    EXPECT_TRUE(test_func(1000, 1000));
 }
-
-
-
