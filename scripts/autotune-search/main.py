@@ -57,6 +57,9 @@ parameter_spaces = {
             ],
             "ValueType": [
                 "int64_t",
+                "int",
+                "short",
+                "int8_t",
             ],
         },
         "params": {
