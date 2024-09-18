@@ -105,18 +105,26 @@ template<
 >
 struct radix_digit_count_helper
 {
-    static constexpr unsigned int radix_size = 1 << RadixBits;
-
+    static constexpr unsigned int radix_size     = 1 << RadixBits;
     static constexpr unsigned int warp_size = WarpSize;
-    static constexpr unsigned int warps_no = BlockSize / warp_size;
+    static constexpr unsigned int atomic_stripes = 4;
+    static constexpr unsigned int counters       = radix_size * atomic_stripes;
+
     ROCPRIM_DETAIL_DEVICE_STATIC_ASSERT(BlockSize % ::rocprim::device_warp_size() == 0,
                                         "BlockSize must be divisible by warp size");
     static_assert(radix_size <= BlockSize, "Radix size must not exceed BlockSize");
 
     struct storage_type
     {
-        unsigned int digit_counts[warps_no][radix_size];
+        unsigned int digit_counters[counters];
     };
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    unsigned int&
+        get_counter(const unsigned stripe, const unsigned int digit, storage_type& storage)
+    {
+        return storage.digit_counters[digit * atomic_stripes + stripe];
+    }
 
     template<
         bool IsFull = false,
@@ -141,14 +149,13 @@ struct radix_digit_count_helper
 
         const unsigned int flat_id = ::rocprim::detail::block_thread_id<0>();
         const unsigned int warp_id = ::rocprim::warp_id<0, 1, 1>();
+        const unsigned int stripe  = flat_id % atomic_stripes;
 
-        if(flat_id < radix_size)
+        for(unsigned int i = flat_id; i < counters; i += BlockSize)
         {
-            for(unsigned int w = 0; w < warps_no; w++)
-            {
-                storage.digit_counts[w][flat_id] = 0;
-            }
+            storage.digit_counters[i] = 0;
         }
+
         ::rocprim::syncthreads();
 
         for(Offset block_offset = begin_offset; block_offset < end_offset; block_offset += items_per_block)
@@ -168,32 +175,30 @@ struct radix_digit_count_helper
                 block_load_direct_striped<BlockSize>(flat_id, keys_input + block_offset, keys, valid_count);
             }
 
+            ROCPRIM_UNROLL
             for(unsigned int i = 0; i < ItemsPerThread; i++)
             {
                 const bit_key_type bit_key = key_codec::encode(keys[i]);
                 const unsigned int digit = key_codec::extract_digit(bit_key, bit, current_radix_bits);
                 const unsigned int pos = i * BlockSize + flat_id;
 
-                lane_mask_type same_digit_lanes_mask
-                    = ::rocprim::match_any<RadixBits>(digit, IsFull || (pos < valid_count));
-
-                if(::rocprim::group_elect(same_digit_lanes_mask))
+                if(IsFull || pos < valid_count)
                 {
-                    // Write the number of lanes having this digit,
-                    // if the current lane is the first (and maybe only) lane with this digit.
-                    storage.digit_counts[warp_id][digit]
-                        += ::rocprim::bit_count(same_digit_lanes_mask);
+                    atomic_add(&get_counter(stripe, digit, storage), 1);
                 }
             }
         }
+
         ::rocprim::syncthreads();
 
         digit_count = 0;
         if(flat_id < radix_size)
         {
-            for(unsigned int w = 0; w < warps_no; w++)
+            // Sum counters from all stripes
+            ROCPRIM_UNROLL
+            for(unsigned int stripe = 0; stripe < atomic_stripes; ++stripe)
             {
-                digit_count += storage.digit_counts[w][flat_id];
+                digit_count += get_counter(stripe, flat_id, storage);
             }
         }
     }
