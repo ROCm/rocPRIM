@@ -62,7 +62,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block(SortType sorter,
                                               unsigned int                     begin_bit,
                                               unsigned int                     end_bit)
 {
-    if(Descending)
+    if ROCPRIM_IF_CONSTEXPR(Descending)
     {
         sorter.sort_desc(keys, values, storage, begin_bit, end_bit, decomposer);
     }
@@ -86,7 +86,7 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block(SortType sorter,
                                               unsigned int                     end_bit)
 {
     (void) values;
-    if(Descending)
+    if ROCPRIM_IF_CONSTEXPR(Descending)
     {
         sorter.sort_desc(keys, storage, begin_bit, end_bit, decomposer);
     }
