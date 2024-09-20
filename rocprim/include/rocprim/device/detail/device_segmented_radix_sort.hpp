@@ -543,6 +543,28 @@ public:
     };
 
 private:
+    template<typename V = Value, typename F>
+    ROCPRIM_DEVICE
+    auto invoke_warp_sort(Key (&keys)[items_per_thread],
+                          Value (&values)[items_per_thread],
+                          storage_type& storage,
+                          F             comparator)
+        -> std::enable_if_t<std::is_same<V, ::rocprim::empty_type>::value>
+    {
+        sort_type().sort(keys, storage.sort, comparator);
+    }
+
+    template<typename V = Value, typename F>
+    ROCPRIM_DEVICE
+    auto invoke_warp_sort(Key (&keys)[items_per_thread],
+                          Value (&values)[items_per_thread],
+                          storage_type& storage,
+                          F             comparator)
+        -> std::enable_if_t<!std::is_same<V, ::rocprim::empty_type>::value>
+    {
+        sort_type().sort(keys, values, storage.sort, comparator);
+    }
+
     template<class K = Key>
     ROCPRIM_DEVICE auto invoke_warp_sort(Key (&keys)[items_per_thread],
                                          Value (&values)[items_per_thread],
@@ -553,10 +575,7 @@ private:
     {
         (void)begin_bit;
         (void)end_bit;
-        sort_type().sort(keys,
-                         values,
-                         storage.sort,
-                         radix_comparator_type<false>{});
+        invoke_warp_sort(keys, values, storage, radix_comparator_type<false>{});
     }
 
     template<class K = Key>
@@ -569,18 +588,12 @@ private:
     {
         if(begin_bit == 0 && end_bit == 8 * sizeof(Key))
         {
-            sort_type().sort(keys,
-                             values,
-                             storage.sort,
-                             radix_comparator_type<false>{});
+            invoke_warp_sort(keys, values, storage, radix_comparator_type<false>{});
         }
         else
         {
             radix_comparator_type<true> comparator(begin_bit, end_bit - begin_bit);
-            sort_type().sort(keys,
-                             values,
-                             storage.sort,
-                             comparator);
+            invoke_warp_sort(keys, values, storage, comparator);
         }
     }
 
