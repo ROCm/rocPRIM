@@ -103,6 +103,7 @@ class block_radix_sort
 
     static constexpr unsigned int BlockSize   = BlockSizeX * BlockSizeY * BlockSizeZ;
     static constexpr bool         with_values = !std::is_same<Value, empty_type>::value;
+    static constexpr bool warp_striped = RadixRankAlgorithm == block_radix_rank_algorithm::match;
 
     using block_rank_type = ::rocprim::
         block_radix_rank<BlockSizeX, RadixBitsPerPass, RadixRankAlgorithm, BlockSizeY, BlockSizeZ>;
@@ -916,8 +917,16 @@ private:
                 break;
             }
 
-            exchange_keys(storage, keys, ranks);
-            exchange_values(storage, values, ranks);
+            if ROCPRIM_IF_CONSTEXPR(warp_striped)
+            {
+                exchange_keys_warp_striped(storage, keys, ranks);
+                exchange_values_warp_striped(storage, values, ranks);
+            }
+            else
+            {
+                exchange_keys(storage, keys, ranks);
+                exchange_values(storage, values, ranks);
+            }
 
             // Synchronization required to make block_rank wait on the next iteration.
             ::rocprim::syncthreads();
@@ -966,6 +975,40 @@ private:
     void exchange_values(storage_type& storage,
                          empty_type (&values)[ItemsPerThread],
                          const unsigned int (&ranks)[ItemsPerThread])
+    {
+        (void)storage;
+        (void)values;
+        (void)ranks;
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void exchange_keys_warp_striped(storage_type& storage,
+                                    Key (&keys)[ItemsPerThread],
+                                    const unsigned int (&ranks)[ItemsPerThread])
+    {
+        storage_type_& storage_ = storage.get();
+        ::rocprim::syncthreads(); // Storage will be reused (union), synchronization is needed
+        keys_exchange_type().scatter_to_warp_striped(keys, keys, ranks, storage_.keys_exchange);
+    }
+
+    template<class SortedValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void exchange_values_warp_striped(storage_type& storage,
+                                      SortedValue (&values)[ItemsPerThread],
+                                      const unsigned int (&ranks)[ItemsPerThread])
+    {
+        storage_type_& storage_ = storage.get();
+        ::rocprim::syncthreads(); // Storage will be reused (union), synchronization is needed
+        values_exchange_type().scatter_to_warp_striped(values,
+                                                       values,
+                                                       ranks,
+                                                       storage_.values_exchange);
+    }
+
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void exchange_values_warp_striped(storage_type& storage,
+                                      empty_type (&values)[ItemsPerThread],
+                                      const unsigned int (&ranks)[ItemsPerThread])
     {
         (void)storage;
         (void)values;
