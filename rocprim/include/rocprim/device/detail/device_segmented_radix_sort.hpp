@@ -277,12 +277,6 @@ class segmented_radix_sort_single_block_helper
     using key_codec = radix_key_codec<Key, Descending>;
     using bit_key_type = typename key_codec::bit_key_type;
     using sort_type = ::rocprim::block_radix_sort<Key, BlockSize, ItemsPerThread, Value, 1, 1, 8, block_radix_rank_algorithm::match>;
-    using keys_store_type = ::rocprim::block_store<
-        Key, BlockSize, ItemsPerThread,
-        ::rocprim::block_store_method::block_store_transpose>;
-    using values_store_type = ::rocprim::block_store<
-        Value, BlockSize, ItemsPerThread,
-        ::rocprim::block_store_method::block_store_transpose>;
 
     static constexpr bool with_values = !std::is_same<Value, ::rocprim::empty_type>::value;
 
@@ -291,8 +285,6 @@ public:
     union storage_type
     {
         typename sort_type::storage_type sort;
-        typename keys_store_type::storage_type keys_store;
-        typename values_store_type::storage_type values_store;
     };
 
     template<
@@ -415,7 +407,7 @@ public:
         }
 
         ::rocprim::syncthreads();
-        sort_block<Descending>(sort_type(),
+        sort_block_to_striped<Descending>(sort_type(),
                                keys,
                                values,
                                storage.sort,
@@ -424,11 +416,10 @@ public:
                                end_bit);
 
         ::rocprim::syncthreads();
-        keys_store_type().store(keys_output + begin_offset, keys, valid_count, storage.keys_store);
-        if(with_values)
+        block_store_direct_striped<BlockSize>(flat_id, keys_output + begin_offset, keys, valid_count);
+        if ROCPRIM_IF_CONSTEXPR(with_values)
         {
-            ::rocprim::syncthreads();
-            values_store_type().store(values_output + begin_offset, values, valid_count, storage.values_store);
+            block_store_direct_striped<BlockSize>(flat_id, values_output + begin_offset, values, valid_count);
         }
 
         return true;

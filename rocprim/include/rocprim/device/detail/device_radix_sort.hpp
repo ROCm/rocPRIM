@@ -54,7 +54,7 @@ template<bool Descending = false,
          class SortValue,
          unsigned int ItemsPerThread,
          class Decomposer>
-ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block(SortType sorter,
+ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block_to_striped(SortType sorter,
                                               SortKey (&keys)[ItemsPerThread],
                                               SortValue (&values)[ItemsPerThread],
                                               typename SortType::storage_type& storage,
@@ -64,11 +64,11 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block(SortType sorter,
 {
     if ROCPRIM_IF_CONSTEXPR(Descending)
     {
-        sorter.sort_desc(keys, values, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_desc_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
     }
     else
     {
-        sorter.sort(keys, values, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 }
 
@@ -77,7 +77,7 @@ template<bool Descending = false,
          class SortKey,
          unsigned int ItemsPerThread,
          class Decomposer>
-ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block(SortType sorter,
+ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block_to_striped(SortType sorter,
                                               SortKey (&keys)[ItemsPerThread],
                                               ::rocprim::empty_type (&values)[ItemsPerThread],
                                               typename SortType::storage_type& storage,
@@ -88,11 +88,11 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block(SortType sorter,
     (void) values;
     if ROCPRIM_IF_CONSTEXPR(Descending)
     {
-        sorter.sort_desc(keys, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_desc_to_striped(keys, storage, begin_bit, end_bit, decomposer);
     }
     else
     {
-        sorter.sort(keys, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_to_striped(keys, storage, begin_bit, end_bit, decomposer);
     }
 }
 
@@ -278,7 +278,7 @@ struct radix_sort_single_helper
             }
         }
 
-        sort_block<Descending>(sort_type(),
+        sort_block_to_striped<Descending>(sort_type(),
                                keys,
                                values,
                                storage.sort,
@@ -289,21 +289,21 @@ struct radix_sort_single_helper
         // Store keys and values
         if(!is_incomplete_block)
         {
-            block_store_direct_blocked(flat_id, keys_output + block_offset, keys);
+            block_store_direct_striped<BlockSize>(flat_id, keys_output + block_offset, keys);
             if ROCPRIM_IF_CONSTEXPR(with_values)
             {
-                block_store_direct_blocked(flat_id, values_output + block_offset, values);
+                block_store_direct_striped<BlockSize>(flat_id, values_output + block_offset, values);
             }
         }
         else
         {
-            block_store_direct_blocked(flat_id,
+            block_store_direct_striped<BlockSize>(flat_id,
                                        keys_output + block_offset,
                                        keys,
                                        valid_in_last_block);
             if ROCPRIM_IF_CONSTEXPR(with_values)
             {
-                block_store_direct_blocked(flat_id,
+                block_store_direct_striped<BlockSize>(flat_id,
                                            values_output + block_offset,
                                            values,
                                            valid_in_last_block);
