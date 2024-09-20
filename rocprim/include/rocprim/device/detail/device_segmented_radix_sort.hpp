@@ -724,6 +724,13 @@ void segmented_sort(KeysInputIterator keys_input,
         value_type,
         block_size,
         Descending>;
+    // using warp_sort_helper_type = segmented_radix_sort_single_block_helper<
+    //     key_type, value_type,
+    //     params.warp_sort_config.logical_warp_size_small, params.warp_sort_config.items_per_thread_small,
+    //     Descending
+    // >;
+
+    // static constexpr unsigned int items_per_warp = params.warp_sort_config.logical_warp_size_small * params.warp_sort_config.items_per_thread_small;
     static constexpr unsigned int items_per_warp = warp_sort_helper_type::items_per_warp;
 
     ROCPRIM_SHARED_MEMORY union
