@@ -594,6 +594,41 @@ public:
         }
     }
 
+    template<unsigned int WarpSize = device_warp_size(), class U, class Offset>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void scatter_to_warp_striped(const T (&input)[ItemsPerThread],
+                                 U (&output)[ItemsPerThread],
+                                 const Offset (&ranks)[ItemsPerThread],
+                                 storage_type& storage)
+    {
+        static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= device_warp_size(),
+                      "WarpSize must be a power of two and equal or less"
+                      "than the size of hardware warp.");
+        const unsigned int flat_id
+            = ::rocprim::flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>();
+        const unsigned int thread_id     = detail::logical_lane_id<WarpSize>();
+        const unsigned int warp_id       = flat_id / WarpSize;
+        const unsigned int warp_offset   = warp_id * WarpSize * ItemsPerThread;
+        const unsigned int thread_offset = thread_id + warp_offset;
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            const Offset rank = ranks[i];
+            storage.buffer.emplace(index(rank), input[i]);
+        }
+
+        ::rocprim::syncthreads();
+
+        const auto& storage_buffer = storage.buffer.get_unsafe_array();
+
+        ROCPRIM_UNROLL
+        for(unsigned int i = 0; i < ItemsPerThread; i++)
+        {
+            output[i] = storage_buffer[index(thread_offset + i * WarpSize)];
+        }
+    }
+
     /// \brief Scatters items to a striped arrangement based on their ranks
     /// across the thread block, guarded by rank.
     ///
