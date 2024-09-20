@@ -29,6 +29,8 @@
 #include "../../functional.hpp"
 #include "../../intrinsics.hpp"
 
+#include "../../detail/merge_path.hpp"
+
 BEGIN_ROCPRIM_NAMESPACE
 
 namespace detail
