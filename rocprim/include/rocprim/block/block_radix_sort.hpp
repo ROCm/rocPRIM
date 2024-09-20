@@ -93,7 +93,8 @@ template<class Key,
          class Value                   = empty_type,
          unsigned int BlockSizeY       = 1,
          unsigned int BlockSizeZ       = 1,
-         unsigned int RadixBitsPerPass = 4>
+         unsigned int RadixBitsPerPass = 4,
+         block_radix_rank_algorithm RadixRankAlgorithm = block_radix_rank_algorithm::basic_memoize>
 class block_radix_sort
 {
     static_assert(RadixBitsPerPass > 0 && RadixBitsPerPass < 32,
@@ -105,7 +106,7 @@ class block_radix_sort
 
     using block_rank_type = ::rocprim::block_radix_rank<BlockSizeX,
                                                         RadixBitsPerPass,
-                                                        block_radix_rank_algorithm::basic_memoize,
+                                                        RadixRankAlgorithm,
                                                         BlockSizeY,
                                                         BlockSizeZ>;
     using keys_exchange_type
