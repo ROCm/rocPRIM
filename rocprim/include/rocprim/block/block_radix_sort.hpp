@@ -1041,6 +1041,7 @@ private:
                                     empty_type*   values,
                                     const unsigned int (&ranks)[ItemsPerThread])
     {
+        (void)ranks;
         (void)storage;
         (void)values;
     }

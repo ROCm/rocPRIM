@@ -551,6 +551,7 @@ private:
                           F             comparator)
         -> std::enable_if_t<std::is_same<V, ::rocprim::empty_type>::value>
     {
+        (void)values;
         sort_type().sort(keys, storage.sort, comparator);
     }
 
@@ -701,15 +702,13 @@ void segmented_sort(KeysInputIterator keys_input,
                     bool to_output,
                     OffsetIterator begin_offsets,
                     OffsetIterator end_offsets,
-                    unsigned int long_iterations,
-                    unsigned int short_iterations,
+                    unsigned int iterations,
                     unsigned int begin_bit,
                     unsigned int end_bit)
 {
     static constexpr segmented_radix_sort_config_params params = device_params<Config>();
 
     static constexpr unsigned int long_radix_bits   = params.long_radix_bits;
-    static constexpr unsigned int short_radix_bits  = params.short_radix_bits;
     static constexpr unsigned int block_size        = params.kernel_config.block_size;
     static constexpr unsigned int items_per_thread  = params.kernel_config.items_per_thread;
     static constexpr unsigned int items_per_block   = block_size * items_per_thread;
@@ -737,13 +736,7 @@ void segmented_sort(KeysInputIterator keys_input,
         value_type,
         block_size,
         Descending>;
-    // using warp_sort_helper_type = segmented_radix_sort_single_block_helper<
-    //     key_type, value_type,
-    //     params.warp_sort_config.logical_warp_size_small, params.warp_sort_config.items_per_thread_small,
-    //     Descending
-    // >;
 
-    // static constexpr unsigned int items_per_warp = params.warp_sort_config.logical_warp_size_small * params.warp_sort_config.items_per_thread_small;
     static constexpr unsigned int items_per_warp = warp_sort_helper_type::items_per_warp;
 
     ROCPRIM_SHARED_MEMORY union
@@ -785,7 +778,7 @@ void segmented_sort(KeysInputIterator keys_input,
         // Small segment
         single_block_helper_type().sort(
             keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output,
-            ((long_iterations + short_iterations) % 2 == 0) != to_output,
+            (iterations % 2 == 0) != to_output,
             begin_offset, end_offset,
             begin_bit, end_bit,
             storage.single_block_helper
@@ -797,7 +790,7 @@ void segmented_sort(KeysInputIterator keys_input,
         warp_sort_helper_type().sort(
             keys_input, keys_tmp, keys_output,
             values_input, values_tmp, values_output,
-            ((long_iterations + short_iterations) % 2 == 0) != to_output,
+            (iterations % 2 == 0) != to_output,
             begin_offset, end_offset,
             begin_bit, end_bit, storage.warp_sort_helper
         );
@@ -825,15 +818,13 @@ void segmented_sort_large(KeysInputIterator keys_input,
                           SegmentIndexIterator segment_indices,
                           OffsetIterator begin_offsets,
                           OffsetIterator end_offsets,
-                          unsigned int long_iterations,
-                          unsigned int short_iterations,
+                          unsigned int iterations,
                           unsigned int begin_bit,
                           unsigned int end_bit)
 {
     static constexpr segmented_radix_sort_config_params params = device_params<Config>();
 
     static constexpr unsigned int long_radix_bits  = params.long_radix_bits;
-    static constexpr unsigned int short_radix_bits = params.short_radix_bits;
     static constexpr unsigned int block_size       = params.kernel_config.block_size;
     static constexpr unsigned int items_per_thread = params.kernel_config.items_per_thread;
     static constexpr unsigned int items_per_block  = block_size * items_per_thread;
@@ -887,7 +878,7 @@ void segmented_sort_large(KeysInputIterator keys_input,
     {
         single_block_helper_type().sort(
             keys_input, keys_tmp, keys_output, values_input, values_tmp, values_output,
-            ((long_iterations + short_iterations) % 2 == 0) != to_output,
+            (iterations % 2 == 0) != to_output,
             begin_offset, end_offset,
             begin_bit, end_bit,
             storage.single_block_helper
