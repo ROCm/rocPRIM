@@ -30,7 +30,7 @@ namespace
 auto benchmarks = config_autotune_register::create_bulk(
     device_segmented_radix_sort_benchmark_generator<
         @LongBits@,
-        @ShortBits@,
+        0,
         @BlockSize@,
         @ItemsPerThread@,
         @WarpSmallLWS@,

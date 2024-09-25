@@ -30,16 +30,15 @@ parameter_spaces = {
             ],
         },
         "params": {
-            "LongBits": [7, 8],
-            "ShortBits": [4, 5, 6],
+            "LongBits": [6, 7, 8],
             "BlockSize": [256],
             "ItemsPerThread": [7, 8, 13, 16, 17],
-            "WarpSmallLWS": [8, 16, 32],
-            "WarpSmallIPT": [4, 8],
+            "WarpSmallLWS": [8, 16, 32, 64],
+            "WarpSmallIPT": [2, 4, 8],
             "WarpSmallBS": [256],
             "WarpPartition": [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096],
-            "WarpMediumLWS": [16, 32],
-            "WarpMediumIPT": [4, 16],
+            "WarpMediumLWS": [16, 32, 64],
+            "WarpMediumIPT": [4, 8, 16],
             "WarpMediumBS": [256],
         },
     },
@@ -63,16 +62,15 @@ parameter_spaces = {
             ],
         },
         "params": {
-            "LongBits": [7, 8],
-            "ShortBits": [4, 5, 6],
+            "LongBits": [6, 7, 8],
             "BlockSize": [256],
             "ItemsPerThread": [7, 8, 13, 16, 17],
-            "WarpSmallLWS": [8, 16, 32],
-            "WarpSmallIPT": [4, 8],
+            "WarpSmallLWS": [8, 16, 32, 64],
+            "WarpSmallIPT": [2, 4, 8],
             "WarpSmallBS": [256],
             "WarpPartition": [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096],
-            "WarpMediumLWS": [16, 32],
-            "WarpMediumIPT": [4, 16],
+            "WarpMediumLWS": [16, 32, 64],
+            "WarpMediumIPT": [4, 8, 16],
             "WarpMediumBS": [256],
         },
     },
@@ -265,7 +263,7 @@ def tune_alg(alg_name: str, arch: str, max_samples: int, num_workers: int, size:
                         '--size',
                         f'{size}',
                         '--trials',
-                        f'{trials}',  # 8 seems to be a fair balance between benchmarking and compile time. Needs verification though.
+                        f'{trials}',
                         '--benchmark_out_format=json',
                         f'--benchmark_out={result_filename}',
                     ],
@@ -348,10 +346,10 @@ parser = argparse.ArgumentParser(
 parser.add_argument('targets',metavar='TARGETS', nargs='*', help='target(s) to optimize, seperated by comma')
 parser.add_argument('-a', '--arch', default='gfx942', help='architecture to target, e.g. gfx908')
 parser.add_argument('-n', '--evals', default=200, help='maximum number of configs being evaluated per type per target')
-parser.add_argument('-v', '--verbose', action='store_true', help='clear the output folder')
+parser.add_argument('-v', '--verbose', action='store_true', help='verbose output')
 parser.add_argument('-w', '--workers', default=8, help='number of workers')
 parser.add_argument('-s', '--size', default=33554432, help='input size to use for tuning')
-parser.add_argument('-t', '--trials', default=8, help='number of trials per config to test')
+parser.add_argument('-t', '--trials', default=3, help='number of trials per config to test')
 parser.add_argument('-c', '--combine', action='store_true', help='skip tuning and combine the results of a previous run for the given targets and architecture')
 parser.add_argument('-l', '--list', action='store_true', help='list available targets')
 
