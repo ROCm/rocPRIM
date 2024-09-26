@@ -8,11 +8,13 @@ def runCI =
 {
     nodeDetails, jobName->
 
-    def prj = new rocProject('rocPRIM', 'static')
-    prj.paths.build_command = './install -c -s'
+    def prj = new rocProject('rocPRIM', 'PreCheckin')
+    prj.paths.build_command = './install -c'
     prj.timeout.compile = 600
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
+
+     def settings = [addressSanitizer: true]
 
     def commonGroovy
 
@@ -23,14 +25,14 @@ def runCI =
         platform, project->
 
         commonGroovy = load "${project.paths.project_src_prefix}/.jenkins/common.groovy"
-        commonGroovy.runCompileCommand(platform, project, jobName, settings)
+        commonGroovy.runCompileCommand(platform, project, jobName)
     }
 
     def testCommand =
     {
         platform, project->
 
-        commonGroovy.runTestCommand(platform, project, settings)
+        commonGroovy.runTestCommand(platform, project)
     }
 
     def packageCommand =
