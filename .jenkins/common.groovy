@@ -52,10 +52,19 @@ def runTestCommand (platform, project, settings)
         hmmTestCommand = ''
         echo("TESTS DISABLED")
     }
+    def LD_PATH = ''
+    if (settings.addressSanitizer)
+    {
+        LD_PATH = """
+                    export ASAN_LIB_PATH=\$(/opt/rocm/llvm/bin/clang -print-file-name=libclang_rt.asan-x86_64.so)
+                    export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$(dirname "\${ASAN_LIB_PATH}")
+                  """
+    }
     def command = """#!/usr/bin/env bash
                 set -x
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
+                ${LD_PATH}
                 ${testCommand} ${testCommandExclude}
                 if (( \$? != 0 )); then
                     exit 1
