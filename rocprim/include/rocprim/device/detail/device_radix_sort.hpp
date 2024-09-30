@@ -54,21 +54,22 @@ template<bool Descending = false,
          class SortValue,
          unsigned int ItemsPerThread,
          class Decomposer>
-ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block_to_striped(SortType sorter,
-                                              SortKey (&keys)[ItemsPerThread],
-                                              SortValue (&values)[ItemsPerThread],
-                                              typename SortType::storage_type& storage,
-                                              Decomposer                       decomposer,
-                                              unsigned int                     begin_bit,
-                                              unsigned int                     end_bit)
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void sort_warp_striped_to_striped(SortType sorter,
+                                  SortKey (&keys)[ItemsPerThread],
+                                  SortValue (&values)[ItemsPerThread],
+                                  typename SortType::storage_type& storage,
+                                  Decomposer                       decomposer,
+                                  unsigned int                     begin_bit,
+                                  unsigned int                     end_bit)
 {
     if ROCPRIM_IF_CONSTEXPR(Descending)
     {
-        sorter.sort_desc_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_desc_warp_striped_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
     }
     else
     {
-        sorter.sort_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_warp_striped_to_striped(keys, values, storage, begin_bit, end_bit, decomposer);
     }
 }
 
@@ -77,22 +78,23 @@ template<bool Descending = false,
          class SortKey,
          unsigned int ItemsPerThread,
          class Decomposer>
-ROCPRIM_DEVICE ROCPRIM_INLINE void sort_block_to_striped(SortType sorter,
-                                              SortKey (&keys)[ItemsPerThread],
-                                              ::rocprim::empty_type (&values)[ItemsPerThread],
-                                              typename SortType::storage_type& storage,
-                                              Decomposer                       decomposer,
-                                              unsigned int                     begin_bit,
-                                              unsigned int                     end_bit)
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void sort_warp_striped_to_striped(SortType sorter,
+                                  SortKey (&keys)[ItemsPerThread],
+                                  ::rocprim::empty_type (&values)[ItemsPerThread],
+                                  typename SortType::storage_type& storage,
+                                  Decomposer                       decomposer,
+                                  unsigned int                     begin_bit,
+                                  unsigned int                     end_bit)
 {
     (void) values;
     if ROCPRIM_IF_CONSTEXPR(Descending)
     {
-        sorter.sort_desc_to_striped(keys, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_desc_warp_striped_to_striped(keys, storage, begin_bit, end_bit, decomposer);
     }
     else
     {
-        sorter.sort_to_striped(keys, storage, begin_bit, end_bit, decomposer);
+        sorter.sort_warp_striped_to_striped(keys, storage, begin_bit, end_bit, decomposer);
     }
 }
 
@@ -278,13 +280,13 @@ struct radix_sort_single_helper
             }
         }
 
-        sort_block_to_striped<Descending>(sort_type(),
-                               keys,
-                               values,
-                               storage.sort,
-                               decomposer,
-                               bit,
-                               bit + current_radix_bits);
+        sort_warp_striped_to_striped<Descending>(sort_type(),
+                                                 keys,
+                                                 values,
+                                                 storage.sort,
+                                                 decomposer,
+                                                 bit,
+                                                 bit + current_radix_bits);
 
         // Store keys and values
         if(!is_incomplete_block)

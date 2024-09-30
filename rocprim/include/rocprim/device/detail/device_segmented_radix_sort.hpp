@@ -407,13 +407,13 @@ public:
         }
 
         ::rocprim::syncthreads();
-        sort_block_to_striped<Descending>(sort_type(),
-                                          keys,
-                                          values,
-                                          storage.sort,
-                                          identity_decomposer{},
-                                          begin_bit,
-                                          end_bit);
+        sort_warp_striped_to_striped<Descending>(sort_type(),
+                                                 keys,
+                                                 values,
+                                                 storage.sort,
+                                                 identity_decomposer{},
+                                                 begin_bit,
+                                                 end_bit);
 
         ::rocprim::syncthreads();
         block_store_direct_striped<BlockSize>(flat_id, keys_output + begin_offset, keys, valid_count);
