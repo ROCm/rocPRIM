@@ -90,10 +90,12 @@ BEGIN_ROCPRIM_NAMESPACE
 template<class Key,
          unsigned int BlockSizeX,
          unsigned int ItemsPerThread,
-         class Value                                 = empty_type,
-         unsigned int               BlockSizeY       = 1,
-         unsigned int               BlockSizeZ       = 1,
-         unsigned int               RadixBitsPerPass = 4,
+         class Value             = empty_type,
+         unsigned int BlockSizeY = 1,
+         unsigned int BlockSizeZ = 1,
+         unsigned int RadixBitsPerPass
+         = (BlockSizeX * BlockSizeY * BlockSizeZ) % device_warp_size() == 0 ? 8 /* match */
+                                                                            : 4 /* basic_memoize */,
          block_radix_rank_algorithm RadixRankAlgorithm
          = (BlockSizeX * BlockSizeY * BlockSizeZ) % device_warp_size() == 0
                ? block_radix_rank_algorithm::match
