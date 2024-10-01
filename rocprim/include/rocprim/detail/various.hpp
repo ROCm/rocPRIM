@@ -160,6 +160,18 @@ constexpr unsigned int get_lds_banks_no()
     return 32;
 }
 
+/// \brief Returns the minimum LDS size in bytes available on this device architecture.
+ROCPRIM_HOST_DEVICE
+constexpr unsigned int get_min_lds_size()
+{
+#if defined(__GFX11__) || defined(__GFX10__)
+    return (1 << 17) /* 128 KiB*/;
+#else
+    // On host the lowest should be returned!
+    return (1 << 16) /* 64 KiB */;
+#endif
+}
+
 // Finds biggest fundamental type for type T that sizeof(T) is
 // a multiple of that type's size.
 template<class T>
