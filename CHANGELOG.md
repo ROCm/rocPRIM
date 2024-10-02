@@ -3,6 +3,11 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
+## rocPRIM-3.2.2 for ROCm 6.2.4
+
+### Additions
+* GFX1151 Support
+
 ## rocPRIM-3.2.1 for ROCm 6.2.1
 
 ### Optimizations
