@@ -18,6 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+
+            // test_utils::GraphHelper gHelper;
+            //     gHelper.startStreamCapture(stream);
+
+            //     gHelper.createAndLaunchGraph(stream);
+
+            //     gHelper.cleanupGraphHelper();
+
+            //     gHelper.resetGraphHelper(stream);
+
+
+
 #ifndef ROCPRIM_TEST_UTILS_HIPGRAPHS_HPP
 #define ROCPRIM_TEST_UTILS_HIPGRAPHS_HPP
 
@@ -37,32 +49,32 @@ namespace test_utils
         public:
 
             inline void startStreamCapture(hipStream_t & stream){
-                HIP_CHECK_NON_VOID(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+                HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
             }
 
             inline void endStreamCapture(hipStream_t & stream){
-                HIP_CHECK_NON_VOID(hipStreamEndCapture(stream, &graph));
+                HIP_CHECK(hipStreamEndCapture(stream, &graph));
             }
 
             inline void createAndLaunchGraph(hipStream_t & stream, const bool launchGraph=true, const bool sync=true){
                 
                 endStreamCapture(stream);
                 
-                HIP_CHECK_NON_VOID(hipGraphInstantiate(&graph_instance, graph, nullptr, nullptr, 0));
+                HIP_CHECK(hipGraphInstantiate(&graph_instance, graph, nullptr, nullptr, 0));
 
                 // Optionally launch the graph
                 if (launchGraph)
-                    HIP_CHECK_NON_VOID(hipGraphLaunch(graph_instance, stream));
+                    HIP_CHECK(hipGraphLaunch(graph_instance, stream));
 
                 // Optionally synchronize the stream when we're done
                 if (sync)
-                    HIP_CHECK_NON_VOID(hipStreamSynchronize(stream));
+                    HIP_CHECK(hipStreamSynchronize(stream));
             } 
     
             inline void cleanupGraphHelper()
             {
-                HIP_CHECK_NON_VOID(hipGraphDestroy(this->graph));
-                HIP_CHECK_NON_VOID(hipGraphExecDestroy(this->graph_instance));
+                HIP_CHECK(hipGraphDestroy(this->graph));
+                HIP_CHECK(hipGraphExecDestroy(this->graph_instance));
             }
 
             inline void resetGraphHelper(hipStream_t& stream, const bool beginCapture=true)
@@ -78,11 +90,11 @@ namespace test_utils
 
             inline void launchGraphHelper(hipStream_t& stream,const bool sync=false)
             {
-                HIP_CHECK_NON_VOID(hipGraphLaunch(this->graph_instance, stream));
+                HIP_CHECK(hipGraphLaunch(this->graph_instance, stream));
 
                 // Optionally sync after the launch
                 if (sync)
-                    HIP_CHECK_NON_VOID(hipStreamSynchronize(stream));
+                    HIP_CHECK(hipStreamSynchronize(stream));
             }
     };
 
