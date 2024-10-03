@@ -170,10 +170,10 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             void* d_temp_storage = nullptr;
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;;
             if(TestFixture::use_graphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -191,7 +191,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
-                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+                gHelper.createAndLaunchGraph(stream);
             }
 
             // Check if number of selected value is as expected_selected
@@ -226,7 +226,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
 
             if(TestFixture::use_graphs)
             {
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                gHelper.cleanupGraphHelper();
             }
         }
     }
@@ -293,10 +293,10 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
     void* d_temp_storage = nullptr;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-    hipGraph_t graph;
+    test_utils::GraphHelper gHelper;;
     if(TestFixture::use_graphs)
     {
-        graph = test_utils::createGraphHelper(stream);
+        gHelper.startStreamCapture(stream);
     }
 
     // Run
@@ -313,7 +313,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
     hipGraphExec_t graph_instance;
     if(TestFixture::use_graphs)
     {
-        graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+        gHelper.createAndLaunchGraph(stream, true, false);
     }
 
     HIP_CHECK(hipDeviceSynchronize());
@@ -335,7 +335,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
 
     if (TestFixture::use_graphs)
     {
-        test_utils::cleanupGraphHelper(graph, graph_instance);
+        gHelper.cleanupGraphHelper();
         HIP_CHECK(hipStreamDestroy(stream));
     }
 }
@@ -425,10 +425,10 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             void* d_temp_storage = nullptr;
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;;
             if(TestFixture::use_graphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -446,7 +446,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
-                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+                gHelper.createAndLaunchGraph(stream, true, false);
             }
 
             HIP_CHECK(hipDeviceSynchronize());
@@ -482,7 +482,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
 
             if(TestFixture::use_graphs)
             {
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                gHelper.cleanupGraphHelper();
             }
         }
     }
@@ -585,10 +585,10 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             void* d_temp_storage = nullptr;
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;;
             if(TestFixture::use_graphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -607,7 +607,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
-                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+                gHelper.createAndLaunchGraph(stream, true, false);
             }
 
             HIP_CHECK(hipDeviceSynchronize());
@@ -645,7 +645,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
 
             if(TestFixture::use_graphs)
             {
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                gHelper.cleanupGraphHelper();
             }
         }
     }
@@ -779,10 +779,10 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 void* d_temp_storage = nullptr;
                 HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_size_bytes));
 
-                hipGraph_t graph;
+                test_utils::GraphHelper gHelper;;
                 if(TestFixture::use_graphs)
                 {
-                    graph = test_utils::createGraphHelper(stream);
+                    gHelper.startStreamCapture(stream);
                 }
 
                 // Run
@@ -804,7 +804,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 hipGraphExec_t graph_instance;
                 if(TestFixture::use_graphs)
                 {
-                    graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+                    gHelper.createAndLaunchGraph(stream);
                 }
 
                 HIP_CHECK(hipDeviceSynchronize());
@@ -858,7 +858,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
 
                 if(TestFixture::use_graphs)
                 {
-                    test_utils::cleanupGraphHelper(graph, graph_instance);
+                    gHelper.cleanupGraphHelper();
                 }
             }
         }
@@ -1167,10 +1167,10 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
         ASSERT_NE(0, temporary_storage_size);
         HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_size));
 
-        hipGraph_t graph;
+        test_utils::GraphHelper gHelper;;
         if(use_graphs)
         {
-            graph = test_utils::createGraphHelper(stream);
+            gHelper.startStreamCapture(stream);
         }
 
         HIP_CHECK(rocprim::partition(d_temporary_storage,
@@ -1186,7 +1186,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
         hipGraphExec_t graph_instance;
         if(use_graphs)
         {
-            graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            gHelper.createAndLaunchGraph(stream);
         }
 
         size_t count_output{};
@@ -1214,7 +1214,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
 
         if(use_graphs)
         {
-            test_utils::cleanupGraphHelper(graph, graph_instance);
+            gHelper.cleanupGraphHelper();
         }
     }
 
@@ -1288,10 +1288,10 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
         ASSERT_NE(0, temporary_storage_size);
         HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_size));
 
-        hipGraph_t graph;
+        test_utils::GraphHelper gHelper;;
         if(use_graphs)
         {
-            graph = test_utils::createGraphHelper(stream);
+            gHelper.startStreamCapture(stream);
         }
 
         HIP_CHECK(rocprim::partition_two_way(d_temporary_storage,
@@ -1308,7 +1308,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
         hipGraphExec_t graph_instance;
         if(use_graphs)
         {
-            graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            gHelper.createAndLaunchGraph(stream);
         }
 
         size_t count_output{};
@@ -1344,7 +1344,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
 
         if(use_graphs)
         {
-            test_utils::cleanupGraphHelper(graph, graph_instance);
+            gHelper.cleanupGraphHelper();
         }
     }
 
@@ -1417,10 +1417,10 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
         ASSERT_NE(0, temporary_storage_size);
         HIP_CHECK(test_common_utils::hipMallocHelper(&d_temporary_storage, temporary_storage_size));
 
-        hipGraph_t graph;
+        test_utils::GraphHelper gHelper;;
         if(use_graphs)
         {
-            graph = test_utils::createGraphHelper(stream);
+            gHelper.startStreamCapture(stream);
         }
 
         HIP_CHECK(rocprim::partition_three_way(d_temporary_storage,
@@ -1439,7 +1439,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
         hipGraphExec_t graph_instance;
         if(use_graphs)
         {
-            graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+            gHelper.createAndLaunchGraph(stream);
         }
 
         size_t count_output[2]{};
@@ -1471,7 +1471,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
 
         if(use_graphs)
         {
-            test_utils::cleanupGraphHelper(graph, graph_instance);
+            gHelper.cleanupGraphHelper();
         }
     }
 

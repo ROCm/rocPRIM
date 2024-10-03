@@ -158,10 +158,10 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
             std::vector<U> expected(input.size());
             std::transform(input.begin(), input.end(), expected.begin(), transform<U>());
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -176,7 +176,7 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
             hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
-                graph_instance = graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+                gHelper.createAndLaunchGraph(stream, true, false);
             }
 
             HIP_CHECK(hipGetLastError());
@@ -201,7 +201,7 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
 
             if (TestFixture::use_graphs)
             {
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                 gHelper.cleanupGraphHelper();
                 HIP_CHECK(hipStreamDestroy(stream));
             }
         }
@@ -281,10 +281,10 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
                 expected.begin(), binary_transform<T1, T2, U>()
             );
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -299,7 +299,7 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
             hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
-                graph_instance = graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+                gHelper.createAndLaunchGraph(stream, true, false);
             }
 
             HIP_CHECK(hipGetLastError());
@@ -325,7 +325,7 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
             
             if (TestFixture::use_graphs)
             {
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                 gHelper.cleanupGraphHelper();
                 HIP_CHECK(hipStreamDestroy(stream));
             }
         }
@@ -390,10 +390,10 @@ void testLargeIndices()
                 return 0;
             };
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;
             if(UseGraphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -403,7 +403,7 @@ void testLargeIndices()
             hipGraphExec_t graph_instance;
             if(UseGraphs)
             {
-                graph_instance = graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+                gHelper.createAndLaunchGraph(stream, true, false);
             }
 
             HIP_CHECK(hipGetLastError());
@@ -419,7 +419,7 @@ void testLargeIndices()
             HIP_CHECK(hipFree(d_flag));
 
             if (UseGraphs)
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                 gHelper.cleanupGraphHelper();
         }
     }
 

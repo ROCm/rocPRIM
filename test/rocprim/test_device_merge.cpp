@@ -212,10 +212,10 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
             // allocate temporary storage
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -232,7 +232,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
             hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
-                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+                gHelper.createAndLaunchGraph(stream);
             }
 
             HIP_CHECK(hipGetLastError());
@@ -258,7 +258,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
             hipFree(d_temp_storage);
 
             if (TestFixture::use_graphs)
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                gHelper.cleanupGraphHelper();
         }
     }
 
@@ -418,10 +418,10 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
             // allocate temporary storage
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-            hipGraph_t graph;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
-                graph = test_utils::createGraphHelper(stream);
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -440,7 +440,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
             hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
-                graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, false);
+                gHelper.createAndLaunchGraph(stream, true, false);
             }
 
             HIP_CHECK(hipGetLastError());
@@ -483,7 +483,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
             hipFree(d_temp_storage);
 
             if (TestFixture::use_graphs)
-                test_utils::cleanupGraphHelper(graph, graph_instance);
+                gHelper.cleanupGraphHelper();
         }
     }
 
@@ -554,10 +554,10 @@ void testMergeMismatchedIteratorTypes()
     void* d_temp_storage = nullptr;
     HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-    hipGraph_t graph;
+    test_utils::GraphHelper gHelper;
     if(UseGraphs)
     {
-        graph = test_utils::createGraphHelper(stream);
+        gHelper.startStreamCapture(stream);
     }
 
     HIP_CHECK(rocprim::merge(d_temp_storage,
@@ -574,7 +574,7 @@ void testMergeMismatchedIteratorTypes()
     hipGraphExec_t graph_instance;
     if(UseGraphs)
     {
-        graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+        gHelper.createAndLaunchGraph(stream);
     }
 
     std::vector<int> keys_output(expected_keys_output.size());
@@ -591,7 +591,7 @@ void testMergeMismatchedIteratorTypes()
 
     if (UseGraphs)
     {
-        test_utils::cleanupGraphHelper(graph, graph_instance);
+        gHelper.cleanupGraphHelper();
         HIP_CHECK(hipStreamDestroy(stream));
     }
 }
