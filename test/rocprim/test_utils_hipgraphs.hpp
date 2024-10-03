@@ -27,65 +27,64 @@
 
 // Helper functions for testing with hipGraph stream capture.
 // Note: graphs will not work on the default stream.
+    
 namespace test_utils
 {
+    class GraphHelper{
+        private:
+            hipGraph_t graph;
+            hipGraphExec_t graph_instance;
+        public:
+
+            inline void startStreamCapture(hipStream_t & stream){
+                HIP_CHECK_NON_VOID(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+            }
+
+            inline void endStreamCapture(hipStream_t & stream){
+                HIP_CHECK_NON_VOID(hipStreamEndCapture(stream, &graph));
+            }
+
+            inline void createAndLaunchGraph(hipStream_t & stream, const bool launchGraph=true, const bool sync=true){
+                
+                endStreamCapture(stream);
+                
+                HIP_CHECK_NON_VOID(hipGraphInstantiate(&graph_instance, graph, nullptr, nullptr, 0));
+
+                // Optionally launch the graph
+                if (launchGraph)
+                    HIP_CHECK_NON_VOID(hipGraphLaunch(graph_instance, stream));
+
+                // Optionally synchronize the stream when we're done
+                if (sync)
+                    HIP_CHECK_NON_VOID(hipStreamSynchronize(stream));
+            } 
     
-inline hipGraph_t createGraphHelper(hipStream_t& stream, const bool beginCapture=true)
-{
-    // Create a new graph
-    hipGraph_t graph;
-    HIP_CHECK(hipGraphCreate(&graph, 0));
+            inline void cleanupGraphHelper()
+            {
+                HIP_CHECK_NON_VOID(hipGraphDestroy(this->graph));
+                HIP_CHECK_NON_VOID(hipGraphExecDestroy(this->graph_instance));
+            }
 
-    // Optionally begin stream capture
-    if (beginCapture)
-        HIP_CHECK(hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal));
+            inline void resetGraphHelper(hipStream_t& stream, const bool beginCapture=true)
+            {
+                // Destroy the old graph and instance
+                cleanupGraphHelper();
 
-    return graph;
-}
+                if(beginCapture)
+                    startStreamCapture(stream);
 
-inline void cleanupGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance)
-{
-    HIP_CHECK(hipGraphDestroy(graph));
-    HIP_CHECK(hipGraphExecDestroy(instance));
-}
+                createAndLaunchGraph(stream);
+            }
 
-inline void resetGraphHelper(hipGraph_t& graph, hipGraphExec_t& instance, hipStream_t& stream, const bool beginCapture=true)
-{
-    // Destroy the old graph and instance
-    cleanupGraphHelper(graph, instance);
+            inline void launchGraphHelper(hipStream_t& stream,const bool sync=false)
+            {
+                HIP_CHECK_NON_VOID(hipGraphLaunch(this->graph_instance, stream));
 
-    // Create a new graph and optionally begin capture
-    graph = createGraphHelper(stream, beginCapture);
-}
-
-inline hipGraphExec_t endCaptureGraphHelper(hipGraph_t& graph, hipStream_t& stream, const bool launchGraph=false, const bool sync=false)
-{
-    // End the capture
-    HIP_CHECK(hipStreamEndCapture(stream, &graph));
-
-    // Instantiate the graph
-    hipGraphExec_t instance;
-    HIP_CHECK(hipGraphInstantiate(&instance, graph, nullptr, nullptr, 0));
-
-    // Optionally launch the graph
-    if (launchGraph)
-        HIP_CHECK(hipGraphLaunch(instance, stream));
-
-    // Optionally synchronize the stream when we're done
-    if (sync)
-        HIP_CHECK(hipStreamSynchronize(stream));
-
-    return instance;
-}
-
-inline void launchGraphHelper(hipGraphExec_t& instance, hipStream_t& stream, const bool sync=false)
-{
-    HIP_CHECK(hipGraphLaunch(instance, stream));
-
-    // Optionally sync after the launch
-    if (sync)
-        HIP_CHECK(hipStreamSynchronize(stream));
-}
+                // Optionally sync after the launch
+                if (sync)
+                    HIP_CHECK_NON_VOID(hipStreamSynchronize(stream));
+            }
+    };
 
 } // end namespace test_utils
 
