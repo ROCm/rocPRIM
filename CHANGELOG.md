@@ -3,7 +3,7 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
-## Unreleased rocPRIM-3.3.0 for ROCm 6.3.0
+## (Unreleased) rocPRIM 3.3.0 for ROCm 6.3.0
 
 ### Additions
 * Add --test smoke option in rtest.py. It will run a subset of tests such that the total test time is in 5 minutes. Use python3 ./rtest.py --test smoke or python3 ./rtest.py -t smoke to execute smoke test.
@@ -36,10 +36,11 @@ Documentation for rocPRIM is available at
 
 * `rocprim::thread_load` and `rocprim::thread_store`, use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
 
-## rocPRIM-3.2.1 for ROCm 6.2.1
+## rocPRIM 3.2.1 for ROCm 6.2.1
 
 ### Optimizations
-* Improved performance of block_reduce_warp_reduce when warp size == block size.
+
+* Improved performance of `block_reduce_warp_reduce` when warp size equals block size.
 
 ## rocPRIM-3.2.0 for ROCm 6.2.0
 
