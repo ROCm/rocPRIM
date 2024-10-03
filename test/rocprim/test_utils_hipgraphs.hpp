@@ -55,6 +55,14 @@ namespace test_utils
             inline void endStreamCapture(hipStream_t & stream){
                 HIP_CHECK(hipStreamEndCapture(stream, &graph));
             }
+            
+            inline void createGraph(){
+                HIP_CHECK(hipGraphInstantiate(&graph_instance, graph, nullptr, nullptr, 0));
+            }
+
+            inline void launchGraph(hipStream_t & stream){
+                HIP_CHECK(hipGraphLaunch(graph_instance, stream));
+            }
 
             inline void createAndLaunchGraph(hipStream_t & stream, const bool launchGraph=true, const bool sync=true){
                 
@@ -69,8 +77,8 @@ namespace test_utils
                 // Optionally synchronize the stream when we're done
                 if (sync)
                     HIP_CHECK(hipStreamSynchronize(stream));
-            } 
-    
+            }
+
             inline void cleanupGraphHelper()
             {
                 HIP_CHECK(hipGraphDestroy(this->graph));
