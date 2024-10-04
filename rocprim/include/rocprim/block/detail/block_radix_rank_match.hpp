@@ -148,7 +148,12 @@ private:
 
             // Get the digit counter for this key on the current warp.
             digit_counters[i] = &get_digit_counter(digit, warp_id, storage);
-            const digit_counter_type warp_digit_prefix = *digit_counters[i];
+
+            // Read the prefix sum of that digit. We already know it's 0 on the first iteration. So
+            // we can skip a read-after-write depedency. The conditional gets optimized out due to
+            // loop unrolling.
+            const digit_counter_type warp_digit_prefix
+                = i == 0 ? digit_counter_type(0) : *digit_counters[i];
 
             // Construct a mask of threads in this wave which have the same digit.
             ::rocprim::lane_mask_type peer_mask = ::rocprim::match_any<RadixBits>(digit);
