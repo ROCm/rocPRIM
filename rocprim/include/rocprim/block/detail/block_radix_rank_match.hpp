@@ -52,6 +52,22 @@ class block_radix_rank_match
     static constexpr unsigned int block_size   = BlockSizeX * BlockSizeY * BlockSizeZ;
     static constexpr unsigned int radix_digits = 1 << RadixBits;
 
+    /// \brief Emulate the LDS usage for a set number of warps.
+    ///
+    /// \warning This function behaves differently between device and host due to device
+    /// specifications not being available on host!
+    ROCPRIM_HOST_DEVICE
+    static constexpr unsigned int emulate_lds_usage(unsigned int warps)
+    {
+        const unsigned int active_counters = warps * radix_digits;
+        const unsigned int counters_per_thread
+            = ::rocprim::detail::ceiling_div(active_counters, block_size);
+        const unsigned int counters = counters_per_thread * block_size;
+        const size_t       lds_size = max(sizeof(digit_counter_type) * counters,
+                                    sizeof(typename block_scan_type::storage_type));
+        return lds_size;
+    }
+
     /// \brief Get the number of warps for this algorithm.
     ///
     /// Using an even number of warps may increase LDS bank conflicts. However padding the number
@@ -59,35 +75,21 @@ class block_radix_rank_match
     /// padding is a multiple of the required LDS.  Higher occupancy is preferred to hide latency
     /// as opposed to decreasaing bank conflicts. But, if the occupancy between padded and non-
     /// padded is the the same, we can pad for free!
+    ///
+    /// \warning This function behaves differently between device and host due to device
+    /// specifications not being available on host!
     ROCPRIM_HOST_DEVICE
     static constexpr unsigned int get_num_warps()
     {
         const unsigned int warps = ::rocprim::detail::ceiling_div(block_size, device_warp_size());
         const unsigned int padded_warps = warps | 1u;
 
-        const unsigned int active_counters        = warps * radix_digits;
-        const unsigned int padded_active_counters = padded_warps * radix_digits;
-
-        const unsigned int counters_per_thread
-            = ::rocprim::detail::ceiling_div(active_counters, block_size);
-        const unsigned int padded_counters_per_thread
-            = ::rocprim::detail::ceiling_div(padded_active_counters, block_size);
-
-        const unsigned int counters        = counters_per_thread * block_size;
-        const unsigned int padded_counters = padded_counters_per_thread * block_size;
-
-        // Get projected LDS size.
-        const size_t lds_size        = max(sizeof(digit_counter_type) * counters,
-                                    sizeof(typename block_scan_type::storage_type));
-        const size_t padded_lds_size = max(sizeof(digit_counter_type) * padded_counters,
-                                           sizeof(typename block_scan_type::storage_type));
-
         // LDS available on this architecture.
         const unsigned int available_lds = detail::get_min_lds_size();
 
         // Check occupancy limited by LDS.
-        const unsigned int occupancy        = available_lds / lds_size;
-        const unsigned int padded_occupancy = available_lds / padded_lds_size;
+        const unsigned int occupancy        = available_lds / emulate_lds_usage(warps);
+        const unsigned int padded_occupancy = available_lds / emulate_lds_usage(padded_warps);
 
         // Check if we can pad without hurting occupancy.
         return padded_occupancy >= occupancy ? padded_warps : warps;
