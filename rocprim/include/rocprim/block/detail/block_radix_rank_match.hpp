@@ -111,7 +111,7 @@ public:
         = ::rocprim::detail::ceiling_div(radix_digits, block_size);
 
 private:
-    struct storage_type_
+    union storage_type_
     {
         typename block_scan_type::storage_type block_scan;
         digit_counter_type                     counters[counters];
@@ -184,14 +184,17 @@ private:
         // Scan the per-warp counters to get a rank-offset per warp counter.
         digit_counter_type scan_counters[counters_per_thread];
 
+        // Move data from LDS to VGPRs.
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < counters_per_thread; ++i)
         {
             scan_counters[i] = storage.counters[flat_id * counters_per_thread + i];
         }
 
+        // Scan over VGPR, reuse LDS storage.
         block_scan_type().exclusive_scan(scan_counters, scan_counters, 0, storage.block_scan);
 
+        // Move data from VGPRs back to LDS.
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < counters_per_thread; ++i)
         {
@@ -200,7 +203,7 @@ private:
 
         ::rocprim::syncthreads();
 
-        // Add the per-warp rank counter to get the final rank.
+        // Lookup per-warp rank counter in LDS and add to get final rank in VGPR.
         ROCPRIM_UNROLL
         for(unsigned int i = 0; i < ItemsPerThread; ++i)
         {
