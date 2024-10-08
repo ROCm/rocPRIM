@@ -60,8 +60,11 @@ namespace test_utils
                 HIP_CHECK(hipGraphInstantiate(&graph_instance, graph, nullptr, nullptr, 0));
             }
 
-            inline void launchGraph(hipStream_t & stream){
+            inline void launchGraph(hipStream_t & stream, const bool sync=false){
                 HIP_CHECK(hipGraphLaunch(graph_instance, stream));
+
+                if (sync)
+                    HIP_CHECK(hipStreamSynchronize(stream));
             }
 
             inline void createAndLaunchGraph(hipStream_t & stream, const bool launchGraph=true, const bool sync=true){

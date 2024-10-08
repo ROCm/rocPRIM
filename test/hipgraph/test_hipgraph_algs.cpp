@@ -208,7 +208,7 @@ TEST(TestHipGraphAlgs, SortAndSearch)
         
         // Launch the graph
         // test_utils::launchGraphHelper(graph_instance, stream, true);
-        gHelper.launchGraph(stream); 
+        gHelper.launchGraph(stream, true); 
 
         // Copy output back to host
         HIP_CHECK(hipMemcpy(device_output.data(), d_search_output, search_needle_size * sizeof(key_type), hipMemcpyDeviceToHost));
