@@ -33,6 +33,7 @@
 
 #include "block_exchange.hpp"
 #include "block_radix_rank.hpp"
+#include "../warp/warp_exchange.hpp"
 
 /// \addtogroup blockmodule
 /// @{
@@ -1030,7 +1031,40 @@ public:
     }
 
 private:
-    template<bool Descending, bool ToStriped = false, bool TryEmulateWarpStriped = true, class SortedValue, class Decomposer>
+    static constexpr bool use_warp_exchange = device_warp_size() % ItemsPerThread == 0 && ItemsPerThread <= 4;
+
+    template<class SortedValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void blocked_to_warp_striped(Key (&keys)[ItemsPerThread],
+                                 SortedValue (&values)[ItemsPerThread],
+                                 storage_type& storage,
+                                 std::false_type)
+    {
+        keys_exchange_type().blocked_to_warp_striped(keys, keys, storage.get().keys_exchange);
+        ::rocprim::syncthreads();
+        values_exchange_type().blocked_to_warp_striped(values,
+                                                       values,
+                                                       storage.get().values_exchange);
+        ::rocprim::syncthreads();
+    }
+
+    template<class SortedValue>
+    ROCPRIM_DEVICE ROCPRIM_INLINE
+    void blocked_to_warp_striped(Key (&keys)[ItemsPerThread],
+                                 SortedValue (&values)[ItemsPerThread],
+                                 storage_type& storage,
+                                 std::true_type)
+    {
+        ::rocprim::warp_exchange<Key, ItemsPerThread>{}.blocked_to_striped_shuffle(keys, keys);
+        ::rocprim::warp_exchange<SortedValue, ItemsPerThread>{}.blocked_to_striped_shuffle(values,
+                                                                                           values);
+    }
+
+    template<bool Descending,
+             bool ToStriped             = false,
+             bool TryEmulateWarpStriped = true,
+             class SortedValue,
+             class Decomposer>
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void sort_impl(Key (&keys)[ItemsPerThread],
                    SortedValue (&values)[ItemsPerThread],
@@ -1043,12 +1077,15 @@ private:
 
         // If we're using warp striped radix rank but our input is in a blocked layout, we
         // can emulate the correct input through an exchange to a warp striped layout.
-        if ROCPRIM_IF_CONSTEXPR(TryEmulateWarpStriped && warp_striped)
+        if ROCPRIM_IF_CONSTEXPR(TryEmulateWarpStriped && warp_striped && ItemsPerThread > 1)
         {
-            keys_exchange_type().blocked_to_warp_striped(keys, keys, storage.get().keys_exchange);
-            ::rocprim::syncthreads();
-            values_exchange_type().blocked_to_warp_striped(values, values, storage.get().values_exchange);
-            ::rocprim::syncthreads();
+            // This appears to be slower with high large items per thread.
+            constexpr bool use_warp_exchange
+                = device_warp_size() % ItemsPerThread == 0 && ItemsPerThread <= 4;
+            blocked_to_warp_striped(keys,
+                                    values,
+                                    storage,
+                                    std::integral_constant<bool, use_warp_exchange>{});
         }
 
         ROCPRIM_UNROLL
