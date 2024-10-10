@@ -5,8 +5,8 @@ Documentation for rocPRIM is available at
 
 ## rocPRIM-3.2.2 for ROCm 6.2.4
 
-### Additions
-* GFX1151 Support
+### Added
+* Support for the gfx1034 and gfx1151 architectures
 
 ## rocPRIM-3.2.1 for ROCm 6.2.1
 
