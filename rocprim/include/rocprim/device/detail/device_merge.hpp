@@ -155,9 +155,9 @@ void merge_keys(unsigned int       flat_id,
             compare_function
         );
 
-    range_t<> range_partition{range_local.begin1 + partition,
+    range_t<> range_partition{std::min(range_local.begin1 + partition, range_local.end1),
                               range_local.end1,
-                              range_local.begin2 + diag - partition,
+                              std::min(range_local.begin2 + diag - partition, range_local.end2),
                               range_local.end2};
 
     serial_merge<false>(keys_shared, key_inputs, index, range_partition, compare_function);
