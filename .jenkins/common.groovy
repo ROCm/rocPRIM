@@ -1,12 +1,13 @@
 // This file is for internal AMD use.
 // If you are interested in running your own Jenkins, please raise a github issue for assistance.
 
-def runCompileCommand(platform, project, jobName, boolean debug=false)
+def runCompileCommand(platform, project, jobName, settings)
 {
     project.paths.construct_build_prefix()
 
-    String buildTypeArg = debug ? '-DCMAKE_BUILD_TYPE=Debug' : '-DCMAKE_BUILD_TYPE=Release'
-    String buildTypeDir = debug ? 'debug' : 'release'
+    String buildTypeArg = settings.debug ? '-DCMAKE_BUILD_TYPE=Debug' : '-DCMAKE_BUILD_TYPE=Release'
+    String buildTypeDir = settings.debug ? 'debug' : 'release'
+    String asanFlag = settings.addressSanitizer ? '-DBUILD_ADDRESS_SANITIZER=ON' : ''
     String cmake = platform.jenkinsLabel.contains('centos') ? 'cmake3' : 'cmake'
     //Set CI node's gfx arch as target if PR, otherwise use default targets of the library
     String amdgpuTargets = env.BRANCH_NAME.startsWith('PR-') ? '-DAMDGPU_TARGETS=\$gfx_arch' : ''
@@ -16,7 +17,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
                 cd ${project.paths.project_build_prefix}
                 mkdir -p build/${buildTypeDir} && cd build/${buildTypeDir}
                 ${auxiliary.gfxTargetParser()}
-                ${cmake} --toolchain=toolchain-linux.cmake ${buildTypeArg} ${amdgpuTargets} -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON ../..
+                ${cmake} --toolchain=toolchain-linux.cmake ${buildTypeArg} ${amdgpuTargets} ${asanFlag} -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON ../..
                 make -j\$(nproc)
                 """
 
@@ -24,7 +25,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 }
 
 
-def runTestCommand (platform, project)
+def runTestCommand (platform, project, settings)
 {
     String sudo = auxiliary.sudo(platform.jenkinsLabel)
 
@@ -51,10 +52,19 @@ def runTestCommand (platform, project)
         hmmTestCommand = ''
         echo("TESTS DISABLED")
     }
+    def LD_PATH = ''
+    if (settings.addressSanitizer)
+    {
+        LD_PATH = """
+                    export ASAN_LIB_PATH=\$(/opt/rocm/llvm/bin/clang -print-file-name=libclang_rt.asan-x86_64.so)
+                    export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$(dirname "\${ASAN_LIB_PATH}")
+                  """
+    }
     def command = """#!/usr/bin/env bash
                 set -x
                 cd ${project.paths.project_build_prefix}
                 cd ${project.testDirectory}
+                ${LD_PATH}
                 ${testCommand} ${testCommandExclude}
                 if (( \$? != 0 )); then
                     exit 1
