@@ -1198,7 +1198,7 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
                 hipGraphExec_t graph_instance;
                 if(TestFixture::use_graphs)
                 {
-                    gHelper.cleanupGraphHelper();
+                    gHelper.createAndLaunchGraph(stream);
                 }
 
                 HIP_CHECK(hipDeviceSynchronize());
