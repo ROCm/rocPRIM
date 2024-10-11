@@ -193,9 +193,9 @@ namespace detail
         const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
         const unsigned int keys2_end_local = num_keys2;
 
-        range_t<> range_local{std::min(keys1_beg_local, keys1_end_local),
+        range_t<> range_local{keys1_beg_local,
                               keys1_end_local,
-                              std::min(keys2_beg_local + keys1_end_local, keys2_end_local + keys1_end_local),
+                              keys2_beg_local + keys1_end_local,
                               keys2_end_local + keys1_end_local};
 
         unsigned int indices[ItemsPerThread];
@@ -329,9 +329,9 @@ namespace detail
         const unsigned int keys2_beg_local = diag0_local - keys1_beg_local;
         const unsigned int keys2_end_local = num_keys2;
 
-        range_t<> range_local{std::min(keys1_beg_local, keys1_end_local),
+        range_t<> range_local{keys1_beg_local,
                               keys1_end_local,
-                              std::min(keys2_beg_local + keys1_end_local, keys2_end_local + keys1_end_local),
+                              keys2_beg_local + keys1_end_local,
                               keys2_end_local + keys1_end_local};
 
         unsigned int indices[ItemsPerThread];

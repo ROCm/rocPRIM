@@ -156,9 +156,9 @@ private:
             const auto keys2_merge_begin = keys2_begin + diag - partition;
 
             const range_t<> range{
-                std::min(keys1_merge_begin, keys1_end),
+                keys1_merge_begin,
                 keys1_end,
-                std::min(keys2_merge_begin, keys2_end),
+                keys2_merge_begin,
                 keys2_end,
             };
 
@@ -217,9 +217,9 @@ private:
             const auto keys2_merge_begin = keys2_begin + diag - partition;
 
             const range_t<> range{
-                std::min(keys1_merge_begin, keys1_end),
+                keys1_merge_begin,
                 keys1_end,
-                std::min(keys2_merge_begin, keys2_end),
+                keys2_merge_begin,
                 keys2_end,
             };
 
