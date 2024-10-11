@@ -100,8 +100,8 @@ void serial_merge(KeyType*                keys_shared,
                   OutputFunction          output_function)
 {
     // Pre condition, we're including some edge cases too.
-    assert(range.begin1 <= range.end1);
-    assert(range.begin2 <= range.end2);
+    if (!AllowUnsafe && range.begin1 > range.end1 && range.begin2 > range.end2)
+        return; // don't do anything, we have invalid inputs  
 
     // More descriptive names for ranges:
     auto       idx_a = range.begin1;
