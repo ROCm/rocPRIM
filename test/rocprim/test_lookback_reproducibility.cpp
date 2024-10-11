@@ -304,7 +304,6 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ScanByKey)
 
             HIP_CHECK(hipFree(d_output));
             HIP_CHECK(hipFree(d_input));
-            HIP_CHECK(hipFree(d_output));
         }
     }
 }
