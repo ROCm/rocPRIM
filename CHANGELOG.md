@@ -37,6 +37,7 @@ Documentation for rocPRIM is available at
   * device merge,
   * device partial sort, and/or
   * device sort (merge sort).
+* Fixed memory leaks in unit tests that were due to missing hipFree calls and incorrect use of hipGraphs
 
 ### Deprecations
 
