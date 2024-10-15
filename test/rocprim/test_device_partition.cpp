@@ -188,7 +188,6 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
                 stream,
                 debug_synchronous));
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -310,7 +309,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
                                          stream,
                                          debug_synchronous));
 
-    hipGraphExec_t graph_instance;
+    
     if(TestFixture::use_graphs)
     {
         gHelper.createAndLaunchGraph(stream, true, false);
@@ -443,7 +442,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
                 stream,
                 debug_synchronous));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -604,7 +603,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
                 stream,
                 debug_synchronous));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -801,7 +800,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                     stream,
                     debug_synchronous));
 
-                hipGraphExec_t graph_instance;
+                
                 if(TestFixture::use_graphs)
                 {
                     gHelper.createAndLaunchGraph(stream);
@@ -1183,7 +1182,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
                                      stream,
                                      debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream);
@@ -1305,7 +1304,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
                                              stream,
                                              debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream);
@@ -1436,7 +1435,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
                                                stream,
                                                debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream);

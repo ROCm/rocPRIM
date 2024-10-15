@@ -229,7 +229,6 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
                 )
             );
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -437,7 +436,6 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
                 )
             );
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -571,7 +569,6 @@ void testMergeMismatchedIteratorTypes()
                              hipStreamDefault,
                              debug_synchronous));
 
-    hipGraphExec_t graph_instance;
     if(UseGraphs)
     {
         gHelper.createAndLaunchGraph(stream);

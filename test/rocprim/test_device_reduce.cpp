@@ -204,7 +204,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceEmptyInput)
         )
     );
 
-    hipGraphExec_t graph_instance;
+    
     if(TestFixture::use_graphs)
     {
         gHelper.createAndLaunchGraph(stream);
@@ -331,7 +331,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -483,7 +483,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -585,7 +585,7 @@ void testLargeIndices()
                                       stream,
                                       debug_synchronous));
 
-            hipGraphExec_t graph_instance;
+            
             if(use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -728,7 +728,7 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
             stream,
             debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(TestFixture::use_graphs)
         {
             gHelper.createAndLaunchGraph(stream);
@@ -858,7 +858,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);

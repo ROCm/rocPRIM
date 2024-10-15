@@ -229,7 +229,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -416,7 +416,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -603,7 +603,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -791,7 +791,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);

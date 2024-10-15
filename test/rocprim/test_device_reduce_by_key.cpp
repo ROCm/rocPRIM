@@ -315,7 +315,7 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
                                                                    stream,
                                                                    debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -462,7 +462,7 @@ void large_indices_reduce_by_key()
                                                       stream,
                                                       debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream);
@@ -617,7 +617,7 @@ void large_segment_count_reduce_by_key()
                                                       stream,
                                                       debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream);

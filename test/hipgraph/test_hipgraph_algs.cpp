@@ -149,7 +149,6 @@ TEST(TestHipGraphAlgs, SortAndSearch)
     HIP_CHECK(hipDeviceSynchronize());
 
     // Begin graph capture
-    // hipGraph_t graph = test_utils::createGraphHelper(stream);
     test_utils::GraphHelper gHelper;
     gHelper.startStreamCapture(stream);
 
@@ -182,8 +181,6 @@ TEST(TestHipGraphAlgs, SortAndSearch)
               );
 
     // End graph capture, but do not execute the graph yet.
-    hipGraphExec_t graph_instance;
-    // graph_instance = test_utils::endCaptureGraphHelper(graph, stream);
     gHelper.endStreamCapture(stream);
     gHelper.createGraph();
 
@@ -207,7 +204,6 @@ TEST(TestHipGraphAlgs, SortAndSearch)
         HIP_CHECK(hipMemcpy(d_search_needles, search_needles.data(), search_needle_size * sizeof(key_type), hipMemcpyHostToDevice));
         
         // Launch the graph
-        // test_utils::launchGraphHelper(graph_instance, stream, true);
         gHelper.launchGraph(stream, true); 
 
         // Copy output back to host
@@ -223,8 +219,6 @@ TEST(TestHipGraphAlgs, SortAndSearch)
     HIP_CHECK(hipFree(d_search_output));
     HIP_CHECK(hipFree(d_search_needles));
     HIP_CHECK(hipFree(d_temp_storage));
-
-    // test_utils::cleanupGraphHelper(graph, graph_instance);
     gHelper.cleanupGraphHelper();
     HIP_CHECK(hipStreamDestroy(stream));
 }

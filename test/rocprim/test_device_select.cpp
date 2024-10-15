@@ -189,7 +189,7 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -352,7 +352,7 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -530,7 +530,7 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
                     )
                 );
 
-                hipGraphExec_t graph_instance;
+                
                 if(TestFixture::use_graphs)
                 {
                     gHelper.createAndLaunchGraph(stream, true, false);
@@ -738,7 +738,7 @@ void testUniqueGuardedOperator()
                     )
                 );
 
-                hipGraphExec_t graph_instance;
+                
                 if(UseGraphs)
                 {
                     gHelper.createAndLaunchGraph(stream, true, false);
@@ -992,7 +992,7 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
                     )
                 );
 
-                hipGraphExec_t graph_instance;
+                
                 if(TestFixture::use_graphs)
                 {
                     gHelper.createAndLaunchGraph(stream, true, false);
@@ -1195,7 +1195,7 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
                     stream,
                     debug_synchronous));
 
-                hipGraphExec_t graph_instance;
+                
                 if(TestFixture::use_graphs)
                 {
                     gHelper.createAndLaunchGraph(stream);
@@ -1366,7 +1366,7 @@ TEST_P(RocprimDeviceSelectLargeInputTests, LargeInputFlagged)
             )
         );
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream, true, false);
@@ -1483,7 +1483,7 @@ TEST_P(RocprimDeviceSelectLargeInputTests, LargeInputUnique)
                                   stream,
                                   debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream);

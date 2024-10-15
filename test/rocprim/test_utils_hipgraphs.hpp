@@ -19,17 +19,6 @@
 // THE SOFTWARE.
 
 
-            // test_utils::GraphHelper gHelper;
-            //     gHelper.startStreamCapture(stream);
-
-            //     gHelper.createAndLaunchGraph(stream);
-
-            //     gHelper.cleanupGraphHelper();
-
-            //     gHelper.resetGraphHelper(stream);
-
-
-
 #ifndef ROCPRIM_TEST_UTILS_HIPGRAPHS_HPP
 #define ROCPRIM_TEST_UTILS_HIPGRAPHS_HPP
 

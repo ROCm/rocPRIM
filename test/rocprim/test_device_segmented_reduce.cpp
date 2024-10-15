@@ -287,7 +287,7 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
                 stream,
                 debug_synchronous));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -432,7 +432,7 @@ void testLargeIndices()
                                             stream,
                                             debug_synchronous));
 
-        hipGraphExec_t graph_instance;
+        
         if(use_graphs)
         {
             gHelper.createAndLaunchGraph(stream, true, false);

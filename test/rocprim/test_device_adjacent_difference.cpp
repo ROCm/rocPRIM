@@ -370,7 +370,6 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size));
 
             test_utils::GraphHelper gHelper;
-            hipGraphExec_t graph_instance;
 
             // We might call the API multiple times, with almost the same parameter
             // (in-place and out-of-place)
@@ -698,7 +697,6 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
                                                    stream,
                                                    debug_synchronous));
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);

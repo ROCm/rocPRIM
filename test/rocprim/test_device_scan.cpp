@@ -306,7 +306,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
                                                    stream,
                                                    debug_synchronous));
 
-    hipGraphExec_t graph_instance;
+    
     if(TestFixture::use_graphs)
     {
         gHelper.createAndLaunchGraph(stream, true, false);
@@ -448,7 +448,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
                 stream,
                 TestFixture::debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -611,7 +611,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
                 stream,
                 debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -789,7 +789,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
                                                                            stream,
                                                                            debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -973,7 +973,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
                                                                            stream,
                                                                            debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -1155,7 +1155,7 @@ void testLargeIndicesInclusiveScan()
                                               )
                       );
 
-            hipGraphExec_t graph_instance;
+            
             if(UseGraphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -1285,7 +1285,7 @@ void testLargeIndicesExclusiveScan()
                                               )
                       );
 
-            hipGraphExec_t graph_instance;
+            
             if(UseGraphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -1536,7 +1536,7 @@ void large_indices_scan_by_key_test(ScanByKeyFun scan_by_key_fun)
                               debug_synchronous,
                               seed_value));
 
-    hipGraphExec_t graph_instance;
+    
     if(UseGraphs)
     {
         gHelper.createAndLaunchGraph(stream);
@@ -1809,7 +1809,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
                 debug_synchronous)));
             HIP_CHECK(hipGetLastError());
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);

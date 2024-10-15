@@ -269,7 +269,6 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
 
                 HIP_CHECK(hipGetLastError());
 
-                hipGraphExec_t graph_instance;
                 if(TestFixture::use_graphs)
                 {
                     gHelper.createAndLaunchGraph(stream);
@@ -492,7 +491,6 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSortCopy)
 
                 HIP_CHECK(hipGetLastError());
 
-                hipGraphExec_t graph_instance;
                 if(TestFixture::use_graphs)
                 {
                     gHelper.createAndLaunchGraph(stream);

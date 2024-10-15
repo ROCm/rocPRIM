@@ -333,7 +333,7 @@ void sort_keys()
                                                             stream,
                                                             debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -633,7 +633,7 @@ void sort_pairs()
                 1024 * 512>;
 
             test_utils::GraphHelper gHelper;;
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -939,7 +939,7 @@ void sort_keys_double_buffer()
                                                                        stream,
                                                                        debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -1227,7 +1227,7 @@ void sort_pairs_double_buffer()
                                                                         stream,
                                                                         debug_synchronous)));
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -1358,7 +1358,7 @@ void sort_keys_over_4g()
                                        stream,
                                        debug_synchronous));
 
-    hipGraphExec_t graph_instance;
+    
     if(UseGraphs)
     {
         gHelper.createAndLaunchGraph(stream);

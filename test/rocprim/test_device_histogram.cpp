@@ -338,7 +338,6 @@ TYPED_TEST(RocprimDeviceHistogramEven, Even)
                 );
             }
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -618,7 +617,6 @@ TYPED_TEST(RocprimDeviceHistogramRange, Range)
                                                            debug_synchronous));
             }
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -910,7 +908,6 @@ TYPED_TEST(RocprimDeviceHistogramMultiEven, MultiEven)
                     debug_synchronous)));
             }
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
@@ -1220,7 +1217,6 @@ TYPED_TEST(RocprimDeviceHistogramMultiRange, MultiRange)
                 ));
             }
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);

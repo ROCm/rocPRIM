@@ -173,7 +173,7 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -296,7 +296,7 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
                 )
             );
 
-            hipGraphExec_t graph_instance;
+            
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);
@@ -400,7 +400,7 @@ void testLargeIndices()
             HIP_CHECK(
                 rocprim::transform(input, output, size, flag_expected, stream, debug_synchronous));
 
-            hipGraphExec_t graph_instance;
+            
             if(UseGraphs)
             {
                 gHelper.createAndLaunchGraph(stream, true, false);

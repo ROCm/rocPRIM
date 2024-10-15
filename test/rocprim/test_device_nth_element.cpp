@@ -324,7 +324,6 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
                                                        debug_synchronous));
             }
 
-            hipGraphExec_t graph_instance;
             if(TestFixture::use_graphs)
             {
                 gHelper.createAndLaunchGraph(stream);
