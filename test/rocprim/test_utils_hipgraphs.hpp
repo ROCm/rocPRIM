@@ -86,15 +86,6 @@ namespace test_utils
                     startStreamCapture(stream);
 
             }
-
-            inline void launchGraphHelper(hipStream_t& stream,const bool sync=false)
-            {
-                HIP_CHECK(hipGraphLaunch(this->graph_instance, stream));
-
-                // Optionally sync after the launch
-                if (sync)
-                    HIP_CHECK(hipStreamSynchronize(stream));
-            }
     };
 
 } // end namespace test_utils
