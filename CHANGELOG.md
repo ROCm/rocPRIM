@@ -39,6 +39,7 @@ Documentation for rocPRIM is available at
   * device merge,
   * device partial sort, and/or
   * device sort (merge sort).
+* Fixed memory leaks in unit tests that were due to missing hipFree calls and incorrect use of hipGraphs
 * Fixed an issue where on certain inputs to block_sort_merge, device_merge_sort_merge_path, device_merge, and warp_sort_stable  would cause an assertion error during its call to serial_merge
 
 ### Upcoming changes
