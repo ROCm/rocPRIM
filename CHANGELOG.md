@@ -3,10 +3,9 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
-## Unreleased rocPRIM-3.3.0 for ROCm 6.3.0
+## (Unreleased) rocPRIM-3.3.0 for ROCm 6.3.0
 
 ### Added
-
 * Add --test smoke option in rtest.py. It will run a subset of tests such that the total test time is in 5 minutes. Use python3 ./rtest.py --test smoke or python3 ./rtest.py -t smoke to execute smoke test.
 * Option `--seed` to benchmarks to specify a seed for the generation of random inputs. The default behavior is to keep using a random seed per benchmark measurement.
 * Added configuration autotuning to device partition (`rocprim::partition`, `rocprim::partition_two_way`, and `rocprim::partition_three_way`), device select (`rocprim::select`, `rocprim::unique`, and `rocprim::unique_by_key`), and device reduce by key (`rocprim::reduce_by_key`) for improved performance on selected architectures.
@@ -43,8 +42,8 @@ Documentation for rocPRIM is available at
 * Fixed an issue where on certain inputs to block_sort_merge, device_merge_sort_merge_path, device_merge, and warp_sort_stable  would cause an assertion error during its call to serial_merge
 
 ### Upcoming changes
+* `rocprim::thread_load` and `rocprim::thread_store` will be deprecated. Use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
 
-* `rocprim::thread_load` and `rocprim::thread_store` are deprecated. Use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
 
 ## rocPRIM-3.2.1 for ROCm 6.2.1
 
