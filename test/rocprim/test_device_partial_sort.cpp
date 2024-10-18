@@ -253,10 +253,10 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                 HIP_CHECK(
                     test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-                hipGraph_t graph;
+                test_utils::GraphHelper gHelper;;
                 if(TestFixture::use_graphs)
                 {
-                    graph = test_utils::createGraphHelper(stream);
+                    gHelper.startStreamCapture(stream);
                 }
                 HIP_CHECK(rocprim::partial_sort<config>(d_temp_storage,
                                                         temp_storage_size_bytes,
@@ -269,10 +269,9 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
 
                 HIP_CHECK(hipGetLastError());
 
-                hipGraphExec_t graph_instance;
                 if(TestFixture::use_graphs)
                 {
-                    graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+                    gHelper.createAndLaunchGraph(stream);
                 }
 
                 std::vector<key_type> output(size);
@@ -288,7 +287,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
 
                 if(TestFixture::use_graphs)
                 {
-                    test_utils::cleanupGraphHelper(graph, graph_instance);
+                    gHelper.cleanupGraphHelper();
                     HIP_CHECK(hipStreamDestroy(stream));
                 }
             }
@@ -474,10 +473,10 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSortCopy)
                 HIP_CHECK(
                     test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
 
-                hipGraph_t graph;
+                test_utils::GraphHelper gHelper;;
                 if(TestFixture::use_graphs)
                 {
-                    graph = test_utils::createGraphHelper(stream);
+                    gHelper.startStreamCapture(stream);
                 }
 
                 HIP_CHECK(rocprim::partial_sort_copy<config>(d_temp_storage,
@@ -492,10 +491,9 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSortCopy)
 
                 HIP_CHECK(hipGetLastError());
 
-                hipGraphExec_t graph_instance;
                 if(TestFixture::use_graphs)
                 {
-                    graph_instance = test_utils::endCaptureGraphHelper(graph, stream, true, true);
+                    gHelper.createAndLaunchGraph(stream);
                 }
 
                 std::vector<key_type> output(size);
@@ -512,7 +510,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSortCopy)
 
                 if(TestFixture::use_graphs)
                 {
-                    test_utils::cleanupGraphHelper(graph, graph_instance);
+                    gHelper.cleanupGraphHelper();
                     HIP_CHECK(hipStreamDestroy(stream));
                 }
             }
