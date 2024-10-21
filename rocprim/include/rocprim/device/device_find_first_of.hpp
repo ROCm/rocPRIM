@@ -67,7 +67,10 @@ void init_find_first_of_kernel(T* output, T size, ordered_block_id<T> ordered_bi
 }
 
 template<class Config, class InputIterator1, class InputIterator2, class BinaryFunction>
-ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().kernel_config.block_size)
+ROCPRIM_KERNEL
+#ifndef DOXYGEN_DOCUMENTATION_BUILD
+__launch_bounds__(device_params<Config>().kernel_config.block_size)
+#endif
 void find_first_of_kernel(InputIterator1           input,
                           InputIterator2           keys,
                           size_t*                  output,
