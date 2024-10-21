@@ -1,12 +1,12 @@
 // This file is for internal AMD use.
 // If you are interested in running your own Jenkins, please raise a github issue for assistance.
 
-def runCompileCommand(platform, project, jobName, boolean debug=false)
+def runCompileCommand(platform, project, jobName, boolean debug=false, String buildTypeDir="release", boolean isCodeCovOn=false)
 {
     project.paths.construct_build_prefix()
 
     String buildTypeArg = debug ? '-DCMAKE_BUILD_TYPE=Debug' : '-DCMAKE_BUILD_TYPE=Release'
-    String buildTypeDir = debug ? 'debug' : 'release'
+    String codeCovArg = isCodeCovOn ? '-DBUILD_CODE_COVERAGE=ON' : ''
     String cmake = platform.jenkinsLabel.contains('centos') ? 'cmake3' : 'cmake'
     //Set CI node's gfx arch as target if PR, otherwise use default targets of the library
     String amdgpuTargets = env.BRANCH_NAME.startsWith('PR-') ? '-DAMDGPU_TARGETS=\$gfx_arch' : ''
@@ -16,7 +16,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
                 cd ${project.paths.project_build_prefix}
                 mkdir -p build/${buildTypeDir} && cd build/${buildTypeDir}
                 ${auxiliary.gfxTargetParser()}
-                ${cmake} --toolchain=toolchain-linux.cmake ${buildTypeArg} ${amdgpuTargets} -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON ../..
+                ${cmake} --toolchain=toolchain-linux.cmake ${buildTypeArg} ${amdgpuTargets} -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON ${codeCovArg} ../..
                 make -j\$(nproc)
                 """
 
@@ -65,9 +65,49 @@ def runTestCommand (platform, project)
     platform.runCommand(this, command)
 }
 
-def runPackageCommand(platform, project)
+def runCodecovTestCommand(platform, project)
 {
-    def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/release")
+    String dirmode = "debug"
+
+    def testCommand = """#!/usr/bin/env bash
+                set -x
+                cd ${project.paths.project_build_prefix}/build/${dirmode}
+                ls
+                cat Makefile
+                export LD_LIBRARY_PATH=/opt/rocm/lib/
+                ctest --output-on-failure
+                GTEST_LISTENER=NO_PASS_LINE_IN_LOG make coverage_cleanup coverage
+            """
+
+    platform.runCommand(this, testCommand)
+
+    this.publishHTML([allowMissing: false,
+                alwaysLinkToLastBuild: false,
+                keepAll: false,
+                reportDir: "${project.paths.project_build_prefix}/build/${dirmode}/lcoverage",
+                reportFiles: "index.html",
+                reportName: "Code coverage report",
+                reportTitles: "Code coverage report"])
+
+    if (this.env.BRANCH_NAME ==~ /PR-\d+/)
+    {
+        def commentBody = "${this.env.BUILD_URL}../Code_20coverage_20report/"
+        
+        this.writeFile(file: 'comment.py', text: this.libraryResource("com/amd/scripts/comment.py"))
+
+        this.withCredentials([this.string(credentialsId: 'ROCmMathLibrariesBot-PAT', variable: 'GH_AUTH')])
+        {
+            def commentCommand = """
+            python comment.py -u ROCmMathLibrariesBot -o ROCm -r ${project.paths.project_name} -n ${this.env.CHANGE_ID} -b ${commentBody}
+            """
+            platform.runCommand(this, commentCommand)
+        }
+    }
+}
+
+def runPackageCommand(platform, project, String buildTypeDir="release")
+{
+    def packageHelper = platform.makePackage(platform.jenkinsLabel,"${project.paths.project_build_prefix}/build/${buildTypeDir}")
 
     platform.runCommand(this, packageHelper[0])
         platform.archiveArtifacts(this, packageHelper[1])
