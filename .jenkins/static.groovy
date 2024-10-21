@@ -15,7 +15,7 @@ def runCI =
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
     def commonGroovy
-
+    def settings = [:]
     boolean formatCheck = false
      
     def compileCommand =
@@ -23,14 +23,14 @@ def runCI =
         platform, project->
 
         commonGroovy = load "${project.paths.project_src_prefix}/.jenkins/common.groovy"
-        commonGroovy.runCompileCommand(platform, project, jobName)
+        commonGroovy.runCompileCommand(platform, project, jobName, settings)
     }
 
     def testCommand =
     {
         platform, project->
 
-        commonGroovy.runTestCommand(platform, project)
+        commonGroovy.runTestCommand(platform, project, settings)
     }
 
     def packageCommand =

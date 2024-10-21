@@ -14,8 +14,10 @@ def runCI =
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
+    def settings = [addressSanitizer: true]
+
     def commonGroovy
-    def settings = [:]
+
     boolean formatCheck = false
      
     def compileCommand =
