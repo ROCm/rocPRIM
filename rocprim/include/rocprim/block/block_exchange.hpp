@@ -95,10 +95,14 @@ class block_exchange
     static constexpr unsigned int banks_no = ::rocprim::detail::get_lds_banks_no();
     static constexpr unsigned int bank_conflicts_padding =
         has_bank_conflicts ? (BlockSize * ItemsPerThread / banks_no) : 0;
-
+        
+    /* Hack: Temporarily disabling bank conflict padding as it can significantly reduce occupancy for Pytorch smaller sizes
     static constexpr unsigned int storage_count
         = BlockSize * ItemsPerThread + bank_conflicts_padding;
-
+    */
+    static constexpr unsigned int storage_count
+        = BlockSize * ItemsPerThread;
+        
     struct storage_type_
     {
         uninitialized_array<T, storage_count, 16> buffer;
