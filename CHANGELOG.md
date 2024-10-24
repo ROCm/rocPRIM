@@ -3,7 +3,11 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
-## (Unreleased) rocPRIM-3.3.0 for ROCm 6.3.0
+## (unreleased) rocPRIM-3.3.0 for ROCM 6.4.0
+  ### Changed
+  * Modified smoke tests to complete in faster run-time and to never exceed 2GB of vram usage
+
+## rocPRIM-3.3.0 for ROCm 6.3.0
 
 ### Added
 
