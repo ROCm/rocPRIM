@@ -3,7 +3,7 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
-## (Unreleased) rocPRIM-3.3.0 for ROCm 6.3.0
+## rocPRIM-3.3.0 for ROCm 6.3.0
 
 ### Added
 
@@ -33,10 +33,19 @@ Documentation for rocPRIM is available at
 * Fixed a bug for `rocprim::merge_path_search` where using `unsigned` offsets would output wrong results.
 * Fixed a bug for `rocprim::thread_load` and `rocprim::thread_store` where `float` and `double` were not casted to the correct type resulting in wrong results.
 * Fix tests failing when compiling with `-D_GLIBCXX_ASSERTIONS=ON`.
+* Fixed a bug for algorithms that use an internal serial merge routine that causes a memory access fault. This may result in a performance drop when using:
+  * block sort,
+  * device merge sort (block merge),
+  * device merge,
+  * device partial sort, and/or
+  * device sort (merge sort).
+* Fixed memory leaks in unit tests that were due to missing hipFree calls and incorrect use of hipGraphs
+* Fixed an issue where on certain inputs to block_sort_merge, device_merge_sort_merge_path, device_merge, and warp_sort_stable  would cause an assertion error during its call to serial_merge
 
 ### Upcoming changes
 
-* `rocprim::thread_load` and `rocprim::thread_store` will be deprecated. Use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
+
+* `rocprim::thread_load` and `rocprim::thread_store` are deprecated. Use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
 
 ## rocPRIM-3.2.1 for ROCm 6.2.1
 
