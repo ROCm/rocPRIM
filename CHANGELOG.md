@@ -3,7 +3,7 @@
 Documentation for rocPRIM is available at
 [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
-## Unreleased rocPRIM-3.3.0 for ROCm 6.3.0
+## rocPRIM-3.3.0 for ROCm 6.3.0
 
 ### Added
 
@@ -43,6 +43,7 @@ Documentation for rocPRIM is available at
 * Fixed an issue where on certain inputs to block_sort_merge, device_merge_sort_merge_path, device_merge, and warp_sort_stable  would cause an assertion error during its call to serial_merge
 
 ### Upcoming changes
+
 
 * `rocprim::thread_load` and `rocprim::thread_store` are deprecated. Use dereference instead. Not all of those functions are available on every device architecture, and their usage can hurt performance, because inline assembly inhibits optimizations.
 
