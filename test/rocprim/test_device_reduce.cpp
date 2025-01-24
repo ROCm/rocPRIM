@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,39 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+
+// required test headers
+#include "identity_iterator.hpp"
+#include "test_seed.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
+
 // required rocprim headers
+#include <rocprim/block/block_reduce.hpp>
+#include <rocprim/config.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_reduce.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/thread/thread_operators.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/types.hpp>
+#include <rocprim/types/key_value_pair.hpp>
 
-// required test headers
-#include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <limits>
+#include <stdint.h>
+#include <type_traits>
+#include <vector>
 
 using bra = ::rocprim::block_reduce_algorithm;
 
@@ -108,8 +132,10 @@ using RocprimDeviceReduceTestsParams = ::testing::Types<
     DeviceReduceParams<uint8_t, uint8_t>,
     DeviceReduceParams<rocprim::half, rocprim::half>,
     DeviceReduceParams<rocprim::bfloat16, rocprim::bfloat16>,
-    DeviceReduceParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<float>>,
-    DeviceReduceParams<test_utils::custom_test_type<int>, test_utils::custom_test_type<float>>,
+    DeviceReduceParams<common::custom_type<float, float, true>,
+                       common::custom_type<float, float, true>>,
+    DeviceReduceParams<common::custom_type<int, int, true>,
+                       common::custom_type<float, float, true>>,
     DeviceReduceParams<rocprim::half,
                        rocprim::half,
                        false,
@@ -131,8 +157,8 @@ using RocprimDeviceReduceTestsParams = ::testing::Types<
                        bra::default_algorithm,
                        false,
                        true>,
-    DeviceReduceParams<test_utils::custom_test_type<double>,
-                       test_utils::custom_test_type<double>,
+    DeviceReduceParams<common::custom_type<double, double, true>,
+                       common::custom_type<double, double, true>,
                        false,
                        ROCPRIM_GRID_SIZE_LIMIT,
                        bra::default_algorithm,
@@ -256,7 +282,6 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
                 HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
             }
 
-
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
@@ -267,7 +292,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
 
             // Calculate expected results on host
             U expected = test_utils::host_reduce(input.begin(), input.end(), rocprim::plus<U>());
-            // fix for custom_test_type case with size == 0
+            // fix for common::custom_type case with size == 0
             if(size == 0)
                 expected = U();
 
@@ -330,26 +355,6 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
     }
 }
 
-template<
-    class Key,
-    class Value
->
-struct arg_min
-{
-    ROCPRIM_HOST_DEVICE inline
-    rocprim::key_value_pair<Key, Value>
-    operator()(const rocprim::key_value_pair<Key, Value>& a,
-               const rocprim::key_value_pair<Key, Value>& b) const
-    {
-        rocprim::less<Value>     less_v;
-        rocprim::less<Key>       less_k;
-        rocprim::equal_to<Value> eq_v;
-        return (less_v(b.value, a.value) || (eq_v(a.value, b.value) && less_k(b.key, a.key))) ? b
-                                                                                              : a;
-    }
-};
-
-
 TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -389,8 +394,8 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
             test_utils::device_ptr<key_value> d_input(input);
             test_utils::device_ptr<key_value> d_output(1);
 
-            arg_min<int, T> reduce_op;
-            const key_value max(std::numeric_limits<int>::max(), test_utils::numeric_limits<T>::max());
+            rocprim::arg_min reduce_op;
+            const key_value max(std::numeric_limits<int>::max(), rocprim::numeric_limits<T>::max());
 
             // Calculate expected results on host
             key_value expected = max;
@@ -603,7 +608,7 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
         T lowest = static_cast<T>(
             -1.0
             * static_cast<double>(
-                test_utils::numeric_limits<
+                rocprim::numeric_limits<
                     T>::min())); // smallest (closest to zero) normal (negative) non-zero number
 
         // Generate data
@@ -712,7 +717,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
             binary_op_type min_op;
 
             // Calculate expected results on host
-            U expected = U(test_utils::numeric_limits<U>::max());
+            U expected = U(rocprim::numeric_limits<U>::max());
             for(unsigned int i = 0; i < input.size(); i++)
             {
                 expected = min_op(expected, input[i]);
@@ -725,7 +730,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
                 temp_storage_size_bytes,
                 d_input.get(),
                 test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
-                test_utils::numeric_limits<U>::max(),
+                rocprim::numeric_limits<U>::max(),
                 input.size(),
                 rocprim::minimum<U>(),
                 stream,
@@ -749,7 +754,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
                 temp_storage_size_bytes,
                 d_input.get(),
                 test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
-                test_utils::numeric_limits<U>::max(),
+                rocprim::numeric_limits<U>::max(),
                 input.size(),
                 rocprim::minimum<U>(),
                 stream,

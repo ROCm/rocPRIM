@@ -23,6 +23,18 @@
 #ifndef TEST_BLOCK_SCAN_KERNELS_HPP_
 #define TEST_BLOCK_SCAN_KERNELS_HPP_
 
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+
+#include <rocprim/block/block_scan.hpp>
+#include <rocprim/functional.hpp>
+
+#include <cstddef>
+#include <type_traits>
+#include <vector>
+
 template<
     int Method,
     unsigned int BlockSize,

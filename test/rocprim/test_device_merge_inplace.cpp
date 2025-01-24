@@ -21,17 +21,18 @@
 // SOFTWARE.
 
 #include "../common_test_header.hpp"
-#include "rocprim/device/config_types.hpp"
+
+#include "../../common/utils_data_generation.hpp"
+
 #include "test_seed.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
 
-#include <rocprim/detail/various.hpp>
 #include <rocprim/device/device_merge_inplace.hpp>
+#include <rocprim/functional.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/transform_iterator.hpp>
-
-#include <gtest/gtest.h>
 
 #include <hip/driver_types.h>
 #include <hip/hip_runtime.h>
@@ -39,7 +40,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <limits>
-#include <rocprim/test_utils_device_ptr.hpp>
+#include <random>
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
 TEST(RocprimDeviceMergeInplaceTests, Basic)
 {
@@ -155,16 +159,16 @@ struct random_data_generator
         using value_type      = T;
 
         // not all integral types are valid for int distribution
-        using dist_value_type = std::conditional_t<
-            std::is_integral<T>::value
-                && !test_utils::is_valid_for_int_distribution<value_type>::value,
-            int,
-            value_type>;
+        using dist_value_type
+            = std::conditional_t<std::is_integral<T>::value
+                                     && !common::is_valid_for_int_distribution<value_type>::value,
+                                 int,
+                                 value_type>;
 
         using val_dist_type = std::conditional_t<std::is_integral<T>::value,
-                                                 std::uniform_int_distribution<dist_value_type>,
+                                                 common::uniform_int_distribution<dist_value_type>,
                                                  std::uniform_real_distribution<dist_value_type>>;
-        using dup_dist_type = std::uniform_int_distribution<int>;
+        using dup_dist_type = common::uniform_int_distribution<int>;
 
         seed_type seed;
         int       duplicates;

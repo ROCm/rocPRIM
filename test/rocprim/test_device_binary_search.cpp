@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +22,27 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <rocprim/functional.hpp>
-#include <rocprim/device/device_binary_search.hpp>
+#include "../../common/utils_custom_type.hpp"
 
 // required test headers
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
+
+// required rocprim headers
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
+#include <rocprim/device/device_binary_search.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/types.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <stdint.h>
+#include <type_traits>
+#include <vector>
 
 template<class Haystack,
          class Needle,
@@ -52,8 +66,8 @@ public:
     using params = Params;
 };
 
-using custom_int2 = test_utils::custom_test_type<int>;
-using custom_double2 = test_utils::custom_test_type<double>;
+using custom_int2    = common::custom_type<int, int, true>;
+using custom_double2 = common::custom_type<double, double, true>;
 
 struct use_custom_config
 {};
@@ -156,7 +170,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -271,7 +285,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -387,7 +401,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);

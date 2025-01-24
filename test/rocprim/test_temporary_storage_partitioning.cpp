@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "../rocprim/test_utils_device_ptr.hpp"
-#include "common_test_header.hpp"
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+
+#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/detail/temp_storage.hpp>
+#include <rocprim/detail/various.hpp>
 
-#include "test_utils_types.hpp"
+#include <algorithm>
+#include <cstddef>
 
 namespace rpts = rocprim::detail::temp_storage;
 
@@ -124,7 +129,7 @@ TEST(RocprimTemporaryStoragePartitioningTests, Sequence)
     constexpr rpts::layout layout_b   = {10, 8};
     constexpr rpts::layout layout_c   = {100, 32};
     constexpr size_t       elements_e = 17;
-    using type_e                      = test_utils::custom_test_type<double>;
+    using type_e                      = common::custom_type<double, double, true>;
 
     hipError_t result;
 
@@ -184,7 +189,7 @@ TEST(RocprimTemporaryStoragePartitioningTests, MutuallyExclusive)
 
     constexpr rpts::layout layout_b   = {50, 1};
     constexpr size_t       elements_c = 17;
-    using type_c                      = test_utils::custom_test_type<double>;
+    using type_c                      = common::custom_type<double, double, true>;
 
     hipError_t result;
 

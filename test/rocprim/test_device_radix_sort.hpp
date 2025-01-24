@@ -26,20 +26,38 @@
 #include "../common_test_header.hpp"
 
 // required rocprim headers
+#include <rocprim/detail/various.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/device_merge_sort_config.hpp>
 #include <rocprim/device/device_radix_sort.hpp>
+#include <rocprim/device/device_radix_sort_config.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/type_traits_interface.hpp>
+#include <rocprim/types/double_buffer.hpp>
 
 // required test headers
 #include "test_seed.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
 #include "test_utils_custom_float_traits_type.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
 #include "test_utils_sort_checker.hpp"
 #include "test_utils_sort_comparator.hpp"
-#include "test_utils_types.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
 #include <iterator>
+#include <memory>
+#include <numeric>
+#include <stdint.h>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 template<class Key,
          class Value,
@@ -90,16 +108,15 @@ auto generate_key_input(KeyIter keys_input, size_t size, engine_type& rng_engine
     using key_type = typename std::iterator_traits<KeyIter>::value_type;
     test_utils::generate_random_data_n(keys_input,
                                        size,
-                                       test_utils::numeric_limits<key_type>::min(),
-                                       test_utils::numeric_limits<key_type>::max(),
+                                       rocprim::numeric_limits<key_type>::min(),
+                                       rocprim::numeric_limits<key_type>::max(),
                                        rng_engine);
 }
 
-// Working around custom_float_test_type, which is both a float and a custom_test_type
+// Working around custom_float_test_type, which is both a float and a common::custom_type
 template<class T>
 constexpr bool is_custom_not_float_test_type
-    = test_utils::is_custom_test_type<T>::value
-      && !std::is_same<test_utils::custom_float_type, T>::value
+    = common::is_custom_type<T>::value && !std::is_same<test_utils::custom_float_type, T>::value
       && !std::is_same<test_utils::custom_float_traits_type, T>::value;
 
 template<class Config, bool Descending, class Key>
@@ -300,7 +317,7 @@ void sort_keys()
             ASSERT_GT(temporary_storage_bytes, 0);
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -619,8 +636,8 @@ void sort_pairs()
                                                     4>,
                 1024 * 512>;
 
-            test_utils::GraphHelper gHelper;;
-            
+            test_utils::GraphHelper gHelper;
+
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -827,7 +844,7 @@ void sort_keys_double_buffer()
         // Default stream does not support hipGraph stream capture, so create one
         HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
     }
-    
+
     const bool debug_synchronous = false;
 
     for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
@@ -881,7 +898,7 @@ void sort_keys_double_buffer()
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -1071,7 +1088,7 @@ void sort_pairs_double_buffer()
         // Default stream does not support hipGraph stream capture, so create one
         HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
     }
-    
+
     const bool debug_synchronous = false;
 
     for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
@@ -1147,7 +1164,7 @@ void sort_pairs_double_buffer()
             ASSERT_GT(temporary_storage_bytes, 0);
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -1208,7 +1225,7 @@ void sort_keys_over_4g()
 {
     using key_type                                 = uint8_t;
     constexpr unsigned int start_bit               = 0;
-    constexpr unsigned int end_bit                 = 8ull * sizeof(key_type);    
+    constexpr unsigned int end_bit                 = 8ull * sizeof(key_type);
     constexpr bool         debug_synchronous       = false;
     constexpr size_t       size                    = (1ull << 32) + 32;
     constexpr size_t       number_of_possible_keys = 1ull << (8ull * sizeof(key_type));
@@ -1218,7 +1235,7 @@ void sort_keys_over_4g()
         // Default stream does not support hipGraph stream capture, so create one
         HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
     }
-    
+
     assert(std::is_unsigned<key_type>::value);
     std::vector<size_t> histogram(number_of_possible_keys, 0);
     const int           seed_value = rand();
@@ -1229,8 +1246,8 @@ void sort_keys_over_4g()
 
     std::vector<key_type> keys_input
         = test_utils::get_random_data<key_type>(size,
-                                                test_utils::numeric_limits<key_type>::min(),
-                                                test_utils::numeric_limits<key_type>::max(),
+                                                rocprim::numeric_limits<key_type>::min(),
+                                                rocprim::numeric_limits<key_type>::max(),
                                                 seed_value);
 
     //generate histogram of the randomly generated values
@@ -1266,7 +1283,6 @@ void sort_keys_over_4g()
    test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
    test_utils::GraphHelper gHelper;
-   ;
    if(UseGraphs)
    {
        gHelper.startStreamCapture(stream);
@@ -1290,7 +1306,7 @@ void sort_keys_over_4g()
    const auto output = d_keys_input_output.load();
 
    size_t counter = 0;
-   for(size_t i = 0; i <= test_utils::numeric_limits<key_type>::max(); ++i)
+   for(size_t i = 0; i <= rocprim::numeric_limits<key_type>::max(); ++i)
    {
        for(size_t j = 0; j < histogram[i]; ++j)
        {

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,32 +20,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_data_generation.hpp"
+
 // required test headers
 #include "indirect_iterator.hpp"
+#include "test_seed.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
 #include "test_utils_sort_comparator.hpp"
-#include "test_utils_types.hpp"
-
-#include "../common_test_header.hpp"
 
 // required rocprim headers
-#include <algorithm>
+#include <rocprim/block/block_radix_rank.hpp>
+#include <rocprim/config.hpp>
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_partial_sort.hpp>
+#include <rocprim/device/device_partial_sort_config.hpp>
 #include <rocprim/functional.hpp>
+#include <rocprim/types.hpp>
 
-#include <iostream>
-#include <iterator>
-#include <vector>
-
-#include <cassert>
+#include <algorithm>
 #include <cstddef>
+#include <stdint.h>
+#include <type_traits>
+#include <vector>
 
 // Params for tests
 template<class KeyType,
@@ -82,7 +88,7 @@ using RocprimDevicePartialSortTestsParams = ::testing::Types<
     DevicePartialSortParams<unsigned short>,
     DevicePartialSortParams<char>,
     DevicePartialSortParams<const int>,
-    DevicePartialSortParams<test_utils::custom_test_type<int>>,
+    DevicePartialSortParams<common::custom_type<int, int, true>>,
     DevicePartialSortParams<unsigned long>,
     DevicePartialSortParams<long long, ::rocprim::greater<long long>>,
     DevicePartialSortParams<const float>,
@@ -91,7 +97,7 @@ using RocprimDevicePartialSortTestsParams = ::testing::Types<
     DevicePartialSortParams<rocprim::half>,
     DevicePartialSortParams<rocprim::bfloat16>,
     DevicePartialSortParams<double>,
-    DevicePartialSortParams<test_utils::custom_test_type<float>>,
+    DevicePartialSortParams<common::custom_type<float, float, true>>,
     DevicePartialSortParams<test_utils::custom_float_type>,
     DevicePartialSortParams<test_utils::custom_test_array_type<int, 4>>,
     DevicePartialSortParams<int, ::rocprim::less<int>, rocprim::default_config, false, true>,
@@ -102,12 +108,12 @@ using RocprimDevicePartialSortTestsParams = ::testing::Types<
             rocprim::
                 nth_element_config<128, 4, 32, 16, rocprim::block_radix_rank_algorithm::basic>>>,
     DevicePartialSortParams<
-        test_utils::custom_test_type<int>,
-        ::rocprim::less<test_utils::custom_test_type<int>>,
+        common::custom_type<int, int, true>,
+        ::rocprim::less<common::custom_type<int, int, true>>,
         rocprim::default_config,
         false,
         false,
-        test_utils::custom_test_type_decomposer<test_utils::custom_test_type<int>>>>;
+        test_utils::custom_test_type_decomposer<common::custom_type<int, int, true>>>>;
 
 template<class InputVector, class OutputVector, class CompareFunction>
 void inline compare_partial_sort_cpp_14(InputVector     input,
@@ -225,8 +231,8 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
 
                 std::vector<key_type> input = test_utils::get_random_data<key_type>(
                     size,
-                    test_utils::generate_limits<key_type>::min(),
-                    test_utils::generate_limits<key_type>::max(),
+                    common::generate_limits<key_type>::min(),
+                    common::generate_limits<key_type>::max(),
                     seed_value);
 
                 test_utils::device_ptr<key_type> d_input(input);
@@ -255,7 +261,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
 
                 test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-                test_utils::GraphHelper gHelper;;
+                test_utils::GraphHelper gHelper;
                 if(TestFixture::use_graphs)
                 {
                     gHelper.startStreamCapture(stream);
@@ -412,13 +418,13 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSortCopy)
 
                 std::vector<key_type> input = test_utils::get_random_data<key_type>(
                     size,
-                    test_utils::generate_limits<key_type>::min(),
-                    test_utils::generate_limits<key_type>::max(),
+                    common::generate_limits<key_type>::min(),
+                    common::generate_limits<key_type>::max(),
                     seed_value);
                 std::vector<key_type> output_original = test_utils::get_random_data<key_type>(
                     size,
-                    test_utils::generate_limits<key_type>::min(),
-                    test_utils::generate_limits<key_type>::max(),
+                    common::generate_limits<key_type>::min(),
+                    common::generate_limits<key_type>::max(),
                     seed_value + 1);
 
                 test_utils::device_ptr<key_type> d_input(input);
@@ -448,7 +454,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSortCopy)
 
                 test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-                test_utils::GraphHelper gHelper;;
+                test_utils::GraphHelper gHelper;
                 if(TestFixture::use_graphs)
                 {
                     gHelper.startStreamCapture(stream);

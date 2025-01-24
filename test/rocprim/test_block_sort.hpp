@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "../common_test_header.hpp"
+
+#include "test_seed.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
 #include "test_utils_sort_comparator.hpp"
+
+#include <rocprim/block/block_sort.hpp>
+#include <rocprim/detail/various.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/types/tuple.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <numeric>
+#include <stdint.h>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 block_sort_test_suite_type_def(suite_name, name_suffix);
 

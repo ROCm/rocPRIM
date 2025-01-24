@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,18 +23,26 @@
 #ifndef TEST_BLOCK_HISTOGRAM_KERNELS_HPP_
 #define TEST_BLOCK_HISTOGRAM_KERNELS_HPP_
 
-// required rocprim headers
-#include <rocprim/block/block_load.hpp>
-#include <rocprim/block/block_store.hpp>
-#include <rocprim/block/block_histogram.hpp>
+#include "../common_test_header.hpp"
 
 // required test headers
-#include "../common_test_header.hpp"
+#include "test_seed.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
 #include "test_utils_types.hpp"
 
-#include <algorithm>
-#include <limits>
+// required rocprim headers
+#include <rocprim/block/block_histogram.hpp>
+#include <rocprim/config.hpp>
+#include <rocprim/intrinsics/thread.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/type_traits_interface.hpp>
+#include <rocprim/types.hpp>
+
+#include <type_traits>
+#include <vector>
 
 template<
     unsigned int BlockSize,
@@ -79,8 +87,7 @@ auto get_safe_maxval(size_t maxval) -> std::enable_if_t<rocprim::is_floating_poi
 {
     // Assert that the cast is defined behavior, based on the assumption that all floating-point
     //   types can be represented by a double
-    EXPECT_LT(static_cast<double>(maxval),
-              static_cast<double>(test_utils::numeric_limits<T>::max()));
+    EXPECT_LT(static_cast<double>(maxval), static_cast<double>(rocprim::numeric_limits<T>::max()));
     return static_cast<T>(maxval);
 }
 
@@ -174,7 +181,6 @@ void test_block_histogram_input_arrays()
 
         test_utils::assert_eq(output_bin, expected_bin);
     }
-
 }
 
 // Static for-loop

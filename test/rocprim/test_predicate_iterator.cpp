@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "rocprim/iterator/transform_iterator.hpp"
+#include "../common_test_header.hpp"
+
+#include "../../common/predicate_iterator.hpp"
+
 #include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
 
-#include <common_test_header.hpp>
-
 #include <rocprim/device/device_transform.hpp>
+#include <rocprim/functional.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
-#include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/predicate_iterator.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
 
 #include <hip/hip_runtime.h>
 
-#include <gtest/gtest.h>
-
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <numeric>
 #include <type_traits>
+#include <vector>
 
 struct is_odd
 {
@@ -60,29 +63,6 @@ struct set_to
         operator()(const T&) const
     {
         return V;
-    }
-};
-
-template<int V>
-struct increment_by
-{
-    template<class T>
-    __device__ __host__
-    T constexpr
-        operator()(const T& a) const
-    {
-        return a + V;
-    }
-};
-
-struct identity
-{
-    template<class T>
-    __device__ __host__
-    constexpr T
-        operator()(const T& a) const
-    {
-        return a;
     }
 };
 
@@ -170,7 +150,11 @@ TEST(RocprimPredicateIteratorTests, HostMaskWrite)
     std::iota(data.begin(), data.end(), 0);
     test_utils::get_random_data<bool>(size, false, true, 0);
 
-    auto masked_it = rocprim::make_predicate_iterator(data.begin(), mask.begin(), identity{});
+    using identity_type = typename std::iterator_traits<decltype(mask.begin())>::value_type;
+
+    auto masked_it = rocprim::make_predicate_iterator(data.begin(),
+                                                      mask.begin(),
+                                                      rocprim::identity<identity_type>{});
     std::transform(data.begin(), data.end(), masked_it, set_to<-1>{});
 
     for(size_t i = 0; i < size; ++i)
@@ -221,7 +205,7 @@ TEST(RocprimPredicateIteratorTests, DeviceInplace)
 {
     using T         = int;
     using predicate = is_odd;
-    using transform = increment_by<5>;
+    using transform = common::increment_by<5>;
 
     constexpr size_t size = 100;
 
@@ -253,7 +237,7 @@ TEST(RocprimPredicateIteratorTests, DeviceRead)
 {
     using T         = int;
     using predicate = is_odd;
-    using transform = increment_by<5>;
+    using transform = common::increment_by<5>;
 
     constexpr size_t size = 100;
 
@@ -266,7 +250,9 @@ TEST(RocprimPredicateIteratorTests, DeviceRead)
     auto t_it = rocprim::make_transform_iterator(d_input.get(), transform{});
     auto r_it = rocprim::make_predicate_iterator(t_it, d_input.get(), predicate{});
 
-    HIP_CHECK(rocprim::transform(r_it, d_output.get(), size, identity{}));
+    using identity_type = typename std::iterator_traits<decltype(r_it)>::value_type;
+
+    HIP_CHECK(rocprim::transform(r_it, d_output.get(), size, rocprim::identity<identity_type>{}));
 
     h_data = d_output.load();
 
@@ -281,5 +267,4 @@ TEST(RocprimPredicateIteratorTests, DeviceRead)
             ASSERT_EQ(h_data[i], T{});
         }
     }
-    std::cout << std::endl;
 }

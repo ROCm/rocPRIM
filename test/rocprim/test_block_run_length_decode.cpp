@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,18 +22,27 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <gtest/gtest.h>
-#include <rocprim/block/block_run_length_decode.hpp>
-#include <rocprim/config.hpp>
-#include <rocprim/test_utils_data_generation.hpp>
+#include "../../common/utils_data_generation.hpp"
 
 // required test headers
-#include "rocprim/block/block_load_func.hpp"
-#include "rocprim/block/block_store_func.hpp"
-#include "rocprim/functional.hpp"
+#include "test_seed.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+
+// required rocprim headers
+#include <rocprim/block/block_load_func.hpp>
+#include <rocprim/block/block_run_length_decode.hpp>
+#include <rocprim/block/block_store_func.hpp>
+#include <rocprim/config.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/types.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <random>
+#include <stdint.h>
+#include <vector>
 
 template<class ItemT,
          class LengthT,
@@ -168,19 +177,19 @@ TYPED_TEST(HipcubBlockRunLengthDecodeTest, TestDecode)
 
         size_t            num_runs       = runs_per_thread * block_size;
         constexpr LengthT max_run_length = static_cast<LengthT>(
-            std::min(1000ll, static_cast<long long>(test_utils::numeric_limits<LengthT>::max())));
+            std::min(1000ll, static_cast<long long>(rocprim::numeric_limits<LengthT>::max())));
 
         auto run_items = std::vector<ItemT>(num_runs);
-        run_items[0] = test_utils::get_random_value<ItemT>(test_utils::numeric_limits<ItemT>::min(),
-                                                           test_utils::numeric_limits<ItemT>::max(),
+        run_items[0]   = test_utils::get_random_value<ItemT>(rocprim::numeric_limits<ItemT>::min(),
+                                                           rocprim::numeric_limits<ItemT>::max(),
                                                            ++seed_value);
 
         size_t run_item_index = 1;
         while(run_item_index < num_runs)
         {
             run_items[run_item_index]
-                = test_utils::get_random_value<ItemT>(test_utils::numeric_limits<ItemT>::min(),
-                                                      test_utils::numeric_limits<ItemT>::max(),
+                = test_utils::get_random_value<ItemT>(rocprim::numeric_limits<ItemT>::min(),
+                                                      rocprim::numeric_limits<ItemT>::max(),
                                                       ++seed_value);
             if(test_utils::convert_to_native(run_items[run_item_index])
                != test_utils::convert_to_native(run_items[run_item_index - 1]))
@@ -194,15 +203,15 @@ TYPED_TEST(HipcubBlockRunLengthDecodeTest, TestDecode)
                                                                 max_run_length,
                                                                 seed_value);
 
-        std::default_random_engine            prng(seed_value);
-        std::uniform_int_distribution<size_t> num_empty_runs_dist(1, 4);
-        const size_t                          num_trailing_empty_runs = num_empty_runs_dist(prng);
+        std::default_random_engine               prng(seed_value);
+        common::uniform_int_distribution<size_t> num_empty_runs_dist(1, 4);
+        const size_t num_trailing_empty_runs = num_empty_runs_dist(prng);
         num_runs += num_trailing_empty_runs;
 
         const auto empty_run_items
             = test_utils::get_random_data<ItemT>(num_trailing_empty_runs,
-                                                 test_utils::numeric_limits<ItemT>::min(),
-                                                 test_utils::numeric_limits<ItemT>::max(),
+                                                 rocprim::numeric_limits<ItemT>::min(),
+                                                 rocprim::numeric_limits<ItemT>::max(),
                                                  seed_value);
         run_items.insert(run_items.end(), empty_run_items.begin(), empty_run_items.end());
         run_lengths.insert(run_lengths.end(), num_trailing_empty_runs, static_cast<LengthT>(0));

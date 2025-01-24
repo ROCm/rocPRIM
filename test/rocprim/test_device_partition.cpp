@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,38 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+
+// required test headers
+#include "bounds_checking_iterator.hpp"
+#include "identity_iterator.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
+
 // required rocprim headers
+#include <rocprim/block/block_load.hpp>
+#include <rocprim/block/block_scan.hpp>
+#include <rocprim/config.hpp>
+#include <rocprim/detail/various.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_partition.hpp>
+#include <rocprim/intrinsics/atomic.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/discard_iterator.hpp>
+#include <rocprim/types.hpp>
 
-// required test headers
-#include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <iterator>
+#include <random>
+#include <stdint.h>
+#include <utility>
+#include <vector>
 
 // Params for tests
 template<class InputType,
@@ -79,7 +102,7 @@ using RocprimDevicePartitionTestsParams = ::testing::Types<
     DevicePartitionParams<uint8_t, uint8_t>,
     DevicePartitionParams<rocprim::half, rocprim::half>,
     DevicePartitionParams<rocprim::bfloat16, rocprim::bfloat16>,
-    DevicePartitionParams<test_utils::custom_test_type<long long>>,
+    DevicePartitionParams<common::custom_type<long long, long long, true>>,
     DevicePartitionParams<int, int, unsigned int, rocprim::default_config, false, true>>;
 
 TYPED_TEST_SUITE(RocprimDevicePartitionTests, RocprimDevicePartitionTestsParams);
@@ -161,7 +184,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -272,7 +295,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
     // allocate temporary storage
     test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-    test_utils::GraphHelper gHelper;;
+    test_utils::GraphHelper gHelper;
     if(TestFixture::use_graphs)
     {
         gHelper.startStreamCapture(stream);
@@ -383,7 +406,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -514,7 +537,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -673,7 +696,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 // allocate temporary storage
                 test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-                test_utils::GraphHelper gHelper;;
+                test_utils::GraphHelper gHelper;
                 if(TestFixture::use_graphs)
                 {
                     gHelper.startStreamCapture(stream);
@@ -1041,7 +1064,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
 
         test_utils::device_ptr<void> d_temporary_storage(temporary_storage_size);
 
-        test_utils::GraphHelper gHelper;;
+        test_utils::GraphHelper gHelper;
         if(use_graphs)
         {
             gHelper.startStreamCapture(stream);
@@ -1154,7 +1177,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
 
         test_utils::device_ptr<void> d_temporary_storage(temporary_storage_size);
 
-        test_utils::GraphHelper gHelper;;
+        test_utils::GraphHelper gHelper;
         if(use_graphs)
         {
             gHelper.startStreamCapture(stream);

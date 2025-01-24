@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,26 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_data_generation.hpp"
+
+#include "test_seed.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+
+#include <rocprim/device/config_types.hpp>
 #include <rocprim/device/device_reduce_by_key.hpp>
 #include <rocprim/device/device_scan.hpp>
 #include <rocprim/device/device_scan_by_key.hpp>
+#include <rocprim/functional.hpp>
 #include <rocprim/iterator/discard_iterator.hpp>
+#include <rocprim/types.hpp>
 
-#include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
-
+#include <algorithm>
+#include <cstddef>
+#include <random>
 #include <vector>
 
 template<typename T>
@@ -74,7 +86,7 @@ using Suite = testing::Types<TestParams<int>, // Sanity check
                              TestParams<rocprim::half>,
                              TestParams<float>,
                              TestParams<double>,
-                             TestParams<test_utils::custom_test_type<double>>>;
+                             TestParams<common::custom_type<double, double, true>>>;
 
 TYPED_TEST_SUITE(RocprimLookbackReproducibilityTests, Suite);
 
@@ -114,8 +126,8 @@ template<typename T>
 std::vector<T>
     generate_segments(size_t seed, size_t n, size_t min_segment_length, size_t max_segment_length)
 {
-    std::default_random_engine            gen(seed);
-    std::uniform_int_distribution<size_t> key_count_dis(min_segment_length, max_segment_length);
+    std::default_random_engine               gen(seed);
+    common::uniform_int_distribution<size_t> key_count_dis(min_segment_length, max_segment_length);
 
     std::vector<T> values(n);
     size_t         i = 0;

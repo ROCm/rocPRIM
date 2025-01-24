@@ -20,6 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+
+#include <rocprim/config.hpp>
+#include <rocprim/detail/various.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/functional.hpp>
+
+#include <cstddef>
+#include <vector>
+
 test_suite_type_def(suite_name, name_suffix)
 
 typed_test_suite_def(RocprimWarpScanTests, name_suffix, warp_params);
@@ -1299,7 +1316,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
     HIP_CHECK(hipSetDevice(device_id));
 
     using base_type = typename TestFixture::params::type;
-    using T = test_utils::custom_test_type<base_type>;
+    using T         = common::custom_type<base_type, base_type, true>;
     using acc_type  = typename test_utils::select_plus_operator_host<base_type>::acc_type;
 
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
@@ -1360,11 +1377,12 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
         // Calculate expected results on host
         for(size_t i = 0; i < input.size() / logical_warp_size; i++)
         {
-            test_utils::custom_test_type<acc_type> accumulator(acc_type(0));
+            common::custom_type<acc_type, acc_type, true> accumulator(acc_type(0));
             for(size_t j = 0; j < logical_warp_size; j++)
             {
                 auto idx = i * logical_warp_size + j;
-                accumulator = static_cast<test_utils::custom_test_type<acc_type>>(input[idx]) + accumulator;
+                accumulator = static_cast<common::custom_type<acc_type, acc_type, true>>(input[idx])
+                              + accumulator;
                 expected[idx] = static_cast<T>(accumulator);
             }
         }

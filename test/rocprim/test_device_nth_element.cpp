@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_data_generation.hpp"
+
 // required test headers
 #include "indirect_iterator.hpp"
+#include "test_seed.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
-
-#include "../common_test_header.hpp"
+#include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
+#include <rocprim/block/block_radix_rank.hpp>
+#include <rocprim/config.hpp>
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_nth_element.hpp>
 #include <rocprim/functional.hpp>
+#include <rocprim/types.hpp>
 
 #include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <vector>
-
-#include <cassert>
 #include <cstddef>
+#include <stdint.h>
+#include <vector>
 
 // Params for tests
 template<class KeyType,
@@ -154,7 +158,7 @@ using RocprimDeviceNthelementTestsParams = ::testing::Types<
     DeviceNthelementParams<unsigned short>,
     DeviceNthelementParams<signed char>,
     DeviceNthelementParams<int>,
-    DeviceNthelementParams<test_utils::custom_test_type<int>>,
+    DeviceNthelementParams<common::custom_type<int, int, true>>,
     DeviceNthelementParams<unsigned long>,
     DeviceNthelementParams<long long>,
     DeviceNthelementParams<float>,
@@ -164,7 +168,7 @@ using RocprimDeviceNthelementTestsParams = ::testing::Types<
     DeviceNthelementParams<rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
     DeviceNthelementParams<short>,
     DeviceNthelementParams<double>,
-    DeviceNthelementParams<test_utils::custom_test_type<float>>,
+    DeviceNthelementParams<common::custom_type<float, float, true>>,
     DeviceNthelementParams<test_utils::custom_float_type>,
     DeviceNthelementParams<test_utils::custom_test_array_type<int, 4>>,
     // DeviceNthelementParams<int, rocprim::less<int>, rocprim::default_config, true>, // Graphs currently do not work
@@ -219,11 +223,11 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             SCOPED_TRACE(testing::Message() << "with nth_element = " << nth_element);
 
             // Generate data
-            std::vector<key_type> input = test_utils::get_random_data<key_type>(
-                size,
-                test_utils::generate_limits<key_type>::min(),
-                test_utils::generate_limits<key_type>::max(),
-                seed_value);
+            std::vector<key_type> input
+                = test_utils::get_random_data<key_type>(size,
+                                                        common::generate_limits<key_type>::min(),
+                                                        common::generate_limits<key_type>::max(),
+                                                        seed_value);
 
             test_utils::device_ptr<key_type> d_input(input);
             test_utils::device_ptr<key_type> d_output_alloc;

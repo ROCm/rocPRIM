@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,21 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <rocprim/iterator/arg_index_iterator.hpp>
-#include <rocprim/device/device_reduce.hpp>
-
 // required test headers
 #include "test_seed.hpp"
-#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
+
+// required rocprim headers
+#include <rocprim/device/device_reduce.hpp>
+#include <rocprim/iterator/arg_index_iterator.hpp>
+#include <rocprim/thread/thread_operators.hpp>
+#include <rocprim/type_traits.hpp>
+
+#include <cstddef>
+#include <numeric>
+#include <vector>
 
 // Params for tests
 template<class InputType>
@@ -88,21 +95,6 @@ TYPED_TEST(RocprimArgIndexIteratorTests, Equal)
     }
 }
 
-struct arg_min
-{
-    template<
-        class Key,
-        class Value
-    >
-    ROCPRIM_HOST_DEVICE inline
-    constexpr rocprim::key_value_pair<Key, Value>
-    operator()(const rocprim::key_value_pair<Key, Value>& a,
-               const rocprim::key_value_pair<Key, Value>& b) const
-    {
-        return ((b.value < a.value) || ((a.value == b.value) && (b.key < a.key))) ? b : a;
-    }
-};
-
 TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
 {
     int device_id = test_common_utils::obtain_device_from_ctest();
@@ -133,9 +125,9 @@ TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
 
         Iterator d_iter(d_input.get());
 
-        arg_min reduce_op;
-        const key_value max(test_utils::numeric_limits<difference_type>::max(),
-                            test_utils::numeric_limits<T>::max());
+        rocprim::arg_min reduce_op;
+        const key_value  max(rocprim::numeric_limits<difference_type>::max(),
+                            rocprim::numeric_limits<T>::max());
 
         // Calculate expected results on host
         Iterator x(input.data());

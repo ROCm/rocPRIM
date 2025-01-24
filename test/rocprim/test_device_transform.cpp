@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,30 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <rocprim/device/device_transform.hpp>
-#include <rocprim/iterator/counting_iterator.hpp>
-#include <rocprim/iterator/discard_iterator.hpp>
+#include "../../common/utils_custom_type.hpp"
 
 // required test headers
+#include "identity_iterator.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
+
+// required rocprim headers
+#include <rocprim/config.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
+#include <rocprim/device/device_transform.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/discard_iterator.hpp>
+#include <rocprim/types.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <stdint.h>
+#include <vector>
 
 // Params for tests
 template<class InputType,
@@ -62,9 +78,9 @@ public:
     static constexpr bool   use_graphs            = Params::use_graphs;
 };
 
-using custom_short2  = test_utils::custom_test_type<short>;
-using custom_int2    = test_utils::custom_test_type<int>;
-using custom_double2 = test_utils::custom_test_type<double>;
+using custom_short2  = common::custom_type<short, short, true>;
+using custom_int2    = common::custom_type<int, int, true>;
+using custom_double2 = common::custom_type<double, double, true>;
 
 using RocprimDeviceTransformTestsParams
     = ::testing::Types<DeviceTransformParams<int, int, true>,

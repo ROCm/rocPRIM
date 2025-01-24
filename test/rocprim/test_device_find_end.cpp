@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+
 // required test headers
 #include "indirect_iterator.hpp"
-#include "test_utils_assertions.hpp"
+#include "test_seed.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
 
-#include "../common_test_header.hpp"
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
+#include <rocprim/device/device_find_end.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/type_traits_interface.hpp>
+#include <rocprim/types.hpp>
 
-#include "rocprim/device/device_find_end.hpp"
-
+#include <algorithm>
 #include <cstddef>
+#include <stdint.h>
 #include <vector>
 
 // Params for tests
@@ -74,7 +84,7 @@ using RocprimDeviceFindEndTestsParams = ::testing::Types<
     DeviceFindEndParams<signed char>,
     DeviceFindEndParams<int, int, unsigned int>,
     DeviceFindEndParams<int, int, int>,
-    DeviceFindEndParams<test_utils::custom_test_type<int>>,
+    DeviceFindEndParams<common::custom_type<int, int, true>>,
     DeviceFindEndParams<unsigned long>,
     DeviceFindEndParams<long long>,
     DeviceFindEndParams<float>,
@@ -87,7 +97,7 @@ using RocprimDeviceFindEndTestsParams = ::testing::Types<
                         rocprim::equal_to<rocprim::bfloat16>>,
     DeviceFindEndParams<short>,
     DeviceFindEndParams<double>,
-    DeviceFindEndParams<test_utils::custom_test_type<float>>,
+    DeviceFindEndParams<common::custom_type<float, float, true>>,
     DeviceFindEndParams<test_utils::custom_float_type>,
     DeviceFindEndParams<test_utils::custom_test_array_type<int, 4>>,
     DeviceFindEndParams<int, int, size_t, rocprim::equal_to<int>, rocprim::default_config, true>,
@@ -166,8 +176,8 @@ TYPED_TEST(RocprimDeviceFindEndTests, FindEnd)
                 {
                     input = test_utils::get_random_data<value_type>(
                         size,
-                        test_utils::numeric_limits<value_type>::min(),
-                        test_utils::numeric_limits<value_type>::max(),
+                        rocprim::numeric_limits<value_type>::min(),
+                        rocprim::numeric_limits<value_type>::max(),
                         seed_value);
                 }
 
@@ -311,8 +321,8 @@ TYPED_TEST(RocprimDeviceFindEndTests, FindEndRepetition)
             {
                 keys = test_utils::get_random_data<key_type>(
                     key_size,
-                    test_utils::numeric_limits<key_type>::min(),
-                    test_utils::numeric_limits<key_type>::max(),
+                    rocprim::numeric_limits<key_type>::min(),
+                    rocprim::numeric_limits<key_type>::max(),
                     seed_value);
             }
 

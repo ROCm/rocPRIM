@@ -1,6 +1,6 @@
 /// MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,35 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+
+// required test headers
+#include "test_seed.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_custom_float_type.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
+
 // required rocprim headers
+#include <rocprim/detail/various.hpp>
 #include <rocprim/device/device_merge_sort.hpp>
+#include <rocprim/device/device_merge_sort_config.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/transform_iterator.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/types.hpp>
 
-// required test headers
-#include "test_utils_custom_float_type.hpp"
-#include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <stdint.h>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 // Params for tests
 template<
@@ -65,9 +84,9 @@ public:
 
 using RocprimDeviceSortTestsParams = ::testing::Types<
     DeviceSortParams<unsigned short, int>,
-    DeviceSortParams<signed char, test_utils::custom_test_type<float>>,
+    DeviceSortParams<signed char, common::custom_type<float, float, true>>,
     DeviceSortParams<int>,
-    DeviceSortParams<test_utils::custom_test_type<int>>,
+    DeviceSortParams<common::custom_type<int, int, true>>,
     DeviceSortParams<unsigned long>,
     DeviceSortParams<long long>,
     DeviceSortParams<float, double>,
@@ -76,9 +95,10 @@ using RocprimDeviceSortTestsParams = ::testing::Types<
     DeviceSortParams<rocprim::half, rocprim::half, rocprim::less<rocprim::half>>,
     DeviceSortParams<rocprim::bfloat16, rocprim::bfloat16, rocprim::less<rocprim::bfloat16>>,
     DeviceSortParams<int, float, ::rocprim::greater<int>>,
-    DeviceSortParams<short, test_utils::custom_test_type<int>>,
-    DeviceSortParams<double, test_utils::custom_test_type<double>>,
-    DeviceSortParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<double>>,
+    DeviceSortParams<short, common::custom_type<int, int, true>>,
+    DeviceSortParams<double, common::custom_type<double, double, true>>,
+    DeviceSortParams<common::custom_type<float, float, true>,
+                     common::custom_type<double, double, true>>,
     DeviceSortParams<int, test_utils::custom_float_type>,
     DeviceSortParams<test_utils::custom_test_array_type<int, 4>>,
     DeviceSortParams<int, int, ::rocprim::less<int>, true>>;
@@ -157,7 +177,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
-                gHelper.startStreamCapture(stream);;
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -280,7 +300,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
-                gHelper.startStreamCapture(stream);;
+                gHelper.startStreamCapture(stream);
             }
 
             // Run
@@ -418,7 +438,7 @@ void testLargeIndices()
                             hipMemcpyDeviceToHost));
 
         // Check if output values are as expected
-        const size_t unique_keys    = size_t(test_utils::numeric_limits<key_type>::max()) + 1;
+        const size_t unique_keys    = size_t(rocprim::numeric_limits<key_type>::max()) + 1;
         const size_t segment_length = rocprim::detail::ceiling_div(size, unique_keys);
         const size_t full_segments  = size % unique_keys == 0 ? unique_keys : size % unique_keys;
         for(size_t i = 0; i < size; i += 4321)

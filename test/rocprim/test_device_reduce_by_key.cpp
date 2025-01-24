@@ -22,18 +22,37 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_data_generation.hpp"
+
+// required test headers
+#include "identity_iterator.hpp"
+#include "test_seed.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_custom_float_traits_type.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
+
 // required rocprim headers
+#include <rocprim/config.hpp>
+#include <rocprim/device/config_types.hpp>
 #include <rocprim/device/device_reduce_by_key.hpp>
+#include <rocprim/functional.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/discard_iterator.hpp>
 #include <rocprim/iterator/transform_iterator.hpp>
+#include <rocprim/type_traits_interface.hpp>
+#include <rocprim/types.hpp>
 
-// required test headers
-#include "rocprim/types.hpp"
-#include "test_utils_custom_test_types.hpp"
-#include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include <algorithm>
+#include <limits>
+#include <random>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 template<class Key,
          class Value,
@@ -88,8 +107,8 @@ struct custom_key_compare_op1
     }
 };
 
-using custom_int2 = test_utils::custom_test_type<int>;
-using custom_double2 = test_utils::custom_test_type<double>;
+using custom_int2    = common::custom_type<int, int, true>;
+using custom_double2 = common::custom_type<double, double, true>;
 
 // clang-format off
 using Params = ::testing::Types<
@@ -154,12 +173,12 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
         std::is_floating_point<key_inner_type>::value,
         std::uniform_real_distribution<key_inner_type>,
         typename std::conditional<
-            test_utils::is_valid_for_int_distribution<key_inner_type>::value,
-            std::uniform_int_distribution<key_inner_type>,
+            common::is_valid_for_int_distribution<key_inner_type>::value,
+            common::uniform_int_distribution<key_inner_type>,
             typename std::conditional<rocprim::is_signed<key_inner_type>::value,
-                                      std::uniform_int_distribution<int>,
-                                      std::uniform_int_distribution<unsigned int>>::type>::type>::
-        type;
+                                      common::uniform_int_distribution<int>,
+                                      common::uniform_int_distribution<unsigned int>>::type>::
+            type>::type;
     using config = typename TestFixture::params::config;
 
     constexpr bool use_identity_iterator = TestFixture::params::use_identity_iterator;
@@ -196,13 +215,13 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
             std::vector<aggregate_type> aggregates_expected;
             size_t unique_count_expected = 0;
 
-            std::vector<key_type> keys_input(size);
-            key_distribution_type key_delta_dis(1, 5);
-            std::uniform_int_distribution<size_t> key_count_dis(
+            std::vector<key_type>                    keys_input(size);
+            key_distribution_type                    key_delta_dis(1, 5);
+            common::uniform_int_distribution<size_t> key_count_dis(
                 TestFixture::params::min_segment_length,
-                TestFixture::params::max_segment_length
-            );
-            std::vector<value_type> values_input = test_utils::get_random_data<value_type>(size, 0, 100, seed_value);
+                TestFixture::params::max_segment_length);
+            std::vector<value_type> values_input
+                = test_utils::get_random_data<value_type>(size, 0, 100, seed_value);
 
             size_t offset = 0;
             key_type prev_key    = static_cast<key_type>(key_distribution_type(0, 100)(gen));
@@ -447,12 +466,12 @@ TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeySmallValueType)
 
 TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyLargeValueType)
 {
-    large_indices_reduce_by_key<test_utils::custom_test_type<size_t>>();
+    large_indices_reduce_by_key<common::custom_type<size_t, size_t, true>>();
 }
 
 TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyLargeValueTypeWithGraphs)
 {
-    large_indices_reduce_by_key<test_utils::custom_test_type<size_t>, true>();
+    large_indices_reduce_by_key<common::custom_type<size_t, size_t, true>, true>();
 }
 
 TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyDeterministic)
@@ -558,7 +577,7 @@ TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeySmallValueType)
 
 TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeyLargeValueType)
 {
-    large_segment_count_reduce_by_key<test_utils::custom_test_type<size_t>>();
+    large_segment_count_reduce_by_key<common::custom_type<size_t, size_t, true>>();
 }
 
 TEST(RocprimDeviceReduceByKey, GraphReduceByKey)

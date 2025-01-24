@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,30 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <rocprim/device/device_run_length_encode.hpp>
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_data_generation.hpp"
 
 // required test headers
-#include "rocprim/block/block_load.hpp"
-#include "rocprim/block/block_scan.hpp"
-#include "rocprim/device/detail/lookback_scan_state.hpp"
-#include "rocprim/types.hpp"
+#include "identity_iterator.hpp"
+#include "test_seed.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
+
+// required rocprim headers
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
+#include <rocprim/device/device_run_length_encode.hpp>
+#include <rocprim/device/device_run_length_encode_config.hpp>
+#include <rocprim/types.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <random>
+#include <stdint.h>
+#include <vector>
 
 template<class Key,
          class Count,
@@ -58,8 +72,8 @@ public:
     using params = Params;
 };
 
-using custom_int2 = test_utils::custom_test_type<int>;
-using custom_double2 = test_utils::custom_test_type<double>;
+using custom_int2    = common::custom_type<int, int, true>;
+using custom_double2 = common::custom_type<double, double, true>;
 
 using Params = ::testing::Types<
     // Tests with default configuration
@@ -151,12 +165,12 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
             std::vector<count_type> counts_expected;
             size_t runs_count_expected = 0;
 
-            std::vector<key_type> input(size);
-            std::uniform_int_distribution<size_t> key_count_dis(
+            std::vector<key_type>                    input(size);
+            common::uniform_int_distribution<size_t> key_count_dis(
                 TestFixture::params::min_segment_length,
-                TestFixture::params::max_segment_length
-            );
-            std::vector<count_type> values_input = test_utils::get_random_data<count_type>(size, 0, 100, seed_value);
+                TestFixture::params::max_segment_length);
+            std::vector<count_type> values_input
+                = test_utils::get_random_data<count_type>(size, 0, 100, seed_value);
 
             size_t offset = 0;
             key_type current_key = get_random_value_no_duplicate(key_type(0), random_keys, size);
@@ -281,11 +295,10 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
             std::vector<count_type> counts_expected;
             size_t runs_count_expected = 0;
 
-            std::vector<key_type> input(size);
-            std::uniform_int_distribution<size_t> key_count_dis(
+            std::vector<key_type>                    input(size);
+            common::uniform_int_distribution<size_t> key_count_dis(
                 TestFixture::params::min_segment_length,
-                TestFixture::params::max_segment_length
-            );
+                TestFixture::params::max_segment_length);
             std::bernoulli_distribution is_trivial_dis(0.1);
 
             size_t offset = 0;
@@ -396,5 +409,4 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
                 test_utils::assert_eq(counts_output, counts_expected, runs_count_expected));
         }
     }
-
 }

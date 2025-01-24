@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,32 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "common_test_header.hpp"
+#include "../common_test_header.hpp"
+
+#include "../../common/device_batch_memcpy.hpp"
+
 #include "indirect_iterator.hpp"
+#include "test_seed.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
 
-#include "rocprim/detail/various.hpp"
-#include "rocprim/device/device_copy.hpp"
-#include "rocprim/device/device_memcpy.hpp"
-#include "rocprim/intrinsics/thread.hpp"
-#include "rocprim/iterator.hpp"
-
-#include <gtest/gtest-typed-test.h>
-#include <gtest/gtest.h>
+#include <rocprim/detail/various.hpp>
+#include <rocprim/device/device_copy.hpp>
+#include <rocprim/device/device_memcpy.hpp>
+#include <rocprim/device/device_memcpy_config.hpp>
+#include <rocprim/iterator/constant_iterator.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
 
 #include <algorithm>
-#include <numeric>
-#include <random>
-#include <type_traits>
-
 #include <cstddef>
 #include <cstring>
-
+#include <numeric>
+#include <random>
 #include <stdint.h>
+#include <type_traits>
+#include <vector>
 
 template<class ValueType,
          class SizeType,
@@ -130,98 +131,6 @@ using RocprimDeviceBatchMemcpyTestsParams = ::testing::Types<
     DeviceBatchMemcpyParams<unsigned int, unsigned int, false, false, 1024, 1024 * 4, true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceBatchMemcpyTests, RocprimDeviceBatchMemcpyTestsParams);
-
-// Used for generating offsets. We generate a permutation map and then derive
-// offsets via a sum scan over the sizes in the order of the permutation. This
-// allows us to keep the order of buffers we pass to batch_memcpy, but still
-// have source and destinations mappings not be the identity function:
-//
-//  batch_memcpy(
-//    [&a0 , &b0 , &c0 , &d0 ], // from (note the order is still just a, b, c, d!)
-//    [&a0', &b0', &c0', &d0'], // to   (order is the same as above too!)
-//    [3   , 2   , 1   , 2   ]) // size
-//
-// ┌───┬───┬───┬───┬───┬───┬───┬───┐
-// │b0 │b1 │a0 │a1 │a2 │d0 │d1 │c0 │ buffer x contains buffers a, b, c, d
-// └───┴───┴───┴───┴───┴───┴───┴───┘ note that the order of buffers is shuffled!
-//  ───┬─── ─────┬───── ───┬─── ───
-//     └─────────┼─────────┼───┐
-//           ┌───┘     ┌───┘   │ what batch_memcpy does
-//           ▼         ▼       ▼
-//  ─── ─────────── ─────── ───────
-// ┌───┬───┬───┬───┬───┬───┬───┬───┐
-// │c0'│a0'│a1'│a2'│d0'│d1'│b0'│b1'│ buffer y contains buffers a', b', c', d'
-// └───┴───┴───┴───┴───┴───┴───┴───┘
-template<class T, class S, class RandomGenerator>
-std::vector<T> shuffled_exclusive_scan(const std::vector<S>& input, RandomGenerator& rng)
-{
-    const size_t n = input.size();
-    assert(n > 0);
-
-    std::vector<T> result(n);
-    std::vector<T> permute(n);
-
-    std::iota(permute.begin(), permute.end(), 0);
-    std::shuffle(permute.begin(), permute.end(), rng);
-
-    T sum = 0;
-    for(size_t i = 0; i < n; ++i)
-    {
-        result[permute[i]] = sum;
-        sum += input[permute[i]];
-    }
-
-    return result;
-}
-
-template<bool IsMemCpy,
-         class ContainerMemCpy,
-         class ContainerCopy,
-         class byte_offset_type,
-         typename std::enable_if<IsMemCpy, int>::type = 0>
-void init_input(ContainerMemCpy& h_input_for_memcpy,
-                ContainerCopy& /*h_input_for_copy*/,
-                std::mt19937_64& rng,
-                byte_offset_type total_num_bytes)
-{
-    std::independent_bits_engine<std::mt19937_64, 64, uint64_t> bits_engine{rng};
-
-    const size_t num_ints = rocprim::detail::ceiling_div(total_num_bytes, sizeof(uint64_t));
-    h_input_for_memcpy    = std::vector<unsigned char>(num_ints * sizeof(uint64_t));
-
-    // generate_n for uninitialized memory, pragmatically use placement-new, since there are no
-    // uint64_t objects alive yet in the storage.
-    std::for_each(
-        reinterpret_cast<uint64_t*>(h_input_for_memcpy.data()),
-        reinterpret_cast<uint64_t*>(h_input_for_memcpy.data() + num_ints * sizeof(uint64_t)),
-        [&bits_engine](uint64_t& elem) { ::new(&elem) uint64_t{bits_engine()}; });
-}
-
-template<bool IsMemCpy,
-         class ContainerMemCpy,
-         class ContainerCopy,
-         class byte_offset_type,
-         typename std::enable_if<!IsMemCpy, int>::type = 0>
-void init_input(ContainerMemCpy& /*h_input_for_memcpy*/,
-                ContainerCopy&   h_input_for_copy,
-                std::mt19937_64& rng,
-                byte_offset_type total_num_bytes)
-{
-    using value_type = typename ContainerCopy::value_type;
-
-    std::independent_bits_engine<std::mt19937_64, 64, uint64_t> bits_engine{rng};
-
-    const size_t num_ints = rocprim::detail::ceiling_div(total_num_bytes, sizeof(uint64_t));
-    const size_t num_of_elements
-        = rocprim::detail::ceiling_div(num_ints * sizeof(uint64_t), sizeof(value_type));
-    h_input_for_copy = std::vector<value_type>(num_of_elements);
-
-    // generate_n for uninitialized memory, pragmatically use placement-new, since there are no
-    // uint64_t objects alive yet in the storage.
-    std::for_each(reinterpret_cast<uint64_t*>(h_input_for_copy.data()),
-                  reinterpret_cast<uint64_t*>(h_input_for_copy.data()) + num_ints,
-                  [&bits_engine](uint64_t& elem) { ::new(&elem) uint64_t{bits_engine()}; });
-}
 
 template<bool IsMemCpy,
          class InputBufferItType,
@@ -423,7 +332,7 @@ TYPED_TEST(RocprimDeviceBatchMemcpyTests, SizeAndTypeVariation)
         // Generate data.
         std::vector<unsigned char> h_input_for_memcpy;
         std::vector<value_type>    h_input_for_copy;
-        init_input<isMemCpy>(h_input_for_memcpy, h_input_for_copy, rng, total_num_bytes);
+        common::init_input<isMemCpy>(h_input_for_memcpy, h_input_for_copy, rng, total_num_bytes);
 
         // Generate the source and shuffled destination offsets.
         std::vector<buffer_offset_type> src_offsets;
@@ -431,8 +340,10 @@ TYPED_TEST(RocprimDeviceBatchMemcpyTests, SizeAndTypeVariation)
 
         if(shuffled)
         {
-            src_offsets = shuffled_exclusive_scan<buffer_offset_type>(h_buffer_num_elements, rng);
-            dst_offsets = shuffled_exclusive_scan<buffer_offset_type>(h_buffer_num_elements, rng);
+            src_offsets
+                = common::shuffled_exclusive_scan<buffer_offset_type>(h_buffer_num_elements, rng);
+            dst_offsets
+                = common::shuffled_exclusive_scan<buffer_offset_type>(h_buffer_num_elements, rng);
         }
         else
         {

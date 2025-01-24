@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +22,30 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <rocprim/iterator/transform_iterator.hpp>
-#include <rocprim/device/device_histogram.hpp>
+#include "../../common/utils_data_generation.hpp"
 
 // required test headers
+#include "test_seed.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
+
+// required rocprim headers
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
+#include <rocprim/device/device_histogram.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/type_traits_interface.hpp>
+#include <rocprim/types.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <random>
+#include <stdint.h>
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
 // rows, columns, (row_stride - columns * Channels)
 std::vector<std::tuple<size_t, size_t, size_t>> get_dims()
@@ -69,10 +86,10 @@ inline auto get_random_samples(size_t size, U min, U max, int seed_value) ->
     const long long d    = max1 - min1;
     return test_utils::get_random_data<T>(
         size,
-        static_cast<T>(std::max(min1 - d / 10,
-                                static_cast<long long>(test_utils::numeric_limits<T>::lowest()))),
         static_cast<T>(
-            std::min(max1 + d / 10, static_cast<long long>(test_utils::numeric_limits<T>::max()))),
+            std::max(min1 - d / 10, static_cast<long long>(rocprim::numeric_limits<T>::lowest()))),
+        static_cast<T>(
+            std::min(max1 + d / 10, static_cast<long long>(rocprim::numeric_limits<T>::max()))),
         seed_value);
 }
 
@@ -86,9 +103,9 @@ inline auto get_random_samples(size_t size, U min, U max, int seed_value) ->
     return test_utils::get_random_data<T>(
         size,
         static_cast<T>(
-            std::max(min1 - d / 10, static_cast<double>(test_utils::numeric_limits<T>::lowest()))),
+            std::max(min1 - d / 10, static_cast<double>(rocprim::numeric_limits<T>::lowest()))),
         static_cast<T>(
-            std::min(max1 + d / 10, static_cast<double>(test_utils::numeric_limits<T>::max()))),
+            std::min(max1 + d / 10, static_cast<double>(rocprim::numeric_limits<T>::max()))),
         seed_value);
 }
 
@@ -305,7 +322,7 @@ TYPED_TEST(RocprimDeviceHistogramEven, Even)
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -460,10 +477,9 @@ TYPED_TEST(RocprimDeviceHistogramRange, Range)
     std::random_device rd;
     std::default_random_engine gen(rd());
 
-    std::uniform_int_distribution<unsigned int> bin_length_dis(
+    common::uniform_int_distribution<unsigned int> bin_length_dis(
         TestFixture::params::min_bin_length,
-        TestFixture::params::max_bin_length
-    );
+        TestFixture::params::max_bin_length);
 
     for(auto dim : get_dims())
     {
@@ -554,7 +570,7 @@ TYPED_TEST(RocprimDeviceHistogramRange, Range)
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -816,7 +832,7 @@ TYPED_TEST(RocprimDeviceHistogramMultiEven, MultiEven)
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -966,18 +982,17 @@ TYPED_TEST(RocprimDeviceHistogramMultiRange, MultiRange)
     std::random_device rd;
     std::default_random_engine gen(rd());
 
-    unsigned int bins[active_channels];
-    unsigned int num_levels[active_channels];
-    std::uniform_int_distribution<unsigned int> bin_length_dis[active_channels];
+    unsigned int                                   bins[active_channels];
+    unsigned int                                   num_levels[active_channels];
+    common::uniform_int_distribution<unsigned int> bin_length_dis[active_channels];
     for(unsigned int channel = 0; channel < active_channels; channel++)
     {
         // Use different ranges for different channels
-        bins[channel] = TestFixture::params::bins + channel;
+        bins[channel]       = TestFixture::params::bins + channel;
         num_levels[channel] = bins[channel] + 1;
-        bin_length_dis[channel] = std::uniform_int_distribution<unsigned int>(
-            TestFixture::params::min_bin_length,
-            TestFixture::params::max_bin_length
-        );
+        bin_length_dis[channel]
+            = common::uniform_int_distribution<unsigned int>(TestFixture::params::min_bin_length,
+                                                             TestFixture::params::max_bin_length);
     }
 
     for(auto dim : get_dims())
@@ -1122,7 +1137,7 @@ TYPED_TEST(RocprimDeviceHistogramMultiRange, MultiRange)
 
             test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
             {
                 gHelper.startStreamCapture(stream);

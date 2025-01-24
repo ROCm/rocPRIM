@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,19 @@
 
 #ifndef TEST_BLOCK_REDUCE_KERNELS_HPP_
 #define TEST_BLOCK_REDUCE_KERNELS_HPP_
+
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+
+#include <rocprim/block/block_reduce.hpp>
+#include <rocprim/functional.hpp>
+
+#include <cmath>
+#include <cstddef>
+#include <iostream>
+#include <vector>
 
 template<
     unsigned int BlockSize,

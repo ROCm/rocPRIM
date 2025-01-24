@@ -22,21 +22,46 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+
+// required test headers
+#include "bounds_checking_iterator.hpp"
+#include "identity_iterator.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
+
 // required rocprim headers
+#include <rocprim/block/block_load.hpp>
+#include <rocprim/block/block_scan.hpp>
+#include <rocprim/block/block_store.hpp>
+#include <rocprim/config.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_reduce.hpp>
 #include <rocprim/device/device_scan.hpp>
 #include <rocprim/device/device_scan_by_key.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/intrinsics/atomic.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 #include <rocprim/iterator/transform_iterator.hpp>
+#include <rocprim/types.hpp>
+#include <rocprim/types/future_value.hpp>
+#include <rocprim/types/tuple.hpp>
 
-// required test headers
-#include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
-
-#include <functional>
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
 #include <iterator>
 #include <numeric>
+#include <stdint.h>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 struct default_config_helper
 {
@@ -207,18 +232,18 @@ using RocprimDeviceScanTestsParams = ::testing::Types<
                      true>,
     DeviceScanParams<signed char, long, rocprim::plus<long>>,
     DeviceScanParams<float, double, rocprim::minimum<double>>,
-    DeviceScanParams<test_utils::custom_test_type<int>>,
-    DeviceScanParams<test_utils::custom_test_type<double>,
-                     test_utils::custom_test_type<double>,
-                     rocprim::plus<test_utils::custom_test_type<double>>,
+    DeviceScanParams<common::custom_type<int, int, true>>,
+    DeviceScanParams<common::custom_type<double, double, true>,
+                     common::custom_type<double, double, true>,
+                     rocprim::plus<common::custom_type<double, double, true>>,
                      true>,
-    DeviceScanParams<test_utils::custom_test_type<double>,
-                     test_utils::custom_test_type<double>,
-                     rocprim::plus<test_utils::custom_test_type<double>>,
+    DeviceScanParams<common::custom_type<double, double, true>,
+                     common::custom_type<double, double, true>,
+                     rocprim::plus<common::custom_type<double, double, true>>,
                      false,
                      default_config_helper,
                      true>,
-    DeviceScanParams<test_utils::custom_test_type<int>>,
+    DeviceScanParams<common::custom_type<int, int, true>>,
     DeviceScanParams<test_utils::custom_test_array_type<long long, 5>>,
     DeviceScanParams<test_utils::custom_test_array_type<int, 10>>,
     // With graphs
@@ -285,7 +310,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
     // allocate temporary storage
     test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-    test_utils::GraphHelper gHelper;;
+    test_utils::GraphHelper gHelper;
     if(TestFixture::use_graphs)
     {
         gHelper.startStreamCapture(stream);
@@ -408,7 +433,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -544,7 +569,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -689,7 +714,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -837,7 +862,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -1002,7 +1027,7 @@ void testLargeIndicesInclusiveScan()
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(UseGraphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -1119,7 +1144,7 @@ void testLargeIndicesExclusiveScan()
             // allocate temporary storage
             test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(UseGraphs)
             {
                 gHelper.startStreamCapture(stream);
@@ -1364,7 +1389,7 @@ void large_indices_scan_by_key_test(ScanByKeyFun scan_by_key_fun)
 
     test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
-    test_utils::GraphHelper gHelper;;
+    test_utils::GraphHelper gHelper;
     if(UseGraphs)
     {
         gHelper.startStreamCapture(stream);
@@ -1482,14 +1507,14 @@ TEST(RocprimDeviceScanTests, LargeIndicesExclusiveScanByKeyWithGraphs)
     testLargeIndicesExclusiveScanByKey<true>();
 }
 
-using RocprimDeviceScanFutureTestsParams
-    = ::testing::Types<DeviceScanParams<char>,
-                       DeviceScanParams<int>,
-                       DeviceScanParams<float, double, rocprim::minimum<double>>,
-                       DeviceScanParams<double, double, rocprim::plus<double>, true>,
-                       DeviceScanParams<test_utils::custom_test_type<int>>,
-                       DeviceScanParams<test_utils::custom_test_array_type<long long, 5>>,
-                       DeviceScanParams<int, int, ::rocprim::plus<int>, false, default_config_helper, true>>;
+using RocprimDeviceScanFutureTestsParams = ::testing::Types<
+    DeviceScanParams<char>,
+    DeviceScanParams<int>,
+    DeviceScanParams<float, double, rocprim::minimum<double>>,
+    DeviceScanParams<double, double, rocprim::plus<double>, true>,
+    DeviceScanParams<common::custom_type<int, int, true>>,
+    DeviceScanParams<test_utils::custom_test_array_type<long long, 5>>,
+    DeviceScanParams<int, int, ::rocprim::plus<int>, false, default_config_helper, true>>;
 
 template <typename Params>
 class RocprimDeviceScanFutureTests : public RocprimDeviceScanTests<Params>
@@ -1608,7 +1633,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
             test_utils::device_ptr<char> d_temp_storage(temp_storage_size_bytes
                                                         + temp_storage_reduce);
 
-            test_utils::GraphHelper gHelper;;
+            test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
             {
                 gHelper.startStreamCapture(stream);

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,15 +21,23 @@
 // SOFTWARE.
 
 #include "../common_test_header.hpp"
-#include "test_utils_device_ptr.hpp"
-
-// required rocprim headers
-#include <rocprim/functional.hpp>
-#include <rocprim/iterator/transform_iterator.hpp>
-#include <rocprim/device/device_reduce.hpp>
 
 // required test headers
-#include "test_utils_types.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+// #include "test_utils_types.hpp"
+
+// required rocprim headers
+#include <rocprim/config.hpp>
+#include <rocprim/device/device_reduce.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
+
+#include <cstddef>
+#include <numeric>
+#include <vector>
 
 template<class T>
 struct times_two

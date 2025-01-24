@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,6 +19,23 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+
+#include <rocprim/config.hpp>
+#include <rocprim/detail/various.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/functional.hpp>
+
+#include <cstddef>
+#include <vector>
 
 test_suite_type_def(suite_name, name_suffix)
 
@@ -471,7 +488,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceCustomStruct)
     HIP_CHECK(hipSetDevice(device_id));
 
     using base_type = typename TestFixture::params::type;
-    using T = test_utils::custom_test_type<base_type>;
+    using T         = common::custom_type<base_type, base_type, true>;
     using acc_type  = typename test_utils::select_plus_operator_host<base_type>::acc_type;
 
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
@@ -531,11 +548,12 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceCustomStruct)
         std::vector<T> expected(output.size());
         for(size_t i = 0; i < output.size(); i++)
         {
-            test_utils::custom_test_type<acc_type> value{(acc_type)0, (acc_type)0};
+            common::custom_type<acc_type, acc_type, true> value{(acc_type)0, (acc_type)0};
             for(size_t j = 0; j < logical_warp_size; j++)
             {
                 auto idx = i * logical_warp_size + j;
-                value = value + static_cast<test_utils::custom_test_type<acc_type>>(input[idx]);
+                value    = value
+                        + static_cast<common::custom_type<acc_type, acc_type, true>>(input[idx]);
             }
             expected[i] = static_cast<T>(value);
         }

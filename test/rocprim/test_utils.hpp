@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,13 +21,12 @@
 #ifndef TEST_TEST_UTILS_HPP_
 #define TEST_TEST_UTILS_HPP_
 
-#include <rocprim/device/config_types.hpp>
-#include <rocprim/functional.hpp>
-#include <rocprim/intrinsics.hpp>
-#include <rocprim/type_traits.hpp>
-#include <rocprim/types.hpp>
-
 #include "../common_test_header.hpp"
+
+#include "../../common/utils.hpp"
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_half.hpp"
 
 // Identity iterator
 #include "identity_iterator.hpp"
@@ -36,12 +35,22 @@
 // Seed values
 #include "test_seed.hpp"
 
-#include "test_utils_half.hpp"
+#include "test_utils_assertions.hpp"
 #include "test_utils_bfloat16.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_assertions.hpp"
 #include "test_utils_hipgraphs.hpp"
+
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/intrinsics/thread.hpp>
+#include <rocprim/types.hpp>
+
+#include <cstdlib>
+#include <iostream>
+#include <iterator>
+#include <stdint.h>
+#include <type_traits>
 
 namespace test_utils
 {
@@ -70,7 +79,7 @@ template<class T>
 static constexpr float precision<const T> = precision<T>;
 
 template<class T>
-static constexpr float precision<custom_test_type<T>> = precision<T>;
+static constexpr float precision<common::custom_type<T, T, true>> = precision<T>;
 
 template<class T, int N>
 static constexpr float precision<custom_test_array_type<T, N>> = precision<T>;
@@ -339,7 +348,6 @@ OutputIt host_exclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
     return host_exclusive_scan_by_key_impl(first, last, k_first, initial_value, d_first, rocprim::plus<acc_type>(), key_compare_op, acc_type{});
 }
 
-
 template<class InputIt, class KeyIt, class OutputIt, class BinaryOperation, class KeyCompare, class acc_type>
 OutputIt host_inclusive_scan_by_key_impl(InputIt first, InputIt last, KeyIt k_first,
                                          OutputIt d_first,
@@ -403,7 +411,7 @@ size_t get_max_block_size()
     return device_properties.maxThreadsPerBlock;
 }
 
-// std::iota causes problems with __half and bfloat16 and custom_test_type because of a missing ++increment operator
+// std::iota causes problems with __half and bfloat16 and common::custom_type because of a missing ++increment operator
 template<class ForwardIt, class T>
 void iota(ForwardIt first, ForwardIt last, T value)
 {
@@ -469,10 +477,6 @@ void iota_modulo(ForwardIt first, ForwardIt last, T lbound, const size_t ubound)
                          << " on a device with warp size " << host_warp_size;   \
         }                                                                       \
     }
-
-template<unsigned int LogicalWarpSize>
-__device__ constexpr bool device_test_enabled_for_warp_size_v
-    = ::rocprim::device_warp_size() >= LogicalWarpSize;
 
 template<bool MakeConst, typename T>
 inline auto wrap_in_const(T* ptr) -> typename std::enable_if_t<MakeConst, const T*>

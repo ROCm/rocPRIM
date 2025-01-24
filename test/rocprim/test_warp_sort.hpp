@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,6 +19,23 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+
+#include <rocprim/config.hpp>
+#include <rocprim/detail/various.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/functional.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <vector>
 
 test_suite_type_def(suite_name, name_suffix)
 
@@ -109,7 +126,7 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
 
     // logical warp side for warp primitive, execution warp size is always rocprim::warp_size()
     using T = typename TestFixture::params::type;
-    using pair = test_utils::custom_test_type<T>;
+    using pair = common::custom_type<T, T, true>;
 
     using value_op_type = rocprim::less<T>;
     using eq_op_type    = rocprim::equal_to<T>;

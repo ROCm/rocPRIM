@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_data_generation.hpp"
+
 #include "../rocprim/test_utils_device_ptr.hpp"
-#include "common_test_header.hpp"
+
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <random>
+#include <vector>
 
 namespace
 {
@@ -101,8 +110,8 @@ protected:
 
     void SetUp() override
     {
-        std::default_random_engine       prng(seed);
-        std::uniform_int_distribution<T> dist;
+        std::default_random_engine          prng(seed);
+        common::uniform_int_distribution<T> dist;
 
         sizes = get_sizes();
         inputs.resize(sizes.size());
@@ -226,9 +235,9 @@ TEST(HipAsyncCopyTestsExtra, StreamInStruct)
     static constexpr int          seed       = 543897;
     static constexpr unsigned int block_size = 1024;
 
-    const size_t                     size = get_sizes().back();
-    std::default_random_engine       prng(seed);
-    std::uniform_int_distribution<T> dist;
+    const size_t                        size = get_sizes().back();
+    std::default_random_engine          prng(seed);
+    common::uniform_int_distribution<T> dist;
 
     StreamWrapper stream_wrapper;
     HIP_CHECK(hipStreamCreateWithFlags(&stream_wrapper.stream, hipStreamNonBlocking));

@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,31 +20,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// required test headers
-#include "indirect_iterator.hpp"
-#include "test_utils_assertions.hpp"
-#include "test_utils_custom_float_type.hpp"
-#include "test_utils_custom_test_types.hpp"
-#include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
-
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+
+// required test headers
+#include "indirect_iterator.hpp"
+#include "test_utils_data_generation.hpp"
+#include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
+
 // required rocprim headers
+#include <rocprim/config.hpp>
 #include <rocprim/device/config_types.hpp>
-// #include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_find_first_of.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/iterator/counting_iterator.hpp>
 
 #include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <vector>
-
-#include <cassert>
+#include <cmath>
 #include <cstddef>
+#include <stdint.h>
+#include <vector>
 
 // Params for tests
 template<class Type,
@@ -80,7 +77,7 @@ struct custom_compare2
 {
     template<class T, class U>
     ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
-    bool operator()(test_utils::custom_test_type<T> a, test_utils::custom_test_type<U> b)
+    bool operator()(common::custom_type<T, T, true> a, common::custom_type<U, U, true> b)
     {
         return a.x == b.x;
     }
@@ -123,8 +120,8 @@ using RocprimDeviceFindFirstOfTestsParams
                                                rocprim::default_config,
                                                false,
                                                true>,
-                       DeviceFindFirstOfParams<test_utils::custom_test_type<int8_t>,
-                                               test_utils::custom_test_type<int8_t>,
+                       DeviceFindFirstOfParams<common::custom_type<int8_t, int8_t, true>,
+                                               common::custom_type<int8_t, int8_t, true>,
                                                size_t,
                                                custom_compare2,
                                                rocprim::default_config,

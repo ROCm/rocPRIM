@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +20,31 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_half.hpp"
+
 #include "test_seed.hpp"
 #include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
 
+#include <rocprim/config.hpp>
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_search_n.hpp>
+#include <rocprim/device/device_search_n_config.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/types.hpp>
 
-#include <time.h>
+#include <algorithm>
+#include <cstddef>
+#include <stdint.h>
+#include <vector>
 
 template<class T>
-using limit_type = test_utils::numeric_limits<T>;
+using limit_type = rocprim::numeric_limits<T>;
 
 template<class InputIterator,
          class OutputIterator     = size_t,
@@ -62,8 +76,8 @@ public:
 };
 
 // Custom types
-using custom_int2        = test_utils::custom_test_type<int>;
-using custom_double2     = test_utils::custom_test_type<double>;
+using custom_int2        = common::custom_type<int, int, true>;
+using custom_double2     = common::custom_type<double, double, true>;
 using custom_int64_array = test_utils::custom_test_array_type<std::int64_t, 4>;
 
 // Custom configs

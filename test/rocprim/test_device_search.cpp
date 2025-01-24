@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+
 // required test headers
-#include "../rocprim/test_utils_device_ptr.hpp"
 #include "indirect_iterator.hpp"
-#include "test_utils_assertions.hpp"
+#include "test_seed.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_device_ptr.hpp"
+#include "test_utils_hipgraphs.hpp"
 
-#include "../common_test_header.hpp"
+#include <rocprim/device/config_types.hpp>
+#include <rocprim/device/detail/device_config_helper.hpp>
+#include <rocprim/device/device_search.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/type_traits.hpp>
+#include <rocprim/type_traits_interface.hpp>
+#include <rocprim/types.hpp>
 
-#include "rocprim/device/device_search.hpp"
-
+#include <algorithm>
 #include <cstddef>
+#include <stdint.h>
 #include <vector>
 
 // Params for tests
@@ -74,7 +84,7 @@ using RocprimDeviceSearchTestsParams = ::testing::Types<
     DeviceSearchParams<signed char>,
     DeviceSearchParams<int, int, unsigned int>,
     DeviceSearchParams<int, int, int>,
-    DeviceSearchParams<test_utils::custom_test_type<int>>,
+    DeviceSearchParams<common::custom_type<int, int, true>>,
     DeviceSearchParams<unsigned long>,
     DeviceSearchParams<long long>,
     DeviceSearchParams<float>,
@@ -87,7 +97,7 @@ using RocprimDeviceSearchTestsParams = ::testing::Types<
                        rocprim::equal_to<rocprim::bfloat16>>,
     DeviceSearchParams<short>,
     DeviceSearchParams<double>,
-    DeviceSearchParams<test_utils::custom_test_type<float>>,
+    DeviceSearchParams<common::custom_type<float, float, true>>,
     DeviceSearchParams<test_utils::custom_float_type>,
     DeviceSearchParams<test_utils::custom_test_array_type<int, 4>>,
     DeviceSearchParams<int, int, size_t, rocprim::equal_to<int>, rocprim::default_config, true>,
@@ -166,8 +176,8 @@ TYPED_TEST(RocprimDeviceSearchTests, Search)
                 {
                     input = test_utils::get_random_data<value_type>(
                         size,
-                        test_utils::numeric_limits<value_type>::min(),
-                        test_utils::numeric_limits<value_type>::max(),
+                        rocprim::numeric_limits<value_type>::min(),
+                        rocprim::numeric_limits<value_type>::max(),
                         seed_value);
                 }
 
@@ -309,8 +319,8 @@ TYPED_TEST(RocprimDeviceSearchTests, SearchRepetition)
             {
                 keys = test_utils::get_random_data<key_type>(
                     key_size,
-                    test_utils::numeric_limits<key_type>::min(),
-                    test_utils::numeric_limits<key_type>::max(),
+                    rocprim::numeric_limits<key_type>::min(),
+                    rocprim::numeric_limits<key_type>::max(),
                     seed_value);
             }
 

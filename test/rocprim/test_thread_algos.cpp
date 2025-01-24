@@ -27,17 +27,27 @@
  *
  ******************************************************************************/
 
-#include "rocprim/thread/thread_load.hpp"
-#include "rocprim/thread/thread_store.hpp"
-#include "rocprim/thread/thread_reduce.hpp"
-#include "rocprim/thread/thread_scan.hpp"
-#include "rocprim/thread/thread_search.hpp"
-
 #include "../common_test_header.hpp"
-#include "test_utils.hpp"
+
+#include "../../common/utils_custom_type.hpp"
+
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
 
+#include <rocprim/config.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/intrinsics/thread.hpp>
+#include <rocprim/thread/thread_load.hpp>
+#include <rocprim/thread/thread_reduce.hpp>
+#include <rocprim/thread/thread_scan.hpp>
+#include <rocprim/thread/thread_search.hpp>
+#include <rocprim/thread/thread_store.hpp>
+#include <rocprim/types.hpp>
+
 #include <algorithm>
+#include <cstddef>
+#include <stdint.h>
 #include <vector>
 
 template<class T>
@@ -53,22 +63,23 @@ public:
     using type = typename Params::type;
 };
 
-using ThreadOperationTestParams = ::testing::Types<params<uint8_t>,
-                                                   params<uint16_t>,
-                                                   params<uint32_t>,
-                                                   params<uint64_t>,
-                                                   params<int>,
-                                                   params<rocprim::half>,
-                                                   params<rocprim::bfloat16>,
-                                                   params<float>,
-                                                   params<double>,
-                                                   params<test_utils::custom_test_type<uint64_t>>,
-                                                   params<test_utils::custom_test_type<double>>
+using ThreadOperationTestParams
+    = ::testing::Types<params<uint8_t>,
+                       params<uint16_t>,
+                       params<uint32_t>,
+                       params<uint64_t>,
+                       params<int>,
+                       params<rocprim::half>,
+                       params<rocprim::bfloat16>,
+                       params<float>,
+                       params<double>,
+                       params<common::custom_type<uint64_t, uint64_t, true>>,
+                       params<common::custom_type<double, double, true>>
 #if ROCPRIM_HAS_INT128_SUPPORT
-                                                   ,
-                                                   params<rocprim::uint128_t>
+                       ,
+                       params<rocprim::uint128_t>
 #endif
-                                                   >;
+                       >;
 
 TYPED_TEST_SUITE(RocprimThreadOperationTests, ThreadOperationTestParams);
 
@@ -326,7 +337,6 @@ TYPED_TEST(RocprimThreadOperationTests, Reduction)
                 expected[offset] = result;
             }
         }
-        //std::vector<T> expected = input;
 
         // Preparing device
         test_utils::device_ptr<T> device_input(input);

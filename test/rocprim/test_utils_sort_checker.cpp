@@ -20,13 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef TEST_UTILS_SORT_CHECKER_CPP_
-#define TEST_UTILS_SORT_CHECKER_CPP_
+#include "../common_test_header.hpp"
 
-#include "test_utils_sort_checker.hpp"
+#include "test_seed.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
+#include "test_utils_sort_checker.hpp"
 #include "test_utils_sort_comparator.hpp"
-#include "test_utils_types.hpp"
+
+#include <rocprim/functional.hpp>
+#include <rocprim/type_traits.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <vector>
 
 template<class InputType, class OpType = rocprim::less<InputType>>
 struct RocprimSortCheckerParams
@@ -74,7 +81,7 @@ TYPED_TEST(RocprimSortCheckerTests, TrueTest)
             std::vector<input_type> input = test_utils::get_random_data<input_type>(
                 size,
                 0,
-                test_utils::numeric_limits<input_type>::max(),
+                rocprim::numeric_limits<input_type>::max(),
                 ++seed_value);
 
             std::sort(input.begin(), input.end(), op);
@@ -111,7 +118,7 @@ TEST(RocprimSortCheckerTests, FalseTest)
             std::vector<input_type> input = test_utils::get_random_data<input_type>(
                 size,
                 0,
-                test_utils::numeric_limits<input_type>::max(),
+                rocprim::numeric_limits<input_type>::max(),
                 ++seed_value);
             bool all_equal = true;
             for(const auto i : input)
@@ -131,5 +138,3 @@ TEST(RocprimSortCheckerTests, FalseTest)
     }
     SUCCEED();
 }
-
-#endif // TEST_UTILS_SORT_CHECKER_CPP_

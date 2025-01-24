@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,30 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <rocprim/device/device_segmented_scan.hpp>
+#include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_data_generation.hpp"
 
 // required test headers
+#include "identity_iterator.hpp"
+#include "test_seed.hpp"
+#include "test_utils.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_custom_test_types.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
 
-#include <numeric>
+// required rocprim headers
+#include <rocprim/device/device_segmented_scan.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/types.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <random>
+#include <stdint.h>
+#include <vector>
 
 template<class Input,
          class Output,
@@ -62,9 +78,9 @@ public:
     using params = Params;
 };
 
-using custom_short2  = test_utils::custom_test_type<short>;
-using custom_int2    = test_utils::custom_test_type<int>;
-using custom_double2 = test_utils::custom_test_type<double>;
+using custom_short2  = common::custom_type<short, short, true>;
+using custom_int2    = common::custom_type<int, int, true>;
+using custom_double2 = common::custom_type<double, double, true>;
 using half           = rocprim::half;
 using bfloat16       = rocprim::bfloat16;
 
@@ -105,7 +121,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
     std::random_device         rd;
     std::default_random_engine gen(rd());
 
-    std::uniform_int_distribution<size_t> segment_length_dis(
+    common::uniform_int_distribution<size_t> segment_length_dis(
         TestFixture::params::min_segment_length,
         TestFixture::params::max_segment_length);
 
@@ -258,7 +274,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
     std::random_device         rd;
     std::default_random_engine gen(rd());
 
-    std::uniform_int_distribution<size_t> segment_length_dis(
+    common::uniform_int_distribution<size_t> segment_length_dis(
         TestFixture::params::min_segment_length,
         TestFixture::params::max_segment_length);
 

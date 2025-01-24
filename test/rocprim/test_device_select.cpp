@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,28 @@
 
 #include "../common_test_header.hpp"
 
-// required rocprim headers
-#include <rocprim/device/device_select.hpp>
-#include <rocprim/iterator/constant_iterator.hpp>
-#include <rocprim/iterator/counting_iterator.hpp>
-#include <rocprim/iterator/discard_iterator.hpp>
+#include "../../common/utils_custom_type.hpp"
 
 // required test headers
+#include "identity_iterator.hpp"
+#include "test_utils_assertions.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_device_ptr.hpp"
-#include "test_utils_types.hpp"
+#include "test_utils_hipgraphs.hpp"
+
+// required rocprim headers
+#include <rocprim/detail/various.hpp>
+#include <rocprim/device/device_select.hpp>
+#include <rocprim/functional.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
+#include <rocprim/types.hpp>
+
+#include <cstddef>
 #include <numeric>
+#include <stdint.h>
+#include <utility>
+#include <vector>
 
 // Params for tests
 template<class InputType,
@@ -69,8 +81,8 @@ using RocprimDeviceSelectTestsParams
                        DeviceSelectParams<float, float>,
                        DeviceSelectParams<unsigned char, float, int, true>,
                        DeviceSelectParams<double, double, int, true>,
-                       DeviceSelectParams<test_utils::custom_test_type<double>,
-                                          test_utils::custom_test_type<double>,
+                       DeviceSelectParams<common::custom_type<double, double, true>,
+                                          common::custom_type<double, double, true>,
                                           int,
                                           true>,
                        DeviceSelectParams<int, int, unsigned int, false, true>>;
@@ -786,8 +798,8 @@ using RocprimDeviceUniqueByKeyTestParams
                        DeviceUniqueByKeyParams<uint8_t, long long>,
                        DeviceUniqueByKeyParams<int, float, long, double>,
                        DeviceUniqueByKeyParams<long long, uint8_t, long, int, true>,
-                       DeviceUniqueByKeyParams<test_utils::custom_test_type<double>,
-                                               test_utils::custom_test_type<double>>,
+                       DeviceUniqueByKeyParams<common::custom_type<double, double, true>,
+                                               common::custom_type<double, double, true>>,
                        DeviceUniqueByKeyParams<int, int, int, int, false, true>>;
 
 TYPED_TEST_SUITE(RocprimDeviceUniqueByKeyTests, RocprimDeviceUniqueByKeyTestParams);

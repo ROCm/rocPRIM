@@ -29,6 +29,7 @@
 #endif
 
 #include "../common_test_header.hpp"
+#include "test_utils.hpp"
 #include "test_utils_device_ptr.hpp"
 #include "test_utils_types.hpp"
 
