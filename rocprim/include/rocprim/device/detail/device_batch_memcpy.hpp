@@ -1099,7 +1099,8 @@ ROCPRIM_INLINE static hipError_t batch_memcpy_func(void*              temporary_
 
     // Compute launch parameters.
 
-    int device_id = hipGetStreamDeviceId(stream);
+    int device_id;
+    ROCPRIM_RETURN_ON_ERROR(get_device_from_stream(stream, device_id));
 
     // Get the number of multiprocessors
     int multiprocessor_count{};
