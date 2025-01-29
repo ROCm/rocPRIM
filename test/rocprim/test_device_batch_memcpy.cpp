@@ -256,21 +256,31 @@ TYPED_TEST(RocprimDeviceBatchMemcpyTests, SizeAndTypeVariation)
     constexpr bool use_indirect_iterator = TestFixture::use_indirect_iterator;
     constexpr bool debug_synchronous     = TestFixture::debug_synchronous;
 
-    constexpr int wlev_min_size = rocprim::batch_memcpy_config<>::wlev_size_threshold;
-    constexpr int blev_min_size = rocprim::batch_memcpy_config<>::blev_size_threshold;
+    using config = rocprim::detail::
+        wrapped_batch_memcpy_config<rocprim::default_config, value_type, isMemCpy>;
 
-    constexpr int wlev_min_elems = rocprim::detail::ceiling_div(wlev_min_size, sizeof(value_type));
-    constexpr int blev_min_elems = rocprim::detail::ceiling_div(blev_min_size, sizeof(value_type));
-    constexpr int max_elems      = max_size / sizeof(value_type);
+    rocprim::detail::target_arch target_arch;
+    hipError_t success = rocprim::detail::host_target_arch(hipStreamDefault, target_arch);
+    ASSERT_EQ(success, hipSuccess);
 
-    constexpr int enabled_size_categories
+    const rocprim::detail::batch_memcpy_config_params params
+        = rocprim::detail::dispatch_target_arch<config>(target_arch);
+
+    const int32_t wlev_min_size = params.wlev_size_threshold;
+    const int32_t blev_min_size = params.blev_size_threshold;
+
+    const int32_t wlev_min_elems = rocprim::detail::ceiling_div(wlev_min_size, sizeof(value_type));
+    const int32_t blev_min_elems = rocprim::detail::ceiling_div(blev_min_size, sizeof(value_type));
+    constexpr int32_t max_elems  = max_size / sizeof(value_type);
+
+    const int32_t enabled_size_categories
         = (blev_min_elems <= max_elems) + (wlev_min_elems <= max_elems) + 1;
 
-    constexpr int num_blev
+    const int32_t num_blev
         = blev_min_elems <= max_elems ? num_buffers / enabled_size_categories : 0;
-    constexpr int num_wlev
+    const int32_t num_wlev
         = wlev_min_elems <= max_elems ? num_buffers / enabled_size_categories : 0;
-    constexpr int num_tlev = num_buffers - num_blev - num_wlev;
+    const int32_t num_tlev = num_buffers - num_blev - num_wlev;
 
     // Get random buffer sizes
     for(size_t seed_index = 0; seed_index < number_of_runs; ++seed_index)

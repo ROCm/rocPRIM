@@ -52,8 +52,6 @@
 
 constexpr uint32_t warmup_size   = 5;
 constexpr int32_t  max_size      = 1024 * 1024;
-constexpr int32_t  wlev_min_size = rocprim::batch_memcpy_config<>::wlev_size_threshold;
-constexpr int32_t  blev_min_size = rocprim::batch_memcpy_config<>::blev_size_threshold;
 
 using offset_type = size_t;
 
@@ -152,7 +150,8 @@ struct BatchMemcpyData
 };
 
 template<typename ValueType, typename BufferSizeType, bool IsMemCpy>
-BatchMemcpyData<ValueType, BufferSizeType> prepare_data(const managed_seed& seed,
+BatchMemcpyData<ValueType, BufferSizeType> prepare_data(hipStream_t         stream,
+                                                        const managed_seed& seed,
                                                         const int32_t       num_tlev_buffers = 1024,
                                                         const int32_t       num_wlev_buffers = 1024,
                                                         const int32_t       num_blev_buffers = 1024)
@@ -160,12 +159,27 @@ BatchMemcpyData<ValueType, BufferSizeType> prepare_data(const managed_seed& seed
     const bool shuffle_buffers = false;
 
     BatchMemcpyData<ValueType, BufferSizeType> result;
+
+    using config
+        = rocprim::detail::wrapped_batch_memcpy_config<rocprim::default_config, ValueType, true>;
+
+    rocprim::detail::target_arch target_arch;
+    hipError_t                   success = rocprim::detail::host_target_arch(stream, target_arch);
+    if(success != hipSuccess)
+    {
+        return result;
+    }
+
+    const rocprim::detail::batch_memcpy_config_params params
+        = rocprim::detail::dispatch_target_arch<config>(target_arch);
+
+    const int32_t wlev_min_size = params.wlev_size_threshold;
+    const int32_t blev_min_size = params.blev_size_threshold;
+
     const size_t num_buffers = num_tlev_buffers + num_wlev_buffers + num_blev_buffers;
 
-    constexpr int32_t wlev_min_elems
-        = rocprim::detail::ceiling_div(wlev_min_size, sizeof(ValueType));
-    constexpr int32_t blev_min_elems
-        = rocprim::detail::ceiling_div(blev_min_size, sizeof(ValueType));
+    const int32_t wlev_min_elems = rocprim::detail::ceiling_div(wlev_min_size, sizeof(ValueType));
+    const int32_t blev_min_elems = rocprim::detail::ceiling_div(blev_min_size, sizeof(ValueType));
     constexpr int32_t max_elems = max_size / sizeof(ValueType);
 
     // Generate data
@@ -299,7 +313,8 @@ void run_benchmark(benchmark::State&   state,
     void* d_temp_storage = nullptr;
     HIP_CHECK(hipMalloc(&d_temp_storage, temp_storage_bytes));
 
-    data = prepare_data<ValueType, BufferSizeType, IsMemCpy>(seed,
+    data = prepare_data<ValueType, BufferSizeType, IsMemCpy>(stream,
+                                                             seed,
                                                              num_tlev_buffers,
                                                              num_wlev_buffers,
                                                              num_blev_buffers);
@@ -401,7 +416,8 @@ void run_naive_benchmark(benchmark::State&   state,
 {
     const size_t num_buffers = num_tlev_buffers + num_wlev_buffers + num_blev_buffers;
 
-    const auto data = prepare_data<ValueType, BufferSizeType, IsMemCpy>(seed,
+    const auto data = prepare_data<ValueType, BufferSizeType, IsMemCpy>(stream,
+                                                                        seed,
                                                                         num_tlev_buffers,
                                                                         num_wlev_buffers,
                                                                         num_blev_buffers);
