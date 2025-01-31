@@ -168,10 +168,12 @@ void assert_eq(ResultIt   result_begin,
     ASSERT_EQ(std::distance(result_begin, result_end), std::distance(expected_begin, expected_end));
     auto result_it   = result_begin;
     auto expected_it = expected_begin;
-    for(; result_it != result_end; ++result_it, ++expected_it)
+    for(size_t i = 0; result_it != result_end; ++result_it, ++expected_it, ++i)
     {
-        assert_eq(static_cast<typename std::iterator_traits<ResultIt>::value_type>(*result_it),
-                  static_cast<typename std::iterator_traits<ExpectedIt>::value_type>(*expected_it));
+        SCOPED_TRACE(testing::Message() << "with index = " << i);
+        ASSERT_NO_FATAL_FAILURE(assert_eq(
+            static_cast<typename std::iterator_traits<ResultIt>::value_type>(*result_it),
+            static_cast<typename std::iterator_traits<ExpectedIt>::value_type>(*expected_it)));
     }
 }
 // end assert_eq
