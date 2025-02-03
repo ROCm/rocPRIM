@@ -271,14 +271,14 @@ build:windows:
     - .deps:visual-studio-devshell
   parallel:
     matrix:
-      - BUILD_TYPE: [Debug, Release]
-        BUILD_TARGET: [BENCHMARK, TEST]
+      - BUILD_TYPE: Release
   script:
     - mkdir -p $CI_PROJECT_DIR/build
     - cmake -G Ninja
       -S $CI_PROJECT_DIR
       -B $CI_PROJECT_DIR/build
-      -D BUILD_$BUILD_TARGET=ON
+      -D BUILD_TEST=ON
+      -D BUILD_BENCHMARK=ON
       -D AMDGPU_TARGETS=$GPU_TARGET
       -D CMAKE_CXX_COMPILER:PATH="${env:HIP_PATH}\bin\clang++.exe"
       -D CMAKE_PREFIX_PATH:PATH="${env:HIP_PATH}"
@@ -427,7 +427,6 @@ test-windows-release:
       parallel:
         matrix:
           - BUILD_TYPE: Release
-            BUILD_TARGET: TEST
 
 .test-package:
   script:
