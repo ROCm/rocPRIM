@@ -382,15 +382,17 @@ inline hipError_t host_target_arch(const hipStream_t stream, target_arch& arch)
 /// \return hipError_t any error that might occur.
 ///
 /// It is constant for a device.
-ROCPRIM_HOST inline hipError_t host_warp_size(const int device_id, unsigned int& warp_size)
+ROCPRIM_HOST
+inline hipError_t host_warp_size(const int device_id, unsigned int& warp_size)
 {
     warp_size = -1;
-    hipDeviceProp_t device_prop;
-    hipError_t      success = hipGetDeviceProperties(&device_prop, device_id);
+    int        warp_size_attribute{};
+    hipError_t success
+        = hipDeviceGetAttribute(&warp_size_attribute, hipDeviceAttributeWarpSize, device_id);
 
     if(success == hipSuccess)
     {
-        warp_size = device_prop.warpSize;
+        warp_size = static_cast<unsigned int>(warp_size_attribute);
     }
     return success;
 };

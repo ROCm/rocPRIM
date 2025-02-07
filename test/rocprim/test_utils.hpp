@@ -41,6 +41,7 @@
 #include "test_utils_data_generation.hpp"
 #include "test_utils_hipgraphs.hpp"
 
+#include <cstddef>
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/intrinsics/thread.hpp>
@@ -398,17 +399,10 @@ OutputIt host_inclusive_scan_by_key(InputIt first, InputIt last, KeyIt k_first,
 inline
 size_t get_max_block_size()
 {
-    hipDeviceProp_t device_properties;
-    hipError_t error = hipGetDeviceProperties(&device_properties, 0);
-    if(error != hipSuccess)
-    {
-        std::cout << "HIP error: " << error
-                  << " file: " << __FILE__
-                  << " line: " << __LINE__
-                  << std::endl;
-        std::exit(error);
-    }
-    return device_properties.maxThreadsPerBlock;
+
+    int max_threads_blocks{};
+    HIP_CHECK(hipDeviceGetAttribute(&max_threads_blocks, hipDeviceAttributeMaxThreadsPerBlock, 0));
+    return static_cast<size_t>(max_threads_blocks);
 }
 
 // std::iota causes problems with __half and bfloat16 and common::custom_type because of a missing ++increment operator
