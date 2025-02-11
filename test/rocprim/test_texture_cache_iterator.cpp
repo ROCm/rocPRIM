@@ -23,10 +23,10 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 // required rocprim headers
 #include <rocprim/device/device_transform.hpp>
@@ -109,8 +109,8 @@ TYPED_TEST(RocprimTextureCacheIteratorTests, Transform)
         }
 
         std::vector<T> output(size);
-        test_utils::device_ptr<T> d_input(input);
-        test_utils::device_ptr<T> d_output(output.size());
+        common::device_ptr<T> d_input(input);
+        common::device_ptr<T> d_output(output.size());
 
         Iterator x;
         HIP_CHECK(x.bind_texture(d_input.get(), sizeof(T) * input.size()));

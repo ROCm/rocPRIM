@@ -30,10 +30,10 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/config.hpp>
 #include <rocprim/functional.hpp>
@@ -144,8 +144,8 @@ TYPED_TEST(RocprimThreadOperationTests, Load)
         std::vector<T> expected = input;
 
         // Preparing device
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(input.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(input.size());
 
         thread_load_kernel<T><<<grid_size, block_size>>>(device_input.get(), device_output.get());
         HIP_CHECK(hipGetLastError());
@@ -198,8 +198,8 @@ TYPED_TEST(RocprimThreadOperationTests, CopyUnroll)
         std::vector<T> expected = input;
 
         // Preparing device
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(input.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(input.size());
 
         thread_copy_unroll_kernel<ItemsPerThread, T>
             <<<grid_size, block_size>>>(device_input.get(), device_output.get());
@@ -271,8 +271,8 @@ TYPED_TEST(RocprimThreadOperationTests, StoreNontemporal)
         std::vector<T> expected = input;
 
         // Preparing device
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(input.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(input.size());
 
         thread_store_kernel<T><<<grid_size, block_size>>>(device_input.get(), device_output.get());
         HIP_CHECK(hipGetLastError());
@@ -339,8 +339,8 @@ TYPED_TEST(RocprimThreadOperationTests, Reduction)
         }
 
         // Preparing device
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(input.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(input.size());
 
         thread_reduce_kernel<T, length>
             <<<grid_size, block_size>>>(device_input.get(), device_output.get());
@@ -405,8 +405,8 @@ TYPED_TEST(RocprimThreadOperationTests, Scan)
         }
 
         // Preparing device
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(input.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(input.size());
 
         thread_scan_kernel<T, length>
             <<<grid_size, block_size>>>(device_input.get(), device_output.get());
@@ -507,12 +507,12 @@ void merge_path_search_test()
         OffsetT              output_oob_x, output_oob_y;
 
         // Preparing device
-        test_utils::device_ptr<T>       device_input1(input1);
-        test_utils::device_ptr<T>       device_input2(input2);
-        test_utils::device_ptr<OffsetT> device_output_x(index_size);
-        test_utils::device_ptr<OffsetT> device_output_y(index_size);
-        test_utils::device_ptr<OffsetT> device_output_oob_x(1);
-        test_utils::device_ptr<OffsetT> device_output_oob_y(1);
+        common::device_ptr<T>       device_input1(input1);
+        common::device_ptr<T>       device_input2(input2);
+        common::device_ptr<OffsetT> device_output_x(index_size);
+        common::device_ptr<OffsetT> device_output_y(index_size);
+        common::device_ptr<OffsetT> device_output_oob_x(1);
+        common::device_ptr<OffsetT> device_output_oob_y(1);
 
         thread_search_kernel<T, OffsetT, BinaryFunction, length>
             <<<grid_size, block_size>>>(device_input1.get(),

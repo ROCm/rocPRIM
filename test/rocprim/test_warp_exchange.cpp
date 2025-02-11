@@ -23,10 +23,10 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils.hpp"
+#include "../../common/utils_device_ptr.hpp"
 #include "../../common/warp_exchange.hpp"
 
 #include "test_utils.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/config.hpp>
 #include <rocprim/device/config_types.hpp>
@@ -250,8 +250,8 @@ TYPED_TEST(WarpExchangeTest, WarpExchange)
         input = stripe_vector(input, warp_size, items_per_thread);
     }
 
-    test_utils::device_ptr<T> d_input(input);
-    test_utils::device_ptr<T> d_output(items_count);
+    common::device_ptr<T> d_input(input);
+    common::device_ptr<T> d_output(items_count);
     HIP_CHECK(hipMemset(d_output.get(), 0, items_count * sizeof(T)));
 
     warp_exchange_kernel<items_per_thread, warp_size, exchange_op>
@@ -296,8 +296,8 @@ TYPED_TEST(WarpExchangeTest, WarpExchangeNotInplace)
         input = stripe_vector(input, warp_size, items_per_thread);
     }
 
-    test_utils::device_ptr<T> d_input(input);
-    test_utils::device_ptr<T> d_output(items_count);
+    common::device_ptr<T> d_input(input);
+    common::device_ptr<T> d_output(items_count);
     HIP_CHECK(hipMemset(d_output.get(), 0, items_count * sizeof(T)));
 
     warp_exchange_kernel<items_per_thread, warp_size, exchange_op>
@@ -403,9 +403,9 @@ TYPED_TEST(WarpExchangeScatterTest, WarpExchangeScatter)
                    [](const T input_val)
                    { return static_cast<OffsetT>(input_val) % (warp_size * items_per_thread); });
 
-    test_utils::device_ptr<OffsetT> d_ranks(ranks);
-    test_utils::device_ptr<T>       d_input(input);
-    test_utils::device_ptr<T>       d_output(items_count);
+    common::device_ptr<OffsetT> d_ranks(ranks);
+    common::device_ptr<T>       d_input(input);
+    common::device_ptr<T>       d_output(items_count);
     HIP_CHECK(hipMemset(d_output.get(), 0, items_count * sizeof(T)));
 
     warp_exchange_scatter_kernel<items_per_thread, warp_size>

@@ -26,11 +26,11 @@
 #include "../common_test_header.hpp"
 
 // required test headers
+#include "../../common/utils_device_ptr.hpp"
 #include "test_seed.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_types.hpp"
 
 // required rocprim headers
@@ -161,8 +161,8 @@ void test_block_histogram_input_arrays()
         }
 
         // Preparing device
-        test_utils::device_ptr<T>       device_output(output);
-        test_utils::device_ptr<BinType> device_output_bin(output_bin);
+        common::device_ptr<T>       device_output(output);
+        common::device_ptr<BinType> device_output_bin(output_bin);
 
         // Running kernel
         hipLaunchKernelGGL(

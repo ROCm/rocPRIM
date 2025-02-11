@@ -22,12 +22,14 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils.hpp"
 #include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_seed.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
+
 #include "test_utils_sort_checker.hpp"
 
 #include <rocprim/device/device_merge_inplace.hpp>
@@ -70,13 +72,13 @@ TEST(RocprimDeviceMergeInplaceTests, Basic)
         h_data[left_size + i] = i * 2 + 1;
     }
 
-    test_utils::device_ptr<value_type> d_data(h_data);
+    common::device_ptr<value_type>     d_data(h_data);
     std::vector<value_type>            h_expected(h_data);
 
     // get temporary storage
     HIP_CHECK(rocprim::merge_inplace(nullptr, storage_size, d_data.get(), left_size, right_size));
 
-    test_utils::device_ptr<void> d_temp_storage(storage_size);
+    common::device_ptr<void> d_temp_storage(storage_size);
 
     HIP_CHECK(rocprim::merge_inplace(d_temp_storage.get(),
                                      storage_size,
@@ -326,7 +328,7 @@ TYPED_TEST(DeviceMergeInplaceTests, MergeInplace)
         size_t size_total = size_a + size_b;
 
         // hipMallocManaged() currently doesnt support zero byte allocation
-        if((size_a == 0 || size_b == 0) && test_common_utils::use_hmm())
+        if((size_a == 0 || size_b == 0) && common::use_hmm())
         {
             continue;
         }
@@ -370,8 +372,8 @@ TYPED_TEST(DeviceMergeInplaceTests, MergeInplace)
         }
 
         // We only allocate on the device *after* ensuring we have enough available vram.
-        test_utils::device_ptr<value_type> d_data = test_utils::device_ptr<value_type>(h_data);
-        test_utils::device_ptr<void>       d_temp_storage(storage_size);
+        common::device_ptr<value_type> d_data = common::device_ptr<value_type>(h_data);
+        common::device_ptr<void>       d_temp_storage(storage_size);
 
         for(size_t seed_index = 0; seed_index < num_seeds; seed_index++)
         {

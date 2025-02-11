@@ -22,12 +22,13 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils.hpp"
 #include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -260,8 +261,8 @@ TYPED_TEST(RocprimDeviceHistogramEven, Even)
             // Generate data
             std::vector<sample_type> input = get_random_samples<sample_type>(size, lower_level, upper_level, seed_value);
 
-            test_utils::device_ptr<sample_type>  d_input(input);
-            test_utils::device_ptr<counter_type> d_histogram(bins);
+            common::device_ptr<sample_type>  d_input(input);
+            common::device_ptr<counter_type> d_histogram(bins);
 
             // Calculate expected results on host
             // native host types - used for low-precision floating-point types
@@ -320,7 +321,7 @@ TYPED_TEST(RocprimDeviceHistogramEven, Even)
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -513,9 +514,9 @@ TYPED_TEST(RocprimDeviceHistogramRange, Range)
 
             std::vector<sample_type> input = get_random_samples<sample_type>(size, levels[0], levels[bins], seed_value);
 
-            test_utils::device_ptr<sample_type>  d_input(input);
-            test_utils::device_ptr<level_type>   d_levels(levels);
-            test_utils::device_ptr<counter_type> d_histogram(bins);
+            common::device_ptr<sample_type>  d_input(input);
+            common::device_ptr<level_type>   d_levels(levels);
+            common::device_ptr<counter_type> d_histogram(bins);
 
             // Calculate expected results on host
             std::vector<counter_type> histogram_expected(bins, 0);
@@ -568,7 +569,7 @@ TYPED_TEST(RocprimDeviceHistogramRange, Range)
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -762,11 +763,12 @@ TYPED_TEST(RocprimDeviceHistogramMultiEven, MultiEven)
                 }
             }
 
-            test_utils::device_ptr<sample_type> d_input(input);
+            common::device_ptr<sample_type>     d_input(input);
             counter_type*                       d_histogram[active_channels];
             for(unsigned int channel = 0; channel < active_channels; channel++)
             {
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_histogram[channel], bins[channel] * sizeof(counter_type)));
+                HIP_CHECK(common::hipMallocHelper(&d_histogram[channel],
+                                                  bins[channel] * sizeof(counter_type)));
             }
 
             // Calculate expected results on host
@@ -830,7 +832,7 @@ TYPED_TEST(RocprimDeviceHistogramMultiEven, MultiEven)
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -1060,13 +1062,15 @@ TYPED_TEST(RocprimDeviceHistogramMultiRange, MultiRange)
                 }
             }
 
-            test_utils::device_ptr<sample_type> d_input(input);
+            common::device_ptr<sample_type>     d_input(input);
             level_type * d_levels[active_channels];
             counter_type*                       d_histogram[active_channels];
             for(unsigned int channel = 0; channel < active_channels; channel++)
             {
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_levels[channel], num_levels[channel] * sizeof(level_type)));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_histogram[channel], bins[channel] * sizeof(counter_type)));
+                HIP_CHECK(common::hipMallocHelper(&d_levels[channel],
+                                                  num_levels[channel] * sizeof(level_type)));
+                HIP_CHECK(common::hipMallocHelper(&d_histogram[channel],
+                                                  bins[channel] * sizeof(counter_type)));
             }
             for(unsigned int channel = 0; channel < active_channels; channel++)
             {
@@ -1135,7 +1139,7 @@ TYPED_TEST(RocprimDeviceHistogramMultiRange, MultiRange)
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)

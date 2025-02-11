@@ -23,6 +23,7 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "indirect_iterator.hpp"
@@ -30,7 +31,6 @@
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 #include <rocprim/device/config_types.hpp>
@@ -191,9 +191,9 @@ TYPED_TEST(RocprimDeviceSearchTests, Search)
                     keys.assign(input.begin() + pattern, input.end());
                 }
 
-                test_utils::device_ptr<value_type> d_input(input);
-                test_utils::device_ptr<key_type>   d_keys(keys);
-                test_utils::device_ptr<index_type> d_output(1);
+                common::device_ptr<value_type> d_input(input);
+                common::device_ptr<key_type>   d_keys(keys);
+                common::device_ptr<index_type> d_output(1);
 
                 const auto input_it
                     = test_utils::wrap_in_indirect_iterator<use_indirect_iterator>(d_input.get());
@@ -223,7 +223,7 @@ TYPED_TEST(RocprimDeviceSearchTests, Search)
                 // temp_storage_size_bytes must be >0
                 ASSERT_GT(temp_storage_size_bytes, 0);
 
-                test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+                common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
                 test_utils::GraphHelper gHelper;
                 if(TestFixture::use_graphs)
@@ -330,9 +330,9 @@ TYPED_TEST(RocprimDeviceSearchTests, SearchRepetition)
                 std::copy(keys.begin(), keys.end(), input.begin() + i * key_size);
             }
 
-            test_utils::device_ptr<value_type> d_input(input);
-            test_utils::device_ptr<key_type>   d_keys(keys);
-            test_utils::device_ptr<index_type> d_output(1);
+            common::device_ptr<value_type> d_input(input);
+            common::device_ptr<key_type>   d_keys(keys);
+            common::device_ptr<index_type> d_output(1);
 
             const auto input_it
                 = test_utils::wrap_in_indirect_iterator<use_indirect_iterator>(d_input.get());
@@ -357,7 +357,7 @@ TYPED_TEST(RocprimDeviceSearchTests, SearchRepetition)
             // temp_storage_size_bytes must be >0
             ASSERT_GT(temp_storage_size_bytes, 0);
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)

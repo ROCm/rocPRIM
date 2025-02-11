@@ -26,13 +26,13 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_sort_comparator.hpp"
 
 // required rocprim headers
@@ -173,10 +173,10 @@ inline void sort_keys()
             }
             offsets.push_back(size);
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input);
-            test_utils::device_ptr<key_type> d_keys_output(size);
+            common::device_ptr<key_type> d_keys_input(keys_input);
+            common::device_ptr<key_type> d_keys_output(size);
 
-            test_utils::device_ptr<offset_type> d_offsets(offsets);
+            common::device_ptr<offset_type> d_offsets(offsets);
 
             // Calculate expected results on host
             std::vector<key_type> expected(keys_input);
@@ -202,7 +202,7 @@ inline void sort_keys()
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(descending)
             {
@@ -280,9 +280,9 @@ inline void sort_keys_empty_data()
             offsets[0] = 0;
             offsets[1] = 0;
 
-            test_utils::device_ptr<key_type> d_keys(keys_input);
+            common::device_ptr<key_type> d_keys(keys_input);
 
-            test_utils::device_ptr<offset_type> d_offsets(offsets);
+            common::device_ptr<offset_type> d_offsets(offsets);
 
             size_t temporary_storage_bytes = 0;
             HIP_CHECK(rocprim::segmented_radix_sort_keys<config>(nullptr,
@@ -298,7 +298,7 @@ inline void sort_keys_empty_data()
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(descending)
             {
@@ -376,10 +376,10 @@ inline void sort_keys_large_segments()
         offsets[1] = static_cast<offset_type>(size / 2);
         offsets[2] = static_cast<offset_type>(size);
 
-        test_utils::device_ptr<key_type> d_keys_input(keys_input);
-        test_utils::device_ptr<key_type> d_keys_output(size);
+        common::device_ptr<key_type> d_keys_input(keys_input);
+        common::device_ptr<key_type> d_keys_output(size);
 
-        test_utils::device_ptr<offset_type> d_offsets(offsets);
+        common::device_ptr<offset_type> d_offsets(offsets);
 
         // Calculate expected results on host
         std::vector<key_type> expected(keys_input);
@@ -405,7 +405,7 @@ inline void sort_keys_large_segments()
 
         ASSERT_GT(temporary_storage_bytes, 0U);
 
-        test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+        common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
         if(descending)
         {
@@ -511,11 +511,11 @@ inline void sort_keys_unspecified_ranges()
                 }
             }
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input);
-            test_utils::device_ptr<key_type> d_keys_output(keys_input);
+            common::device_ptr<key_type> d_keys_input(keys_input);
+            common::device_ptr<key_type> d_keys_output(keys_input);
 
-            test_utils::device_ptr<offset_type> d_offsets_begin(begin_offsets);
-            test_utils::device_ptr<offset_type> d_offsets_end(end_offsets);
+            common::device_ptr<offset_type> d_offsets_begin(begin_offsets);
+            common::device_ptr<offset_type> d_offsets_end(end_offsets);
 
             // Calculate expected results on host
             std::vector<key_type> expected(keys_input);
@@ -541,7 +541,7 @@ inline void sort_keys_unspecified_ranges()
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(descending)
             {
@@ -638,13 +638,13 @@ inline void sort_pairs()
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input);
-            test_utils::device_ptr<key_type> d_keys_output(size);
+            common::device_ptr<key_type> d_keys_input(keys_input);
+            common::device_ptr<key_type> d_keys_output(size);
 
-            test_utils::device_ptr<value_type> d_values_input(values_input);
-            test_utils::device_ptr<value_type> d_values_output(size);
+            common::device_ptr<value_type> d_values_input(values_input);
+            common::device_ptr<value_type> d_values_output(size);
 
-            test_utils::device_ptr<offset_type> d_offsets(offsets);
+            common::device_ptr<offset_type> d_offsets(offsets);
 
             using key_value = std::pair<key_type, value_type>;
 
@@ -688,7 +688,7 @@ inline void sort_pairs()
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(descending)
             {
@@ -808,14 +808,14 @@ inline void sort_pairs_unspecified_ranges()
                 }
             }
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input);
-            test_utils::device_ptr<key_type> d_keys_output(keys_input);
+            common::device_ptr<key_type> d_keys_input(keys_input);
+            common::device_ptr<key_type> d_keys_output(keys_input);
 
-            test_utils::device_ptr<value_type> d_values_input(values_input);
-            test_utils::device_ptr<value_type> d_values_output(values_input);
+            common::device_ptr<value_type> d_values_input(values_input);
+            common::device_ptr<value_type> d_values_output(values_input);
 
-            test_utils::device_ptr<offset_type> d_offsets_begin(begin_offsets);
-            test_utils::device_ptr<offset_type> d_offsets_end(end_offsets);
+            common::device_ptr<offset_type> d_offsets_begin(begin_offsets);
+            common::device_ptr<offset_type> d_offsets_end(end_offsets);
 
             using key_value = std::pair<key_type, value_type>;
 
@@ -852,7 +852,7 @@ inline void sort_pairs_unspecified_ranges()
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(descending)
             {
@@ -955,10 +955,10 @@ inline void sort_keys_double_buffer()
             }
             offsets.push_back(size);
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input);
-            test_utils::device_ptr<key_type> d_keys_output(size);
+            common::device_ptr<key_type> d_keys_input(keys_input);
+            common::device_ptr<key_type> d_keys_output(size);
 
-            test_utils::device_ptr<offset_type> d_offsets(offsets);
+            common::device_ptr<offset_type> d_offsets(offsets);
 
             // Calculate expected results on host
             std::vector<key_type> expected(keys_input);
@@ -985,7 +985,7 @@ inline void sort_keys_double_buffer()
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(descending)
             {
@@ -1086,13 +1086,13 @@ inline void sort_pairs_double_buffer()
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input);
-            test_utils::device_ptr<key_type> d_keys_output(size);
+            common::device_ptr<key_type> d_keys_input(keys_input);
+            common::device_ptr<key_type> d_keys_output(size);
 
-            test_utils::device_ptr<value_type> d_values_input(values_input);
-            test_utils::device_ptr<value_type> d_values_output(size);
+            common::device_ptr<value_type> d_values_input(values_input);
+            common::device_ptr<value_type> d_values_output(size);
 
-            test_utils::device_ptr<offset_type> d_offsets(offsets);
+            common::device_ptr<offset_type> d_offsets(offsets);
 
             using key_value = std::pair<key_type, value_type>;
 
@@ -1138,7 +1138,7 @@ inline void sort_pairs_double_buffer()
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(descending)
             {

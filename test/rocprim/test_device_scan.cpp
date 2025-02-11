@@ -23,6 +23,7 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "bounds_checking_iterator.hpp"
@@ -31,7 +32,6 @@
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -282,7 +282,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
         HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
     }
 
-    test_utils::device_ptr<U> d_output(1);
+    common::device_ptr<U> d_output(1);
 
     test_utils::out_of_bounds_flag out_of_bounds;
     test_utils::bounds_checking_iterator<U> d_checking_output(d_output.get(),
@@ -308,7 +308,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanEmptyInput)
                                                    debug_synchronous));
 
     // allocate temporary storage
-    test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+    common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
     test_utils::GraphHelper gHelper;
     if(TestFixture::use_graphs)
@@ -398,8 +398,8 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<U> d_output(input.size());
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<U> d_output(input.size());
 
             // scan function
             scan_op_type scan_op;
@@ -431,7 +431,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -531,8 +531,8 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<U> d_output(input.size());
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<U> d_output(input.size());
 
             // scan function
             scan_op_type scan_op;
@@ -567,7 +567,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -674,9 +674,9 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
                 keys = test_utils::get_random_data<K>(size, 0, 3, seed_value);
             }
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<K> d_keys(keys);
-            test_utils::device_ptr<U> d_output(input.size());
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<K> d_keys(keys);
+            common::device_ptr<U> d_output(input.size());
 
             // scan function
             scan_op_type scan_op;
@@ -712,7 +712,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -820,9 +820,9 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
                 keys = test_utils::get_random_data<K>(size, 0, 3, seed_value);
             }
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<K> d_keys(keys);
-            test_utils::device_ptr<U> d_output(input.size());
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<K> d_keys(keys);
+            common::device_ptr<U> d_output(input.size());
 
             // scan function
             scan_op_type scan_op;
@@ -860,7 +860,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -1006,7 +1006,7 @@ void testLargeIndicesInclusiveScan()
 
             SCOPED_TRACE(testing::Message() << "with starting point = " << *input_begin);
 
-            test_utils::device_ptr<T> d_output(1);
+            common::device_ptr<T> d_output(1);
 
             OutputIterator output_it{d_output.get(), size - 1};
 
@@ -1025,7 +1025,7 @@ void testLargeIndicesInclusiveScan()
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(UseGraphs)
@@ -1122,7 +1122,7 @@ void testLargeIndicesExclusiveScan()
             SCOPED_TRACE(testing::Message() << "with starting point = " << *input_begin);
             SCOPED_TRACE(testing::Message() << "with initial value = " << initial_value);
 
-            test_utils::device_ptr<T> d_output(1);
+            common::device_ptr<T> d_output(1);
 
             OutputIterator output_it{d_output.get(), size - 1};
 
@@ -1142,7 +1142,7 @@ void testLargeIndicesExclusiveScan()
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(UseGraphs)
@@ -1362,7 +1362,7 @@ void large_indices_scan_by_key_test(ScanByKeyFun scan_by_key_fun)
     const auto size = test_utils::get_large_sizes(seed_value).back();
     SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-    test_utils::device_ptr<unsigned int> d_incorrect_flag(1);
+    common::device_ptr<unsigned int> d_incorrect_flag(1);
     HIP_CHECK(hipMemset(d_incorrect_flag.get(), 0, sizeof(unsigned int)));
 
     const size_t run_length = test_utils::get_random_value<size_t>(1, 10000, seed_value);
@@ -1387,7 +1387,7 @@ void large_indices_scan_by_key_test(ScanByKeyFun scan_by_key_fun)
 
     ASSERT_GT(temp_storage_size_bytes, 0);
 
-    test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+    common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
     test_utils::GraphHelper gHelper;
     if(UseGraphs)
@@ -1578,10 +1578,10 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
                 = test_utils::get_random_data<T>(future_size, 1, 10, ~seed_value);
             const std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<U> d_output(input.size());
-            test_utils::device_ptr<T> d_future_input(future_input);
-            test_utils::device_ptr<T> d_initial_value(1);
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<U> d_output(input.size());
+            common::device_ptr<T> d_future_input(future_input);
+            common::device_ptr<T> d_initial_value(1);
 
             // scan function
             scan_op_type scan_op;
@@ -1630,8 +1630,7 @@ TYPED_TEST(RocprimDeviceScanFutureTests, ExclusiveScan)
 
             // allocate temporary storage
             // we use a char pointer as we need to offset it
-            test_utils::device_ptr<char> d_temp_storage(temp_storage_size_bytes
-                                                        + temp_storage_reduce);
+            common::device_ptr<char> d_temp_storage(temp_storage_size_bytes + temp_storage_reduce);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)

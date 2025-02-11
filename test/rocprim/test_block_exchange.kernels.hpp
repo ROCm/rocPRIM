@@ -25,10 +25,10 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_types.hpp"
 
 #include <rocprim/block/block_exchange.hpp>
@@ -244,8 +244,8 @@ auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method ==
     }
 
     // Preparing device
-    test_utils::device_ptr<type>        device_input(input);
-    test_utils::device_ptr<output_type> device_output(size);
+    common::device_ptr<type>        device_input(input);
+    common::device_ptr<output_type> device_output(size);
 
     // Running kernel
     constexpr unsigned int grid_size = (size / items_per_block);
@@ -316,8 +316,8 @@ auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method ==
     }
 
     // Preparing device
-    test_utils::device_ptr<type>        device_input(input);
-    test_utils::device_ptr<output_type> device_output(size);
+    common::device_ptr<type>        device_input(input);
+    common::device_ptr<output_type> device_output(size);
 
     // Running kernel
     constexpr unsigned int grid_size = (size / items_per_block);
@@ -401,8 +401,8 @@ auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 2>:
     }
 
     // Preparing device
-    test_utils::device_ptr<type>        device_input(input);
-    test_utils::device_ptr<output_type> device_output(size);
+    common::device_ptr<type>        device_input(input);
+    common::device_ptr<output_type> device_output(size);
 
     // Running kernel
     constexpr unsigned int grid_size = (size / items_per_block);
@@ -486,8 +486,8 @@ auto test_block_exchange(int device_id) -> typename std::enable_if<Method == 3>:
     }
 
     // Preparing device
-    test_utils::device_ptr<type>        device_input(input);
-    test_utils::device_ptr<output_type> device_output(size);
+    common::device_ptr<type>        device_input(input);
+    common::device_ptr<output_type> device_output(size);
 
     // Running kernel
     constexpr unsigned int grid_size = (size / items_per_block);
@@ -566,9 +566,9 @@ auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method ==
     }
 
     // Preparing device
-    test_utils::device_ptr<type>         device_input(input);
-    test_utils::device_ptr<output_type>  device_output(size);
-    test_utils::device_ptr<unsigned int> device_ranks(ranks);
+    common::device_ptr<type>         device_input(input);
+    common::device_ptr<output_type>  device_output(size);
+    common::device_ptr<unsigned int> device_ranks(ranks);
 
     // Running kernel
     constexpr unsigned int grid_size = (size / items_per_block);
@@ -650,9 +650,9 @@ auto test_block_exchange(int /*device_id*/) -> typename std::enable_if<Method ==
     }
 
     // Preparing device
-    test_utils::device_ptr<type>         device_input(input);
-    test_utils::device_ptr<output_type>  device_output(size);
-    test_utils::device_ptr<unsigned int> device_ranks(ranks);
+    common::device_ptr<type>         device_input(input);
+    common::device_ptr<output_type>  device_output(size);
+    common::device_ptr<unsigned int> device_ranks(ranks);
 
     // Running kernel
     constexpr unsigned int grid_size = (size / items_per_block);

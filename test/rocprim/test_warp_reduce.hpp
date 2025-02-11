@@ -23,11 +23,11 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/config.hpp>
 #include <rocprim/detail/various.hpp>
@@ -110,8 +110,8 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSum)
             expected[i] = static_cast<T>(value);
         }
 
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -220,8 +220,8 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSum)
             }
         }
 
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -327,8 +327,8 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSumValid)
             expected[i] = static_cast<T>(value);
         }
 
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -441,8 +441,8 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSumValid)
             }
         }
 
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -558,8 +558,8 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceCustomStruct)
             expected[i] = static_cast<T>(value);
         }
 
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -660,9 +660,9 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, HeadSegmentedReduceSum)
         }
         std::vector<T> output(input.size());
 
-        test_utils::device_ptr<T>         device_input(input);
-        test_utils::device_ptr<flag_type> device_flags(flags);
-        test_utils::device_ptr<T>         device_output(output.size());
+        common::device_ptr<T>         device_input(input);
+        common::device_ptr<flag_type> device_flags(flags);
+        common::device_ptr<T>         device_output(output.size());
 
         // Calculate expected results on host
         std::vector<T> expected(output.size());
@@ -800,9 +800,9 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, TailSegmentedReduceSum)
         }
         std::vector<T> output(input.size());
 
-        test_utils::device_ptr<T>         device_input(input);
-        test_utils::device_ptr<flag_type> device_flags(flags);
-        test_utils::device_ptr<T>         device_output(output.size());
+        common::device_ptr<T>         device_input(input);
+        common::device_ptr<flag_type> device_flags(flags);
+        common::device_ptr<T>         device_output(output.size());
 
         // Calculate expected results on host
         std::vector<T> expected(output.size());

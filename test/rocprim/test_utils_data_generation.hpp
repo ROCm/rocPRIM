@@ -21,8 +21,7 @@
 #ifndef ROCPRIM_TEST_UTILS_DATA_GENERATION_HPP
 #define ROCPRIM_TEST_UTILS_DATA_GENERATION_HPP
 
-#include "../common_test_header.hpp"
-
+#include "../../common/utils.hpp"
 #include "../../common/utils_custom_type.hpp"
 #include "../../common/utils_data_generation.hpp"
 
@@ -507,7 +506,7 @@ std::vector<size_t> get_sizes(T seed_value)
         (1 << 20) + 123
     };
     // clang-format on
-    if(!test_common_utils::use_hmm())
+    if(!common::use_hmm())
     {
         // hipMallocManaged() currently doesnt support zero byte allocation
         sizes.push_back(0);

@@ -23,13 +23,13 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "bounds_checking_iterator.hpp"
 #include "identity_iterator.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -140,10 +140,10 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
             std::vector<F> flags = test_utils::get_random_data01<F>(size, 0.25, seed_value);
 
-            test_utils::device_ptr<T>            d_input(input);
-            test_utils::device_ptr<F>            d_flags(flags);
-            test_utils::device_ptr<U>            d_output(input.size());
-            test_utils::device_ptr<unsigned int> d_selected_count_output(1);
+            common::device_ptr<T>            d_input(input);
+            common::device_ptr<F>            d_flags(flags);
+            common::device_ptr<U>            d_output(input.size());
+            common::device_ptr<unsigned int> d_selected_count_output(1);
 
             // Calculate expected_selected and expected_rejected results on host
             std::vector<U> expected_selected;
@@ -182,7 +182,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -271,8 +271,8 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
     auto select_op = select_op_t<T>{};
 
     unsigned int selected_count_output = 123;
-    test_utils::device_ptr<U>            d_output(1);
-    test_utils::device_ptr<unsigned int> d_selected_count_output(selected_count_output);
+    common::device_ptr<U>            d_output(1);
+    common::device_ptr<unsigned int> d_selected_count_output(selected_count_output);
 
     test_utils::out_of_bounds_flag out_of_bounds;
     test_utils::bounds_checking_iterator<U> d_checking_output(d_output.get(),
@@ -293,7 +293,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateEmptyInput)
                                          debug_synchronous));
 
     // allocate temporary storage
-    test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+    common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
     test_utils::GraphHelper gHelper;
     if(TestFixture::use_graphs)
@@ -364,9 +364,9 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
 
-            test_utils::device_ptr<T>            d_input(input);
-            test_utils::device_ptr<U>            d_output(input.size());
-            test_utils::device_ptr<unsigned int> d_selected_count_output(1);
+            common::device_ptr<T>            d_input(input);
+            common::device_ptr<U>            d_output(input.size());
+            common::device_ptr<unsigned int> d_selected_count_output(1);
 
             // Calculate expected_selected and expected_rejected results on host
             std::vector<U> expected_selected;
@@ -404,7 +404,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -494,10 +494,10 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
 
-            test_utils::device_ptr<T>            d_input(input);
-            test_utils::device_ptr<U>            d_selected(input.size());
-            test_utils::device_ptr<U>            d_rejected(input.size());
-            test_utils::device_ptr<unsigned int> d_selected_count_output(1);
+            common::device_ptr<T>            d_input(input);
+            common::device_ptr<U>            d_selected(input.size());
+            common::device_ptr<U>            d_rejected(input.size());
+            common::device_ptr<unsigned int> d_selected_count_output(1);
 
             // Calculate expected_selected and expected_rejected results on host
             std::vector<U> expected_selected;
@@ -535,7 +535,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -643,11 +643,11 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 // Generate data
                 const auto input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
 
-                test_utils::device_ptr<T>            d_input(input);
-                test_utils::device_ptr<U>            d_first_output(input.size());
-                test_utils::device_ptr<U>            d_second_output(input.size());
-                test_utils::device_ptr<U>            d_unselected_output(input.size());
-                test_utils::device_ptr<unsigned int> d_selected_counts(2);
+                common::device_ptr<T>            d_input(input);
+                common::device_ptr<U>            d_first_output(input.size());
+                common::device_ptr<U>            d_second_output(input.size());
+                common::device_ptr<U>            d_unselected_output(input.size());
+                common::device_ptr<unsigned int> d_selected_counts(2);
 
                 const auto first_op = LessOp<T>{std::get<0>(limits)};
                 const auto second_op = LessOp<T>{std::get<1>(limits)};
@@ -694,7 +694,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 ASSERT_GT(temp_storage_size_bytes, 0);
 
                 // allocate temporary storage
-                test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+                common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
                 test_utils::GraphHelper gHelper;
                 if(TestFixture::use_graphs)
@@ -1039,14 +1039,14 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
         const auto input_iterator = rocprim::make_counting_iterator(static_cast<size_t>(0));
         const modulo_predicate predicate{modulo};
 
-        test_utils::device_ptr<unsigned int> d_incorrect_flag(1);
+        common::device_ptr<unsigned int> d_incorrect_flag(1);
 
         HIP_CHECK(hipMemsetAsync(d_incorrect_flag.get(), 0, sizeof(unsigned int), stream));
 
         const auto output_checker_it
             = check_modulo_iterator<check_two_way_modulo>(modulo, size, d_incorrect_flag.get());
 
-        test_utils::device_ptr<size_t> d_count_output(1);
+        common::device_ptr<size_t> d_count_output(1);
 
         size_t temporary_storage_size;
 
@@ -1062,7 +1062,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartition)
 
         ASSERT_NE(0, temporary_storage_size);
 
-        test_utils::device_ptr<void> d_temporary_storage(temporary_storage_size);
+        common::device_ptr<void> d_temporary_storage(temporary_storage_size);
 
         test_utils::GraphHelper gHelper;
         if(use_graphs)
@@ -1146,8 +1146,8 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
         const auto input_iterator = rocprim::make_counting_iterator(static_cast<size_t>(0));
         const modulo_predicate predicate{modulo};
 
-        test_utils::device_ptr<unsigned int> d_incorrect_select_flag(1);
-        test_utils::device_ptr<unsigned int> d_incorrect_reject_flag(1);
+        common::device_ptr<unsigned int> d_incorrect_select_flag(1);
+        common::device_ptr<unsigned int> d_incorrect_reject_flag(1);
 
         HIP_CHECK(hipMemsetAsync(d_incorrect_select_flag.get(), 0, sizeof(unsigned int), stream));
         HIP_CHECK(hipMemsetAsync(d_incorrect_reject_flag.get(), 0, sizeof(unsigned int), stream));
@@ -1159,7 +1159,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
                                                            size,
                                                            d_incorrect_reject_flag.get());
 
-        test_utils::device_ptr<size_t> d_count_output(1);
+        common::device_ptr<size_t> d_count_output(1);
 
         size_t temporary_storage_size;
         HIP_CHECK(rocprim::partition_two_way(nullptr,
@@ -1175,7 +1175,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionTwoWay)
 
         ASSERT_NE(0, temporary_storage_size);
 
-        test_utils::device_ptr<void> d_temporary_storage(temporary_storage_size);
+        common::device_ptr<void> d_temporary_storage(temporary_storage_size);
 
         test_utils::GraphHelper gHelper;
         if(use_graphs)
@@ -1270,7 +1270,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
         const auto predicate_a    = modulo_predicate{modulo_a};
         const auto predicate_b    = modulo_predicate{modulo_b};
 
-        test_utils::device_ptr<unsigned int> d_incorrect_flag(1);
+        common::device_ptr<unsigned int> d_incorrect_flag(1);
 
         HIP_CHECK(hipMemsetAsync(d_incorrect_flag.get(), 0, sizeof(unsigned int), stream));
 
@@ -1281,7 +1281,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
 
         const auto unselected_output = rocprim::make_discard_iterator();
 
-        test_utils::device_ptr<size_t> d_count_output(2);
+        common::device_ptr<size_t> d_count_output(2);
 
         size_t temporary_storage_size;
         HIP_CHECK(rocprim::partition_three_way(nullptr,
@@ -1299,7 +1299,7 @@ TEST_P(RocprimDevicePartitionLargeInputTests, LargeInputPartitionThreeWay)
 
         ASSERT_NE(0, temporary_storage_size);
 
-        test_utils::device_ptr<void> d_temporary_storage(temporary_storage_size);
+        common::device_ptr<void> d_temporary_storage(temporary_storage_size);
 
         test_utils::GraphHelper gHelper;
         if(use_graphs)
@@ -1432,9 +1432,9 @@ TEST(RocprimDevicePartitionBlockSizeTests, BlockSize)
             for (size_t i = 0; i < size; i++)
                 memcpy(input[i].data, input_data.data() + i * test_obj_size, test_obj_size);
 
-            test_utils::device_ptr<T>            d_input(input);
-            test_utils::device_ptr<U>            d_output(input.size());
-            test_utils::device_ptr<unsigned int> d_selected_count_output(1);
+            common::device_ptr<T>            d_input(input);
+            common::device_ptr<U>            d_output(input.size());
+            common::device_ptr<unsigned int> d_selected_count_output(1);
 
             // Calculate expected_selected and expected_rejected results on host
             std::vector<U> expected_selected;
@@ -1471,7 +1471,7 @@ TEST(RocprimDevicePartitionBlockSizeTests, BlockSize)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             // Run
             HIP_CHECK(rocprim::partition(d_temp_storage.get(),

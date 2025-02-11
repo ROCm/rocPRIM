@@ -27,8 +27,10 @@
 // required test headers
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
+
+// required common headers
+#include "../../common/utils_device_ptr.hpp"
 
 // required rocprim headers
 #include <rocprim/device/config_types.hpp>
@@ -141,9 +143,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
                 needles_size, d, haystack_size + d, seed_value
             );
 
-            test_utils::device_ptr<haystack_type> d_haystack(haystack);
-            test_utils::device_ptr<needle_type>   d_needles(needles);
-            test_utils::device_ptr<output_type>   d_output(needles_size);
+            common::device_ptr<haystack_type> d_haystack(haystack);
+            common::device_ptr<needle_type>   d_needles(needles);
+            common::device_ptr<output_type>   d_output(needles_size);
 
             // Calculate expected results on host
             std::vector<output_type> expected(needles_size);
@@ -168,7 +170,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -256,9 +258,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
                 needles_size, d, haystack_size + d, seed_value
             );
 
-            test_utils::device_ptr<haystack_type> d_haystack(haystack);
-            test_utils::device_ptr<needle_type>   d_needles(needles);
-            test_utils::device_ptr<output_type>   d_output(needles_size);
+            common::device_ptr<haystack_type> d_haystack(haystack);
+            common::device_ptr<needle_type>   d_needles(needles);
+            common::device_ptr<output_type>   d_output(needles_size);
 
             // Calculate expected results on host
             std::vector<output_type> expected(needles_size);
@@ -283,7 +285,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -374,9 +376,9 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
                 needles_size, d, haystack_size + d, seed_value
             );
 
-            test_utils::device_ptr<haystack_type> d_haystack(haystack);
-            test_utils::device_ptr<needle_type>   d_needles(needles);
-            test_utils::device_ptr<output_type>   d_output(needles_size);
+            common::device_ptr<haystack_type> d_haystack(haystack);
+            common::device_ptr<needle_type>   d_needles(needles);
+            common::device_ptr<output_type>   d_output(needles_size);
 
             // Calculate expected results on host
             std::vector<output_type> expected(needles_size);
@@ -399,7 +401,7 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)

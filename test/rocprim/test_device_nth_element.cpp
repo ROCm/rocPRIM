@@ -24,6 +24,7 @@
 
 #include "../../common/utils_custom_type.hpp"
 #include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "indirect_iterator.hpp"
@@ -32,7 +33,6 @@
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -229,10 +229,10 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
                                                         common::generate_limits<key_type>::max(),
                                                         seed_value);
 
-            test_utils::device_ptr<key_type> d_input(input);
-            test_utils::device_ptr<key_type> d_output_alloc;
+            common::device_ptr<key_type> d_input(input);
+            common::device_ptr<key_type> d_output_alloc;
             d_output_alloc.resize(in_place ? 0 : size);
-            test_utils::device_ptr<key_type>& d_output = in_place ? d_input : d_output_alloc;
+            common::device_ptr<key_type>& d_output = in_place ? d_input : d_output_alloc;
 
             const auto input_it
                 = test_utils::wrap_in_indirect_iterator<use_indirect_iterator>(d_input.get());
@@ -270,7 +270,7 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
 
@@ -354,7 +354,7 @@ TEST(RocprimNthelementKeySameTests, NthelementKeySame)
         // Generate data
         std::vector<key_type> input(size, 8);
 
-        test_utils::device_ptr<key_type> d_input(input);
+        common::device_ptr<key_type> d_input(input);
 
         // compare function
         compare_function compare_op;
@@ -375,7 +375,7 @@ TEST(RocprimNthelementKeySameTests, NthelementKeySame)
         ASSERT_GT(temp_storage_size_bytes, 0);
 
         // allocate temporary storage
-        test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+        common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
         // Run
         HIP_CHECK(rocprim::nth_element(d_temp_storage.get(),

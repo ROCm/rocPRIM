@@ -24,12 +24,12 @@
 
 #include "../../common/device_batch_memcpy.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
 #include "indirect_iterator.hpp"
 #include "test_seed.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/detail/various.hpp>
 #include <rocprim/device/device_copy.hpp>
@@ -319,12 +319,12 @@ TYPED_TEST(RocprimDeviceBatchMemcpyTests, SizeAndTypeVariation)
         const byte_offset_type total_num_bytes = total_num_elements * sizeof(value_type);
 
         // Allocate memory.
-        test_utils::device_ptr<value_type> d_input(total_num_elements);
-        test_utils::device_ptr<value_type> d_output(total_num_elements);
+        common::device_ptr<value_type> d_input(total_num_elements);
+        common::device_ptr<value_type> d_output(total_num_elements);
 
-        test_utils::device_ptr<value_type*>      d_buffer_srcs(num_buffers);
-        test_utils::device_ptr<value_type*>      d_buffer_dsts(num_buffers);
-        test_utils::device_ptr<buffer_size_type> d_buffer_sizes(num_buffers);
+        common::device_ptr<value_type*>      d_buffer_srcs(num_buffers);
+        common::device_ptr<value_type*>      d_buffer_dsts(num_buffers);
+        common::device_ptr<buffer_size_type> d_buffer_sizes(num_buffers);
 
         // Calculate temporary storage
         size_t temp_storage_bytes = 0;
@@ -337,7 +337,7 @@ TYPED_TEST(RocprimDeviceBatchMemcpyTests, SizeAndTypeVariation)
                              hipStreamDefault,
                              debug_synchronous);
 
-        test_utils::device_ptr<void> d_temp_storage(temp_storage_bytes);
+        common::device_ptr<void> d_temp_storage(temp_storage_bytes);
 
         // Generate data.
         std::vector<unsigned char> h_input_for_memcpy;

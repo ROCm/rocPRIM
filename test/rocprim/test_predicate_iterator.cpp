@@ -23,9 +23,9 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/predicate_iterator.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/device/device_transform.hpp>
 #include <rocprim/functional.hpp>
@@ -212,7 +212,7 @@ TEST(RocprimPredicateIteratorTests, DeviceInplace)
     std::vector<T> h_data(size);
     std::iota(h_data.begin(), h_data.end(), 0);
 
-    test_utils::device_ptr<T> d_data(h_data);
+    common::device_ptr<T> d_data(h_data);
 
     auto w_it = rocprim::make_predicate_iterator(d_data.get(), predicate{});
 
@@ -244,8 +244,8 @@ TEST(RocprimPredicateIteratorTests, DeviceRead)
     std::vector<T> h_data(size);
     std::iota(h_data.begin(), h_data.end(), 0);
 
-    test_utils::device_ptr<T> d_input(h_data);
-    test_utils::device_ptr<T> d_output(size);
+    common::device_ptr<T> d_input(h_data);
+    common::device_ptr<T> d_output(size);
 
     auto t_it = rocprim::make_transform_iterator(d_input.get(), transform{});
     auto r_it = rocprim::make_predicate_iterator(t_it, d_input.get(), predicate{});

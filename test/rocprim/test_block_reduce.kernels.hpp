@@ -23,10 +23,12 @@
 #ifndef TEST_BLOCK_REDUCE_KERNELS_HPP_
 #define TEST_BLOCK_REDUCE_KERNELS_HPP_
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_device_ptr.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/block/block_reduce.hpp>
 #include <rocprim/functional.hpp>
@@ -280,8 +282,8 @@ void test_block_reduce_input_arrays()
         }
 
         // Preparing device
-        test_utils::device_ptr<T> device_output(output);
-        test_utils::device_ptr<T> device_output_reductions(output_reductions);
+        common::device_ptr<T> device_output(output);
+        common::device_ptr<T> device_output_reductions(output_reductions);
 
         // Running kernel
         hipLaunchKernelGGL(

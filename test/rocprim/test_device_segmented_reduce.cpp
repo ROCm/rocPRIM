@@ -24,6 +24,7 @@
 
 #include "../../common/utils_custom_type.hpp"
 #include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "identity_iterator.hpp"
@@ -32,7 +33,6 @@
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -252,9 +252,9 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
                 continue;
             }
 
-            test_utils::device_ptr<input_type>  d_values_input(values_input);
-            test_utils::device_ptr<offset_type> d_offsets(offsets);
-            test_utils::device_ptr<output_type> d_aggregates_output(segments_count);
+            common::device_ptr<input_type>  d_values_input(values_input);
+            common::device_ptr<offset_type> d_offsets(offsets);
+            common::device_ptr<output_type> d_aggregates_output(segments_count);
 
             size_t temp_storage_bytes;
 
@@ -272,7 +272,7 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
 
             ASSERT_GT(temp_storage_bytes, 0);
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -377,10 +377,10 @@ void testLargeIndices()
 
         // Device inputs
         const Iterator            values_input{0};
-        test_utils::device_ptr<T> d_offsets(offsets);
+        common::device_ptr<T>     d_offsets(offsets);
 
         // Device outputs
-        test_utils::device_ptr<T> d_aggregates_output(segments_count);
+        common::device_ptr<T> d_aggregates_output(segments_count);
 
         // temp storage
         size_t temp_storage_size_bytes = 0;
@@ -398,7 +398,7 @@ void testLargeIndices()
                                             debug_synchronous));
 
         // Allocate temporary storage
-        test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+        common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
         HIP_CHECK(hipDeviceSynchronize());
 
         test_utils::GraphHelper gHelper;

@@ -22,11 +22,12 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
+
 // required test headers
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 // #include "test_utils_types.hpp"
 
 // required rocprim headers
@@ -116,8 +117,8 @@ TYPED_TEST(RocprimTransformIteratorTests, TransformReduce)
         std::vector<input_type> input = test_utils::get_random_data<input_type>(size, 1, 200, seed_value);
         std::vector<value_type> output(1);
 
-        test_utils::device_ptr<input_type> d_input(input);
-        test_utils::device_ptr<value_type> d_output(output.size());
+        common::device_ptr<input_type> d_input(input);
+        common::device_ptr<value_type> d_output(output.size());
 
         auto reduce_op = rocprim::plus<value_type>();
         unary_function transform;
@@ -143,7 +144,7 @@ TYPED_TEST(RocprimTransformIteratorTests, TransformReduce)
         ASSERT_GT(temp_storage_size_bytes, 0);
 
         // allocate temporary storage
-        test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+        common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
         // Run
         HIP_CHECK(rocprim::reduce(d_temp_storage.get(),
                                   temp_storage_size_bytes,

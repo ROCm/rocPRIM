@@ -23,10 +23,10 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/config.hpp>
 #include <rocprim/detail/various.hpp>
@@ -96,7 +96,7 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> d_output(output);
+        common::device_ptr<T> d_output(output);
 
         // Launching kernel
         hipLaunchKernelGGL(
@@ -183,8 +183,8 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> d_output_key(output_key);
-        test_utils::device_ptr<T> d_output_value(output_value);
+        common::device_ptr<T> d_output_key(output_key);
+        common::device_ptr<T> d_output_value(output_value);
 
         // Launching kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(test_hip_sort_key_value_kernel<items_per_thread,

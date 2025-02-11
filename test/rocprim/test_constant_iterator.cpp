@@ -23,11 +23,11 @@
 #include "../common_test_header.hpp"
 
 // required test headers
+#include "../../common/utils_device_ptr.hpp"
 #include "test_seed.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_types.hpp"
 
 // required rocprim headers
@@ -94,7 +94,7 @@ TYPED_TEST(RocprimConstantIteratorTests, Transform)
         Iterator input_begin(value);
 
         std::vector<T> output(size);
-        test_utils::device_ptr<T> d_output(output.size());
+        common::device_ptr<T> d_output(output.size());
 
         // Calculate expected results on host
         std::vector<T> expected(size, transform<T>()(value));

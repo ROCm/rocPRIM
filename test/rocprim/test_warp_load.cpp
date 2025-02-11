@@ -23,10 +23,10 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_utils.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/config.hpp>
 #include <rocprim/type_traits.hpp>
@@ -261,8 +261,8 @@ TYPED_TEST(WarpLoadTest, WarpLoad)
     std::vector<T> input(items_count);
     std::iota(input.begin(), input.end(), static_cast<T>(0));
 
-    test_utils::device_ptr<T> d_input(input);
-    test_utils::device_ptr<T> d_output(items_count);
+    common::device_ptr<T> d_input(input);
+    common::device_ptr<T> d_output(items_count);
 
     warp_load_kernel<block_size, items_per_thread, warp_size, method>
         <<<dim3(1), dim3(block_size), 0, 0>>>(d_input.get(), d_output.get());
@@ -298,8 +298,8 @@ TYPED_TEST(WarpLoadTest, WarpLoadGuarded)
     std::vector<T> input(items_count);
     std::iota(input.begin(), input.end(), static_cast<T>(0));
 
-    test_utils::device_ptr<T> d_input(input);
-    test_utils::device_ptr<T> d_output(items_count);
+    common::device_ptr<T> d_input(input);
+    common::device_ptr<T> d_output(items_count);
 
     warp_load_guarded_kernel<block_size, items_per_thread, warp_size, method>
         <<<dim3(1), dim3(block_size), 0, 0>>>(d_input.get(),

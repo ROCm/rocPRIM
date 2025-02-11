@@ -23,13 +23,13 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "identity_iterator.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -159,8 +159,8 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<U> d_output(input.size());
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<U> d_output(input.size());
 
             // Calculate expected results on host
             std::vector<U> expected(input.size());
@@ -250,9 +250,9 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
             std::vector<T1> input1 = test_utils::get_random_data<T1>(size, 1, 100, seed_value);
             std::vector<T2> input2 = test_utils::get_random_data<T2>(size, 1, 100, seed_value);
 
-            test_utils::device_ptr<T1> d_input1(input1);
-            test_utils::device_ptr<T2> d_input2(input2);
-            test_utils::device_ptr<U>  d_output(input1.size());
+            common::device_ptr<T1> d_input1(input1);
+            common::device_ptr<T2> d_input2(input2);
+            common::device_ptr<U>  d_output(input1.size());
 
             // Calculate expected results on host
             std::vector<U> expected(input1.size());
@@ -358,7 +358,7 @@ void testLargeIndices()
 
             // Using char instead of bool here, since C++ vectors pack bools in single bits
             std::vector<char>            flags = {false, false};
-            test_utils::device_ptr<char> d_flag(flags);
+            common::device_ptr<char>     d_flag(flags);
 
             const auto expected = test_utils::get_random_value<T>(0, size - 1, seed_value);
             const auto limit    = ROCPRIM_GRID_SIZE_LIMIT;

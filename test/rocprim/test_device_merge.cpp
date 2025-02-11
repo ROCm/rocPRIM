@@ -23,13 +23,14 @@
 // required test headers
 #include "../common_test_header.hpp"
 
+#include "../../common/utils.hpp"
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "bounds_checking_iterator.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -137,7 +138,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 
     for(auto sizes : get_sizes())
     {
-        if ((std::get<0>(sizes) == 0 || std::get<1>(sizes) == 0) && test_common_utils::use_hmm())
+        if((std::get<0>(sizes) == 0 || std::get<1>(sizes) == 0) && common::use_hmm())
         {
             // hipMallocManaged() currently doesnt support zero byte allocation
             continue;
@@ -178,9 +179,9 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 
             test_utils::out_of_bounds_flag out_of_bounds;
 
-            test_utils::device_ptr<key_type> d_keys_input1(keys_input1);
-            test_utils::device_ptr<key_type> d_keys_input2(keys_input2);
-            test_utils::device_ptr<key_type> d_keys_output(keys_output.size());
+            common::device_ptr<key_type> d_keys_input1(keys_input1);
+            common::device_ptr<key_type> d_keys_input2(keys_input2);
+            common::device_ptr<key_type> d_keys_output(keys_output.size());
 
             test_utils::bounds_checking_iterator<key_type> d_keys_checking_output(
                 d_keys_output.get(),
@@ -204,7 +205,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -271,7 +272,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 
     for(auto sizes : get_sizes())
     {
-        if ((std::get<0>(sizes) == 0 || std::get<1>(sizes) == 0) && test_common_utils::use_hmm())
+        if((std::get<0>(sizes) == 0 || std::get<1>(sizes) == 0) && common::use_hmm())
         {
             // hipMallocManaged() currently doesnt support zero byte allocation
             continue;
@@ -329,12 +330,12 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 
             test_utils::out_of_bounds_flag out_of_bounds;
 
-            test_utils::device_ptr<key_type>   d_keys_input1(keys_input1);
-            test_utils::device_ptr<key_type>   d_keys_input2(keys_input2);
-            test_utils::device_ptr<key_type>   d_keys_output(keys_output.size());
-            test_utils::device_ptr<value_type> d_values_input1(values_input1);
-            test_utils::device_ptr<value_type> d_values_input2(values_input2);
-            test_utils::device_ptr<value_type> d_values_output(values_output.size());
+            common::device_ptr<key_type>   d_keys_input1(keys_input1);
+            common::device_ptr<key_type>   d_keys_input2(keys_input2);
+            common::device_ptr<key_type>   d_keys_output(keys_output.size());
+            common::device_ptr<value_type> d_values_input1(values_input1);
+            common::device_ptr<value_type> d_values_input2(values_input2);
+            common::device_ptr<value_type> d_values_output(values_output.size());
 
             test_utils::bounds_checking_iterator<key_type> d_keys_checking_output(
                 d_keys_output.get(),
@@ -365,7 +366,7 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -441,8 +442,8 @@ void testMergeMismatchedIteratorTypes()
     std::vector<int> expected_keys_output(2 * keys_input1.size());
     std::iota(expected_keys_output.begin(), expected_keys_output.end(), 0);
 
-    test_utils::device_ptr<int> d_keys_input1(keys_input1);
-    test_utils::device_ptr<int> d_keys_output(expected_keys_output.size());
+    common::device_ptr<int> d_keys_input1(keys_input1);
+    common::device_ptr<int> d_keys_output(expected_keys_output.size());
 
     const auto d_keys_input2
         = rocprim::make_transform_iterator(rocprim::make_counting_iterator(0),
@@ -471,7 +472,7 @@ void testMergeMismatchedIteratorTypes()
 
     ASSERT_GT(temp_storage_size_bytes, 0);
 
-    test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+    common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
     test_utils::GraphHelper gHelper;
     if(UseGraphs)

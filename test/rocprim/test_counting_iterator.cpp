@@ -25,7 +25,9 @@
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
+
+// required common headers
+#include "../../common/utils_device_ptr.hpp"
 
 // required rocprim headers
 #include <rocprim/device/device_transform.hpp>
@@ -92,7 +94,7 @@ TYPED_TEST(RocprimCountingIteratorTests, Transform)
         Iterator input_begin(test_utils::get_random_value<T>(0, 200, seed_value));
 
         std::vector<T> output(size);
-        test_utils::device_ptr<T> d_output(output.size());
+        common::device_ptr<T> d_output(output.size());
 
         // Calculate expected results on host
         std::vector<T> expected(size);

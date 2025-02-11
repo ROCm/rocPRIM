@@ -22,9 +22,10 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
+
 #include "test_seed.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_sort_checker.hpp"
 #include "test_utils_sort_comparator.hpp"
 
@@ -86,7 +87,7 @@ TYPED_TEST(RocprimSortCheckerTests, TrueTest)
 
             std::sort(input.begin(), input.end(), op);
 
-            test_utils::device_ptr<input_type> d_input(input);
+            common::device_ptr<input_type> d_input(input);
             ASSERT_TRUE(test_utils::device_sort_check(d_input.get(), size, op));
         }
     }
@@ -131,7 +132,7 @@ TEST(RocprimSortCheckerTests, FalseTest)
             }
             std::sort(input.begin(), input.end(), rocprim::less<input_type>{});
 
-            test_utils::device_ptr<input_type> d_input(input);
+            common::device_ptr<input_type> d_input(input);
             ASSERT_FALSE(
                 test_utils::device_sort_check(d_input.get(), size, rocprim::greater<input_type>{}));
         }

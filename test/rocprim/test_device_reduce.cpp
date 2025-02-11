@@ -23,6 +23,7 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "identity_iterator.hpp"
@@ -31,7 +32,6 @@
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -193,7 +193,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceEmptyInput)
         HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
     }
 
-    test_utils::device_ptr<U> d_output(1);
+    common::device_ptr<U> d_output(1);
 
     const U initial_value = U(1234);
 
@@ -209,7 +209,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceEmptyInput)
                                       stream,
                                       debug_synchronous));
 
-    test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+    common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
     test_utils::GraphHelper gHelper;
     if(TestFixture::use_graphs)
@@ -287,8 +287,8 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 0, 100, seed_value);
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<U> d_output(1);
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<U> d_output(1);
 
             // Calculate expected results on host
             U expected = test_utils::host_reduce(input.begin(), input.end(), rocprim::plus<U>());
@@ -312,7 +312,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -391,8 +391,8 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
                 input[i].value = test_utils::get_random_data<T>(1, 1, 100, seed_value)[0];
             }
 
-            test_utils::device_ptr<key_value> d_input(input);
-            test_utils::device_ptr<key_value> d_output(1);
+            common::device_ptr<key_value> d_input(input);
+            common::device_ptr<key_value> d_output(1);
 
             rocprim::arg_min reduce_op;
             const key_value max(std::numeric_limits<int>::max(), rocprim::numeric_limits<T>::max());
@@ -421,7 +421,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceArgMinimum)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -495,7 +495,7 @@ void testLargeIndices()
 
             const Iterator input {0};
 
-            test_utils::device_ptr<T> d_output(1);
+            common::device_ptr<T> d_output(1);
 
             // Get size of d_temp_storage
             size_t temp_storage_size_bytes;
@@ -509,7 +509,7 @@ void testLargeIndices()
                                       debug_synchronous));
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(use_graphs)
@@ -614,8 +614,8 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
         // Generate data
         std::vector<T> input(size, lowest);
 
-        test_utils::device_ptr<T> d_input(input);
-        test_utils::device_ptr<U> d_output(1);
+        common::device_ptr<T> d_input(input);
+        common::device_ptr<U> d_output(1);
 
         // Calculate expected results on host mathematically (instead of using reduce on host)
         U expected = static_cast<U>(static_cast<double>(size) * static_cast<double>(lowest));
@@ -636,7 +636,7 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
         ASSERT_GT(temp_storage_size_bytes, 0);
 
         // allocate temporary storage
-        test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+        common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
         test_utils::GraphHelper gHelper;
         if(TestFixture::use_graphs)
@@ -710,8 +710,8 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
 
-            test_utils::device_ptr<T> d_input(input);
-            test_utils::device_ptr<U> d_output(1);
+            common::device_ptr<T> d_input(input);
+            common::device_ptr<U> d_output(1);
 
             // reduce function
             binary_op_type min_op;
@@ -740,7 +740,7 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceMinimum)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)

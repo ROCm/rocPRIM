@@ -25,12 +25,86 @@
 
 #include <rocprim/intrinsics/thread.hpp>
 
+#ifdef USE_GTEST
+    // GoogleTest-compatible HIP_CHECK macro. FAIL is called to log the Google Test trace.
+    // The lambda is invoked immediately as assertions that generate a fatal failure can
+    // only be used in void-returning functions.
+    #define HIP_CHECK(condition)                                                            \
+        {                                                                                   \
+            hipError_t error = condition;                                                   \
+            if(error != hipSuccess)                                                         \
+            {                                                                               \
+                [error]()                                                                   \
+                { FAIL() << "HIP error " << error << ": " << hipGetErrorString(error); }(); \
+                exit(error);                                                                \
+            }                                                                               \
+        }
+#else
+    #define HIP_CHECK(condition)                                                                \
+        {                                                                                       \
+            hipError_t error = condition;                                                       \
+            if(error != hipSuccess)                                                             \
+            {                                                                                   \
+                std::cout << "HIP error: " << hipGetErrorString(error) << " file: " << __FILE__ \
+                          << " line: " << __LINE__ << std::endl;                                \
+                exit(error);                                                                    \
+            }                                                                                   \
+        }
+#endif
+
 namespace common
 {
 
 template<unsigned int LogicalWarpSize>
 __device__ constexpr bool device_test_enabled_for_warp_size_v
     = ::rocprim::device_warp_size() >= LogicalWarpSize;
+
+inline char* __get_env(const char* name)
+{
+    char* env;
+#ifdef _MSC_VER
+    errno_t err = _dupenv_s(&env, nullptr, name);
+    if(err)
+    {
+        return nullptr;
+    }
+#else
+    env = std::getenv(name);
+#endif
+    return env;
+}
+
+inline void clean_env(char* env)
+{
+#ifdef _MSC_VER
+    free(env);
+#endif
+    (void)env;
+}
+
+inline bool use_hmm()
+{
+
+    char*      env = __get_env("ROCPRIM_USE_HMM");
+    const bool hmm = (env != nullptr) && (strcmp(env, "1") == 0);
+    clean_env(env);
+    return hmm;
+}
+
+// Helper for HMM allocations: HMM is requested through ROCPRIM_USE_HMM=1 environment variable
+template<class T>
+hipError_t hipMallocHelper(T** devPtr, size_t size)
+{
+    if(use_hmm())
+    {
+        return hipMallocManaged(reinterpret_cast<void**>(devPtr), size);
+    }
+    else
+    {
+        return hipMalloc(reinterpret_cast<void**>(devPtr), size);
+    }
+    return hipSuccess;
+}
 
 } // namespace common
 

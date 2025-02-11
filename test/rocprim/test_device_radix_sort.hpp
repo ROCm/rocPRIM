@@ -35,6 +35,8 @@
 #include <rocprim/type_traits_interface.hpp>
 #include <rocprim/types/double_buffer.hpp>
 
+#include "../../common/utils_device_ptr.hpp"
+
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils.hpp"
@@ -43,7 +45,6 @@
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 #include "test_utils_sort_checker.hpp"
 #include "test_utils_sort_comparator.hpp"
@@ -292,9 +293,9 @@ void sort_keys()
             auto keys_input = std::make_unique<key_type[]>(size);
             generate_key_input(keys_input.get(), size, rng_engine);
 
-            test_utils::device_ptr<key_type>  d_keys_input(keys_input, size);
-            test_utils::device_ptr<key_type>  d_keys_output_alloc;
-            test_utils::device_ptr<key_type>& d_keys_output
+            common::device_ptr<key_type>  d_keys_input(keys_input, size);
+            common::device_ptr<key_type>  d_keys_output_alloc;
+            common::device_ptr<key_type>& d_keys_output
                 = in_place ? d_keys_input : d_keys_output_alloc;
             d_keys_output_alloc.resize(in_place ? 0 : size);
 
@@ -315,7 +316,7 @@ void sort_keys()
                                                             stream,
                                                             debug_synchronous)));
             ASSERT_GT(temporary_storage_bytes, 0);
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -594,15 +595,15 @@ void sort_pairs()
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);
 
-            test_utils::device_ptr<key_type>  d_keys_input(keys_input, size);
-            test_utils::device_ptr<key_type>  d_keys_output_alloc;
-            test_utils::device_ptr<key_type>& d_keys_output
+            common::device_ptr<key_type>  d_keys_input(keys_input, size);
+            common::device_ptr<key_type>  d_keys_output_alloc;
+            common::device_ptr<key_type>& d_keys_output
                 = in_place ? d_keys_input : d_keys_output_alloc;
             d_keys_output_alloc.resize(in_place ? 0 : size);
 
-            test_utils::device_ptr<value_type>  d_values_input(values_input);
-            test_utils::device_ptr<value_type>  d_values_output_alloc;
-            test_utils::device_ptr<value_type>& d_values_output
+            common::device_ptr<value_type>  d_values_input(values_input);
+            common::device_ptr<value_type>  d_values_output_alloc;
+            common::device_ptr<value_type>& d_values_output
                 = in_place ? d_values_input : d_values_output_alloc;
             d_values_output_alloc.resize(in_place ? 0 : size);
 
@@ -662,7 +663,7 @@ void sort_pairs()
             }
 
             ASSERT_GT(temporary_storage_bytes, 0);
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             if(TestFixture::params::use_graphs)
             {
@@ -871,8 +872,8 @@ void sort_keys_double_buffer()
             auto keys_input = std::make_unique<key_type[]>(size);
             generate_key_input(keys_input.get(), size, rng_engine);
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input, size);
-            test_utils::device_ptr<key_type> d_keys_output(size);
+            common::device_ptr<key_type> d_keys_input(keys_input, size);
+            common::device_ptr<key_type> d_keys_output(size);
 
             // Calculate expected results on host
             std::vector<key_type> expected(keys_input.get(), keys_input.get() + size);
@@ -896,7 +897,7 @@ void sort_keys_double_buffer()
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -1118,11 +1119,11 @@ void sort_pairs_double_buffer()
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input, size);
-            test_utils::device_ptr<key_type> d_keys_output(size);
+            common::device_ptr<key_type> d_keys_input(keys_input, size);
+            common::device_ptr<key_type> d_keys_output(size);
 
-            test_utils::device_ptr<value_type> d_values_input(values_input);
-            test_utils::device_ptr<value_type> d_values_output(size);
+            common::device_ptr<value_type> d_values_input(values_input);
+            common::device_ptr<value_type> d_values_output(size);
 
             using key_value = std::pair<key_type, value_type>;
 
@@ -1162,7 +1163,7 @@ void sort_pairs_double_buffer()
                                                                         debug_synchronous)));
 
             ASSERT_GT(temporary_storage_bytes, 0);
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -1253,7 +1254,7 @@ void sort_keys_over_4g()
     //generate histogram of the randomly generated values
     std::for_each(keys_input.begin(), keys_input.end(), [&](const key_type& a) { histogram[a]++; });
 
-    test_utils::device_ptr<key_type> d_keys_input_output(keys_input);
+    common::device_ptr<key_type> d_keys_input_output(keys_input);
     size_t key_type_storage_bytes = size * sizeof(key_type);
 
     size_t temporary_storage_bytes;
@@ -1280,7 +1281,7 @@ void sort_keys_over_4g()
                     << " bytes). Skipping test";
    }
 
-   test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+   common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
    test_utils::GraphHelper gHelper;
    if(UseGraphs)
@@ -1351,7 +1352,7 @@ inline void sort_keys_large_sizes()
     {
         SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-        test_utils::device_ptr<key_type> d_keys;
+        common::device_ptr<key_type> d_keys;
         if(!d_keys.resize_with_memory_check(size))
         {
             std::cout << "Out of memory. Skipping size = " << size << std::endl;
@@ -1374,7 +1375,7 @@ inline void sort_keys_large_sizes()
                                            stream));
 
         ASSERT_GT(temporary_storage_bytes, 0U);
-        test_utils::device_ptr<void> d_temporary_storage;
+        common::device_ptr<void> d_temporary_storage;
         if(!d_temporary_storage.resize_with_memory_check(temporary_storage_bytes))
         {
             std::cout << "Out of memory. Skipping size = " << size << std::endl;

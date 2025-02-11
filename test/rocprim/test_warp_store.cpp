@@ -23,9 +23,9 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_utils.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/config.hpp>
 #include <rocprim/types.hpp>
@@ -248,8 +248,8 @@ TYPED_TEST(WarpStoreTest, WarpLoad)
     std::vector<T> input(items_count);
     std::iota(input.begin(), input.end(), static_cast<T>(0));
 
-    test_utils::device_ptr<T> d_input(input);
-    test_utils::device_ptr<T> d_output(items_count);
+    common::device_ptr<T> d_input(input);
+    common::device_ptr<T> d_output(items_count);
 
     warp_store_kernel<block_size, items_per_thread, warp_size, method>
         <<<dim3(1), dim3(block_size), 0, 0>>>(d_input.get(), d_output.get());
@@ -283,8 +283,8 @@ TYPED_TEST(WarpStoreTest, WarpStoreGuarded)
     std::vector<T> input(items_count);
     std::iota(input.begin(), input.end(), static_cast<T>(0));
 
-    test_utils::device_ptr<T> d_input(input);
-    test_utils::device_ptr<T> d_output(items_count);
+    common::device_ptr<T> d_input(input);
+    common::device_ptr<T> d_output(items_count);
     HIP_CHECK(hipMemset(d_output.get(), 0, items_count * sizeof(T)));
 
     warp_store_guarded_kernel<block_size, items_per_thread, warp_size, method>

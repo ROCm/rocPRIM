@@ -25,13 +25,13 @@
 #include "../../common/device_adjacent_difference.hpp"
 #include "../../common/utils_custom_type.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
 #include "indirect_iterator.hpp"
 #include "test_seed.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 #include <rocprim/block/block_load.hpp>
@@ -247,7 +247,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
 
-            test_utils::device_ptr<T> d_input(input);
+            common::device_ptr<T> d_input(input);
 
             static constexpr auto left_tag = rocprim::detail::bool_constant<left>{};
             static constexpr auto alias_tag
@@ -272,7 +272,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
 
             ASSERT_GT(temp_storage_size, 0);
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void> d_temp_storage(temp_storage_size);
 
             test_utils::GraphHelper gHelper;
 
@@ -336,7 +336,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceTests, AdjacentDifference)
             // if common::api_variant is not in_place we should check the non aliased function call
             if(aliasing != common::api_variant::in_place)
             {
-                test_utils::device_ptr<output_type> d_output(size);
+                common::device_ptr<output_type> d_output(size);
 
                 const auto output_it
                     = test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get());
@@ -531,12 +531,12 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-            test_utils::device_ptr<flag_type> d_incorrect_flag(1);
+            common::device_ptr<flag_type> d_incorrect_flag(1);
             HIP_CHECK(hipMemset(d_incorrect_flag.get(),
                                 0,
                                 sizeof(typename decltype(d_incorrect_flag)::value_type)));
 
-            test_utils::device_ptr<size_t> d_counter(1);
+            common::device_ptr<size_t> d_counter(1);
             HIP_CHECK(
                 hipMemset(d_counter.get(), 0, sizeof(typename decltype(d_counter)::value_type)));
 
@@ -573,7 +573,7 @@ TYPED_TEST(RocprimDeviceAdjacentDifferenceLargeTests, LargeIndices)
 
             ASSERT_GT(temp_storage_size, 0);
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void> d_temp_storage(temp_storage_size);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)

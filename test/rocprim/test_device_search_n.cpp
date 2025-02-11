@@ -21,12 +21,12 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 #include "../../common/utils_half.hpp"
 
 #include "test_seed.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 #include <rocprim/config.hpp>
@@ -152,9 +152,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, RandomTest)
             }
 
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -173,7 +173,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, RandomTest)
                                                 h_input.size(),
                                                 count,
                                                 nullptr));
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void> d_temp_storage(temp_storage_size);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -245,9 +245,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, MaxCount)
                                                            ++seed_value);
             std::vector<input_type>             h_input(size, h_value);
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -266,7 +266,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, MaxCount)
                                                 h_input.size(),
                                                 count,
                                                 nullptr));
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void> d_temp_storage(temp_storage_size);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -340,9 +340,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, MinCount)
                                                            ++seed_value);
             std::vector<input_type>             h_input(size, h_value);
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -362,7 +362,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, MinCount)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -432,9 +432,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, SmallCount)
             input_type                          h_noise{0};
             std::vector<input_type>             h_input(size, h_noise);
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             if(size > 0 && size - 1 > 0)
             {
@@ -461,7 +461,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, SmallCount)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -532,9 +532,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromBegin)
             std::fill(h_input.begin(), h_input.begin() + (size - count), h_value);
             std::fill(h_input.begin() + count, h_input.end(), 0);
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -554,7 +554,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromBegin)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -626,9 +626,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromMiddle)
             std::fill(h_input.begin(), h_input.begin() + (size - count), 0);
             std::fill(h_input.begin() + count, h_input.end(), h_value);
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -648,7 +648,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromMiddle)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -720,9 +720,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromEnd)
             std::fill(h_input.begin(), h_input.begin() + (size - count), 0);
             std::fill(h_input.begin() + (size - count), h_input.end(), h_value);
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -742,7 +742,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromEnd)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -818,9 +818,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromEndButFail)
                 count += 2;
             }
             output_type                         h_output;
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>      d_input(h_input);
+            common::device_ptr<input_type>      d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type>     d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -840,7 +840,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, StartFromEndButFail)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -938,9 +938,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, NoiseTest_1block)
                 }
             }
 
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>  d_input(h_input);
+            common::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type> d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -960,7 +960,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, NoiseTest_1block)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -1058,9 +1058,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, NoiseTest_2block)
                 }
             }
 
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>  d_input(h_input);
+            common::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type> d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -1080,7 +1080,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, NoiseTest_2block)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -1178,9 +1178,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, NoiseTest_3block)
                 }
             }
 
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>  d_input(h_input);
+            common::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type> d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -1200,7 +1200,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, NoiseTest_3block)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -1300,9 +1300,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, MultiResult1)
                 h_input[0] = h_noise;
             }
 
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>  d_input(h_input);
+            common::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type> d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -1322,7 +1322,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, MultiResult1)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {
@@ -1415,9 +1415,9 @@ TYPED_TEST(RocprimDeviceSearchNTests, MultiResult2)
                 }
             }
 
-            test_utils::device_ptr<input_type>  d_input(h_input);
-            test_utils::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<input_type>  d_input(h_input);
+            common::device_ptr<input_type>  d_value(std::vector<input_type>({h_value}));
+            common::device_ptr<output_type> d_output(1);
 
             SCOPED_TRACE(testing::Message() << "with size = " << h_input.size());
             SCOPED_TRACE(testing::Message() << "with count = " << count);
@@ -1437,7 +1437,7 @@ TYPED_TEST(RocprimDeviceSearchNTests, MultiResult2)
                                                 count,
                                                 nullptr));
 
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size);
+            common::device_ptr<void>     d_temp_storage(temp_storage_size);
             test_utils::GraphHelper      gHelper;
             if(TestFixture::use_graphs)
             {

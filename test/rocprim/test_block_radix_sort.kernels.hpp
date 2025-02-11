@@ -27,11 +27,11 @@
 
 #include "../../common/utils_data_generation.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
 #include "test_seed.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_sort_comparator.hpp"
 
 #include <rocprim/block/block_load_func.hpp>
@@ -241,7 +241,7 @@ auto test_block_radix_sort() -> typename std::enable_if<Method == 0>::type
         }
 
         // Preparing device
-        test_utils::device_ptr<key_type> device_keys_output(keys_output, size);
+        common::device_ptr<key_type> device_keys_output(keys_output, size);
 
         sort_key_kernel<block_size, items_per_thread, radix_bits_per_pass, key_type>
             <<<dim3(grid_size), dim3(block_size), 0, 0>>>(device_keys_output.get(),
@@ -345,8 +345,8 @@ auto test_block_radix_sort() -> typename std::enable_if<Method == 1>::type
             values_expected[i] = expected[i].second;
         }
 
-        test_utils::device_ptr<key_type>   device_keys_output(keys_output, size);
-        test_utils::device_ptr<value_type> device_values_output(values_output);
+        common::device_ptr<key_type>   device_keys_output(keys_output, size);
+        common::device_ptr<value_type> device_values_output(values_output);
 
         // Running kernel
         sort_key_value_kernel<block_size,

@@ -22,10 +22,11 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
+
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 // required rocprim headers
 #include <rocprim/device/device_reduce_by_key.hpp>
@@ -109,9 +110,9 @@ TEST(RocprimDiscardIteratorTests, ReduceByKey)
     std::vector<int> aggregates_expected = {3, 2, 2, 4};
 
     // device input/output
-    test_utils::device_ptr<int> d_keys_input(keys_input);
-    test_utils::device_ptr<int> d_values_input(values_input);
-    test_utils::device_ptr<int> d_aggregates_output(aggregates_expected.size());
+    common::device_ptr<int> d_keys_input(keys_input);
+    common::device_ptr<int> d_values_input(values_input);
+    common::device_ptr<int> d_aggregates_output(aggregates_expected.size());
 
     // Get temporary storage size
     size_t temporary_storage_bytes;
@@ -131,7 +132,7 @@ TEST(RocprimDiscardIteratorTests, ReduceByKey)
 
     ASSERT_GT(temporary_storage_bytes, 0);
 
-    test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+    common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
     HIP_CHECK(rocprim::reduce_by_key(d_temporary_storage.get(),
                                      temporary_storage_bytes,

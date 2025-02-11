@@ -22,7 +22,9 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils.hpp"
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "test_seed.hpp"
@@ -31,7 +33,6 @@
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -145,10 +146,10 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
                                                         100,
                                                         seed_value); // float16 can't exceed 65504
 
-            test_utils::device_ptr<key_type> d_input(input);
-            test_utils::device_ptr<key_type> d_output_alloc;
+            common::device_ptr<key_type> d_input(input);
+            common::device_ptr<key_type> d_output_alloc;
             d_output_alloc.resize(in_place ? 0 : size);
-            test_utils::device_ptr<key_type>& d_output = in_place ? d_input : d_output_alloc;
+            common::device_ptr<key_type>& d_output = in_place ? d_input : d_output_alloc;
 
             // compare function
             compare_function compare_op;
@@ -172,7 +173,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -251,16 +252,16 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);
 
-            test_utils::device_ptr<key_type> d_keys_input(keys_input);
-            test_utils::device_ptr<key_type> d_keys_output_alloc;
+            common::device_ptr<key_type> d_keys_input(keys_input);
+            common::device_ptr<key_type> d_keys_output_alloc;
             d_keys_output_alloc.resize(in_place ? 0 : size);
-            test_utils::device_ptr<key_type>& d_keys_output
+            common::device_ptr<key_type>& d_keys_output
                 = in_place ? d_keys_input : d_keys_output_alloc;
 
-            test_utils::device_ptr<value_type> d_values_input(values_input);
-            test_utils::device_ptr<value_type> d_values_output_alloc;
+            common::device_ptr<value_type> d_values_input(values_input);
+            common::device_ptr<value_type> d_values_output_alloc;
             d_values_output_alloc.resize(in_place ? 0 : size);
-            test_utils::device_ptr<value_type>& d_values_output
+            common::device_ptr<value_type>& d_values_output
                 = in_place ? d_values_input : d_values_output_alloc;
 
             // compare function
@@ -295,7 +296,7 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -380,8 +381,7 @@ void testLargeIndices()
                                                rocprim::identity<key_type>());
 
         key_type*  d_output;
-        hipError_t malloc_status
-            = test_common_utils::hipMallocHelper(&d_output, size * sizeof(*d_output));
+        hipError_t malloc_status = common::hipMallocHelper(&d_output, size * sizeof(*d_output));
         if(malloc_status == hipErrorOutOfMemory)
         {
             std::cout << "Out of memory. Skipping size = " << size << std::endl;
@@ -409,8 +409,7 @@ void testLargeIndices()
         ASSERT_GT(temp_storage_size_bytes, 0);
 
         // allocate temporary storage
-        malloc_status
-            = test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes);
+        malloc_status = common::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes);
         if(malloc_status == hipErrorOutOfMemory)
         {
             std::cout << "Out of memory. Skipping size = " << size << std::endl;

@@ -22,11 +22,12 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
+
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 // required rocprim headers
 #include <rocprim/config.hpp>
@@ -326,7 +327,7 @@ void test_shuffle()
         }
     };
 
-    test_utils::device_ptr<T> d_data(size);
+    common::device_ptr<T> d_data(size);
 
     for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
     {
@@ -431,8 +432,8 @@ TYPED_TEST(RocprimIntrinsicsTests, ShuffleIndex)
         // Generate input
         auto input = test_type_helper<T>::get_random_data(size, seed_value);
 
-        test_utils::device_ptr<T>   device_data(input.size());
-        test_utils::device_ptr<int> device_src_lanes(hardware_warp_size);
+        common::device_ptr<T>   device_data(input.size());
+        common::device_ptr<int> device_src_lanes(hardware_warp_size);
 
         for(unsigned int i = hardware_warp_size; i > 1; i = i / 2)
         {
@@ -508,7 +509,7 @@ TEST(RocprimIntrinsicsTests, LaneId)
     const size_t size            = blocks * block_size;
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
-    test_utils::device_ptr<unsigned int> d_output(size);
+    common::device_ptr<unsigned int> d_output(size);
 
     hipLaunchKernelGGL(lane_id_kernel,
                        dim3(blocks),
@@ -568,9 +569,9 @@ TEST(RocprimIntrinsicsTests, MaskedBitCount)
 
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
-    test_utils::device_ptr<max_lane_mask_type> d_input(in_size);
+    common::device_ptr<max_lane_mask_type> d_input(in_size);
 
-    test_utils::device_ptr<unsigned int> d_output(out_size);
+    common::device_ptr<unsigned int> d_output(out_size);
 
     std::vector<unsigned int> expected(out_size);
 
@@ -684,9 +685,9 @@ void warp_any_all_test()
 
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
-    test_utils::device_ptr<max_lane_mask_type> d_input(in_size);
+    common::device_ptr<max_lane_mask_type> d_input(in_size);
 
-    test_utils::device_ptr<unsigned int> d_output(out_size);
+    common::device_ptr<unsigned int> d_output(out_size);
 
     std::vector<unsigned int> expected(out_size);
     for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
@@ -800,10 +801,10 @@ TYPED_TEST(RocprimIntrinsicsTests, WarpPermute)
 
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
-    test_utils::device_ptr<T> d_input(size);
-    test_utils::device_ptr<T> d_output(size);
+    common::device_ptr<T> d_input(size);
+    common::device_ptr<T> d_output(size);
 
-    test_utils::device_ptr<unsigned int> d_indices(size);
+    common::device_ptr<unsigned int> d_indices(size);
 
     const auto permute = [&](T*                       out,
                              const T*                 in,
@@ -927,8 +928,8 @@ TEST(RocprimIntrinsicsTests, MatchAny)
     constexpr unsigned int label_bits      = 3;
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
-    test_utils::device_ptr<unsigned int>       d_input(size);
-    test_utils::device_ptr<max_lane_mask_type> d_output(size);
+    common::device_ptr<unsigned int>       d_input(size);
+    common::device_ptr<max_lane_mask_type> d_output(size);
 
     std::vector<max_lane_mask_type> expected(size);
 
@@ -1036,8 +1037,8 @@ TEST(RocprimIntrinsicsTests, Ballot)
     const size_t size            = blocks * block_size;
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
-    test_utils::device_ptr<unsigned int>       d_input(size);
-    test_utils::device_ptr<max_lane_mask_type> d_output(size);
+    common::device_ptr<unsigned int>       d_input(size);
+    common::device_ptr<max_lane_mask_type> d_output(size);
 
     std::vector<max_lane_mask_type> expected(size);
 
@@ -1125,8 +1126,8 @@ TEST(RocprimIntrinsicsTests, GroupElect)
     const size_t number_of_warps = blocks * warps_per_block;
     SCOPED_TRACE(testing::Message() << "with hardware_warp_size = " << hardware_warp_size);
 
-    test_utils::device_ptr<max_lane_mask_type> d_input(size);
-    test_utils::device_ptr<max_lane_mask_type> d_output(number_of_warps);
+    common::device_ptr<max_lane_mask_type> d_input(size);
+    common::device_ptr<max_lane_mask_type> d_output(number_of_warps);
 
     std::vector<max_lane_mask_type> output;
     output.reserve(number_of_warps);

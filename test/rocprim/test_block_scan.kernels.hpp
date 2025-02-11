@@ -23,10 +23,12 @@
 #ifndef TEST_BLOCK_SCAN_KERNELS_HPP_
 #define TEST_BLOCK_SCAN_KERNELS_HPP_
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_device_ptr.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/block/block_scan.hpp>
 #include <rocprim/functional.hpp>
@@ -561,7 +563,7 @@ auto test_block_scan_input_arrays()
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_output(output);
+        common::device_ptr<T> device_output(output);
 
         // Launching kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(inclusive_scan_array_kernel<block_size,
@@ -643,8 +645,8 @@ auto test_block_scan_input_arrays()
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_output(output);
-        test_utils::device_ptr<T> device_output_reductions(output_reductions);
+        common::device_ptr<T> device_output(output);
+        common::device_ptr<T> device_output_reductions(output_reductions);
 
         // Launching kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(inclusive_scan_reduce_array_kernel<block_size,
@@ -729,8 +731,8 @@ auto test_block_scan_input_arrays()
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_output(output);
-        test_utils::device_ptr<T> device_output_bp(output_block_prefixes);
+        common::device_ptr<T> device_output(output);
+        common::device_ptr<T> device_output_bp(output_block_prefixes);
 
         // Launching kernel
         hipLaunchKernelGGL(
@@ -815,7 +817,7 @@ auto test_block_scan_input_arrays()
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_output(output);
+        common::device_ptr<T> device_output(output);
 
         // Launching kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(exclusive_scan_array_kernel<block_size,
@@ -904,8 +906,8 @@ auto test_block_scan_input_arrays()
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_output(output);
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_output(output);
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         // Launching kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(exclusive_scan_reduce_array_kernel<block_size,
@@ -996,8 +998,8 @@ auto test_block_scan_input_arrays()
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_output(output);
-        test_utils::device_ptr<T> device_output_bp(output_block_prefixes.size());
+        common::device_ptr<T> device_output(output);
+        common::device_ptr<T> device_output_bp(output_block_prefixes.size());
 
         // Launching kernel
         hipLaunchKernelGGL(

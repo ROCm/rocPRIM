@@ -27,7 +27,9 @@
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
+
+// required common headers
+#include "../../common/utils_device_ptr.hpp"
 
 // required rocprim headers
 #include <rocprim/block/block_load_func.hpp>
@@ -225,10 +227,10 @@ TYPED_TEST(HipcubBlockRunLengthDecodeTest, TestDecode)
             }
         }
 
-        test_utils::device_ptr<ItemT>   d_run_items(run_items);
-        test_utils::device_ptr<LengthT> d_run_lengths(run_lengths);
-        test_utils::device_ptr<ItemT>   d_decoded_runs(expected.size());
-        test_utils::device_ptr<LengthT> d_decoded_offsets(expected.size());
+        common::device_ptr<ItemT>   d_run_items(run_items);
+        common::device_ptr<LengthT> d_run_lengths(run_lengths);
+        common::device_ptr<ItemT>   d_decoded_runs(expected.size());
+        common::device_ptr<LengthT> d_decoded_offsets(expected.size());
 
         block_run_length_decode_kernel<ItemT,
                                        LengthT,

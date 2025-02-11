@@ -27,11 +27,11 @@
 
 #include "../../common/utils_data_generation.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
 #include "test_seed.hpp"
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_sort_comparator.hpp"
 
 #include <rocprim/block/block_exchange.hpp>
@@ -191,8 +191,8 @@ void test_block_radix_rank()
             }
         }
 
-        test_utils::device_ptr<T>            d_keys_input(keys_input);
-        test_utils::device_ptr<unsigned int> d_ranks_output(size);
+        common::device_ptr<T>            d_keys_input(keys_input);
+        common::device_ptr<unsigned int> d_ranks_output(size);
 
         // Running kernel
         hipLaunchKernelGGL(

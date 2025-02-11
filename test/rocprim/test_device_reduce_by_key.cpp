@@ -24,6 +24,7 @@
 
 #include "../../common/utils_custom_type.hpp"
 #include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "identity_iterator.hpp"
@@ -32,7 +33,6 @@
 #include "test_utils_custom_float_traits_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -269,12 +269,12 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
                 offset += key_count;
             }
 
-            test_utils::device_ptr<key_type>   d_keys_input(keys_input);
-            test_utils::device_ptr<value_type> d_values_input(values_input);
+            common::device_ptr<key_type>   d_keys_input(keys_input);
+            common::device_ptr<value_type> d_values_input(values_input);
 
-            test_utils::device_ptr<key_type>       d_unique_output(unique_count_expected);
-            test_utils::device_ptr<aggregate_type> d_aggregates_output(unique_count_expected);
-            test_utils::device_ptr<unsigned int>   d_unique_count_output(1);
+            common::device_ptr<key_type>       d_unique_output(unique_count_expected);
+            common::device_ptr<aggregate_type> d_aggregates_output(unique_count_expected);
+            common::device_ptr<unsigned int>   d_unique_count_output(1);
 
             size_t temporary_storage_bytes;
             HIP_CHECK((invoke_reduce_by_key<deterministic, config>(
@@ -294,7 +294,7 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::params::use_graphs)
@@ -382,9 +382,9 @@ void large_indices_reduce_by_key()
         // the count is value of the last key plus one as the value of the first key is zero
         unsigned int unique_count_expected = log2(size) + 1;
 
-        test_utils::device_ptr<key_type>       d_unique_output(unique_count_expected);
-        test_utils::device_ptr<aggregate_type> d_aggregates_output(unique_count_expected);
-        test_utils::device_ptr<unsigned int>   d_unique_count_output(1);
+        common::device_ptr<key_type>       d_unique_output(unique_count_expected);
+        common::device_ptr<aggregate_type> d_aggregates_output(unique_count_expected);
+        common::device_ptr<unsigned int>   d_unique_count_output(1);
 
         size_t temporary_storage_bytes;
         HIP_CHECK(invoke_reduce_by_key<Deterministic>(nullptr,
@@ -402,7 +402,7 @@ void large_indices_reduce_by_key()
 
         ASSERT_GT(temporary_storage_bytes, 0);
 
-        test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+        common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
         test_utils::GraphHelper gHelper;
         if(use_graphs)
@@ -514,7 +514,7 @@ void large_segment_count_reduce_by_key()
         auto d_unique_output     = rocprim::make_discard_iterator();
         auto d_aggregates_output = rocprim::make_discard_iterator();
 
-        test_utils::device_ptr<size_t> d_unique_count_output(1);
+        common::device_ptr<size_t> d_unique_count_output(1);
 
         size_t temporary_storage_bytes;
         HIP_CHECK(invoke_reduce_by_key<Deterministic>(nullptr,
@@ -532,7 +532,7 @@ void large_segment_count_reduce_by_key()
 
         ASSERT_GT(temporary_storage_bytes, 0);
 
-        test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+        common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
         test_utils::GraphHelper gHelper;
         if(use_graphs)
@@ -631,7 +631,7 @@ TEST(RocprimDeviceReduceByKey, ReduceByNonEqualKeys)
             auto d_unique_output     = rocprim::make_discard_iterator();
             auto d_aggregates_output = rocprim::make_discard_iterator();
 
-            test_utils::device_ptr<size_t> d_unique_count_output(1);
+            common::device_ptr<size_t> d_unique_count_output(1);
 
             size_t temporary_storage_bytes;
             HIP_CHECK(invoke_reduce_by_key<deterministic>(nullptr,
@@ -649,7 +649,7 @@ TEST(RocprimDeviceReduceByKey, ReduceByNonEqualKeys)
 
             ASSERT_GT(temporary_storage_bytes, 0);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             HIP_CHECK(invoke_reduce_by_key<deterministic>(d_temporary_storage.get(),
                                                           temporary_storage_bytes,

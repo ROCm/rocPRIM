@@ -23,11 +23,11 @@
 #include "../common_test_header.hpp"
 
 #include "../../common/utils_custom_type.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 #include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/config.hpp>
 #include <rocprim/detail/various.hpp>
@@ -111,8 +111,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -227,8 +227,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanInitialValue)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if(current_device_warp_size == ws32)
@@ -344,9 +344,9 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -472,9 +472,9 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduceInitialValu
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         // Launching kernel
         if(current_device_warp_size == ws32)
@@ -595,8 +595,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -708,8 +708,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Broadcast)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if(current_device_warp_size == ws32)
@@ -826,8 +826,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScanWoInit)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if(current_device_warp_size == ws32)
@@ -956,9 +956,9 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -1095,9 +1095,9 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScanWoInit)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         // Launching kernel
         if(current_device_warp_size == ws32)
@@ -1230,9 +1230,9 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_inclusive_output(output_inclusive.size());
-        test_utils::device_ptr<T> device_exclusive_output(output_exclusive.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_inclusive_output(output_inclusive.size());
+        common::device_ptr<T> device_exclusive_output(output_exclusive.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -1362,10 +1362,10 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_inclusive_output(output_inclusive.size());
-        test_utils::device_ptr<T> device_exclusive_output(output_exclusive.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_inclusive_output(output_inclusive.size());
+        common::device_ptr<T> device_exclusive_output(output_exclusive.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)
@@ -1498,8 +1498,8 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
         }
 
         // Writing to device memory
-        test_utils::device_ptr<T> device_input(input);
-        test_utils::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_input(input);
+        common::device_ptr<T> device_output(output.size());
 
         // Launching kernel
         if (current_device_warp_size == ws32)

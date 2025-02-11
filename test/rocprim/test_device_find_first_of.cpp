@@ -27,8 +27,10 @@
 // required test headers
 #include "indirect_iterator.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
+
+// required common headers
+#include "../../common/utils_device_ptr.hpp"
 
 // required rocprim headers
 #include <rocprim/config.hpp>
@@ -203,9 +205,9 @@ TYPED_TEST(RocprimDeviceFindFirstOfTests, FindFirstOf)
                     }
                 }
 
-                test_utils::device_ptr<type>        d_input(input);
-                test_utils::device_ptr<key_type>    d_keys(keys);
-                test_utils::device_ptr<output_type> d_output(1);
+                common::device_ptr<type>        d_input(input);
+                common::device_ptr<key_type>    d_keys(keys);
+                common::device_ptr<output_type> d_output(1);
 
                 const auto input_it
                     = test_utils::wrap_in_indirect_iterator<use_indirect_iterator, const type>(
@@ -234,7 +236,7 @@ TYPED_TEST(RocprimDeviceFindFirstOfTests, FindFirstOf)
                 ASSERT_GT(temp_storage_size_bytes, 0);
 
                 // allocate temporary storage
-                test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+                common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
                 test_utils::GraphHelper gHelper;
                 if(TestFixture::use_graphs)
@@ -308,7 +310,7 @@ TEST(RocprimDeviceFindFirstOfTests, LargeIndices)
 
             hipStream_t stream = 0; // default
 
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<output_type> d_output(1);
 
             const output_type expected
                 = std::min(size, static_cast<output_type>(starting_point * size));
@@ -335,7 +337,7 @@ TEST(RocprimDeviceFindFirstOfTests, LargeIndices)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            test_utils::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
+            common::device_ptr<void> d_temp_storage(temp_storage_size_bytes);
 
             // Run
             HIP_CHECK(rocprim::find_first_of<config>(d_temp_storage.get(),

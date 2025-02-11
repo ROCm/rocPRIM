@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -73,8 +73,8 @@ typed_test_def(suite_name_single, name_suffix, Reduce)
         }
 
         // Preparing device
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         static_run_algo<T,
                         block_size,
@@ -152,8 +152,8 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultiplies)
         }
 
         // Preparing device
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         static_run_algo<T,
                         block_size,
@@ -237,8 +237,8 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultipliesExact)
         }
 
         // Preparing device
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         static_run_algo<T,
                         block_size,
@@ -323,8 +323,8 @@ typed_test_def(suite_name_single, name_suffix, ReduceValid)
         }
 
         // Preparing device
-        test_utils::device_ptr<T> device_output(output.size());
-        test_utils::device_ptr<T> device_output_reductions(output_reductions.size());
+        common::device_ptr<T> device_output(output.size());
+        common::device_ptr<T> device_output_reductions(output_reductions.size());
 
         static_run_valid<T,
                          block_size,

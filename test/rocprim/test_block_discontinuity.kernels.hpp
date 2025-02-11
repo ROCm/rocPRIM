@@ -23,9 +23,11 @@
 #ifndef TEST_BLOCK_DISCONTINUITY_KERNELS_HPP_
 #define TEST_BLOCK_DISCONTINUITY_KERNELS_HPP_
 
+#include "../common_test_header.hpp"
+
+#include "../../common/utils_device_ptr.hpp"
 #include "test_utils.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <rocprim/block/block_discontinuity.hpp>
 #include <rocprim/block/block_load_func.hpp>
@@ -256,8 +258,8 @@ auto test_block_discontinuity()
         }
 
         // Preparing Device
-        test_utils::device_ptr<type>      device_input(input);
-        test_utils::device_ptr<flag_type> device_heads(size);
+        common::device_ptr<type>      device_input(input);
+        common::device_ptr<flag_type> device_heads(size);
 
         // Running kernel
         hipLaunchKernelGGL(
@@ -341,8 +343,8 @@ auto test_block_discontinuity()
         }
 
         // Preparing Device
-        test_utils::device_ptr<type>      device_input(input);
-        test_utils::device_ptr<flag_type> device_tails(size);
+        common::device_ptr<type>      device_input(input);
+        common::device_ptr<flag_type> device_tails(size);
 
         // Running kernel
         hipLaunchKernelGGL(
@@ -437,9 +439,9 @@ auto test_block_discontinuity()
         }
 
         // Preparing Device
-        test_utils::device_ptr<type>      device_input(input);
-        test_utils::device_ptr<flag_type> device_heads(size);
-        test_utils::device_ptr<flag_type> device_tails(size);
+        common::device_ptr<type>      device_input(input);
+        common::device_ptr<flag_type> device_heads(size);
+        common::device_ptr<flag_type> device_tails(size);
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(flag_heads_and_tails_kernel<type,

@@ -24,11 +24,11 @@
 
 #include "../../common/utils_custom_type.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
 #include "identity_iterator.hpp"
 #include "test_seed.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 #include <rocprim/device/config_types.hpp>
@@ -165,8 +165,8 @@ TYPED_TEST(RocprimDeviceAdjacentFindTests, AdjacentFind)
             std::iota(input.begin(), input.begin() + first_adj_index, 0);
             std::fill(input.begin(), input.end(), first_adj_index);
 
-            test_utils::device_ptr<T>           d_input(input);
-            test_utils::device_ptr<output_type> d_output(1);
+            common::device_ptr<T>           d_input(input);
+            common::device_ptr<output_type> d_output(1);
 
             const auto output_it
                 = test_utils::wrap_in_identity_iterator<use_indirect_iterator>(d_output.get());
@@ -182,7 +182,7 @@ TYPED_TEST(RocprimDeviceAdjacentFindTests, AdjacentFind)
                                                        stream,
                                                        debug_synchronous));
             ASSERT_GT(tmp_storage_size, 0);
-            test_utils::device_ptr<void> d_tmp_storage(tmp_storage_size);
+            common::device_ptr<void> d_tmp_storage(tmp_storage_size);
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)

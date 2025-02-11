@@ -21,6 +21,7 @@
 #ifndef ROCPRIM_BENCHMARK_UTILS_HPP_
 #define ROCPRIM_BENCHMARK_UTILS_HPP_
 
+#include "../common/utils.hpp"
 #include "../common/utils_custom_type.hpp"
 #include "../common/utils_data_generation.hpp"
 #include "../common/utils_half.hpp"
@@ -55,17 +56,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#define HIP_CHECK(condition)                                                                \
-    {                                                                                       \
-        hipError_t error = condition;                                                       \
-        if(error != hipSuccess)                                                             \
-        {                                                                                   \
-            std::cout << "HIP error: " << hipGetErrorString(error) << " file: " << __FILE__ \
-                      << " line: " << __LINE__ << std::endl;                                \
-            exit(error);                                                                    \
-        }                                                                                   \
-    }
 
 #define TUNING_SHARED_MEMORY_MAX 65536u
 // Support half operators on host side

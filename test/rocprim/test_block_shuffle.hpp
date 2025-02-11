@@ -22,10 +22,10 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils_device_ptr.hpp"
 #include "test_seed.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -56,8 +56,8 @@ typed_test_def(suite_name, name_suffix, BlockOffset)
             = test_utils::get_random_data<type>(size, -100, 100, seed_value);
 
         // Preparing device
-        test_utils::device_ptr<type> device_input(input_data);
-        test_utils::device_ptr<type> device_output(input_data.size());
+        common::device_ptr<type> device_input(input_data);
+        common::device_ptr<type> device_output(input_data.size());
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(shuffle_offset_kernel<block_size, type>),
@@ -110,8 +110,8 @@ typed_test_def(suite_name, name_suffix, BlockRotate)
             = test_utils::get_random_data<type>(size, -100, 100, seed_value);
 
         // Preparing device
-        test_utils::device_ptr<type> device_input(input_data);
-        test_utils::device_ptr<type> device_output(input_data.size());
+        common::device_ptr<type> device_input(input_data);
+        common::device_ptr<type> device_output(input_data.size());
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(shuffle_rotate_kernel<block_size, type>),
@@ -165,8 +165,8 @@ typed_test_def(suite_name, name_suffix, BlockUp)
         std::vector<type*> arr_output(size);
 
         // Preparing device
-        test_utils::device_ptr<type> device_input(input_data);
-        test_utils::device_ptr<type> device_output(input_data.size());
+        common::device_ptr<type> device_input(input_data);
+        common::device_ptr<type> device_output(input_data.size());
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(shuffle_up_kernel<block_size, ItemsPerThread, type>),
@@ -224,8 +224,8 @@ typed_test_def(suite_name, name_suffix, BlockDown)
         std::vector<type*> arr_output(size);
 
         // Preparing device
-        test_utils::device_ptr<type> device_input(input_data);
-        test_utils::device_ptr<type> device_output(input_data.size());
+        common::device_ptr<type> device_input(input_data);
+        common::device_ptr<type> device_output(input_data.size());
 
         // Running kernel
         hipLaunchKernelGGL(HIP_KERNEL_NAME(shuffle_down_kernel<block_size, ItemsPerThread, type>),

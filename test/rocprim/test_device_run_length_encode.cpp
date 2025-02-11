@@ -24,6 +24,7 @@
 
 #include "../../common/utils_custom_type.hpp"
 #include "../../common/utils_data_generation.hpp"
+#include "../../common/utils_device_ptr.hpp"
 
 // required test headers
 #include "identity_iterator.hpp"
@@ -31,7 +32,6 @@
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
-#include "test_utils_device_ptr.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -194,11 +194,11 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
                 offset += key_count;
             }
 
-            test_utils::device_ptr<key_type> d_input(input);
+            common::device_ptr<key_type> d_input(input);
 
-            test_utils::device_ptr<key_type>   d_unique_output(runs_count_expected);
-            test_utils::device_ptr<count_type> d_counts_output(runs_count_expected);
-            test_utils::device_ptr<count_type> d_runs_count_output(1);
+            common::device_ptr<key_type>   d_unique_output(runs_count_expected);
+            common::device_ptr<count_type> d_counts_output(runs_count_expected);
+            common::device_ptr<count_type> d_runs_count_output(1);
 
             size_t temporary_storage_bytes = 0;
 
@@ -216,7 +216,7 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             gHelper.startStreamCapture(stream);
@@ -335,13 +335,13 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
                 offset += key_count;
             }
 
-            test_utils::device_ptr<key_type> d_input(input);
+            common::device_ptr<key_type> d_input(input);
 
-            test_utils::device_ptr<offset_type> d_offsets_output(
+            common::device_ptr<offset_type> d_offsets_output(
                 std::max<size_t>(1, runs_count_expected));
-            test_utils::device_ptr<count_type> d_counts_output(
+            common::device_ptr<count_type> d_counts_output(
                 std::max<size_t>(1, runs_count_expected));
-            test_utils::device_ptr<count_type> d_runs_count_output(1);
+            common::device_ptr<count_type> d_runs_count_output(1);
 
             size_t temporary_storage_bytes;
             HIP_CHECK(rocprim::run_length_encode_non_trivial_runs<config>(
@@ -359,7 +359,7 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
 
             ASSERT_GT(temporary_storage_bytes, 0U);
 
-            test_utils::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
+            common::device_ptr<void> d_temporary_storage(temporary_storage_bytes);
 
             test_utils::GraphHelper gHelper;
             gHelper.startStreamCapture(stream);
