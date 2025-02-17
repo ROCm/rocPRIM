@@ -34,6 +34,9 @@
 #include "../detail/various.hpp"
 #include "thread_copy.hpp"
 
+#include <stdint.h>
+#include <type_traits>
+
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \defgroup thread_store Thread Store Functions
@@ -51,7 +54,8 @@ enum cache_store_modifier
     store_nontemporal, ///< Cache streaming (likely not to be accessed again after storing)
     store_wt, ///< Cache write-through (to system memory)
     store_volatile, ///< Volatile (any memory space)
-    store_cs = store_nontemporal ///< Alias for store_nontemporal (will be deprecated in 7.0)
+    store_cs = store_nontemporal, ///< Alias for store_nontemporal (will be deprecated in 7.0)
+    store_count
 };
 
 /// @}

@@ -32,9 +32,12 @@
 
 #include "../config.hpp"
 #include "../detail/various.hpp"
-#include "../type_traits.hpp"
+#include "../type_traits.hpp" // not be used
 #include "thread_copy.hpp"
 
+#include <iterator>
+#include <stdint.h>
+#include <type_traits>
 #include <utility>
 
 BEGIN_ROCPRIM_NAMESPACE
@@ -55,7 +58,8 @@ enum cache_load_modifier : int
     load_cv, ///< Cache as volatile (including cached system lines)
     load_ldg, ///< Cache as texture
     load_volatile, ///< Volatile (any memory space)
-    load_cs = load_nontemporal ///< Alias for load_nontemporal (will be deprecated in 7.0)
+    load_cs = load_nontemporal, ///< Alias for load_nontemporal (will be deprecated in 7.0)
+    load_count
 };
 
 /// @}
