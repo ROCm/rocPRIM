@@ -115,13 +115,9 @@ void thread_load_kernel(Type* volatile const device_input, Type* device_output)
     {
         device_output[index] = rocprim::thread_load<rocprim::load_ldg>(device_input + index);
     }
-    else if(index % rocprim::load_count == rocprim::load_volatile)
+    else // index % rocprim::load_count == rocprim::load_volatile
     {
         device_output[index] = rocprim::thread_load<rocprim::load_volatile>(device_input + index);
-    }
-    else // index % rocprim::load_count == rocprim::load_cs
-    {
-        device_output[index] = rocprim::thread_load<rocprim::load_cs>(device_input + index);
     }
 }
 
@@ -241,13 +237,9 @@ void thread_store_kernel(Type* const device_input, Type* device_output)
     {
         rocprim::thread_store<rocprim::store_wt>(device_output + index, device_input[index]);
     }
-    else if(index % rocprim::store_count == rocprim::store_volatile)
+    else // index % rocprim::store_count == rocprim::store_volatile
     {
         rocprim::thread_store<rocprim::store_volatile>(device_output + index, device_input[index]);
-    }
-    else // index % rocprim::store_count == rocprim::store_cs
-    {
-        rocprim::thread_store<rocprim::store_cs>(device_output + index, device_input[index]);
     }
 }
 

@@ -51,15 +51,15 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief These enum values are used to specify caching behaviour on load
 enum cache_load_modifier : int
 {
-    load_default, ///< Default (no modifier)
-    load_ca, ///< Cache at all levels
-    load_cg, ///< Cache at global level
-    load_nontemporal, ///< Cache streaming (likely not to be accessed again after loading)
-    load_cv, ///< Cache as volatile (including cached system lines)
-    load_ldg, ///< Cache as texture
-    load_volatile, ///< Volatile (any memory space)
-    load_cs = load_nontemporal, ///< Alias for load_nontemporal (will be deprecated in 7.0)
-    load_count
+    load_default     = 0, ///< Default (no modifier)
+    load_ca          = 1, ///< Cache at all levels
+    load_cg          = 2, ///< Cache at global level
+    load_nontemporal = 3, ///< Cache streaming (likely not to be accessed again after loading)
+    load_cv          = 4, ///< Cache as volatile (including cached system lines)
+    load_ldg         = 5, ///< Cache as texture
+    load_volatile    = 6, ///< Volatile (any memory space)
+    load_cs          = load_nontemporal, ///< Alias for load_nontemporal (will be deprecated in 7.0)
+    load_count       = 8
 };
 
 /// @}
