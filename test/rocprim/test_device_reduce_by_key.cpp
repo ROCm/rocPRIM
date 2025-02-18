@@ -29,6 +29,7 @@
 // required test headers
 #include "identity_iterator.hpp"
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_float_traits_type.hpp"
 #include "test_utils_custom_test_types.hpp"
@@ -221,7 +222,7 @@ TYPED_TEST(RocprimDeviceReduceByKey, ReduceByKey)
                 TestFixture::params::min_segment_length,
                 TestFixture::params::max_segment_length);
             std::vector<value_type> values_input
-                = test_utils::get_random_data<value_type>(size, 0, 100, seed_value);
+                = test_utils::get_random_data_wrapped<value_type>(size, 0, 100, seed_value);
 
             size_t offset = 0;
             key_type prev_key    = static_cast<key_type>(key_distribution_type(0, 100)(gen));

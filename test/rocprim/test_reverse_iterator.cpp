@@ -56,7 +56,7 @@ TEST(RocprimReverseIteratorTests, DeviceVector)
     SCOPED_TRACE(testing::Message() << "with device_id = " << device_id);
     HIP_CHECK(hipSetDevice(device_id));
 
-    auto           input    = test_utils::get_random_data<T>(size, 0, 100, seed_value);
+    auto           input    = test_utils::get_random_data_wrapped<T>(size, 0, 100, seed_value);
     std::vector<T> expected = input;
     std::sort(expected.rbegin(), expected.rend());
     std::vector<T> output(size);

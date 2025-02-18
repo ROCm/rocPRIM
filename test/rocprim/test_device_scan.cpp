@@ -662,7 +662,6 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
 
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 0, 9, seed_value);
-
             std::vector<K> keys;
             if(use_unique_keys)
             {

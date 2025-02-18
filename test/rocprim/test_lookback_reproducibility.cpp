@@ -27,6 +27,7 @@
 #include "../../common/utils_device_ptr.hpp"
 
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
@@ -54,11 +55,11 @@ std::vector<size_t> get_sizes(T seed_value)
                                  (1 << 20) + 123};
 
     const std::vector<size_t> random_sizes1
-        = test_utils::get_random_data<size_t>(2, 2, 1 << 20, seed_value);
+        = test_utils::get_random_data_wrapped<size_t>(2, 2, 1 << 20, seed_value);
     sizes.insert(sizes.end(), random_sizes1.begin(), random_sizes1.end());
 
     const std::vector<size_t> random_sizes2
-        = test_utils::get_random_data<size_t>(3, 2, 1 << 17, seed_value);
+        = test_utils::get_random_data_wrapped<size_t>(3, 2, 1 << 17, seed_value);
     sizes.insert(sizes.end(), random_sizes2.begin(), random_sizes2.end());
 
     std::sort(sizes.begin(), sizes.end());
@@ -169,7 +170,8 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, Scan)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, -1000, 1000, seed_value);
+            std::vector<T> input
+                = test_utils::get_random_data_wrapped<T>(size, -1000, 1000, seed_value);
 
             common::device_ptr<T> d_input(input);
             common::device_ptr<T> d_output(input.size());
@@ -238,7 +240,8 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ScanByKey)
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-            std::vector<V> input = test_utils::get_random_data<V>(size, -1000, 1000, seed_value);
+            std::vector<V> input
+                = test_utils::get_random_data_wrapped<V>(size, -1000, 1000, seed_value);
             std::vector<K> keys
                 = generate_segments<K>(seed_value, size, min_segment_length, max_segment_length);
 
@@ -318,7 +321,8 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ReduceByKey)
         {
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
-            std::vector<V> input = test_utils::get_random_data<V>(size, -1000, 1000, seed_value);
+            std::vector<V> input
+                = test_utils::get_random_data_wrapped<V>(size, -1000, 1000, seed_value);
             std::vector<K> keys
                 = generate_segments<K>(seed_value, size, min_segment_length, max_segment_length);
 

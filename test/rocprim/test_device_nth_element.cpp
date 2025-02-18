@@ -29,6 +29,7 @@
 // required test headers
 #include "indirect_iterator.hpp"
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
@@ -223,11 +224,11 @@ TYPED_TEST(RocprimDeviceNthelementTests, NthelementKey)
             SCOPED_TRACE(testing::Message() << "with nth_element = " << nth_element);
 
             // Generate data
-            std::vector<key_type> input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             common::device_ptr<key_type> d_input(input);
             common::device_ptr<key_type> d_output_alloc;

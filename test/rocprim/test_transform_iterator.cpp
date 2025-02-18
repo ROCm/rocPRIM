@@ -114,7 +114,8 @@ TYPED_TEST(RocprimTransformIteratorTests, TransformReduce)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<input_type> input = test_utils::get_random_data<input_type>(size, 1, 200, seed_value);
+        std::vector<input_type> input
+            = test_utils::get_random_data_wrapped<input_type>(size, 1, 200, seed_value);
         std::vector<value_type> output(1);
 
         common::device_ptr<input_type> d_input(input);

@@ -26,6 +26,7 @@
 
 // required test headers
 #include "indirect_iterator.hpp"
+#include "test_utils.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_hipgraphs.hpp"
 
@@ -173,7 +174,10 @@ TYPED_TEST(RocprimDeviceFindFirstOfTests, FindFirstOf)
                 }
 
                 // Generate data
-                auto keys = test_utils::get_random_data<key_type>(keys_size, 0, 10, seed_value + 1);
+                auto keys = test_utils::get_random_data_wrapped<key_type>(keys_size,
+                                                                          0,
+                                                                          10,
+                                                                          seed_value + 1);
 
                 std::vector<type> input(size);
                 // Generate the input data in such a way that it does not contain any values from
@@ -183,12 +187,14 @@ TYPED_TEST(RocprimDeviceFindFirstOfTests, FindFirstOf)
                 const size_t size2 = size - size1;
                 if(size1 > 0)
                 {
-                    auto input1 = test_utils::get_random_data<type>(size1, 20, 100, seed_value + 2);
+                    auto input1
+                        = test_utils::get_random_data_wrapped<type>(size1, 20, 100, seed_value + 2);
                     std::copy(input1.begin(), input1.end(), input.begin());
                 }
                 if(size2 > 0)
                 {
-                    auto input2 = test_utils::get_random_data<type>(size2, 0, 100, seed_value + 3);
+                    auto input2
+                        = test_utils::get_random_data_wrapped<type>(size2, 0, 100, seed_value + 3);
                     std::copy(input2.begin(), input2.end(), input.begin() + size1);
                 }
 

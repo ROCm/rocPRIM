@@ -32,6 +32,7 @@
 #include "../../common/utils_custom_type.hpp"
 #include "../../common/utils_device_ptr.hpp"
 
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 
@@ -137,7 +138,7 @@ TYPED_TEST(RocprimThreadOperationTests, Load)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 200, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 200, seed_value);
         std::vector<T> output(size);
 
         // Calculate expected results on host
@@ -264,7 +265,7 @@ TYPED_TEST(RocprimThreadOperationTests, StoreNontemporal)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 200, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 200, seed_value);
         std::vector<T> output(size);
 
         // Calculate expected results on host
@@ -319,7 +320,7 @@ TYPED_TEST(RocprimThreadOperationTests, Reduction)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 200, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 200, seed_value);
         std::vector<T> output(size);
         std::vector<T> expected(size);
 
@@ -384,7 +385,7 @@ TYPED_TEST(RocprimThreadOperationTests, Scan)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 200, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 200, seed_value);
         std::vector<T> output(size);
         std::vector<T> expected(size);
 
@@ -496,8 +497,8 @@ void merge_path_search_test()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input1 = test_utils::get_random_data<T>(size, 2, 200, seed_value);
-        std::vector<T> input2 = test_utils::get_random_data<T>(size, 2, 200, seed_value);
+        std::vector<T> input1 = test_utils::get_random_data_wrapped<T>(size, 2, 200, seed_value);
+        std::vector<T> input2 = test_utils::get_random_data_wrapped<T>(size, 2, 200, seed_value);
 
         std::sort(input1.begin(), input1.end(), bin_op);
         std::sort(input2.begin(), input2.end(), bin_op);

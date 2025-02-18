@@ -56,7 +56,8 @@ typed_test_def(suite_name_single, name_suffix, Reduce)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, T(2), T(50), seed_value);
+        std::vector<T> output
+            = test_utils::get_random_data_wrapped<T>(size, T(2), T(50), seed_value);
         std::vector<T> output_reductions(grid_size);
 
         // Calculate expected results on host
@@ -135,7 +136,8 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultiplies)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, T(0.95), T(1.05), seed_value);
+        std::vector<T> output
+            = test_utils::get_random_data_wrapped<T>(size, T(0.95), T(1.05), seed_value);
         std::vector<T> output_reductions(grid_size);
 
         // Calculate expected results on host
@@ -215,7 +217,8 @@ typed_test_def(suite_name_single, name_suffix, ReduceMultipliesExact)
 
         // Generate data
         std::vector<T> output(size, T(1));
-        auto two_places = test_utils::get_random_data<unsigned int>(size/32, 0, size-1, seed_value);
+        auto           two_places
+            = test_utils::get_random_data_wrapped<unsigned int>(size / 32, 0, size - 1, seed_value);
         for(auto i : two_places)
         {
             output[i] = T(2);
@@ -306,7 +309,7 @@ typed_test_def(suite_name_single, name_suffix, ReduceValid)
         const size_t grid_size = size / block_size;
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output_reductions(grid_size);
 
         // Calculate expected results on host

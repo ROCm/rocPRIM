@@ -143,7 +143,10 @@ void test_block_histogram_input_arrays()
         // Generate data
         const size_t   max_value = bin - 1;
         std::vector<T> output
-            = test_utils::get_random_data<T>(size, 0, get_safe_maxval<T>(max_value), seed_value);
+            = test_utils::get_random_data_wrapped<T>(size,
+                                                     0,
+                                                     get_safe_maxval<T>(max_value),
+                                                     seed_value);
 
         // Output histogram results
         std::vector<BinType> output_bin(bin_sizes, 0);

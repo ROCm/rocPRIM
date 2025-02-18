@@ -25,6 +25,7 @@
 #include "../../common/utils_custom_type.hpp"
 
 // required test headers
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_hipgraphs.hpp"
@@ -133,15 +134,19 @@ TYPED_TEST(RocprimDeviceBinarySearch, LowerBound)
             const size_t d = haystack_size / 100;
 
             // Generate data
-            std::vector<haystack_type> haystack = test_utils::get_random_data<haystack_type>(
-                haystack_size, 0, haystack_size + 2 * d, seed_value
-            );
+            std::vector<haystack_type> haystack
+                = test_utils::get_random_data_wrapped<haystack_type>(haystack_size,
+                                                                     0,
+                                                                     haystack_size + 2 * d,
+                                                                     seed_value);
             std::sort(haystack.begin(), haystack.end(), compare_op);
 
             // Use a narrower range for needles for checking out-of-haystack cases
-            std::vector<needle_type> needles = test_utils::get_random_data<needle_type>(
-                needles_size, d, haystack_size + d, seed_value
-            );
+            std::vector<needle_type> needles
+                = test_utils::get_random_data_wrapped<needle_type>(needles_size,
+                                                                   d,
+                                                                   haystack_size + d,
+                                                                   seed_value);
 
             common::device_ptr<haystack_type> d_haystack(haystack);
             common::device_ptr<needle_type>   d_needles(needles);
@@ -248,15 +253,19 @@ TYPED_TEST(RocprimDeviceBinarySearch, UpperBound)
             const size_t d = haystack_size / 100;
 
             // Generate data
-            std::vector<haystack_type> haystack = test_utils::get_random_data<haystack_type>(
-                haystack_size, 0, haystack_size + 2 * d, seed_value
-            );
+            std::vector<haystack_type> haystack
+                = test_utils::get_random_data_wrapped<haystack_type>(haystack_size,
+                                                                     0,
+                                                                     haystack_size + 2 * d,
+                                                                     seed_value);
             std::sort(haystack.begin(), haystack.end(), compare_op);
 
             // Use a narrower range for needles for checking out-of-haystack cases
-            std::vector<needle_type> needles = test_utils::get_random_data<needle_type>(
-                needles_size, d, haystack_size + d, seed_value
-            );
+            std::vector<needle_type> needles
+                = test_utils::get_random_data_wrapped<needle_type>(needles_size,
+                                                                   d,
+                                                                   haystack_size + d,
+                                                                   seed_value);
 
             common::device_ptr<haystack_type> d_haystack(haystack);
             common::device_ptr<needle_type>   d_needles(needles);
@@ -366,15 +375,19 @@ TYPED_TEST(RocprimDeviceBinarySearch, BinarySearch)
             const size_t d = haystack_size / 100;
 
             // Generate data
-            std::vector<haystack_type> haystack = test_utils::get_random_data<haystack_type>(
-                haystack_size, 0, haystack_size + 2 * d, seed_value
-            );
+            std::vector<haystack_type> haystack
+                = test_utils::get_random_data_wrapped<haystack_type>(haystack_size,
+                                                                     0,
+                                                                     haystack_size + 2 * d,
+                                                                     seed_value);
             std::sort(haystack.begin(), haystack.end(), compare_op);
 
             // Use a narrower range for needles for checking out-of-haystack cases
-            std::vector<needle_type> needles = test_utils::get_random_data<needle_type>(
-                needles_size, d, haystack_size + d, seed_value
-            );
+            std::vector<needle_type> needles
+                = test_utils::get_random_data_wrapped<needle_type>(needles_size,
+                                                                   d,
+                                                                   haystack_size + d,
+                                                                   seed_value);
 
             common::device_ptr<haystack_type> d_haystack(haystack);
             common::device_ptr<needle_type>   d_needles(needles);

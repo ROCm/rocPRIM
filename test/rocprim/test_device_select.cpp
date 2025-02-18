@@ -27,6 +27,7 @@
 
 // required test headers
 #include "identity_iterator.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_hipgraphs.hpp"
@@ -118,8 +119,8 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
-            std::vector<F> flags = test_utils::get_random_data<F>(size, 0, 1, seed_value);
+            std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 100, seed_value);
+            std::vector<F> flags = test_utils::get_random_data_wrapped<F>(size, 0, 1, seed_value);
 
             common::device_ptr<T>            d_input(input);
             common::device_ptr<F>            d_flags(flags);
@@ -245,7 +246,7 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, 0, 100, seed_value);
+            std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 0, 100, seed_value);
 
             common::device_ptr<T>            d_input(input);
             common::device_ptr<U>            d_output(input.size());
@@ -359,8 +360,8 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectFlagged)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
-            std::vector<F> flags = test_utils::get_random_data<F>(size, 0, 1, seed_value);
+            std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 100, seed_value);
+            std::vector<F> flags = test_utils::get_random_data_wrapped<F>(size, 0, 1, seed_value);
 
             common::device_ptr<T>            d_input(input);
             common::device_ptr<F>            d_flags(flags);
@@ -646,7 +647,7 @@ void testUniqueGuardedOperator()
 
                 // Generate data
                 std::vector<T> input
-                    = test_utils::get_random_data<T>(size, 0, size - 1, seed_value);
+                    = test_utils::get_random_data_wrapped<T>(size, 0, size - 1, seed_value);
 
                 std::vector<F> input_flag(size);
                 {
@@ -853,7 +854,10 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
                                      scan_op_type());
                 }
                 const auto input_values
-                    = test_utils::get_random_data<value_type>(size, -1000, 1000, seed_value);
+                    = test_utils::get_random_data_wrapped<value_type>(size,
+                                                                      -1000,
+                                                                      1000,
+                                                                      seed_value);
 
                 // Allocate and copy to device
                 common::device_ptr<key_type>          d_keys_input(input_keys);
@@ -1013,7 +1017,10 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
                                      scan_op_type());
                 }
                 const auto input_values
-                    = test_utils::get_random_data<value_type>(size, -1000, 1000, seed_value);
+                    = test_utils::get_random_data_wrapped<value_type>(size,
+                                                                      -1000,
+                                                                      1000,
+                                                                      seed_value);
 
                 // Allocate and copy to device
                 common::device_ptr<key_type>     d_keys_input(input_keys);

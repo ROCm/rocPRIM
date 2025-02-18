@@ -1246,10 +1246,10 @@ void sort_keys_over_4g()
     HIP_CHECK(hipSetDevice(device_id));
 
     std::vector<key_type> keys_input
-        = test_utils::get_random_data<key_type>(size,
-                                                rocprim::numeric_limits<key_type>::min(),
-                                                rocprim::numeric_limits<key_type>::max(),
-                                                seed_value);
+        = test_utils::get_random_data_wrapped<key_type>(size,
+                                                        rocprim::numeric_limits<key_type>::min(),
+                                                        rocprim::numeric_limits<key_type>::max(),
+                                                        seed_value);
 
     //generate histogram of the randomly generated values
     std::for_each(keys_input.begin(), keys_input.end(), [&](const key_type& a) { histogram[a]++; });

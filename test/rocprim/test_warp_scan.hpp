@@ -94,7 +94,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> expected(output.size(), T(0));
 
@@ -324,7 +324,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> output_reductions(size / logical_warp_size);
         std::vector<T> expected(output.size(), T(0));
@@ -576,7 +576,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> expected(input.size(), T(0));
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
@@ -804,7 +804,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScanWoInit)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> expected(input.size(), T(0));
 
@@ -927,7 +927,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> output_reductions(size / logical_warp_size);
         std::vector<T> expected(input.size(), T(0));
@@ -1063,7 +1063,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScanWoInit)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(size);
         std::vector<T> output_reductions(size / logical_warp_size);
         std::vector<T> expected(input.size(), T(0));
@@ -1203,7 +1203,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output_inclusive(size);
         std::vector<T> output_exclusive(size);
         std::vector<T> expected_inclusive(output_inclusive.size(), T(0));
@@ -1332,7 +1332,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output_inclusive(size);
         std::vector<T> output_exclusive(size);
         std::vector<T> output_reductions(size / logical_warp_size);
@@ -1475,8 +1475,10 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
         std::vector<T> expected(output.size(), (base_type)0);
         // Initializing input data
         {
-            auto random_values =
-                test_utils::get_random_data<base_type>(2 * input.size(), 0, 100, seed_value);
+            auto random_values = test_utils::get_random_data_wrapped<base_type>(2 * input.size(),
+                                                                                0,
+                                                                                100,
+                                                                                seed_value);
             for(size_t i = 0; i < input.size(); i++)
             {
                 input[i].x = random_values[i];

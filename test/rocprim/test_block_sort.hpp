@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include "../common_test_header.hpp"
+#include "test_utils.hpp"
 
 #include "../../common/utils.hpp"
 #include "../../common/utils_device_ptr.hpp"
@@ -82,9 +83,9 @@ void TestSortKeyValue()
 
         // Generate data
         std::vector<key_type> output_key
-            = test_utils::get_random_data<key_type>(size, 0, 100, seed_value);
+            = test_utils::get_random_data_wrapped<key_type>(size, 0, 100, seed_value);
         std::vector<value_type> output_value
-            = test_utils::get_random_data<value_type>(size, -100, 100, seed_value);
+            = test_utils::get_random_data_wrapped<value_type>(size, -100, 100, seed_value);
 
         // Combine vectors to form pairs with key and value
         std::vector<std::pair<key_type, value_type>> target(size);
@@ -198,7 +199,7 @@ void TestSortKey(std::vector<size_t> sizes)
             }
             // Generate data
             std::vector<key_type> output
-                = test_utils::get_random_data<key_type>(size, -100, 100, seed_value);
+                = test_utils::get_random_data_wrapped<key_type>(size, -100, 100, seed_value);
 
             // Calculate expected results on host
             std::vector<key_type> expected(output);
@@ -284,7 +285,7 @@ void TestSortStableKey(std::vector<size_t> sizes)
 
             // Generate data
             std::vector<key_type> keys
-                = test_utils::get_random_data<key_type>(size, -10, 10, seed_value);
+                = test_utils::get_random_data_wrapped<key_type>(size, -10, 10, seed_value);
 
             std::vector<index_type> values(size);
             std::iota(values.begin(), values.end(), 0u);

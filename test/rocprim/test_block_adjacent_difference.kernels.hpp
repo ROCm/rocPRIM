@@ -406,7 +406,8 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 0>::t
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type> input
+            = test_utils::get_random_data_wrapped<type>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<stored_flag_type> expected_heads(size);
@@ -505,7 +506,8 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 1>::t
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type> input
+            = test_utils::get_random_data_wrapped<type>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<stored_flag_type> expected_tails(size);
@@ -606,7 +608,8 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 2>::t
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type> input
+            = test_utils::get_random_data_wrapped<type>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<stored_flag_type> expected_heads(size);
@@ -719,7 +722,8 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 3>::t
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        const std::vector<T> input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
+        const std::vector<T> input
+            = test_utils::get_random_data_wrapped<T>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);
@@ -805,7 +809,8 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 4>::t
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        const std::vector<T> input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
+        const std::vector<T> input
+            = test_utils::get_random_data_wrapped<T>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);
@@ -891,10 +896,14 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 5>::t
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        const std::vector<T> input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
+        const std::vector<T> input
+            = test_utils::get_random_data_wrapped<T>(size, 0, 10, seed_value);
 
         const std::vector<unsigned int> tile_sizes
-            = test_utils::get_random_data<unsigned int>(grid_size, 0, items_per_block, seed_value);
+            = test_utils::get_random_data_wrapped<unsigned int>(grid_size,
+                                                                0,
+                                                                items_per_block,
+                                                                seed_value);
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);
@@ -989,10 +998,14 @@ auto test_block_adjacent_difference() -> typename std::enable_if<Method == 6>::t
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        const std::vector<T> input = test_utils::get_random_data<T>(size, 0, 10, seed_value);
+        const std::vector<T> input
+            = test_utils::get_random_data_wrapped<T>(size, 0, 10, seed_value);
 
         const std::vector<unsigned int> tile_sizes
-            = test_utils::get_random_data<unsigned int>(grid_size, 0, items_per_block, seed_value);
+            = test_utils::get_random_data_wrapped<unsigned int>(grid_size,
+                                                                0,
+                                                                items_per_block,
+                                                                seed_value);
 
         // Calculate expected results on host
         std::vector<stored_type> expected(size);

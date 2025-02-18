@@ -66,7 +66,8 @@ typed_test_def(suite_name, name_suffix, LoadStoreClass)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<Type> input = test_utils::get_random_data<Type>(size, -100, 100, seed_value);
+        std::vector<Type> input
+            = test_utils::get_random_data_wrapped<Type>(size, -100, 100, seed_value);
 
         // Calculate expected results on host
         std::vector<Type> expected(input.size(), (Type)0);
@@ -144,7 +145,8 @@ typed_test_def(suite_name, name_suffix, LoadStoreClassValid)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<Type> input = test_utils::get_random_data<Type>(size, -100, 100, seed_value);
+        std::vector<Type> input
+            = test_utils::get_random_data_wrapped<Type>(size, -100, 100, seed_value);
         std::vector<Type> output(input.size(), (Type)0);
 
         // Calculate expected results on host
@@ -231,7 +233,8 @@ typed_test_def(suite_name, name_suffix, LoadStoreClassDefault)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<Type> input = test_utils::get_random_data<Type>(size, -100, 100, seed_value);
+        std::vector<Type> input
+            = test_utils::get_random_data_wrapped<Type>(size, -100, 100, seed_value);
 
         // Calculate expected results on host
         std::vector<Type> expected(input.size(), _default);

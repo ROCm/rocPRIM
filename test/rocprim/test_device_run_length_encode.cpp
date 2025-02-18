@@ -29,6 +29,7 @@
 // required test headers
 #include "identity_iterator.hpp"
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
@@ -144,7 +145,8 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
 
     const unsigned int seed = 123;
     std::default_random_engine gen(seed);
-    std::vector<key_type> random_keys = test_utils::get_random_data<key_type>(64, -100, 100, seed);
+    std::vector<key_type>      random_keys
+        = test_utils::get_random_data_wrapped<key_type>(64, -100, 100, seed);
 
     for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
     {
@@ -170,7 +172,7 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
                 TestFixture::params::min_segment_length,
                 TestFixture::params::max_segment_length);
             std::vector<count_type> values_input
-                = test_utils::get_random_data<count_type>(size, 0, 100, seed_value);
+                = test_utils::get_random_data_wrapped<count_type>(size, 0, 100, seed_value);
 
             size_t offset = 0;
             key_type current_key = get_random_value_no_duplicate(key_type(0), random_keys, size);
@@ -274,7 +276,8 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
 
     const unsigned int seed = 123;
     std::default_random_engine gen(seed);
-    std::vector<key_type> random_keys = test_utils::get_random_data<key_type>(64, -100, 100, seed);
+    std::vector<key_type>      random_keys
+        = test_utils::get_random_data_wrapped<key_type>(64, -100, 100, seed);
 
     for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
     {

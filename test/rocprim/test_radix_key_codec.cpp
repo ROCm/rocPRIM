@@ -26,6 +26,7 @@
 #include "../../common/utils_data_generation.hpp"
 
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
@@ -429,10 +430,10 @@ TYPED_TEST(TypedRadixKeyCodecTest, EncodeDecodeExtract)
 
         const size_t     size = (1 << 20) + 123;
         std::vector<Key> input_keys
-            = test_utils::get_random_data<Key>(size,
-                                               common::generate_limits<Key>::min(),
-                                               common::generate_limits<Key>::max(),
-                                               seed_value);
+            = test_utils::get_random_data_wrapped<Key>(size,
+                                                       common::generate_limits<Key>::min(),
+                                                       common::generate_limits<Key>::max(),
+                                                       seed_value);
 
         for(size_t i = 0; i < size; ++i)
         {

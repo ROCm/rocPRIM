@@ -28,7 +28,8 @@
 
 // required test headers
 #include "test_seed.hpp"
-#include "test_utils_data_generation.hpp"
+#include "test_utils.hpp"
+//#include "test_utils_data_generation.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
@@ -85,7 +86,7 @@ inline auto get_random_samples(size_t size, U min, U max, int seed_value) ->
     const long long min1 = static_cast<long long>(min);
     const long long max1 = static_cast<long long>(max);
     const long long d    = max1 - min1;
-    return test_utils::get_random_data<T>(
+    return test_utils::get_random_data_wrapped<T>(
         size,
         static_cast<T>(
             std::max(min1 - d / 10, static_cast<long long>(rocprim::numeric_limits<T>::lowest()))),
@@ -101,7 +102,7 @@ inline auto get_random_samples(size_t size, U min, U max, int seed_value) ->
     const double min1 = static_cast<double>(min);
     const double max1 = static_cast<double>(max);
     const double d    = max1 - min1;
-    return test_utils::get_random_data<T>(
+    return test_utils::get_random_data_wrapped<T>(
         size,
         static_cast<T>(
             std::max(min1 - d / 10, static_cast<double>(rocprim::numeric_limits<T>::lowest()))),

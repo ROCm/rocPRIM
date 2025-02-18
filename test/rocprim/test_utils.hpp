@@ -39,6 +39,11 @@
 #include "test_utils_bfloat16.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
+#ifdef WITH_ROCRAND
+    #include "test_utils_data_generation_with_rocrand.hpp"
+#endif
+#include "test_utils_assertions.hpp"
+#include "test_utils_get_random_data.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 #include <cstddef>

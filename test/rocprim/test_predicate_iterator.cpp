@@ -20,13 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "../common_test_header.hpp"
+#include <common_test_header.hpp>
 
 #include "../../common/predicate_iterator.hpp"
+#include "../../common/utils_data_generation.hpp"
 #include "../../common/utils_device_ptr.hpp"
+#include "rocprim/iterator/transform_iterator.hpp"
 
-#include "test_utils_data_generation.hpp"
-
+#include "test_utils.hpp"
 #include <rocprim/device/device_transform.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>

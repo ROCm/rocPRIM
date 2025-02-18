@@ -157,7 +157,7 @@ TYPED_TEST(RocprimDeviceTransformTests, Transform)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
+            std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 100, seed_value);
 
             common::device_ptr<T> d_input(input);
             common::device_ptr<U> d_output(input.size());
@@ -247,8 +247,10 @@ TYPED_TEST(RocprimDeviceTransformTests, BinaryTransform)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T1> input1 = test_utils::get_random_data<T1>(size, 1, 100, seed_value);
-            std::vector<T2> input2 = test_utils::get_random_data<T2>(size, 1, 100, seed_value);
+            std::vector<T1> input1
+                = test_utils::get_random_data_wrapped<T1>(size, 1, 100, seed_value);
+            std::vector<T2> input2
+                = test_utils::get_random_data_wrapped<T2>(size, 1, 100, seed_value);
 
             common::device_ptr<T1> d_input1(input1);
             common::device_ptr<T2> d_input2(input2);

@@ -94,7 +94,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSum)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(input.size() / logical_warp_size, T(0));
 
         // Calculate expected results on host
@@ -200,7 +200,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSum)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(input.size(), T(0));
 
         // Calculate expected results on host
@@ -311,7 +311,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceSumValid)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(input.size() / logical_warp_size, T(0));
 
         // Calculate expected results on host
@@ -421,7 +421,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, AllReduceSumValid)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output(input.size(), T(0));
 
         // Calculate expected results on host
@@ -534,8 +534,10 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, ReduceCustomStruct)
         // Generate data
         std::vector<T> input(size);
         {
-            auto random_values =
-                test_utils::get_random_data<base_type>(2 * input.size(), 2, 50, seed_value);
+            auto random_values = test_utils::get_random_data_wrapped<base_type>(2 * input.size(),
+                                                                                2,
+                                                                                50,
+                                                                                seed_value);
             for(size_t i = 0; i < input.size(); i++)
             {
                 input[i].x = random_values[i];
@@ -652,7 +654,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, HeadSegmentedReduceSum)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 10, seed_value);
         std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f, seed_value);
         for(size_t i = 0; i < flags.size(); i+= logical_warp_size)
         {
@@ -792,7 +794,7 @@ typed_test_def(RocprimWarpReduceTests, name_suffix, TailSegmentedReduceSum)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 1, 10, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 10, seed_value);
         std::vector<flag_type> flags = test_utils::get_random_data01<flag_type>(size, 0.25f, seed_value);
         for(size_t i = logical_warp_size - 1; i < flags.size(); i+= logical_warp_size)
         {

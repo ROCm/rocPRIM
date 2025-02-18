@@ -155,11 +155,11 @@ inline void sort_keys()
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<key_type> keys_input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             std::vector<offset_type> offsets;
             unsigned int             segments_count = 0;
@@ -270,11 +270,11 @@ inline void sort_keys_empty_data()
             SCOPED_TRACE(testing::Message() << "with segments_count = " << segments_count);
 
             // Generate data
-            std::vector<key_type> keys_input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             std::vector<offset_type> offsets(2);
             offsets[0] = 0;
@@ -365,11 +365,11 @@ inline void sort_keys_large_segments()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<key_type> keys_input
-            = test_utils::get_random_data<key_type>(size,
-                                                    common::generate_limits<key_type>::min(),
-                                                    common::generate_limits<key_type>::max(),
-                                                    seed_value);
+        std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+            size,
+            common::generate_limits<key_type>::min(),
+            common::generate_limits<key_type>::max(),
+            seed_value);
 
         std::vector<offset_type> offsets(3);
         offsets[0] = 0;
@@ -477,11 +477,11 @@ inline void sort_keys_unspecified_ranges()
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<key_type> keys_input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             std::vector<offset_type> begin_offsets;
             unsigned int             segments_count = 0;
@@ -617,11 +617,11 @@ inline void sort_pairs()
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<key_type> keys_input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             std::vector<offset_type> offsets;
             unsigned int             segments_count = 0;
@@ -771,11 +771,11 @@ inline void sort_pairs_unspecified_ranges()
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<key_type> keys_input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             std::vector<value_type> values_input(size);
             std::iota(values_input.begin(), values_input.end(), 0);
@@ -937,11 +937,11 @@ inline void sort_keys_double_buffer()
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<key_type> keys_input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             std::vector<offset_type> offsets;
             unsigned int             segments_count = 0;
@@ -1065,11 +1065,11 @@ inline void sort_pairs_double_buffer()
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<key_type> keys_input
-                = test_utils::get_random_data<key_type>(size,
-                                                        common::generate_limits<key_type>::min(),
-                                                        common::generate_limits<key_type>::max(),
-                                                        seed_value);
+            std::vector<key_type> keys_input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                common::generate_limits<key_type>::min(),
+                common::generate_limits<key_type>::max(),
+                seed_value);
 
             std::vector<offset_type> offsets;
             unsigned int             segments_count = 0;

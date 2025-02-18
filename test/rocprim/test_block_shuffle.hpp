@@ -24,6 +24,7 @@
 
 #include "../../common/utils_device_ptr.hpp"
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 
@@ -53,7 +54,7 @@ typed_test_def(suite_name, name_suffix, BlockOffset)
                      << "with seed = " << seed_value << ", distance = " << distance);
         // Generate data
         std::vector<type> input_data
-            = test_utils::get_random_data<type>(size, -100, 100, seed_value);
+            = test_utils::get_random_data_wrapped<type>(size, -100, 100, seed_value);
 
         // Preparing device
         common::device_ptr<type> device_input(input_data);
@@ -107,7 +108,7 @@ typed_test_def(suite_name, name_suffix, BlockRotate)
                      << "with seed = " << seed_value << ", distance = " << distance);
         // Generate data
         std::vector<type> input_data
-            = test_utils::get_random_data<type>(size, -100, 100, seed_value);
+            = test_utils::get_random_data_wrapped<type>(size, -100, 100, seed_value);
 
         // Preparing device
         common::device_ptr<type> device_input(input_data);
@@ -159,7 +160,10 @@ typed_test_def(suite_name, name_suffix, BlockUp)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
         // Generate data
         std::vector<type> input_data
-            = test_utils::get_random_data<type>(ItemsPerThread * size, -100, 100, seed_value);
+            = test_utils::get_random_data_wrapped<type>(ItemsPerThread * size,
+                                                        -100,
+                                                        100,
+                                                        seed_value);
 
         std::vector<type*>  arr_input(size);
         std::vector<type*> arr_output(size);
@@ -218,7 +222,10 @@ typed_test_def(suite_name, name_suffix, BlockDown)
 
         // Generate data
         std::vector<type> input_data
-            = test_utils::get_random_data<type>(ItemsPerThread * size, -100, 100, seed_value);
+            = test_utils::get_random_data_wrapped<type>(ItemsPerThread * size,
+                                                        -100,
+                                                        100,
+                                                        seed_value);
 
         std::vector<type*>  arr_input(size);
         std::vector<type*> arr_output(size);

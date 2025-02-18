@@ -229,7 +229,7 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSort)
                     HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
                 }
 
-                std::vector<key_type> input = test_utils::get_random_data<key_type>(
+                std::vector<key_type> input = test_utils::get_random_data_wrapped<key_type>(
                     size,
                     common::generate_limits<key_type>::min(),
                     common::generate_limits<key_type>::max(),
@@ -416,16 +416,17 @@ TYPED_TEST(RocprimDevicePartialSortTests, PartialSortCopy)
                     HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
                 }
 
-                std::vector<key_type> input = test_utils::get_random_data<key_type>(
+                std::vector<key_type> input = test_utils::get_random_data_wrapped<key_type>(
                     size,
                     common::generate_limits<key_type>::min(),
                     common::generate_limits<key_type>::max(),
                     seed_value);
-                std::vector<key_type> output_original = test_utils::get_random_data<key_type>(
-                    size,
-                    common::generate_limits<key_type>::min(),
-                    common::generate_limits<key_type>::max(),
-                    seed_value + 1);
+                std::vector<key_type> output_original
+                    = test_utils::get_random_data_wrapped<key_type>(
+                        size,
+                        common::generate_limits<key_type>::min(),
+                        common::generate_limits<key_type>::max(),
+                        seed_value + 1);
 
                 common::device_ptr<key_type> d_input(input);
                 common::device_ptr<key_type> d_output(output_original);

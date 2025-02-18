@@ -160,8 +160,10 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
             SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
             // Generate data
-            std::vector<key_type> keys_input1 = test_utils::get_random_data<key_type>(size1, 0, size1, seed_value);
-            std::vector<key_type> keys_input2 = test_utils::get_random_data<key_type>(size2, 0, size2, seed_value);
+            std::vector<key_type> keys_input1
+                = test_utils::get_random_data_wrapped<key_type>(size1, 0, size1, seed_value);
+            std::vector<key_type> keys_input2
+                = test_utils::get_random_data_wrapped<key_type>(size2, 0, size2, seed_value);
             std::sort(keys_input1.begin(), keys_input1.end(), compare_op);
             std::sort(keys_input2.begin(), keys_input2.end(), compare_op);
             std::vector<key_type> keys_output(size1 + size2, (key_type)0);
@@ -294,8 +296,10 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
             SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
             // Generate data
-            std::vector<key_type> keys_input1 = test_utils::get_random_data<key_type>(size1, 0, size1, seed_value);
-            std::vector<key_type> keys_input2 = test_utils::get_random_data<key_type>(size2, 0, size2, seed_value);
+            std::vector<key_type> keys_input1
+                = test_utils::get_random_data_wrapped<key_type>(size1, 0, size1, seed_value);
+            std::vector<key_type> keys_input2
+                = test_utils::get_random_data_wrapped<key_type>(size2, 0, size2, seed_value);
             std::sort(keys_input1.begin(), keys_input1.end(), compare_op);
             std::sort(keys_input2.begin(), keys_input2.end(), compare_op);
             std::vector<value_type> values_input1(size1);

@@ -28,6 +28,7 @@
 // required test headers
 #include "bounds_checking_iterator.hpp"
 #include "identity_iterator.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 #include "test_utils_hipgraphs.hpp"
@@ -137,7 +138,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
+            std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 100, seed_value);
             std::vector<F> flags = test_utils::get_random_data01<F>(size, 0.25, seed_value);
 
             common::device_ptr<T>            d_input(input);
@@ -362,7 +363,7 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
+            std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 100, seed_value);
 
             common::device_ptr<T>            d_input(input);
             common::device_ptr<U>            d_output(input.size());
@@ -492,7 +493,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
+            std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 100, seed_value);
 
             common::device_ptr<T>            d_input(input);
             common::device_ptr<U>            d_selected(input.size());
@@ -641,7 +642,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 SCOPED_TRACE(testing::Message() << "with limits = "
                     << std::get<0>(limits) << ", " << std::get<1>(limits));
                 // Generate data
-                const auto input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
+                const auto input = test_utils::get_random_data_wrapped<T>(size, 1, 100, seed_value);
 
                 common::device_ptr<T>            d_input(input);
                 common::device_ptr<U>            d_first_output(input.size());
@@ -1427,7 +1428,11 @@ TEST(RocprimDevicePartitionBlockSizeTests, BlockSize)
             SCOPED_TRACE(testing::Message() << "with size = " << size);
 
             // Generate data
-            std::vector<unsigned char> input_data = test_utils::get_random_data<unsigned char>(size * test_obj_size, 0, 255, seed_value);
+            std::vector<unsigned char> input_data
+                = test_utils::get_random_data_wrapped<unsigned char>(size * test_obj_size,
+                                                                     0,
+                                                                     255,
+                                                                     seed_value);
             std::vector<T> input(size);
             for (size_t i = 0; i < size; i++)
                 memcpy(input[i].data, input_data.data() + i * test_obj_size, test_obj_size);

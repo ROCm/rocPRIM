@@ -163,10 +163,10 @@ void test_block_radix_rank()
 
         // Generate data
         std::vector<T> keys_input
-            = test_utils::get_random_data<T>(size,
-                                             common::generate_limits<T>::min(),
-                                             common::generate_limits<T>::max(),
-                                             seed_value);
+            = test_utils::get_random_data_wrapped<T>(size,
+                                                     common::generate_limits<T>::min(),
+                                                     common::generate_limits<T>::max(),
+                                                     seed_value);
 
         // Calculated expected results on host
         std::vector<unsigned int> expected(size);

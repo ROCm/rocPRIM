@@ -25,6 +25,7 @@
 #include "../../common/utils_custom_type.hpp"
 #include "../../common/utils_device_ptr.hpp"
 
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 
@@ -83,7 +84,7 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 0, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 0, 100, seed_value);
 
         // Calculate expected results on host
         std::vector<T> expected(output);
@@ -163,8 +164,10 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output_key = test_utils::get_random_data<T>(size, 0, 100, seed_value);
-        std::vector<T> output_value = test_utils::get_random_data<T>(size, 0, 100, seed_value);
+        std::vector<T> output_key
+            = test_utils::get_random_data_wrapped<T>(size, 0, 100, seed_value);
+        std::vector<T> output_value
+            = test_utils::get_random_data_wrapped<T>(size, 0, 100, seed_value);
 
         // Combine vectors to form pairs with key and value
         std::vector<pair> target(size);

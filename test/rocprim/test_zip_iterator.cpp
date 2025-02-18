@@ -180,9 +180,9 @@ TEST(RocprimZipIteratorTests, Transform)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T1> input1 = test_utils::get_random_data<T1>(size, 1, 100, seed_value);
-        std::vector<T2> input2 = test_utils::get_random_data<T2>(size, 1, 100, seed_value);
-        std::vector<T3> input3 = test_utils::get_random_data<T3>(size, 1, 100, seed_value);
+        std::vector<T1> input1 = test_utils::get_random_data_wrapped<T1>(size, 1, 100, seed_value);
+        std::vector<T2> input2 = test_utils::get_random_data_wrapped<T2>(size, 1, 100, seed_value);
+        std::vector<T3> input3 = test_utils::get_random_data_wrapped<T3>(size, 1, 100, seed_value);
         std::vector<U> output(input1.size());
 
         common::device_ptr<T1> d_input1(input1);
@@ -278,9 +278,9 @@ TEST(RocprimZipIteratorTests, TransformReduce)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T1> input1 = test_utils::get_random_data<T1>(size, 1, 100, seed_value);
-        std::vector<T2> input2 = test_utils::get_random_data<T2>(size, 1, 50, seed_value);
-        std::vector<T3> input3 = test_utils::get_random_data<T3>(size, 1, 10, seed_value);
+        std::vector<T1> input1 = test_utils::get_random_data_wrapped<T1>(size, 1, 100, seed_value);
+        std::vector<T2> input2 = test_utils::get_random_data_wrapped<T2>(size, 1, 50, seed_value);
+        std::vector<T3> input3 = test_utils::get_random_data_wrapped<T3>(size, 1, 10, seed_value);
         std::vector<U1> output1(1, 0);
         std::vector<U2> output2(1, 0);
 

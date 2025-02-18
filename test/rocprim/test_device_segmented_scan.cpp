@@ -145,7 +145,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
             // Generate data and calculate expected results
             std::vector<output_type> values_expected(size);
             std::vector<input_type>  values_input
-                = test_utils::get_random_data<input_type>(size, 0, 100, seed_value);
+                = test_utils::get_random_data_wrapped<input_type>(size, 0, 100, seed_value);
 
             std::vector<offset_type> offsets;
             unsigned int             segments_count     = 0;
@@ -298,7 +298,7 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
             // Generate data and calculate expected results
             std::vector<output_type> values_expected(size);
             std::vector<input_type>  values_input
-                = test_utils::get_random_data<input_type>(size, 0, 100, seed_value);
+                = test_utils::get_random_data_wrapped<input_type>(size, 0, 100, seed_value);
 
             std::vector<offset_type> offsets;
             unsigned int             segments_count     = 0;
@@ -445,9 +445,9 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
 
             // Generate data
             std::vector<input_type> input
-                = test_utils::get_random_data<input_type>(size, 1, 10, seed_value);
+                = test_utils::get_random_data_wrapped<input_type>(size, 1, 10, seed_value);
             std::vector<flag_type> flags
-                = test_utils::get_random_data<flag_type>(size, 0, 10, seed_value);
+                = test_utils::get_random_data_wrapped<flag_type>(size, 0, 10, seed_value);
 
             if(size != 0)
                 flags[0] = 1U;
@@ -605,9 +605,9 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
 
             // Generate data
             std::vector<input_type> input
-                = test_utils::get_random_data<input_type>(size, 1, 10, seed_value);
+                = test_utils::get_random_data_wrapped<input_type>(size, 1, 10, seed_value);
             std::vector<flag_type> flags
-                = test_utils::get_random_data<flag_type>(size, 0, 10, seed_value);
+                = test_utils::get_random_data_wrapped<flag_type>(size, 0, 10, seed_value);
 
             if(size != 0)
                 flags[0] = 1U;

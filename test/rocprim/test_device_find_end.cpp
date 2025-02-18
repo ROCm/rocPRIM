@@ -27,6 +27,7 @@
 // required test headers
 #include "indirect_iterator.hpp"
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_data_generation.hpp"
@@ -172,11 +173,14 @@ TYPED_TEST(RocprimDeviceFindEndTests, FindEnd)
                 std::vector<value_type> input;
                 if(rocprim::is_floating_point<value_type>::value)
                 {
-                    input = test_utils::get_random_data<value_type>(size, -1000, 1000, seed_value);
+                    input = test_utils::get_random_data_wrapped<value_type>(size,
+                                                                            -1000,
+                                                                            1000,
+                                                                            seed_value);
                 }
                 else
                 {
-                    input = test_utils::get_random_data<value_type>(
+                    input = test_utils::get_random_data_wrapped<value_type>(
                         size,
                         rocprim::numeric_limits<value_type>::min(),
                         rocprim::numeric_limits<value_type>::max(),
@@ -317,11 +321,14 @@ TYPED_TEST(RocprimDeviceFindEndTests, FindEndRepetition)
             std::vector<key_type> keys;
             if(rocprim::is_floating_point<value_type>::value)
             {
-                keys = test_utils::get_random_data<key_type>(key_size, -1000, 1000, seed_value);
+                keys = test_utils::get_random_data_wrapped<key_type>(key_size,
+                                                                     -1000,
+                                                                     1000,
+                                                                     seed_value);
             }
             else
             {
-                keys = test_utils::get_random_data<key_type>(
+                keys = test_utils::get_random_data_wrapped<key_type>(
                     key_size,
                     rocprim::numeric_limits<key_type>::min(),
                     rocprim::numeric_limits<key_type>::max(),

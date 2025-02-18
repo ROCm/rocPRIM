@@ -262,7 +262,7 @@ void test_block_reduce_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 0, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 0, 100, seed_value);
 
         // Output reduce results
         std::vector<T> output_reductions(size / block_size, T(0));

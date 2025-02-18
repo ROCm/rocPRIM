@@ -55,7 +55,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScan)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output  = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output2 = output;
 
         // Calculate expected results on host
@@ -198,7 +198,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanReduce)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output  = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output2 = output;
         std::vector<T> output_reductions(size / block_size);
 
@@ -350,7 +350,7 @@ typed_test_def(suite_name_single, name_suffix, InclusiveScanPrefixCallback)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output  = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output2 = output;
         std::vector<T> output_block_prefixes(size / block_size);
         T block_prefix = test_utils::get_random_value<T>(0, 5, seed_value);
@@ -426,7 +426,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScan)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output  = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output2 = output;
         const T init = test_utils::get_random_value<T>(0, 5, seed_value);
 
@@ -498,7 +498,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanReduce)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output  = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output2 = output;
         const T init = test_utils::get_random_value<T>(0, 5, seed_value);
 
@@ -584,7 +584,7 @@ typed_test_def(suite_name_single, name_suffix, ExclusiveScanPrefixCallback)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 50, seed_value);
+        std::vector<T> output  = test_utils::get_random_data_wrapped<T>(size, 2, 50, seed_value);
         std::vector<T> output2 = output;
         std::vector<T> output_block_prefixes(size / block_size);
         T block_prefix = test_utils::get_random_value<T>(0, 5, seed_value);

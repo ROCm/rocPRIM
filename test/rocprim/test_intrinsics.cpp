@@ -26,6 +26,7 @@
 
 // required test headers
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 
@@ -126,10 +127,10 @@ struct test_type_helper
     /// Initialize some random data for this type, of \p n elements and with random seed <tt>seed</tt>.
     static std::vector<T> get_random_data(size_t n, seed_type seed)
     {
-        return test_utils::get_random_data<T>(n,
-                                              test_utils::saturate_cast<T>(-100),
-                                              test_utils::saturate_cast<T>(100),
-                                              seed);
+        return test_utils::get_random_data_wrapped<T>(n,
+                                                      test_utils::saturate_cast<T>(-100),
+                                                      test_utils::saturate_cast<T>(100),
+                                                      seed);
     }
 };
 
@@ -151,7 +152,7 @@ struct test_type_helper<custom_notaligned>
     static std::vector<custom_notaligned> get_random_data(size_t n, seed_type seed)
     {
         std::vector<double> random_data
-            = test_utils::get_random_data<double>(4 * n, -100, 100, seed);
+            = test_utils::get_random_data_wrapped<double>(4 * n, -100, 100, seed);
         std::vector<custom_notaligned> result(n);
         for(size_t i = 0; i < result.size(); ++i)
         {
@@ -182,7 +183,8 @@ struct test_type_helper<custom_16aligned>
 
     static std::vector<custom_16aligned> get_random_data(size_t n, seed_type seed)
     {
-        std::vector<float> random_data = test_utils::get_random_data<float>(3 * n, -100, 100, seed);
+        std::vector<float> random_data
+            = test_utils::get_random_data_wrapped<float>(3 * n, -100, 100, seed);
         std::vector<custom_16aligned> result(n);
         for(size_t i = 0; i < result.size(); ++i)
         {
@@ -348,7 +350,7 @@ void test_shuffle()
                 SCOPED_TRACE(testing::Message()
                              << "where logical_warp_size = " << logical_warp_size);
 
-                const auto deltas = test_utils::get_random_data<unsigned int>(
+                const auto deltas = test_utils::get_random_data_wrapped<unsigned int>(
                     std::max<size_t>(1, logical_warp_size / 2),
                     1U,
                     std::max<unsigned int>(1, logical_warp_size - 1),
@@ -441,10 +443,10 @@ TYPED_TEST(RocprimIntrinsicsTests, ShuffleIndex)
             SCOPED_TRACE(testing::Message() << "where logical_warp_size = " << i);
 
             auto src_lanes
-                = test_utils::get_random_data<int>(hardware_warp_size / logical_warp_size,
-                                                   0,
-                                                   std::max<int>(0, logical_warp_size - 1),
-                                                   seed_value);
+                = test_utils::get_random_data_wrapped<int>(hardware_warp_size / logical_warp_size,
+                                                           0,
+                                                           std::max<int>(0, logical_warp_size - 1),
+                                                           seed_value);
 
             // Calculate expected results on host
             std::vector<T> expected(size, test_type_helper<T>::zero());
@@ -582,17 +584,17 @@ TEST(RocprimIntrinsicsTests, MaskedBitCount)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate input
-        const auto input = test_utils::get_random_data<max_lane_mask_type>(in_size,
-                                                                           0,
-                                                                           all_lanes_active,
-                                                                           seed_value);
+        const auto input = test_utils::get_random_data_wrapped<max_lane_mask_type>(in_size,
+                                                                                   0,
+                                                                                   all_lanes_active,
+                                                                                   seed_value);
         d_input.store(input);
 
-        auto adds
-            = test_utils::get_random_data<unsigned int>(n_add,
-                                                        1,
-                                                        std::numeric_limits<unsigned int>::max(),
-                                                        seed_value);
+        auto adds = test_utils::get_random_data_wrapped<unsigned int>(
+            n_add,
+            1,
+            std::numeric_limits<unsigned int>::max(),
+            seed_value);
         adds.push_back(0);
         for(const unsigned int add : adds)
         {
@@ -844,7 +846,7 @@ TYPED_TEST(RocprimIntrinsicsTests, WarpPermute)
 
         const auto input = test_type_helper<T>::get_random_data(size, seed_value);
 
-        const auto wrap = test_utils::get_random_data<unsigned int>(size, 0, 4, seed_value);
+        const auto wrap = test_utils::get_random_data_wrapped<unsigned int>(size, 0, 4, seed_value);
 
         for(const auto active_lanes : active_lanes_tests(device_id))
         {
@@ -939,10 +941,10 @@ TEST(RocprimIntrinsicsTests, MatchAny)
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
-        const auto input = test_utils::get_random_data<unsigned int>(size,
-                                                                     0,
-                                                                     1u << (label_bits + 3),
-                                                                     seed_value);
+        const auto input = test_utils::get_random_data_wrapped<unsigned int>(size,
+                                                                             0,
+                                                                             1u << (label_bits + 3),
+                                                                             seed_value);
 
         const auto active_lanes_for_testing = active_lanes_tests(device_id);
         for(const auto& active_lanes : active_lanes_for_testing)
@@ -1147,10 +1149,10 @@ TEST(RocprimIntrinsicsTests, GroupElect)
             for(size_t warp = 0; warp < warps_per_block; ++warp)
             {
                 const std::vector<unsigned int> group_labels
-                    = test_utils::get_random_data<unsigned int>(hardware_warp_size,
-                                                                0,
-                                                                hardware_warp_size,
-                                                                seed_value + warp);
+                    = test_utils::get_random_data_wrapped<unsigned int>(hardware_warp_size,
+                                                                        0,
+                                                                        hardware_warp_size,
+                                                                        seed_value + warp);
 
                 auto& histogram = warp_histograms[block * warps_per_block + warp];
                 histogram.assign(hardware_warp_size + 1, 0);

@@ -26,6 +26,7 @@
 
 // required test headers
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_data_generation.hpp"
 
 // required common headers
@@ -200,10 +201,10 @@ TYPED_TEST(HipcubBlockRunLengthDecodeTest, TestDecode)
             }
         }
 
-        auto run_lengths = test_utils::get_random_data<LengthT>(num_runs,
-                                                                static_cast<LengthT>(1),
-                                                                max_run_length,
-                                                                seed_value);
+        auto run_lengths = test_utils::get_random_data_wrapped<LengthT>(num_runs,
+                                                                        static_cast<LengthT>(1),
+                                                                        max_run_length,
+                                                                        seed_value);
 
         std::default_random_engine               prng(seed_value);
         common::uniform_int_distribution<size_t> num_empty_runs_dist(1, 4);
@@ -211,10 +212,10 @@ TYPED_TEST(HipcubBlockRunLengthDecodeTest, TestDecode)
         num_runs += num_trailing_empty_runs;
 
         const auto empty_run_items
-            = test_utils::get_random_data<ItemT>(num_trailing_empty_runs,
-                                                 rocprim::numeric_limits<ItemT>::min(),
-                                                 rocprim::numeric_limits<ItemT>::max(),
-                                                 seed_value);
+            = test_utils::get_random_data_wrapped<ItemT>(num_trailing_empty_runs,
+                                                         rocprim::numeric_limits<ItemT>::min(),
+                                                         rocprim::numeric_limits<ItemT>::max(),
+                                                         seed_value);
         run_items.insert(run_items.end(), empty_run_items.begin(), empty_run_items.end());
         run_lengths.insert(run_lengths.end(), num_trailing_empty_runs, static_cast<LengthT>(0));
 

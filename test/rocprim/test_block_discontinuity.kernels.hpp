@@ -234,7 +234,8 @@ auto test_block_discontinuity()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type> input
+            = test_utils::get_random_data_wrapped<type>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<flag_type> expected_heads(size);
@@ -319,7 +320,8 @@ auto test_block_discontinuity()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type> input
+            = test_utils::get_random_data_wrapped<type>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<flag_type> expected_tails(size);
@@ -403,7 +405,8 @@ auto test_block_discontinuity()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<type> input = test_utils::get_random_data<type>(size, 0, 10, seed_value);
+        std::vector<type> input
+            = test_utils::get_random_data_wrapped<type>(size, 0, 10, seed_value);
 
         // Calculate expected results on host
         std::vector<flag_type> expected_heads(size);

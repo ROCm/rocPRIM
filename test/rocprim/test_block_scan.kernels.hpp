@@ -548,7 +548,7 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 2, 100, seed_value);
 
         // Calculate expected results on host
         std::vector<T> expected(output.size(), T(0));
@@ -625,7 +625,7 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 2, 100, seed_value);
 
         // Output reduce results
         std::vector<T> output_reductions(size / block_size, T(0));
@@ -711,7 +711,7 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 2, 100, seed_value);
         std::vector<T> output_block_prefixes(size / items_per_block, T(0));
         T block_prefix = test_utils::get_random_value<T>(0, 100, seed_value);
 
@@ -800,7 +800,7 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 2, 100, seed_value);
         const T init = test_utils::get_random_value<T>(0, 100, seed_value);
 
         // Calculate expected results on host
@@ -880,7 +880,7 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 2, 100, seed_value);
 
         // Output reduce results
         std::vector<T> output_reductions(size / items_per_block);
@@ -973,7 +973,7 @@ auto test_block_scan_input_arrays()
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> output = test_utils::get_random_data<T>(size, 2, 100, seed_value);
+        std::vector<T> output = test_utils::get_random_data_wrapped<T>(size, 2, 100, seed_value);
         std::vector<T> output_block_prefixes(size / items_per_block);
         T block_prefix = test_utils::get_random_value<T>(0, 100, seed_value);
 

@@ -211,7 +211,7 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
             std::vector<output_type> aggregates_expected;
 
             std::vector<input_type> values_input
-                = test_utils::get_random_data<input_type>(size, 0, 100, seed_value);
+                = test_utils::get_random_data_wrapped<input_type>(size, 0, 100, seed_value);
 
             std::vector<offset_type> offsets;
             unsigned int             segments_count     = 0;

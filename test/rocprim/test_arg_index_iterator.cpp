@@ -25,6 +25,7 @@
 // required test headers
 #include "../../common/utils_device_ptr.hpp"
 #include "test_seed.hpp"
+#include "test_utils.hpp"
 #include "test_utils_assertions.hpp"
 #include "test_utils_data_generation.hpp"
 
@@ -75,7 +76,7 @@ TYPED_TEST(RocprimArgIndexIteratorTests, Equal)
         unsigned int seed_value = seed_index < random_seeds_count  ? rand() : seeds[seed_index - random_seeds_count];
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
-        std::vector<T> input = test_utils::get_random_data<T>(5, 1, 200, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(5, 1, 200, seed_value);
 
         Iterator x(input.data());
         Iterator y = x;
@@ -117,7 +118,7 @@ TYPED_TEST(RocprimArgIndexIteratorTests, ReduceArgMinimum)
         SCOPED_TRACE(testing::Message() << "with seed = " << seed_value);
 
         // Generate data
-        std::vector<T> input = test_utils::get_random_data<T>(size, 1, 200, seed_value);
+        std::vector<T> input = test_utils::get_random_data_wrapped<T>(size, 1, 200, seed_value);
         std::vector<key_value> output(1);
 
         common::device_ptr<T>         d_input(input);
