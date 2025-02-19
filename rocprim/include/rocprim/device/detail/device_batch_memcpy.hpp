@@ -1139,11 +1139,18 @@ ROCPRIM_INLINE static hipError_t batch_memcpy_func(void*              temporary_
     ROCPRIM_RETURN_ON_ERROR(hipSetDevice(device_id));
 
     int blev_occupancy{};
-    ROCPRIM_RETURN_ON_ERROR(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+    hipError_t error = hipOccupancyMaxActiveBlocksPerMultiprocessor(
         &blev_occupancy,
         batch_memcpy_impl_type::template blev_memcpy_kernel<config>,
         blev_block_size,
-        0 /* dynSharedMemPerBlk */));
+        0 /* dynSharedMemPerBlk */);
+    if(error != hipSuccess)
+    {
+        // Attempt to reset the device.
+        static_cast<void>(hipSetDevice(previous_device));
+
+        return error;
+    }
 
     // Restore the default device id to initial state
     ROCPRIM_RETURN_ON_ERROR(hipSetDevice(previous_device));
