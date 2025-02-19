@@ -29,7 +29,7 @@
 // required test headers
 #include "test_seed.hpp"
 #include "test_utils.hpp"
-//#include "test_utils_data_generation.hpp"
+#include "test_utils_data_generation.hpp"
 #include "test_utils_hipgraphs.hpp"
 
 // required rocprim headers
