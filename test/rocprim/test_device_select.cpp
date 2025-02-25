@@ -86,7 +86,10 @@ using RocprimDeviceSelectTestsParams
                                           common::custom_type<double, double, true>,
                                           int,
                                           true>,
-                       DeviceSelectParams<int, int, unsigned int, false, true>>;
+                       DeviceSelectParams<int, int, unsigned int, false, true>,
+                       DeviceSelectParams<common::custom_huge_type<1024, int>,
+                                          common::custom_huge_type<1024, int>,
+                                          int>>;
 
 TYPED_TEST_SUITE(RocprimDeviceSelectTests, RocprimDeviceSelectTestsParams);
 
@@ -801,7 +804,8 @@ using RocprimDeviceUniqueByKeyTestParams
                        DeviceUniqueByKeyParams<long long, uint8_t, long, int, true>,
                        DeviceUniqueByKeyParams<common::custom_type<double, double, true>,
                                                common::custom_type<double, double, true>>,
-                       DeviceUniqueByKeyParams<int, int, int, int, false, true>>;
+                       DeviceUniqueByKeyParams<int, int, int, int, false, true>,
+                       DeviceUniqueByKeyParams<common::custom_huge_type<1024, int>, uint8_t>>;
 
 TYPED_TEST_SUITE(RocprimDeviceUniqueByKeyTests, RocprimDeviceUniqueByKeyTestParams);
 

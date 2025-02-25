@@ -94,42 +94,61 @@ struct kernel_config : detail::kernel_config_params
 namespace detail
 {
 
-template<
-    unsigned int MaxBlockSize,
-    unsigned int SharedMemoryPerThread,
-    // Most kernels require block sizes not smaller than warp
-    unsigned int MinBlockSize, 
-    // If kernels require more than MaxBlockSize * SharedMemoryPerThread bytes
-    // (eg. to store some kind of block-wide state), that size can be specified here
-    unsigned int ExtraSharedMemory = 0,
-    // Can fit in shared memory?
-    // Although GPUs have 64KiB, 32KiB is used here as a "soft" limit,
-    // because some additional memory may be required in kernels
-    bool = (MaxBlockSize * SharedMemoryPerThread + ExtraSharedMemory <= (1u << 15))
->
+template<unsigned int MaxBlockSize,
+         unsigned int SharedMemoryPerThread,
+         // Most kernels require block sizes not smaller than warp
+         unsigned int MinBlockSize,
+         // If kernels require more than MaxBlockSize * SharedMemoryPerThread bytes
+         // (eg. to store some kind of block-wide state), that size can be specified here
+         unsigned int ExtraSharedMemory = 0,
+         // virtual shared memory support
+         bool VsmemSupport = false,
+         // Can fit in shared memory?
+         // Although GPUs have 64KiB, 32KiB is used here as a "soft" limit,
+         // because some additional memory may be required in kernels
+         bool = (MaxBlockSize * SharedMemoryPerThread + ExtraSharedMemory <= (1u << 15))>
 struct limit_block_size
 {
     // No, then try to decrease block size
-    static constexpr unsigned int value =
-        limit_block_size<
-            detail::next_power_of_two(MaxBlockSize) / 2,
-            SharedMemoryPerThread,
-            MinBlockSize,
-            ExtraSharedMemory
-        >::value;
+    static constexpr unsigned int value
+        = limit_block_size<detail::next_power_of_two(MaxBlockSize) / 2,
+                           SharedMemoryPerThread,
+                           MinBlockSize,
+                           ExtraSharedMemory,
+                           VsmemSupport>::value;
 };
 
-template<
-    unsigned int MaxBlockSize,
-    unsigned int SharedMemoryPerThread,
-    unsigned int MinBlockSize,
-    unsigned int ExtraSharedMemory
->
-struct limit_block_size<MaxBlockSize, SharedMemoryPerThread, MinBlockSize, ExtraSharedMemory, true>
+template<unsigned int MaxBlockSize,
+         unsigned int SharedMemoryPerThread,
+         unsigned int MinBlockSize,
+         unsigned int ExtraSharedMemory,
+         bool         VsmemSupport>
+struct limit_block_size<MaxBlockSize,
+                        SharedMemoryPerThread,
+                        MinBlockSize,
+                        ExtraSharedMemory,
+                        VsmemSupport,
+                        true>
 {
-    static_assert(MaxBlockSize >= MinBlockSize, "Data is too large, it cannot fit in shared memory");
+    static_assert(MaxBlockSize >= MinBlockSize || VsmemSupport,
+                  "Data is too large, it cannot fit in shared memory");
 
     static constexpr unsigned int value = MaxBlockSize;
+};
+
+template<unsigned int MaxBlockSize,
+         unsigned int SharedMemoryPerThread,
+         unsigned int MinBlockSize,
+         unsigned int ExtraSharedMemory = 0>
+struct fallback_block_size
+{
+
+    static constexpr unsigned int fallback_bs = limit_block_size<MaxBlockSize,
+                                                                 SharedMemoryPerThread,
+                                                                 MinBlockSize,
+                                                                 ExtraSharedMemory,
+                                                                 true>::value;
+    static constexpr unsigned int value = fallback_bs >= MinBlockSize ? fallback_bs : MaxBlockSize;
 };
 
 template<class Config, class Default>

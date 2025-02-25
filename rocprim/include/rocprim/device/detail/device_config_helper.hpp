@@ -25,6 +25,7 @@
 
 #include "../../config.hpp"
 #include "../../detail/various.hpp"
+#include "../../detail/virtual_shared_memory.hpp"
 
 #include "../../block/block_load.hpp"
 #include "../../block/block_reduce.hpp"
@@ -98,9 +99,14 @@ template<class Key, class Value>
 struct merge_sort_block_sort_config_base
 {
     static constexpr unsigned int item_scale = ::rocprim::max(sizeof(Key), sizeof(Value));
+    static constexpr bool         use_fallback = merge_sort_block_size(item_scale) * 2
+                                             * merge_sort_items_per_thread(item_scale) * item_scale
+                                         <= max_smem_per_block;
     // multiply by 2 to ensure block_sort's items_per_block >= block_merge's items_per_block
-    static constexpr unsigned int block_size       = merge_sort_block_size(item_scale) * 2;
-    static constexpr unsigned int items_per_thread = merge_sort_items_per_thread(item_scale);
+    static constexpr unsigned int block_size
+        = use_fallback ? merge_sort_block_size(item_scale) * 2 : 256;
+    static constexpr unsigned int items_per_thread
+        = use_fallback ? merge_sort_items_per_thread(item_scale) : 1;
     using type                                     = merge_sort_block_sort_config<block_size,
                                               items_per_thread,
                                               block_sort_algorithm::stable_merge_sort>;
@@ -156,9 +162,13 @@ template<class Key, class Value>
 struct merge_sort_block_merge_config_base
 {
     static constexpr unsigned int item_scale = ::rocprim::max(sizeof(Key), sizeof(Value));
-
-    static constexpr unsigned int block_size       = merge_sort_block_size(item_scale);
-    static constexpr unsigned int items_per_thread = merge_sort_items_per_thread(item_scale);
+    static constexpr bool         use_fallback = merge_sort_block_size(item_scale) * 2
+                                             * merge_sort_items_per_thread(item_scale) * item_scale
+                                         <= max_smem_per_block;
+    static constexpr unsigned int block_size
+        = use_fallback ? merge_sort_block_size(item_scale) : 128;
+    static constexpr unsigned int items_per_thread
+        = use_fallback ? merge_sort_items_per_thread(item_scale) : 1;
     using type                                     = merge_sort_block_merge_config<block_size,
                                                1,
                                                (1 << 17) + 70000,
@@ -1059,7 +1069,7 @@ struct default_partition_config_base
                                                 lookback_scan_state<offset_t>>::storage_type);
 
     using type = select_config<
-        limit_block_size<256U, sizeof(Key), ROCPRIM_WARP_SIZE_64, shared_mem_offset>::value,
+        fallback_block_size<256U, sizeof(Key), ROCPRIM_WARP_SIZE_64, shared_mem_offset>::value,
         ::rocprim::max(1u, ItemScaleBase / item_scale),
         ::rocprim::block_load_method::block_load_transpose,
         ::rocprim::block_load_method::block_load_transpose,

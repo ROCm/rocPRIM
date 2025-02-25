@@ -95,6 +95,8 @@ int main(int argc, char* argv[])
     using custom_int2            = common::custom_type<int, int>;
     using custom_char_double     = common::custom_type<char, double>; // used by ssbk benchmark
     using custom_longlong_double = common::custom_type<long long, double>;
+    using huge_float2_1024       = common::custom_huge_type<1024, float, float>;
+    using huge_float2_2048       = common::custom_huge_type<2048, float, float>;
 
     CREATE_BENCHMARK(int, float)
     CREATE_BENCHMARK(long long, double)
@@ -102,7 +104,9 @@ int main(int argc, char* argv[])
     CREATE_BENCHMARK(uint8_t, uint8_t)
     CREATE_BENCHMARK(rocprim::half, rocprim::half)
     CREATE_BENCHMARK(short, short)
-    CREATE_BENCHMARK(int, custom_float2)
+    CREATE_BENCHMARK(custom_float2)
+    CREATE_BENCHMARK(huge_float2_1024)
+    CREATE_BENCHMARK(huge_float2_2048)
     CREATE_BENCHMARK(long long, custom_double2)
     CREATE_BENCHMARK(custom_double2, custom_double2)
     CREATE_BENCHMARK(custom_int2, custom_double2)

@@ -166,6 +166,7 @@ int main(int argc, char* argv[])
 #else
     using custom_double2    = common::custom_type<double, double>;
     using custom_int_double = common::custom_type<int, double>;
+    using huge_float2       = common::custom_huge_type<1024, float, float>;
 
     BENCHMARK_FLAG_TYPE(int, unsigned char);
     BENCHMARK_FLAG_TYPE(float, unsigned char);
@@ -176,6 +177,7 @@ int main(int argc, char* argv[])
     BENCHMARK_FLAG_TYPE(custom_double2, unsigned char);
     BENCHMARK_FLAG_TYPE(rocprim::int128_t, int8_t);
     BENCHMARK_FLAG_TYPE(rocprim::uint128_t, uint8_t);
+    BENCHMARK_FLAG_TYPE(huge_float2, uint8_t);
 
     BENCHMARK_PREDICATE_TYPE(int);
     BENCHMARK_PREDICATE_TYPE(float);
@@ -186,6 +188,7 @@ int main(int argc, char* argv[])
     BENCHMARK_PREDICATE_TYPE(custom_int_double);
     BENCHMARK_PREDICATE_TYPE(rocprim::int128_t);
     BENCHMARK_PREDICATE_TYPE(rocprim::uint128_t);
+    BENCHMARK_PREDICATE_TYPE(huge_float2);
 
     BENCHMARK_TWO_WAY_FLAG_TYPE(int, unsigned char);
     BENCHMARK_TWO_WAY_FLAG_TYPE(float, unsigned char);
@@ -196,6 +199,7 @@ int main(int argc, char* argv[])
     BENCHMARK_TWO_WAY_FLAG_TYPE(custom_double2, unsigned char);
     BENCHMARK_TWO_WAY_FLAG_TYPE(rocprim::int128_t, int8_t);
     BENCHMARK_TWO_WAY_FLAG_TYPE(rocprim::uint128_t, uint8_t);
+    BENCHMARK_TWO_WAY_FLAG_TYPE(huge_float2, uint8_t);
 
     BENCHMARK_TWO_WAY_PREDICATE_TYPE(int);
     BENCHMARK_TWO_WAY_PREDICATE_TYPE(float);
@@ -206,6 +210,7 @@ int main(int argc, char* argv[])
     BENCHMARK_TWO_WAY_PREDICATE_TYPE(custom_int_double);
     BENCHMARK_TWO_WAY_PREDICATE_TYPE(rocprim::int128_t);
     BENCHMARK_TWO_WAY_PREDICATE_TYPE(rocprim::uint128_t);
+    BENCHMARK_TWO_WAY_PREDICATE_TYPE(huge_float2);
 
     BENCHMARK_THREE_WAY_TYPE(int);
     BENCHMARK_THREE_WAY_TYPE(float);
@@ -216,6 +221,7 @@ int main(int argc, char* argv[])
     BENCHMARK_THREE_WAY_TYPE(custom_int_double);
     BENCHMARK_THREE_WAY_TYPE(rocprim::int128_t);
     BENCHMARK_THREE_WAY_TYPE(rocprim::uint128_t);
+    BENCHMARK_THREE_WAY_TYPE(huge_float2);
 #endif
 
     // Use manual timing

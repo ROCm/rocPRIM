@@ -104,7 +104,8 @@ using RocprimDevicePartitionTestsParams = ::testing::Types<
     DevicePartitionParams<rocprim::half, rocprim::half>,
     DevicePartitionParams<rocprim::bfloat16, rocprim::bfloat16>,
     DevicePartitionParams<common::custom_type<long long, long long, true>>,
-    DevicePartitionParams<int, int, unsigned int, rocprim::default_config, false, true>>;
+    DevicePartitionParams<int, int, unsigned int, rocprim::default_config, false, true>,
+    DevicePartitionParams<common::custom_huge_type<1024, long long>>>;
 
 TYPED_TEST_SUITE(RocprimDevicePartitionTests, RocprimDevicePartitionTestsParams);
 

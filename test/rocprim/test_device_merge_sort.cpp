@@ -102,7 +102,9 @@ using RocprimDeviceSortTestsParams = ::testing::Types<
                      common::custom_type<double, double, true>>,
     DeviceSortParams<int, test_utils::custom_float_type>,
     DeviceSortParams<test_utils::custom_test_array_type<int, 4>>,
-    DeviceSortParams<int, int, ::rocprim::less<int>, true>>;
+    DeviceSortParams<int, int, ::rocprim::less<int>, true>,
+    DeviceSortParams<int, common::custom_huge_type<2048, float>>,
+    DeviceSortParams<common::custom_huge_type<2048, float>>>;
 
 static_assert(std::is_trivially_copyable<test_utils::custom_float_type>::value,
               "Type must be trivially copyable to cover merge sort specialized kernel");

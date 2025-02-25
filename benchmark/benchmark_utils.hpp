@@ -923,6 +923,16 @@ inline const char* Traits<common::custom_type<float, float>>::name()
     return "common::custom_type<float,float>";
 }
 template<>
+inline const char* Traits<common::custom_huge_type<1024, float, float>>::name()
+{
+    return "common::custom_type<1024,float,float>";
+}
+template<>
+inline const char* Traits<common::custom_huge_type<2048, float, float>>::name()
+{
+    return "common::custom_type<2048,float,float>";
+}
+template<>
 inline const char* Traits<common::custom_type<double, double>>::name()
 {
     return "common::custom_type<double,double>";

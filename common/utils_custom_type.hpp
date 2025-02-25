@@ -138,12 +138,49 @@ struct custom_type
     }
 };
 
+template<unsigned int Size, class T, typename U = T, bool NonZero = false>
+struct custom_huge_type : custom_type<T, U, NonZero>
+{
+    static constexpr auto extra_bytes = Size - sizeof(T) - sizeof(U);
+    std::uint8_t          data[extra_bytes];
+
+    // Non-zero values in default constructor for checking reduce and scan:
+    // ensure that scan_op(custom_type(), value) != value
+    ROCPRIM_HOST_DEVICE constexpr inline custom_huge_type() : custom_type<T, U, NonZero>()
+    {}
+
+    ROCPRIM_HOST_DEVICE inline custom_huge_type(T x, U y) : custom_type<T, U, NonZero>(x, y) {}
+
+    ROCPRIM_HOST_DEVICE inline custom_huge_type(T xy) : custom_type<T, U, NonZero>(xy) {}
+
+    template<typename V, typename W>
+    ROCPRIM_HOST_DEVICE inline custom_huge_type(const custom_type<V, W, NonZero>& other)
+        : custom_type<T, U, NonZero>(other)
+    {}
+
+    template<unsigned int OtherSize, typename V, typename W>
+    ROCPRIM_HOST_DEVICE inline custom_huge_type(
+        const custom_huge_type<OtherSize, V, W, NonZero>& other)
+        : custom_type<T, U, NonZero>(static_cast<T>(other.x), static_cast<U>(other.y))
+    {}
+
+    friend inline std::ostream& operator<<(std::ostream& stream, const custom_huge_type& value)
+    {
+        stream << "[" << value.x << "; " << value.y << "]";
+        return stream;
+    }
+};
+
 template<typename T>
 struct is_custom_type : std::false_type
 {};
 
 template<typename T, typename U, bool NonZero>
 struct is_custom_type<common::custom_type<T, U, NonZero>> : std::true_type
+{};
+
+template<unsigned int Size, typename T, typename U, bool NonZero>
+struct is_custom_type<common::custom_huge_type<Size, T, U, NonZero>> : std::true_type
 {};
 } // namespace common
 
