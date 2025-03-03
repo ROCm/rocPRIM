@@ -320,8 +320,7 @@ TYPED_TEST(DeviceMergeInplaceTests, MergeInplace)
 
     for(auto size : sizes)
     {
-        size_t num_seeds
-            = gen_a_type::is_random || gen_b_type::is_random ? (random_seeds_count + seed_size) : 1;
+        size_t num_seeds = gen_a_type::is_random || gen_b_type::is_random ? number_of_runs : 1;
 
         size_t size_a     = std::get<0>(size);
         size_t size_b     = std::get<1>(size);

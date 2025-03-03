@@ -68,7 +68,7 @@ TYPED_TEST(RocprimSortCheckerTests, TrueTest)
 
     const auto op = op_type{};
 
-    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
@@ -101,7 +101,7 @@ TEST(RocprimSortCheckerTests, FalseTest)
     int device_id = test_common_utils::obtain_device_from_ctest();
     HIP_CHECK(hipSetDevice(device_id));
 
-    for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
+    for(size_t seed_index = 0; seed_index < number_of_runs; seed_index++)
     {
         unsigned int seed_value
             = seed_index < random_seeds_count ? rand() : seeds[seed_index - random_seeds_count];
