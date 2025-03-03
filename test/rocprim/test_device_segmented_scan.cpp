@@ -148,12 +148,14 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
                 = test_utils::get_random_data_wrapped<input_type>(size, 0, 100, seed_value);
 
             std::vector<offset_type> offsets;
+            std::vector<size_t>      sizes;
             unsigned int             segments_count     = 0;
             size_t                   offset             = 0;
             size_t                   max_segment_length = 0;
             while(offset < size)
             {
                 const size_t segment_length = segment_length_dis(gen);
+                sizes.push_back(segment_length);
                 offsets.push_back(offset);
 
                 const size_t end   = std::min(size, offset + segment_length);
@@ -236,8 +238,25 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScan)
 
             auto values_output = d_values_output.load();
 
-            ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(values_output, values_expected, precision));
+            if(size > 0)
+            {
+                const float single_op_precision = precision / max_segment_length;
+
+                size_t current_offset     = 0;
+                size_t current_size_index = 0;
+                for(size_t i = 0; i < values_output.size(); ++i)
+                {
+                    if((i - current_offset) == sizes[current_size_index])
+                    {
+                        current_offset += sizes[current_size_index];
+                        ++current_size_index;
+                    }
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(values_output[i],
+                                                values_expected[i],
+                                                single_op_precision * (i - current_offset)));
+                }
+            }
 
             if(TestFixture::params::use_graphs)
             {
@@ -301,12 +320,14 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
                 = test_utils::get_random_data_wrapped<input_type>(size, 0, 100, seed_value);
 
             std::vector<offset_type> offsets;
+            std::vector<size_t>      sizes;
             unsigned int             segments_count     = 0;
             size_t                   offset             = 0;
             size_t                   max_segment_length = 0;
             while(offset < size)
             {
                 const size_t segment_length = segment_length_dis(gen);
+                sizes.push_back(segment_length);
                 offsets.push_back(offset);
 
                 const size_t end   = std::min(size, offset + segment_length);
@@ -392,8 +413,25 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScan)
 
             auto values_output = d_values_output.load();
 
-            ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(values_output, values_expected, precision));
+            if(size > 0)
+            {
+                const float single_op_precision = precision / max_segment_length;
+
+                size_t current_offset     = 0;
+                size_t current_size_index = 0;
+                for(size_t i = 0; i < values_output.size(); ++i)
+                {
+                    if((i - current_offset) == sizes[current_size_index])
+                    {
+                        current_offset += sizes[current_size_index];
+                        ++current_size_index;
+                    }
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(values_output[i],
+                                                values_expected[i],
+                                                single_op_precision * (i - current_offset)));
+                }
+            }
 
             if(TestFixture::params::use_graphs)
             {
@@ -551,7 +589,15 @@ TYPED_TEST(RocprimDeviceSegmentedScan, InclusiveScanUsingHeadFlags)
             // Check if output values are as expected
             auto output = d_output.load();
 
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, precision));
+            if(size > 0)
+            {
+                const float single_op_precision = precision / max_segment_length;
+                for(size_t i = 0; i < output.size(); ++i)
+                {
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(output[i], expected[i], single_op_precision * i));
+                }
+            }
 
             if(TestFixture::params::use_graphs)
             {
@@ -721,7 +767,15 @@ TYPED_TEST(RocprimDeviceSegmentedScan, ExclusiveScanUsingHeadFlags)
 
             HIP_CHECK(hipDeviceSynchronize());
 
-            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output, expected, precision));
+            if(size > 0)
+            {
+                const float single_op_precision = precision / max_segment_length;
+                for(size_t i = 0; i < output.size(); ++i)
+                {
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(output[i], expected[i], single_op_precision * i));
+                }
+            }
         }
     }
 

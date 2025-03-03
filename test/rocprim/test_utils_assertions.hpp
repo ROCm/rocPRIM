@@ -313,6 +313,15 @@ auto assert_near(const common::custom_type<T, T, true>& result,
     ASSERT_EQ(result.y,expected.y);
 }
 
+template<class T>
+auto assert_near(const T& result, const T& expected, const float /*percent*/) ->
+    typename std::enable_if<!std::is_integral<T>::value && !std::is_floating_point<T>::value
+                            && !(std::is_same<T, rocprim::bfloat16>::value
+                                 || std::is_same<T, rocprim::half>::value)>::type
+{
+    ASSERT_EQ(result, expected);
+}
+
 // End assert_near
 
 #if ROCPRIM_HAS_INT128_SUPPORT

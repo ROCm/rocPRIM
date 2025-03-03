@@ -159,39 +159,63 @@ struct select_plus_operator_host<::rocprim::bfloat16>
     using acc_type = double;
 };
 
-template<class InputIt, class T,
-    std::enable_if_t<std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value ||
-                     std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::half>::value ||
-                     std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value
-                     , bool> = true>
-constexpr T host_reduce(InputIt first, InputIt last, rocprim::plus<T>)
+template<
+    class InputIt,
+    class T,
+    std::enable_if_t<
+        std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value
+            || std::is_same<typename std::iterator_traits<InputIt>::value_type,
+                            rocprim::half>::value
+            || std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value,
+        bool>
+    = true>
+constexpr std::vector<T> host_reduce(InputIt first, InputIt last, rocprim::plus<T>)
 {
     using accumulator_type = double;
+    size_t         size    = std::distance(first, last);
+    std::vector<T> result(size);
+    if(size == 0)
+    {
+        return result;
+    }
     // Calculate expected results on host
     accumulator_type expected = accumulator_type(0);
     rocprim::plus<accumulator_type> bin_op;
-    for(InputIt it = first; it != last; it++)
+    for(int i = size - 1; i >= 0; --i)
     {
-        expected = bin_op(expected, static_cast<accumulator_type>(*it));
+        expected  = bin_op(expected, static_cast<accumulator_type>(*(first + i)));
+        result[i] = static_cast<T>(expected);
     }
-    return static_cast<T>(expected);
+    return result;
 }
 
-template<class InputIt, class T,
-          std::enable_if_t<!std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value &&
-                           !std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::half>::value &&
-                           !std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value
-                           , bool> = true>
-constexpr T host_reduce(InputIt first, InputIt last, rocprim::plus<T> op)
+template<
+    class InputIt,
+    class T,
+    std::enable_if_t<
+        !std::is_same<typename std::iterator_traits<InputIt>::value_type, rocprim::bfloat16>::value
+            && !std::is_same<typename std::iterator_traits<InputIt>::value_type,
+                             rocprim::half>::value
+            && !std::is_same<typename std::iterator_traits<InputIt>::value_type, float>::value,
+        bool>
+    = true>
+constexpr std::vector<T> host_reduce(InputIt first, InputIt last, rocprim::plus<T> op)
 {
     using acc_type = T;
+    size_t         size = std::distance(first, last);
+    std::vector<T> result(size);
+    if(size == 0)
+    {
+        return result;
+    }
     // Calculate expected results on host
     acc_type expected = acc_type(0);
-    for(InputIt it = first; it != last; it++)
+    for(int i = size - 1; i >= 0; --i)
     {
-        expected = op(expected, *it);
+        expected  = op(expected, *(first + i));
+        result[i] = expected;
     }
-    return expected;
+    return result;
 }
 
 template<class acc_type, class InputIt, class OutputIt, class FlagsIt, class BinaryOperation>

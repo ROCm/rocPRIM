@@ -291,10 +291,8 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
             common::device_ptr<U> d_output(1);
 
             // Calculate expected results on host
-            U expected = test_utils::host_reduce(input.begin(), input.end(), rocprim::plus<U>());
-            // fix for common::custom_type case with size == 0
-            if(size == 0)
-                expected = U();
+            std::vector<U> expected
+                = test_utils::host_reduce(input.begin(), input.end(), rocprim::plus<U>());
 
             // Get size of d_temp_storage
             size_t temp_storage_size_bytes;
@@ -343,8 +341,21 @@ TYPED_TEST(RocprimDeviceReduceTests, ReduceSum)
             const auto output = d_output.load();
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(output[0], expected, test_utils::precision<U> * size));
+            if(size == 0)
+            {
+                ASSERT_NO_FATAL_FAILURE(
+                    test_utils::assert_near(output[0], U{}, test_utils::precision<U> * 1));
+            }
+            else
+            {
+                for(size_t i = 0; i < output.size(); ++i)
+                {
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(output[i],
+                                                expected[i],
+                                                test_utils::precision<U> * (size - 1 - i)));
+                }
+            }
 
             if (TestFixture::use_graphs)
             {
@@ -585,7 +596,7 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
         //if(size == 0)
         //    continue;
         // as all numbers here are the same and have only 1 significant bit in matnissa the error is like this
-        const float precision = std::max(0.0, test_utils::precision<U> / 2.0 * size - 1.0);
+        const float precision = std::max(0.0, test_utils::precision<U> / 2.0 * (size - 1) - 1.0);
         if(precision > 0.5)
         {
             std::cout << "Test is skipped from size " << size
@@ -618,7 +629,8 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
         common::device_ptr<U> d_output(1);
 
         // Calculate expected results on host mathematically (instead of using reduce on host)
-        U expected = static_cast<U>(static_cast<double>(size) * static_cast<double>(lowest));
+        std::vector<U> expected
+            = test_utils::host_reduce(input.begin(), input.end(), rocprim::plus<U>());
 
         // Get size of d_temp_storage
         size_t temp_storage_size_bytes;
@@ -667,8 +679,22 @@ TYPED_TEST(RocprimDeviceReducePrecisionTests, ReduceSumInputEqualExponentFunctio
         const auto output = d_output.load();
 
         // Check if output values are as expected
-        ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output[0], expected, precision));
-
+        //ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output[0], expected, precision));
+        if(size == 0)
+        {
+            ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(output[0], U{}, precision));
+        }
+        else
+        {
+            for(size_t i = 0; i < output.size(); ++i)
+            {
+                ASSERT_NO_FATAL_FAILURE(test_utils::assert_near(
+                    output[i],
+                    expected[i],
+                    test_utils::precision<U>
+                        * std::max(0.0, test_utils::precision<U> / 2.0 * (size - 1 - i) - 1.0)));
+            }
+        }
         if (TestFixture::use_graphs)
         {
             gHelper.cleanupGraphHelper();

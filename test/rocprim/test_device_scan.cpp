@@ -378,7 +378,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
-            if(single_op_precision * size > 0.5)
+            if(single_op_precision * (size - 1) > 0.5)
             {
                 std::cout << "Test is skipped from size " << size
                           << " on, potential error of summation is more than 0.5 of the result "
@@ -462,8 +462,14 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScan)
             const auto output = d_output.load();
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(output, expected, single_op_precision * size));
+            if(size > 0)
+            {
+                for(size_t i = 0; i < output.size(); ++i)
+                {
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(output[i], expected[i], single_op_precision * i));
+                }
+            }
 
             if (TestFixture::use_graphs)
             {
@@ -511,7 +517,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
-            if(single_op_precision * size > 0.5)
+            if(single_op_precision * (size - 1) > 0.5)
             {
                 std::cout << "Test is skipped from size " << size
                           << " on, potential error of summation is more than 0.5 of the result "
@@ -599,8 +605,14 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScan)
             const auto output = d_output.load();
 
             // Check if output values are as expected
-            ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(output, expected, single_op_precision * size));
+            if(size > 0)
+            {
+                for(size_t i = 0; i < output.size(); ++i)
+                {
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(output[i], expected[i], single_op_precision * i));
+                }
+            }
 
             if (TestFixture::use_graphs)
             {
@@ -641,7 +653,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
-            if(single_op_precision * size > 0.5)
+            if(single_op_precision * (size - 1) > 0.5)
             {
                 std::cout << "Test is skipped from size " << size
                           << " on, potential error of summation is more than 0.5 of the result "
@@ -744,7 +756,7 @@ TYPED_TEST(RocprimDeviceScanTests, InclusiveScanByKey)
 
             // Check if output values are as expected
             ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(output, expected, single_op_precision * size));
+                test_utils::assert_near(output, expected, single_op_precision * (size - 1)));
 
             if (TestFixture::use_graphs)
             {
@@ -786,7 +798,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
 
         for(auto size : test_utils::get_sizes(seed_value))
         {
-            if(single_op_precision * size > 0.5)
+            if(single_op_precision * (size - 1) > 0.5)
             {
                 std::cout << "Test is skipped from size " << size
                           << " on, potential error of summation is more than 0.5 of the result "
@@ -893,7 +905,7 @@ TYPED_TEST(RocprimDeviceScanTests, ExclusiveScanByKey)
 
             // Check if output values are as expected
             ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(output, expected, single_op_precision * size));
+                test_utils::assert_near(output, expected, single_op_precision * (size - 1)));
 
             if (TestFixture::use_graphs)
             {

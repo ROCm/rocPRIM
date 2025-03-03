@@ -214,12 +214,14 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
                 = test_utils::get_random_data_wrapped<input_type>(size, 0, 100, seed_value);
 
             std::vector<offset_type> offsets;
+            std::vector<size_t>      sizes;
             unsigned int             segments_count     = 0;
             size_t                   offset             = 0;
             size_t                   max_segment_length = 0;
             while(offset < size)
             {
                 const size_t segment_length = segment_length_dis(gen);
+                sizes.push_back(segment_length);
                 offsets.push_back(offset);
 
                 const size_t end   = std::min(size, offset + segment_length);
@@ -307,8 +309,19 @@ TYPED_TEST(RocprimDeviceSegmentedReduce, Reduce)
                 HIP_CHECK(hipStreamDestroy(stream));
             }
             SCOPED_TRACE(testing::Message() << "with seed = " << seed);
-            ASSERT_NO_FATAL_FAILURE(
-                test_utils::assert_near(aggregates_output, aggregates_expected, precision));
+
+            if(size > 0)
+            {
+                const float single_op_precision = precision / max_segment_length;
+
+                for(size_t i = 0; i < aggregates_output.size(); ++i)
+                {
+                    ASSERT_NO_FATAL_FAILURE(
+                        test_utils::assert_near(aggregates_output[i],
+                                                aggregates_expected[i],
+                                                single_op_precision * (sizes[i] - 1)));
+                }
+            }
         }
     }
 }
