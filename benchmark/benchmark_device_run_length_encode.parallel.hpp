@@ -32,12 +32,17 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
+#include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_run_length_encode.hpp>
+#ifdef BENCHMARK_CONFIG_TUNING
+    #include <rocprim/block/block_load.hpp>
+    #include <rocprim/block/block_scan.hpp>
+#endif
 
 #include <algorithm>
+#include <cstddef>
 #include <string>
-#include <type_traits>
 #include <vector>
 #ifdef BENCHMARK_CONFIG_TUNING
     #include <memory>
@@ -218,7 +223,10 @@ struct device_run_length_encode_benchmark_generator
 
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
-        static_for_each<make_index_range<unsigned int, 4u, 15u>, create_ipt>(storage);
+        static constexpr unsigned int max_items_per_thread
+            = std::min(TUNING_SHARED_MEMORY_MAX / sizeof(T) / BlockSize - 1, size_t{15});
+        static_for_each<make_index_range<unsigned int, 4u, max_items_per_thread>, create_ipt>(
+            storage);
     }
 };
 

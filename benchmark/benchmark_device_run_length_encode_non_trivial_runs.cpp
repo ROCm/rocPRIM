@@ -33,9 +33,10 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
-#include <rocprim/device/device_run_length_encode.hpp>
+#include <rocprim/types.hpp>
 
-#include <algorithm>
+#include <cstddef>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -63,6 +64,8 @@ void add_non_trivial_runs_benchmarks(std::vector<benchmark::internal::Benchmark*
     CREATE_NON_TRIVIAL_RUNS_BENCHMARK(int16_t, MaxLength);
     CREATE_NON_TRIVIAL_RUNS_BENCHMARK(int32_t, MaxLength);
     CREATE_NON_TRIVIAL_RUNS_BENCHMARK(int64_t, MaxLength);
+    CREATE_NON_TRIVIAL_RUNS_BENCHMARK(rocprim::int128_t, MaxLength);
+    CREATE_NON_TRIVIAL_RUNS_BENCHMARK(rocprim::uint128_t, MaxLength);
     CREATE_NON_TRIVIAL_RUNS_BENCHMARK(rocprim::half, MaxLength);
     CREATE_NON_TRIVIAL_RUNS_BENCHMARK(float, MaxLength);
     CREATE_NON_TRIVIAL_RUNS_BENCHMARK(double, MaxLength);

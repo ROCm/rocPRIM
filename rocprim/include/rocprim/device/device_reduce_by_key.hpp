@@ -103,7 +103,7 @@ template<lookback_scan_determinism Determinism,
          typename CompareFunction,
          typename BinaryOp,
          typename LookbackScanState>
-ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().kernel_config.block_size) void
+ROCPRIM_KERNEL ROCPRIM_LAUNCH_BOUNDS(device_params<Config>().kernel_config.block_size) void
     reduce_by_key_kernel(const KeyIterator            keys_input,
                          const ValueIterator          values_input,
                          const UniqueIterator         unique_keys,
@@ -397,46 +397,46 @@ hipError_t reduce_by_key_impl(void*                     temporary_storage,
 /// * Ranges specified by \p unique_output and \p aggregates_output must have at least
 /// <tt>*unique_count_output</tt> (i.e. the number of unique keys) elements.
 ///
-/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `reduce_by_key_config`.
-/// \tparam KeysInputIterator - random-access iterator type of the input range. Must meet the
+/// \tparam Config [optional] Configuration of the primitive, must be `default_config` or `reduce_by_key_config`.
+/// \tparam KeysInputIterator random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
-/// \tparam ValuesInputIterator - random-access iterator type of the input range. Must meet the
+/// \tparam ValuesInputIterator random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
-/// \tparam UniqueOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam UniqueOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// \tparam AggregatesOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam AggregatesOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// \tparam UniqueCountOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam UniqueCountOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// \tparam BinaryFunction - type of binary function used for reduction. Default type
+/// \tparam BinaryFunction type of binary function used for reduction. Default type
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p ValuesInputIterator.
-/// \tparam KeyCompareFunction - type of binary function used to determine keys equality. Default type
+/// \tparam KeyCompareFunction type of binary function used to determine keys equality. Default type
 /// is \p rocprim::equal_to<T>, where \p T is a \p value_type of \p KeysInputIterator.
 ///
-/// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
+/// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
 /// \p storage_size and function returns without performing the reduction operation.
-/// \param [in,out] storage_size - reference to a size (in bytes) of \p temporary_storage.
-/// \param [in] keys_input - iterator to the first element in the range of keys.
-/// \param [in] values_input - iterator to the first element in the range of values to reduce.
-/// \param [in] size - number of element in the input range.
-/// \param [out] unique_output - iterator to the first element in the output range of unique keys.
-/// \param [out] aggregates_output - iterator to the first element in the output range of reductions.
-/// \param [out] unique_count_output - iterator to total number of groups.
-/// \param [in] reduce_op - binary operation function object that will be used for reduction.
+/// \param [in,out] storage_size reference to a size (in bytes) of \p temporary_storage.
+/// \param [in] keys_input iterator to the first element in the range of keys.
+/// \param [in] values_input iterator to the first element in the range of values to reduce.
+/// \param [in] size number of element in the input range.
+/// \param [out] unique_output iterator to the first element in the output range of unique keys.
+/// \param [out] aggregates_output iterator to the first element in the output range of reductions.
+/// \param [out] unique_count_output iterator to total number of groups.
+/// \param [in] reduce_op binary operation function object that will be used for reduction.
 /// The signature of the function should be equivalent to the following:
 /// <tt>T f(const T &a, const T &b);</tt>. The signature does not need to have
 /// <tt>const &</tt>, but function object must not modify the objects passed to it and must not have
 /// any side effects since the function may be called on uninitalized data.
 /// Default is BinaryFunction().
-/// \param [in] key_compare_op - binary operation function object that will be used to determine key equality.
+/// \param [in] key_compare_op binary operation function object that will be used to determine key equality.
 /// The signature of the function should be equivalent to the following:
 /// <tt>bool f(const T &a, const T &b);</tt>. The signature does not need to have
 /// <tt>const &</tt>, but function object must not modify the objects passed to it and must not have
 /// any side effects since the function may be called on uninitalized data.
 /// Default is KeyCompareFunction().
-/// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
-/// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
+/// \param [in] stream [optional] HIP stream object. Default is \p 0 (default stream).
+/// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. Default value is \p false.
 ///
 /// \returns \p hipSuccess (\p 0) after successful reduction; otherwise a HIP runtime error of

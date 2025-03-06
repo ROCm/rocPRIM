@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -187,13 +187,13 @@ public:
     /// then writes the values to \p output in a striped manner.
     /// Values in \p ranks that exceed \p WarpSize*ItemsPerThread-1 are not orderer nor written
     /// to output.
-    /// \tparam U - [inferred] the output type.
-    /// \tparam OffsetT - [inferred] the offset type.
+    /// \tparam U [inferred] the output type.
+    /// \tparam OffsetT [inferred] the offset type.
     ///
-    /// \param [in] input - array that data is loaded from.
-    /// \param [out] output - array that data is loaded to.
-    /// \param [in] ranks - array containing the positions.
-    /// \param [in] storage - reference to a temporary storage object of type storage_type.
+    /// \param [in] input array that data is loaded from.
+    /// \param [out] output array that data is loaded to.
+    /// \param [in] ranks array containing the positions.
+    /// \param [in] storage reference to a temporary storage object of type storage_type.
     ///
     /// \par Storage reuse
     /// Synchronization barrier should be placed before \p storage is reused

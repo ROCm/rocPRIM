@@ -184,10 +184,10 @@ struct radix_sort_onesweep_config_params
 
 /// \brief Configuration of subalgorithm Onesweep.
 ///
-/// \tparam HistogramConfig - configuration of histogram kernel.
-/// \tparam SortConfig - configuration of sort kernel.
-/// \tparam RadixBits - number of bits per iteration.
-/// \tparam RadixRankAlgorithm - algorithm used for radix rank.
+/// \tparam HistogramConfig configuration of histogram kernel.
+/// \tparam SortConfig configuration of sort kernel.
+/// \tparam RadixBits number of bits per iteration.
+/// \tparam RadixRankAlgorithm algorithm used for radix rank.
 template<class HistogramConfig                = kernel_config<256, 12>,
          class SortConfig                     = kernel_config<256, 12>,
          unsigned int               RadixBits = 4,
@@ -240,10 +240,10 @@ struct reduce_config_params
 
 /// \brief Configuration of device-level reduce primitives.
 ///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam BlockReduceMethod - algorithm for block reduce.
-/// \tparam SizeLimit - limit on the number of items reduced by a single launch
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+/// \tparam BlockReduceMethod algorithm for block reduce.
+/// \tparam SizeLimit limit on the number of items reduced by a single launch
 template<unsigned int                      BlockSize      = 256,
          unsigned int                      ItemsPerThread = 8,
          ::rocprim::block_reduce_algorithm BlockReduceMethod
@@ -291,12 +291,12 @@ struct scan_config_params
 
 /// \brief Configuration of device-level scan primitives.
 ///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+/// \tparam BlockLoadMethod method for loading input values.
+/// \tparam StoreLoadMethod method for storing values.
+/// \tparam BlockScanMethod algorithm for block scan.
+/// \tparam SizeLimit limit on the number of items for a single scan kernel launch.
 template<unsigned int                    BlockSize,
          unsigned int                    ItemsPerThread,
          ::rocprim::block_load_method    BlockLoadMethod,
@@ -368,12 +368,12 @@ struct scan_by_key_config_params
 
 /// \brief Configuration of device-level scan-by-key operation.
 ///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam StoreLoadMethod - method for storing values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single scan kernel launch.
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+/// \tparam BlockLoadMethod method for loading input values.
+/// \tparam StoreLoadMethod method for storing values.
+/// \tparam BlockScanMethod algorithm for block scan.
+/// \tparam SizeLimit limit on the number of items for a single scan kernel launch.
 template<unsigned int                    BlockSize,
          unsigned int                    ItemsPerThread,
          ::rocprim::block_load_method    BlockLoadMethod,
@@ -485,21 +485,21 @@ struct segmented_radix_sort_config_params
 /// \brief Configuration of the warp sort part of the device segmented radix sort operation.
 /// Short enough segments are processed on warp level.
 ///
-/// \tparam LogicalWarpSizeSmall - number of threads in the logical warp of the kernel
+/// \tparam LogicalWarpSizeSmall number of threads in the logical warp of the kernel
 /// that processes small segments.
-/// \tparam ItemsPerThreadSmall - number of items processed by a thread in the kernel that processes
+/// \tparam ItemsPerThreadSmall number of items processed by a thread in the kernel that processes
 /// small segments.
-/// \tparam BlockSizeSmall - number of threads per block in the kernel which processes the small segments.
-/// \tparam PartitioningThreshold - if the number of segments is at least this threshold, the
+/// \tparam BlockSizeSmall number of threads per block in the kernel which processes the small segments.
+/// \tparam PartitioningThreshold if the number of segments is at least this threshold, the
 /// segments are partitioned to a small, a medium and a large segment collection. Both collections
 /// are sorted by different kernels. Otherwise, all segments are sorted by a single kernel.
-/// \tparam EnableUnpartitionedWarpSort - If set to \p true, warp sort can be used to sort
+/// \tparam EnableUnpartitionedWarpSort If set to \p true, warp sort can be used to sort
 /// the small segments, even if the total number of segments is below \p PartitioningThreshold.
-/// \tparam LogicalWarpSizeMedium - number of threads in the logical warp of the kernel
+/// \tparam LogicalWarpSizeMedium number of threads in the logical warp of the kernel
 /// that processes medium segments.
-/// \tparam ItemsPerThreadMedium - number of items processed by a thread in the kernel that processes
+/// \tparam ItemsPerThreadMedium number of items processed by a thread in the kernel that processes
 /// medium segments.
-/// \tparam BlockSizeMedium - number of threads per block in the kernel which processes the medium segments.
+/// \tparam BlockSizeMedium number of threads per block in the kernel which processes the medium segments.
 template<unsigned int LogicalWarpSizeSmall,
          unsigned int ItemsPerThreadSmall,
          unsigned int BlockSizeSmall        = 256,
@@ -568,11 +568,11 @@ struct DisabledWarpSortConfig
 /// If a segment's element count is low ( <= warp_sort_config::items_per_thread * warp_sort_config::logical_warp_size ),
 /// it is sorted by a special warp-level sorting method.
 ///
-/// \tparam LongRadixBits - number of bits in long iterations.
-/// \tparam ShortRadixBits - number of bits in short iterations, must be equal to or less than `LongRadixBits`.
+/// \tparam LongRadixBits number of bits in long iterations.
+/// \tparam ShortRadixBits number of bits in short iterations, must be equal to or less than `LongRadixBits`.
 /// Deprecated and no longer used.
-/// \tparam SortConfig - configuration of radix sort kernel. Must be `kernel_config`.
-/// \tparam WarpSortConfig - configuration of the warp sort that is used on the short segments.
+/// \tparam SortConfig configuration of radix sort kernel. Must be `kernel_config`.
+/// \tparam WarpSortConfig configuration of the warp sort that is used on the short segments.
 template<unsigned int LongRadixBits,
          unsigned int ShortRadixBits,
          class SortConfig,
@@ -628,9 +628,9 @@ namespace detail
 {
 /// \brief Default segmented_radix_sort kernel configurations, such that the maximum shared memory is not exceeded.
 ///
-/// \tparam LongRadixBits - Long bits used during the sorting.
-/// \tparam ShortRadixBits - Short bits used during the sorting.
-/// \tparam ItemsPerThread - Items per thread when type Key has size 1.
+/// \tparam LongRadixBits Long bits used during the sorting.
+/// \tparam ShortRadixBits Short bits used during the sorting.
+/// \tparam ItemsPerThread Items per thread when type Key has size 1.
 template<unsigned int LongRadixBits, unsigned int ShortRadixBits>
 struct default_segmented_radix_sort_config_base
 {
@@ -764,12 +764,12 @@ struct histogram_config_params
 
 /// \brief Configuration of device-level histogram operation.
 ///
-/// \tparam HistogramConfig - configuration of histogram kernel. Must be \p kernel_config.
-/// \tparam MaxGridSize - maximum number of blocks to launch.
-/// \tparam SharedImplMaxBins - maximum total number of bins for all active channels
+/// \tparam HistogramConfig configuration of histogram kernel. Must be \p kernel_config.
+/// \tparam MaxGridSize maximum number of blocks to launch.
+/// \tparam SharedImplMaxBins maximum total number of bins for all active channels
 /// for the shared memory histogram implementation (samples -> shared memory bins -> global memory bins),
 /// when exceeded the global memory implementation is used (samples -> global memory bins).
-/// \tparam SharedImplHistograms - number of histograms in the shared memory to reduce bank conflicts
+/// \tparam SharedImplHistograms number of histograms in the shared memory to reduce bank conflicts
 /// for atomic operations with narrow sample distributions. Sweetspot for 9xx and 10xx is 3.
 template<class HistogramConfig,
          unsigned int MaxGridSize          = 1024,
@@ -818,11 +818,11 @@ struct adjacent_difference_config_params
 
 /// \brief Configuration of device-level adjacent difference primitives.
 ///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam BlockLoadMethod - method for loading input values.
-/// \tparam BlockStoreMethod - method for storing values.
-/// \tparam SizeLimit - limit on the number of items for a single adjacent difference kernel launch.
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+/// \tparam BlockLoadMethod method for loading input values.
+/// \tparam BlockStoreMethod method for storing values.
+/// \tparam SizeLimit limit on the number of items for a single adjacent difference kernel launch.
 template<unsigned int       BlockSize,
          unsigned int       ItemsPerThread,
          block_load_method  BlockLoadMethod  = block_load_method::block_load_transpose,
@@ -881,13 +881,13 @@ struct partition_config_params
 
 /// \brief Configuration of device-level partition and select operation.
 ///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam KeyBlockLoadMethod - method for loading input keys.
-/// \tparam ValueBlockLoadMethod - method for loading input values.
-/// \tparam FlagBlockLoadMethod - method for loading flag values.
-/// \tparam BlockScanMethod - algorithm for block scan.
-/// \tparam SizeLimit - limit on the number of items for a single select kernel launch.
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+/// \tparam KeyBlockLoadMethod method for loading input keys.
+/// \tparam ValueBlockLoadMethod method for loading input values.
+/// \tparam FlagBlockLoadMethod method for loading flag values.
+/// \tparam BlockScanMethod algorithm for block scan.
+/// \tparam SizeLimit limit on the number of items for a single select kernel launch.
 template<unsigned int                 BlockSize,
          unsigned int                 ItemsPerThread,
          ::rocprim::block_load_method KeyBlockLoadMethod
@@ -1105,10 +1105,10 @@ struct non_trivial_runs_config_params
 
 /// \brief Configuration of device-level run length encode (non-trivial runs) operation.
 ///
-/// \tparam BlockSize - number of threads in a block.
-/// \tparam ItemsPerThread - number of items processed by each thread.
-/// \tparam LoadInputMethod - method for loading inputs.
-/// \tparam BlockScanMethod - algorithm for block scan.
+/// \tparam BlockSize number of threads in a block.
+/// \tparam ItemsPerThread number of items processed by each thread.
+/// \tparam LoadInputMethod method for loading inputs.
+/// \tparam BlockScanMethod algorithm for block scan.
 template<unsigned int                 BlockSize,
          unsigned int                 ItemsPerThread,
          ::rocprim::block_load_method LoadInputMethod
@@ -1257,7 +1257,7 @@ struct search_config_params
 
 } // namespace detail
 
-/// \brief Configuration of device-level find_end
+/// \brief Configuration of device-level search/find_end.
 ///
 /// \tparam BlockSize number of threads in a block.
 /// \tparam ItemsPerThread number of items processed by each thread.
@@ -1293,7 +1293,7 @@ struct search_n_config : public detail::search_n_config_params
 #ifndef DOXYGEN_DOCUMENTATION_BUILD
     constexpr search_n_config()
         : detail::search_n_config_params{
-            6, {BlockSize, ItemsPerThread, 0}
+            8, {BlockSize, ItemsPerThread, 0}
     }
     {}
 #endif

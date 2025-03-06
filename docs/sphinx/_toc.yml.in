@@ -53,6 +53,7 @@ subtrees:
               - file: block_ops/ops_classes/discontinuity.rst
               - file: block_ops/ops_classes/scan.rst
               - file: block_ops/ops_classes/reduce.rst
+              - file: block_ops/ops_classes/run_length_decode.rst
               - file: block_ops/ops_classes/shuffle.rst
               - file: block_ops/ops_classes/exchange.rst
               - file: block_ops/ops_classes/sort.rst

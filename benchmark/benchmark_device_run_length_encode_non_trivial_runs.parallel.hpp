@@ -32,15 +32,24 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM
+#include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_run_length_encode.hpp>
+#ifdef BENCHMARK_CONFIG_TUNING
+    #include <rocprim/block/block_load.hpp>
+    #include <rocprim/block/block_scan.hpp>
+    #include <rocprim/config.hpp>
+    #include <rocprim/functional.hpp>
+    #include <rocprim/types/tuple.hpp>
+#endif
 
-#include <algorithm>
 #include <array>
+#include <cstddef>
 #include <string>
 #include <type_traits>
 #include <vector>
 #ifdef BENCHMARK_CONFIG_TUNING
+    #include <algorithm>
     #include <memory>
 #endif
 
@@ -215,9 +224,11 @@ struct device_non_trivial_runs_benchmark_generator
         = std::max(sizeof(T), sizeof(OffsetCountPairT));
     static constexpr unsigned int max_items_per_thread
         = max_shared_memory / (BlockSize * max_size_per_element);
-    static constexpr unsigned int max_items_per_thread_exponent
-        = rocprim::Log2<max_items_per_thread>::VALUE - 1;
     static constexpr unsigned int min_items_per_thread_exponent = 3u;
+    static constexpr unsigned int max_items_per_thread_exponent
+        = std::max(static_cast<unsigned int>(rocprim::Log2<max_items_per_thread>::VALUE),
+                   min_items_per_thread_exponent)
+          - 1u;
 
     static constexpr bool is_load_warp_transpose
         = BlockLoadMethod == ::rocprim::block_load_method::block_load_warp_transpose;

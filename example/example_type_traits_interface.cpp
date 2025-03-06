@@ -122,4 +122,6 @@ int main()
     // other types
     some_algo<custom_float_type>();
     some_algo<custom_int_type>();
+
+    return 0;
 }

@@ -32,12 +32,26 @@
 #include <hip/hip_runtime.h>
 
 // rocPRIM HIP API
+#include <rocprim/config.hpp>
+#include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp>
 #include <rocprim/device/device_reduce_by_key.hpp>
+#include <rocprim/functional.hpp>
+#ifdef BENCHMARK_CONFIG_TUNING
+    #include <rocprim/block/block_load.hpp>
+    #include <rocprim/block/block_scan.hpp>
+#endif
 
+#include <array>
 #include <cstddef>
+#include <numeric>
 #include <string>
+#include <type_traits>
 #include <vector>
+#ifdef BENCHMARK_CONFIG_TUNING
+    #include <algorithm>
+    #include <memory>
+#endif
 
 template<typename Config>
 std::string config_name()
@@ -226,7 +240,7 @@ struct device_reduce_by_key_benchmark : public config_autotune_interface
 template<typename KeyType, typename ValueType, unsigned int BlockSize>
 struct device_reduce_by_key_benchmark_generator
 {
-    template<int ItemsPerThread>
+    template<unsigned int ItemsPerThread>
     struct create_ipt
     {
         void operator()(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
@@ -246,7 +260,11 @@ struct device_reduce_by_key_benchmark_generator
 
     static void create(std::vector<std::unique_ptr<config_autotune_interface>>& storage)
     {
-        static_for_each<make_index_range<int, 4, 15>, create_ipt>(storage);
+        static constexpr unsigned int max_items_per_thread = std::min(
+            TUNING_SHARED_MEMORY_MAX / std::max(sizeof(KeyType), sizeof(ValueType)) / BlockSize - 1,
+            size_t{15});
+        static_for_each<make_index_range<unsigned int, 4u, max_items_per_thread>, create_ipt>(
+            storage);
     }
 };
 

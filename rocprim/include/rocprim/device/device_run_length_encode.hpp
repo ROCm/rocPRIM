@@ -100,7 +100,7 @@ template<typename Config,
          typename CountsOutputIterator,
          typename RunsCountOutputIterator,
          typename LookbackScanState>
-ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().kernel_config.block_size) void
+ROCPRIM_KERNEL ROCPRIM_LAUNCH_BOUNDS(device_params<Config>().kernel_config.block_size) void
     non_trivial_kernel(const InputIterator           input,
                        const OffsetsOutputIterator   offsets_output,
                        const CountsOutputIterator    counts_output,
@@ -277,27 +277,27 @@ hipError_t run_length_encode_non_trivial_runs_impl(void*                   tempo
 /// * Ranges specified by \p unique_output and \p counts_output must have at least
 /// <tt>*runs_count_output</tt> (i.e. the number of runs) elements.
 ///
-/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `run_length_encode_config`.
-/// \tparam InputIterator - random-access iterator type of the input range. Must meet the
+/// \tparam Config [optional] Configuration of the primitive, must be `default_config` or `run_length_encode_config`.
+/// \tparam InputIterator random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
-/// \tparam UniqueOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam UniqueOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// \tparam CountsOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam CountsOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// \tparam RunsCountOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam RunsCountOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
 ///
-/// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
+/// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
 /// \p storage_size and function returns without performing the operation.
-/// \param [in,out] storage_size - reference to a size (in bytes) of \p temporary_storage.
-/// \param [in] input - iterator to the first element in the range of values.
-/// \param [in] size - number of element in the input range.
-/// \param [out] unique_output - iterator to the first element in the output range of unique values.
-/// \param [out] counts_output - iterator to the first element in the output range of lenghts.
-/// \param [out] runs_count_output - iterator to total number of runs.
-/// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
-/// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
+/// \param [in,out] storage_size reference to a size (in bytes) of \p temporary_storage.
+/// \param [in] input iterator to the first element in the range of values.
+/// \param [in] size number of element in the input range.
+/// \param [out] unique_output iterator to the first element in the output range of unique values.
+/// \param [out] counts_output iterator to the first element in the output range of lenghts.
+/// \param [out] runs_count_output iterator to total number of runs.
+/// \param [in] stream [optional] HIP stream object. Default is \p 0 (default stream).
+/// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. Default value is \p false.
 ///
 /// \returns \p hipSuccess (\p 0) after successful operation; otherwise a HIP runtime error of
@@ -390,27 +390,27 @@ inline hipError_t run_length_encode(void*                   temporary_storage,
 /// * Ranges specified by \p offsets_output and \p counts_output must have at least
 /// <tt>*runs_count_output</tt> (i.e. the number of non-trivial runs) elements.
 ///
-/// \tparam Config - [optional] Configuration of the primitive, must be `default_config` or `run_length_encode_config`.
-/// \tparam InputIterator - random-access iterator type of the input range. Must meet the
+/// \tparam Config [optional] Configuration of the primitive, must be `default_config` or `run_length_encode_config`.
+/// \tparam InputIterator random-access iterator type of the input range. Must meet the
 /// requirements of a C++ InputIterator concept. It can be a simple pointer type.
-/// \tparam OffsetsOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam OffsetsOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// \tparam CountsOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam CountsOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
-/// \tparam RunsCountOutputIterator - random-access iterator type of the output range. Must meet the
+/// \tparam RunsCountOutputIterator random-access iterator type of the output range. Must meet the
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
 ///
-/// \param [in] temporary_storage - pointer to a device-accessible temporary storage. When
+/// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
 /// \p storage_size and function returns without performing the operation.
-/// \param [in,out] storage_size - reference to a size (in bytes) of \p temporary_storage.
-/// \param [in] input - iterator to the first element in the range of values.
-/// \param [in] size - number of element in the input range.
-/// \param [out] offsets_output - iterator to the first element in the output range of offsets.
-/// \param [out] counts_output - iterator to the first element in the output range of lenghts.
-/// \param [out] runs_count_output - iterator to total number of runs.
-/// \param [in] stream - [optional] HIP stream object. Default is \p 0 (default stream).
-/// \param [in] debug_synchronous - [optional] If true, synchronization after every kernel
+/// \param [in,out] storage_size reference to a size (in bytes) of \p temporary_storage.
+/// \param [in] input iterator to the first element in the range of values.
+/// \param [in] size number of element in the input range.
+/// \param [out] offsets_output iterator to the first element in the output range of offsets.
+/// \param [out] counts_output iterator to the first element in the output range of lenghts.
+/// \param [out] runs_count_output iterator to total number of runs.
+/// \param [in] stream [optional] HIP stream object. Default is \p 0 (default stream).
+/// \param [in] debug_synchronous [optional] If true, synchronization after every kernel
 /// launch is forced in order to check for errors. Default value is \p false.
 ///
 /// \returns \p hipSuccess (\p 0) after successful operation; otherwise a HIP runtime error of

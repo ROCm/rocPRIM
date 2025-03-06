@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -461,6 +461,14 @@ class AlgorithmDeviceReduce(Algorithm):
     def __init__(self, fallback_entries):
         Algorithm.__init__(self, fallback_entries)
 
+class AlgorithmDeviceSegmentedReduce(Algorithm):
+    algorithm_name = "device_segmented_reduce"
+    config_selection_params = [
+        SelectionType(name="key_type", is_optional=False, select_on_size_only=False)]
+    cpp_configuration_template_name = "segmented_reduce_config_template"
+    def __init__(self, fallback_entries):
+        Algorithm.__init__(self, fallback_entries)
+
 class AlgorithmDeviceScan(Algorithm):
     algorithm_name = "device_scan"
     cpp_configuration_template_name = "scan_config_template"
@@ -687,6 +695,8 @@ def create_algorithm(algorithm_name: str, fallback_entries: List[FallbackCase]):
         return AlgorithmDeviceRadixSortOnesweep(fallback_entries)
     elif algorithm_name == 'device_reduce':
         return AlgorithmDeviceReduce(fallback_entries)
+    elif algorithm_name == 'device_segmented_reduce':
+        return AlgorithmDeviceSegmentedReduce(fallback_entries)
     elif algorithm_name == 'device_scan':
         return AlgorithmDeviceScan(fallback_entries)
     elif algorithm_name == 'device_scan_by_key':

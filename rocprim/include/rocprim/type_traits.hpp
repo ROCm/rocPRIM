@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -111,45 +111,44 @@ struct numeric_limits<rocprim::int128_t> : std::numeric_limits<int>
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /// \brief Used to retrieve a type that can be treated as unsigned version of the template parameter.
-/// \tparam T - The signed type to find an unsigned equivalent for.
-/// \tparam size - the desired size (in bytes) of the unsigned type
+/// \tparam T The signed type to find an unsigned equivalent for.
+/// \tparam size the desired size (in bytes) of the unsigned type
 template<typename T, int size = 0>
 struct get_unsigned_bits_type
 {
-  typedef typename get_unsigned_bits_type<T,sizeof(T)>::unsigned_type unsigned_type; ///< Typedefed to the unsigned type.
+    using unsigned_type = typename get_unsigned_bits_type<T, sizeof(T)>::
+        unsigned_type; ///< Typedefed to the unsigned type.
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized versions
 template<typename T>
-struct get_unsigned_bits_type<T,1>
+struct get_unsigned_bits_type<T, 1>
 {
-  typedef uint8_t unsigned_type;
-};
-
-
-template<typename T>
-struct get_unsigned_bits_type<T,2>
-{
-  typedef uint16_t unsigned_type;
-};
-
-
-template<typename T>
-struct get_unsigned_bits_type<T,4>
-{
-  typedef uint32_t unsigned_type;
+    using unsigned_type = uint8_t;
 };
 
 template<typename T>
-struct get_unsigned_bits_type<T,8>
+struct get_unsigned_bits_type<T, 2>
 {
-  typedef uint64_t unsigned_type;
+    using unsigned_type = uint16_t;
+};
+
+template<typename T>
+struct get_unsigned_bits_type<T, 4>
+{
+    using unsigned_type = uint32_t;
+};
+
+template<typename T>
+struct get_unsigned_bits_type<T, 8>
+{
+    using unsigned_type = uint64_t;
 };
 
 template<typename T>
 struct get_unsigned_bits_type<T, 16>
 {
-    typedef ::rocprim::uint128_t unsigned_type;
+    using unsigned_type = ::rocprim::uint128_t;
 };
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
@@ -495,6 +494,66 @@ struct is_binary_functional<minimum<T>>
 {
     static constexpr bool value = true;
 };
+
+} // namespace detail
+
+/// \brief Helper struct it has the Type and the number of aligned bytes.
+///
+/// \tparam T is the Type used to get the number of aligned bytes.
+template<typename T>
+struct align_bytes
+{
+    /// Number of aligned bytes for type T
+    static constexpr unsigned value = alignof(T);
+    /// Type defined by T
+    using Type = T;
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS // skip specialized versions
+template<typename T>
+struct align_bytes<volatile T> : align_bytes<T>
+{};
+template<typename T>
+struct align_bytes<const T> : align_bytes<T>
+{};
+template<typename T>
+struct align_bytes<const volatile T> : align_bytes<T>
+{};
+#endif
+
+namespace detail
+{
+
+template<typename T>
+struct word_type
+{
+    static constexpr auto align_bytes_value = align_bytes<T>::value;
+
+    template<typename Unit>
+    struct IsMultiple
+    {
+        static constexpr auto unit_align_bytes = align_bytes<Unit>::value;
+        static constexpr bool is_multiple
+            = (sizeof(T) % sizeof(Unit) == 0)
+              && (int(align_bytes_value) % int(unit_align_bytes) == 0);
+    };
+
+    using type = typename std::conditional<IsMultiple<int>::is_multiple,
+                                           unsigned int,
+                                           typename std::conditional<IsMultiple<short>::is_multiple,
+                                                                     unsigned short,
+                                                                     unsigned char>::type>::type;
+};
+
+template<typename T>
+struct word_type<volatile T> : word_type<T>
+{};
+template<typename T>
+struct word_type<const T> : word_type<T>
+{};
+template<typename T>
+struct word_type<const volatile T> : word_type<T>
+{};
 
 } // namespace detail
 
