@@ -24,6 +24,7 @@
 #include <benchmark/benchmark.h>
 
 // rocPRIM
+#include <rocprim/block/block_load.hpp>
 #include <rocprim/block/block_scan.hpp>
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp> // partition_config_params
@@ -1132,7 +1133,7 @@ inline void add_common_benchmark_info()
     num("hdp_arch_has_dynamic_parallelism", arch.hasDynamicParallelism);
 }
 
-inline const char* get_block_scan_method_name(rocprim::block_scan_algorithm alg)
+inline const char* get_block_scan_algorithm_name(rocprim::block_scan_algorithm alg)
 {
     switch(alg)
     {
@@ -1142,7 +1143,25 @@ inline const char* get_block_scan_method_name(rocprim::block_scan_algorithm alg)
             return "block_scan_algorithm::reduce_then_scan";
             // Not using `default: ...` because it kills effectiveness of -Wswitch
     }
-    return "unknown_algorithm";
+    return "default_algorithm";
+}
+
+inline const char* get_block_load_method_name(rocprim::block_load_method method)
+{
+    switch(method)
+    {
+        case rocprim::block_load_method::block_load_direct:
+            return "block_load_method::block_load_direct";
+        case rocprim::block_load_method::block_load_striped:
+            return "block_load_method::block_load_striped";
+        case rocprim::block_load_method::block_load_vectorize:
+            return "block_load_method::block_load_vectorize";
+        case rocprim::block_load_method::block_load_transpose:
+            return "block_load_method::block_load_transpose";
+        case rocprim::block_load_method::block_load_warp_transpose:
+            return "block_load_method::block_load_warp_transpose";
+    }
+    return "default_method";
 }
 
 template<std::size_t Size, std::size_t Alignment>

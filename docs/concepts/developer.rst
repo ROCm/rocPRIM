@@ -116,7 +116,7 @@ Selecting the default configuration is done based on the target architecture ``t
     struct default_ALGO_config<
         static_cast<unsigned int>(target_arch::gfx1030),
         Type,
-        std::enable_if_t<bool(rocprim::is_floating_point<value_type>::value) && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2)>>
+        std::enable_if_t<bool(rocprim::traits::get<value_type>().is_floating_point()) && (sizeof(value_type) <= 4) && (sizeof(value_type) > 2)>>
         : ALGO_config<256, 16>
     {};
 

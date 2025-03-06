@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +53,9 @@ struct merge_sort_block_sort_config_params
 
 // Necessary to construct a parameterized type of `merge_sort_block_sort_config_params`.
 // Used in passing to host-side sub-algorithms and GPU kernels so non-default parameters can be available during compile-time.
-template<unsigned int BlockSize, unsigned int ItemsPerThread, rocprim::block_sort_algorithm Algo>
+template<unsigned int                  BlockSize,
+         unsigned int                  ItemsPerThread,
+         rocprim::block_sort_algorithm Algo = block_sort_algorithm::stable_merge_sort>
 struct merge_sort_block_sort_config : rocprim::detail::merge_sort_block_sort_config_params
 {
     using sort_config = kernel_config<BlockSize, ItemsPerThread>;
@@ -964,13 +966,14 @@ struct reduce_by_key_config_params
 
 /**
  * \brief Configuration of device-level reduce-by-key operation.
- * 
+ *
  * \tparam BlockSize number of threads in a block.
- * \tparam ItemsPerThread number of items processed by each thread per tile. 
+ * \tparam ItemsPerThread number of items processed by each thread per tile.
  * \tparam LoadKeysMethod method of loading keys
  * \tparam LoadValuesMethod method of loading values
  * \tparam ScanAlgorithm block level scan algorithm to use
- * \tparam TilesPerBlock number of tiles (`BlockSize` * `ItemsPerThread` items) to process per block
+ * \tparam TilesPerBlock number of tiles (`BlockSize` * `ItemsPerThread` items) to process per block.
+ * This parameter is only here for legacy purposes. Its no longer used.
  * \tparam SizeLimit limit on the number of items for a single reduce_by_key kernel launch.
  */
 template<unsigned int         BlockSize,
@@ -986,6 +989,7 @@ struct reduce_by_key_config : public detail::reduce_by_key_config_params
     /// Number of threads in a block.
     static constexpr unsigned int block_size = BlockSize;
     /// Number of tiles (`BlockSize` * `ItemsPerThread` items) to process per block
+    /// This value is only here for legacy purposes and no longer used.
     static constexpr unsigned int tiles_per_block = TilesPerBlock;
     /// Number of items processed by each thread per tile.
     static constexpr unsigned int items_per_thread = ItemsPerThread;
@@ -1087,6 +1091,86 @@ struct nth_element_config : public detail::nth_element_config_params
 
 namespace detail
 {
+struct non_trivial_runs_config_tag
+{};
+
+struct non_trivial_runs_config_params
+{
+    kernel_config_params kernel_config;
+    block_load_method    load_input_method;
+    block_scan_algorithm scan_algorithm;
+};
+
+} // namespace detail
+
+/// \brief Configuration of device-level run length encode (non-trivial runs) operation.
+///
+/// \tparam BlockSize - number of threads in a block.
+/// \tparam ItemsPerThread - number of items processed by each thread.
+/// \tparam LoadInputMethod - method for loading inputs.
+/// \tparam BlockScanMethod - algorithm for block scan.
+template<unsigned int                 BlockSize,
+         unsigned int                 ItemsPerThread,
+         ::rocprim::block_load_method LoadInputMethod
+         = ::rocprim::block_load_method::default_method,
+         ::rocprim::block_scan_algorithm BlockScanAlgorithm
+         = ::rocprim::block_scan_algorithm::reduce_then_scan>
+struct non_trivial_runs_config : public detail::non_trivial_runs_config_params
+{
+    /// \brief Identifies the algorithm associated to the config.
+    using tag = detail::non_trivial_runs_config_tag;
+#ifndef DOXYGEN_DOCUMENTATION_BUILD
+    /// \brief Number of threads in a block.
+    static constexpr unsigned int block_size = BlockSize;
+    /// \brief Number of items processed by each thread.
+    static constexpr unsigned int items_per_thread = ItemsPerThread;
+    /// \brief Method for loading inputs.
+    static constexpr block_load_method load_input_method = LoadInputMethod;
+    /// \brief Algorithm for block scan.
+    static constexpr block_scan_algorithm scan_algorithm = BlockScanAlgorithm;
+
+    constexpr non_trivial_runs_config()
+        : detail::non_trivial_runs_config_params{
+            {BlockSize, ItemsPerThread},
+            LoadInputMethod, BlockScanAlgorithm
+    } {};
+#endif // DOXYGEN_DOCUMENTATION_BUILD
+};
+
+namespace detail
+{
+
+template<typename InputT, int ItemScaleBase = 32>
+struct default_non_trivial_runs_config_base
+{
+    static constexpr unsigned int items_per_thread = 16;
+    using small_config                             = non_trivial_runs_config<256U,
+                                                 items_per_thread,
+                                                 block_load_method::block_load_vectorize,
+                                                 block_scan_algorithm::reduce_then_scan>;
+
+    using OffsetCountPairT = ::rocprim::tuple<unsigned int, unsigned int>;
+
+    static constexpr unsigned int size_memory_per_item
+        = std::max(sizeof(InputT), sizeof(OffsetCountPairT));
+
+    // Additional shared memory is required by the lookback scan state.
+    static constexpr unsigned int shared_mem_offset
+        = sizeof(typename offset_lookback_scan_prefix_op<
+                 OffsetCountPairT,
+                 lookback_scan_state<OffsetCountPairT>>::storage_type);
+
+    using big_config
+        = non_trivial_runs_config<detail::limit_block_size<64U,
+                                                           items_per_thread * size_memory_per_item,
+                                                           ROCPRIM_WARP_SIZE_64,
+                                                           shared_mem_offset>::value,
+                                  items_per_thread,
+                                  block_load_method::block_load_warp_transpose,
+                                  block_scan_algorithm::reduce_then_scan>;
+
+    using type = std::conditional_t<sizeof(InputT) < 8, small_config, big_config>;
+};
 
 struct find_first_of_config_params
 {
@@ -1227,9 +1311,9 @@ struct merge_config_params
 
 /**
  * \brief Configuration of device-level merge operation.
- * 
+ *
  * \tparam BlockSize number of threads in a block.
- * \tparam ItemsPerThread number of items processed by each thread per tile. 
+ * \tparam ItemsPerThread number of items processed by each thread per tile.
  */
 template<unsigned int BlockSize, unsigned int ItemsPerThread>
 struct merge_config : public detail::merge_config_params

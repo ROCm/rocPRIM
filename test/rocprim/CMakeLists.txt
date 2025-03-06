@@ -55,10 +55,16 @@ function(add_rocprim_test_internal TEST_NAME TEST_SOURCES TEST_TARGET)
       GTest::Main
   )
 
-  target_link_libraries(${TEST_TARGET}
-    PRIVATE
+  if(USE_HIPCXX)
+    target_link_libraries(${TEST_TARGET}
+      PRIVATE
       $<IF:$<LINK_LANGUAGE:HIP>,hip::host,hip::device>
-  )
+    )
+  else()
+    target_link_libraries(${TEST_TARGET}
+      PRIVATE
+      hip::device)
+  endif()
 
   target_compile_options(${TEST_TARGET}
     PRIVATE
@@ -208,20 +214,26 @@ ${TEST_TYPE_SLICE_COUNT} test type slice(s) for test target ${TEST_TARGET}")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SOURCES})
 endfunction()
 
-function(add_rocprim_cpp17_test TEST_NAME TEST_SOURCES)
-  add_rocprim_test(${TEST_NAME} ${TEST_SOURCES})
+function(add_rocprim_cpp_standard_test STANDARD EXTENSIONS TARGET_SUFFIX TEST_NAME TEST_SOURCES)
   get_rocprim_test_target(${TEST_SOURCES} TEST_TARGET)
+  set(TEST_TARGET ${TEST_TARGET}${TARGET_SUFFIX})
+  add_rocprim_test_internal(${TEST_NAME}${TARGET_SUFFIX} "${TEST_SOURCES}" ${TEST_TARGET})
   # Request C++ standard 17, but decay to a previous version if not available:
   set_target_properties(${TEST_TARGET}
     PROPERTIES
-    CXX_STANDARD 17)
+    CXX_STANDARD ${STANDARD}
+    CXX_EXTENSIONS ${EXTENSIONS})
   if(USE_HIPCXX)
     set_target_properties(${TEST_TARGET}
       PROPERTIES
-      HIP_STANDARD 17)
+      HIP_STANDARD ${STANDARD}
+      HIP_EXTENSIONS ${EXTENSIONS})
   endif()
 endfunction()
 
+function(add_rocprim_cpp17_test TEST_NAME TEST_SOURCES)
+  add_rocprim_cpp_standard_test(17 OFF "" ${TEST_NAME} ${TEST_SOURCES})
+endfunction()
 
 # ****************************************************************************
 # Tests
@@ -288,8 +300,15 @@ add_rocprim_test("rocprim.texture_cache_iterator" test_texture_cache_iterator.cp
 add_rocprim_test("rocprim.thread" test_thread.cpp)
 add_rocprim_test("rocprim.thread_algos" test_thread_algos.cpp)
 add_rocprim_test("rocprim.transform_iterator" test_transform_iterator.cpp)
+add_rocprim_cpp_standard_test(14 OFF "_cpp14" "rocprim.type_traits_interface" test_type_traits_interface.cpp)
+add_rocprim_cpp_standard_test(14 ON "_gnupp14" "rocprim.type_traits_interface" test_type_traits_interface.cpp)
+add_rocprim_cpp_standard_test(17 OFF "_cpp17" "rocprim.type_traits_interface" test_type_traits_interface.cpp)
+add_rocprim_cpp_standard_test(17 ON "_gnupp17" "rocprim.type_traits_interface" test_type_traits_interface.cpp)
+add_rocprim_cpp_standard_test(20 OFF "_cpp20" "rocprim.type_traits_interface" test_type_traits_interface.cpp)
+add_rocprim_cpp_standard_test(20 ON "_gnupp20" "rocprim.type_traits_interface" test_type_traits_interface.cpp)
 add_rocprim_test("rocprim.no_half_operators" test_no_half_operators.cpp)
 add_rocprim_test("rocprim.intrinsics" test_intrinsics.cpp)
+add_rocprim_test("rocprim.intrinsics_atomic" test_intrinsics_atomic.cpp)
 add_rocprim_test("rocprim.invoke_result" test_invoke_result.cpp)
 add_rocprim_test("rocprim.warp_exchange" test_warp_exchange.cpp)
 add_rocprim_test("rocprim.warp_load" test_warp_load.cpp)

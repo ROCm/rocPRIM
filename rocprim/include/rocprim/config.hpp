@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -68,6 +68,39 @@
     #define ROCPRIM_FORCE_INLINE __attribute__((always_inline))
 #endif
 
+#undef ROCPRIM_TARGET_GCN3
+#undef ROCPRIM_TARGET_GCN5
+#undef ROCPRIM_TARGET_RDNA1
+#undef ROCPRIM_TARGET_RDNA2
+#undef ROCPRIM_TARGET_RDNA3
+#undef ROCPRIM_TARGET_RDNA4
+#undef ROCPRIM_TARGET_CDNA1
+#undef ROCPRIM_TARGET_CDNA2
+#undef ROCPRIM_TARGET_CDNA3
+
+// See https://llvm.org/docs/AMDGPUUsage.html#instructions
+#if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__)
+    #define ROCPRIM_TARGET_CDNA3 1
+#elif defined(__gfx90a__)
+    #define ROCPRIM_TARGET_CDNA2 1
+#elif defined(__gfx908__)
+    #define ROCPRIM_TARGET_CDNA1 1
+#elif defined(__gfx900__) || defined(__gfx902__) || defined(__gfx904__) || defined(__gfx906__) \
+    || defined(__gfx90c__)
+    #define ROCPRIM_TARGET_GCN5 1
+#elif defined(__GFX12__)
+    #define ROCPRIM_TARGET_RDNA4 1
+#elif defined(__GFX11__)
+    #define ROCPRIM_TARGET_RDNA3 1
+#elif defined(__gfx1030__) || defined(__gfx1031__) || defined(__gfx1032__) || defined(__gfx1033__) \
+    || defined(__gfx1034__) || defined(__gfx1035__) || defined(__gfx1036__)
+    #define ROCPRIM_TARGET_RDNA2 1
+#elif defined(__gfx1010__) || defined(__gfx1011__) || defined(__gfx1012__) || defined(__gfx1013__)
+    #define ROCPRIM_TARGET_RDNA1 1
+#elif defined(__GFX8__)
+    #define ROCPRIM_TARGET_GCN3 1
+#endif
+
 // DPP is supported only after Volcanic Islands (GFX8+)
 // Only defined when support is present, in contrast to ROCPRIM_DETAIL_USE_DPP, which should be
 // always defined
@@ -110,7 +143,8 @@
 #endif
 
 #ifndef ROCPRIM_NAVI
-    #if defined(__HIP_DEVICE_COMPILE__) && (defined(__GFX10__) || defined(__GFX11__) || defined(__GFX12__))
+    #if defined(__HIP_DEVICE_COMPILE__) \
+        && (defined(__GFX10__) || defined(__GFX11__) || defined(__GFX12__))
         #define ROCPRIM_NAVI 1
     #else
         #define ROCPRIM_NAVI 0
@@ -123,22 +157,22 @@
 #define ROCPRIM_WARP_SIZE_64 64u
 #define ROCPRIM_MAX_WARP_SIZE ROCPRIM_WARP_SIZE_64
 
-#if (defined(_MSC_VER) && !defined(__clang__)) || (defined(__GNUC__) && !defined(__clang__))
-#define ROCPRIM_UNROLL
-#define ROCPRIM_NO_UNROLL
+#if(defined(_MSC_VER) && !defined(__clang__)) || (defined(__GNUC__) && !defined(__clang__))
+    #define ROCPRIM_UNROLL
+    #define ROCPRIM_NO_UNROLL
 #else
-#define ROCPRIM_UNROLL _Pragma("unroll")
-#define ROCPRIM_NO_UNROLL _Pragma("nounroll")
+    #define ROCPRIM_UNROLL _Pragma("unroll")
+    #define ROCPRIM_NO_UNROLL _Pragma("nounroll")
 #endif
 
 #ifndef ROCPRIM_GRID_SIZE_LIMIT
-#define ROCPRIM_GRID_SIZE_LIMIT std::numeric_limits<unsigned int>::max()
+    #define ROCPRIM_GRID_SIZE_LIMIT std::numeric_limits<unsigned int>::max()
 #endif
 
 #if __cpp_if_constexpr >= 201606
-#define ROCPRIM_IF_CONSTEXPR constexpr
+    #define ROCPRIM_IF_CONSTEXPR constexpr
 #else
-#define ROCPRIM_IF_CONSTEXPR
+    #define ROCPRIM_IF_CONSTEXPR
 #endif
 
 //  Copyright 2001 John Maddock.

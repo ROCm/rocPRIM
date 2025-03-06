@@ -35,4 +35,4 @@ Due to the modularity of rocPRIM, some device-level algorithms depend on other d
 * ``segmented_radix_sort`` depends on ``partition`` and ``partition_three_way`` but does not use the tuned configurations.
 * ``segmented_reduce`` does not depend on ``reduce`` but uses the same tuned configurations.
 * ``segmented_scan`` does not depend on ``scan`` but uses the same tuned configurations.
-* ``run_length_encode`` depends on ``reduce_by_key``, but does not use its tuned configurations. ``run_length_encode_non_trivial_runs`` depends on ``reduce_by_key`` and ``select``, but does not use the tuned configurations from ``reduce_by_key`` and ``select``.
+* ``run_length_encode`` depends on ``reduce_by_key``, but uses separate tuned configurations. ``run_length_encode_non_trivial_runs`` depends on ``reduce_by_key`` and ``select``, but does not use the tuned configurations from ``reduce_by_key`` and ``select``.

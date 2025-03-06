@@ -26,6 +26,7 @@
 #include <rocprim/type_traits.hpp>
 
 #include "test_utils_bfloat16.hpp"
+#include "test_utils_custom_float_traits_type.hpp"
 #include "test_utils_custom_float_type.hpp"
 #include "test_utils_custom_test_types.hpp"
 #include "test_utils_half.hpp"
@@ -89,7 +90,8 @@ template<unsigned int StartBit,
                               // radix sorting custom types. A part of this workaround
                               // is to specialize rocprim::is_floating_point<custom_float_type>
                               // that we must counter here.
-                              && !std::is_same<Key, custom_float_type>::value,
+                              && !std::is_same<Key, custom_float_type>::value
+                              && !std::is_same<Key, custom_float_traits_type>::value,
                           int>
          = 0>
 auto to_bits(const Key key) -> typename rocprim::get_unsigned_bits_type<Key>::unsigned_type
@@ -127,7 +129,8 @@ template<unsigned int StartBit,
                               // radix sorting custom types. A part of this workaround
                               // is to specialize rocprim::is_custom_test_type<custom_float_type>
                               // that we must counter here.
-                              && !std::is_same<Key, custom_float_type>::value,
+                              && !std::is_same<Key, custom_float_type>::value
+                              && !std::is_same<Key, custom_float_traits_type>::value,
                           int>
          = 0>
 auto to_bits(const Key& key) -> typename rocprim::get_unsigned_bits_type<Key>::unsigned_type
@@ -158,6 +161,15 @@ template<unsigned int StartBit,
          unsigned int EndBit,
          class Key,
          std::enable_if_t<std::is_same<Key, custom_float_type>::value, int> = 0>
+auto to_bits(const Key key) -> typename rocprim::get_unsigned_bits_type<Key>::unsigned_type
+{
+    return to_bits<StartBit, EndBit>(key.x);
+}
+
+template<unsigned int StartBit,
+         unsigned int EndBit,
+         class Key,
+         std::enable_if_t<std::is_same<Key, custom_float_traits_type>::value, int> = 0>
 auto to_bits(const Key key) -> typename rocprim::get_unsigned_bits_type<Key>::unsigned_type
 {
     return to_bits<StartBit, EndBit>(key.x);

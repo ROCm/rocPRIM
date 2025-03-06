@@ -23,94 +23,18 @@
 
 #include "config.hpp"
 #include "functional.hpp"
-#include "types.hpp"
+
+#include "type_traits_interface.hpp"
 
 #include "types/tuple.hpp"
 
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 /// \addtogroup utilsmodule_typetraits
 /// @{
 
 BEGIN_ROCPRIM_NAMESPACE
-
-/// \brief Extension of `std::is_floating_point`, which includes support for \ref rocprim::half and \ref rocprim::bfloat16.
-template<class T>
-struct is_floating_point
-    : std::integral_constant<
-        bool,
-        std::is_floating_point<T>::value ||
-        std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value ||
-        std::is_same<::rocprim::bfloat16, typename std::remove_cv<T>::type>::value
-    > {};
-
-/// \brief Extension of `std::is_integral`, which includes support for 128-bit integers.
-template<class T>
-struct is_integral
-    : std::integral_constant<
-          bool,
-          std::is_integral<T>::value
-              || std::is_same<::rocprim::int128_t, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::uint128_t, typename std::remove_cv<T>::type>::value>
-{};
-
-/// \brief Extension of `std::is_arithmetic`, which includes support for \ref rocprim::half , \ref rocprim::bfloat16 and 128-bit integers.
-template<class T>
-struct is_arithmetic
-    : std::integral_constant<
-          bool,
-          std::is_arithmetic<T>::value
-              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::bfloat16, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::int128_t, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::uint128_t, typename std::remove_cv<T>::type>::value>
-{};
-
-/// \brief Extension of `std::is_fundamental`, which includes support for \ref rocprim::half , \ref rocprim::bfloat16 and 128-bit integers.
-template<class T>
-struct is_fundamental
-    : std::integral_constant<
-          bool,
-          std::is_fundamental<T>::value
-              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::bfloat16, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::int128_t, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::uint128_t, typename std::remove_cv<T>::type>::value>
-{};
-
-/// \brief Extension of `std::is_unsigned`, which includes support for 128-bit integers.
-template<class T>
-struct is_unsigned
-    : std::integral_constant<
-          bool,
-          std::is_unsigned<T>::value
-              || std::is_same<::rocprim::uint128_t, typename std::remove_cv<T>::type>::value>
-{};
-
-/// \brief Extension of `std::is_signed`, which includes support for \ref rocprim::half , \ref rocprim::bfloat16 and 128-bit integers.
-template<class T>
-struct is_signed
-    : std::integral_constant<
-          bool,
-          std::is_signed<T>::value
-              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::bfloat16, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::int128_t, typename std::remove_cv<T>::type>::value>
-{};
-
-/// \brief Extension of `std::is_scalar`, which includes support for \ref rocprim::half , \ref rocprim::bfloat16 and 128-bit integers.
-template<class T>
-struct is_scalar
-    : std::integral_constant<
-          bool,
-          std::is_scalar<T>::value
-              || std::is_same<::rocprim::half, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::bfloat16, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::int128_t, typename std::remove_cv<T>::type>::value
-              || std::is_same<::rocprim::uint128_t, typename std::remove_cv<T>::type>::value>
-{};
 
 /// \brief Extension of `std::make_unsigned`, which includes support for 128-bit integers.
 template<class T>
@@ -133,14 +57,6 @@ struct make_unsigned<::rocprim::uint128_t>
 
 static_assert(std::is_same<make_unsigned<::rocprim::int128_t>::type, ::rocprim::uint128_t>::value,
               "'rocprim::int128_t' needs to implement 'make_unsigned' trait.");
-
-/// \brief Extension of `std::is_compound`, which includes support for \ref rocprim::half , \ref rocprim::bfloat16 and 128-bit integers.
-template<class T>
-struct is_compound
-    : std::integral_constant<
-        bool,
-        !is_fundamental<T>::value
-    > {};
 
 /// \brief Extension of `std::numeric_limits`, which includes support for 128-bit integers.
 template<class T>
@@ -370,6 +286,35 @@ struct invoke_result_impl<decltype(void(INVOKE(std::declval<F>(), std::declval<A
 };
 
 template<class T>
+struct is_tuple
+{
+public:
+    static constexpr bool value = false;
+};
+
+template<class... Args>
+struct is_tuple<::rocprim::tuple<Args...>>
+{
+private:
+    template<size_t Index>
+    ROCPRIM_HOST_DEVICE
+    static constexpr bool is_tuple_impl()
+    {
+        return is_tuple_impl<Index + 1>();
+    }
+
+    template<>
+    ROCPRIM_HOST_DEVICE
+    static constexpr bool is_tuple_impl<sizeof...(Args)>()
+    {
+        return true;
+    }
+
+public:
+    static constexpr bool value = is_tuple_impl<0>();
+};
+
+template<class T>
 struct is_tuple_of_references
 {
     static_assert(sizeof(T) == 0, "is_tuple_of_references is only implemented for rocprim::tuple");
@@ -397,47 +342,40 @@ public:
     static constexpr bool value = is_tuple_of_references_impl<0>();
 };
 
-template<class Key>
-struct float_bit_mask;
+template<typename Iterator>
+using value_type_t = typename std::iterator_traits<Iterator>::value_type;
 
-template<>
-struct float_bit_mask<float>
+template<typename EqualityOp, int Ret = 0>
+struct guarded_inequality_wrapper
 {
-    static constexpr uint32_t sign_bit = 0x80000000;
-    static constexpr uint32_t exponent = 0x7F800000;
-    static constexpr uint32_t mantissa = 0x007FFFFF;
-    using bit_type                     = uint32_t;
-};
+    /// Wrapped equality operator
+    EqualityOp op;
 
-template<>
-struct float_bit_mask<double>
-{
-    static constexpr uint64_t sign_bit = 0x8000000000000000;
-    static constexpr uint64_t exponent = 0x7FF0000000000000;
-    static constexpr uint64_t mantissa = 0x000FFFFFFFFFFFFF;
-    using bit_type                     = uint64_t;
-};
+    /// Out-of-bounds limit
+    size_t guard;
 
-template<>
-struct float_bit_mask<rocprim::bfloat16>
-{
-    static constexpr uint16_t sign_bit = 0x8000;
-    static constexpr uint16_t exponent = 0x7F80;
-    static constexpr uint16_t mantissa = 0x007F;
-    using bit_type                     = uint16_t;
-};
+    /// Constructor
+    ROCPRIM_HOST_DEVICE inline guarded_inequality_wrapper(EqualityOp op, size_t guard)
+        : op(op), guard(guard)
+    {}
 
-template<>
-struct float_bit_mask<rocprim::half>
-{
-    static constexpr uint16_t sign_bit = 0x8000;
-    static constexpr uint16_t exponent = 0x7C00;
-    static constexpr uint16_t mantissa = 0x03FF;
-    using bit_type                     = uint16_t;
+    /// \brief Guarded boolean inequality operator.
+    ///
+    /// \tparam T Type of the operands compared by the equality operator
+    /// \param a Left hand-side operand
+    /// \param b Right hand-side operand
+    /// \param idx Index of the thread calling to this operator. This is used to determine which
+    /// operations are out-of-bounds
+    /// \returns <tt>!op(a, b)</tt> for a certain equality operator \p op when in-bounds.
+    template<typename T>
+    ROCPRIM_HOST_DEVICE
+    inline bool
+        operator()(const T& a, const T& b, size_t idx) const
+    {
+        // In-bounds return operation result, out-of-bounds return ret.
+        return (idx < guard) ? !op(a, b) : Ret;
+    }
 };
-
-template<class...>
-using void_t = void;
 
 } // end namespace detail
 

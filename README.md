@@ -157,9 +157,15 @@ find_package(rocprim REQUIRED CONFIG PATHS "/opt/rocm/rocprim")
 # to be linked manually by user
 target_link_libraries(<your_target> roc::rocprim)
 
-# Includes rocPRIM headers and required HIP dependencies
-target_link_libraries(<your_target> roc::rocprim_hip)
+# Include rocPRIM headers and required HIP dependencies
+# - If using HIP language support (USE_HIPCXX=ON):
+target_link_libraries(<your_target> hip::host)
+
+# - Otherwise:
+target_link_libraries(<your_target> hip::device)
 ```
+
+For more information on `hip::host` and `hip::device`, please see the [ROCm documentation](https://rocm.docs.amd.com/en/latest/conceptual/cmake-packages.html#consuming-the-hip-api-in-c-code).
 
 ## Running unit tests
 

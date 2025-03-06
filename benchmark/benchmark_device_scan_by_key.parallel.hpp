@@ -45,8 +45,8 @@ std::string config_name()
 {
     const rocprim::detail::scan_by_key_config_params config = Config();
     return "{bs:" + std::to_string(config.kernel_config.block_size)
-           + ",ipt:" + std::to_string(config.kernel_config.items_per_thread)
-           + ",method:" + std::string(get_block_scan_method_name(config.block_scan_method)) + "}";
+           + ",ipt:" + std::to_string(config.kernel_config.items_per_thread) + ",method:"
+           + std::string(get_block_scan_algorithm_name(config.block_scan_method)) + "}";
 }
 
 template<>

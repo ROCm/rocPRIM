@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -524,13 +524,11 @@ TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeySmallValueType)
 
 TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyLargeValueType)
 {
-    // large value type to test TilesPerBlock > 1
     large_indices_reduce_by_key<test_utils::custom_test_type<size_t>>();
 }
 
 TEST(RocprimDeviceReduceByKey, LargeIndicesReduceByKeyLargeValueTypeWithGraphs)
 {
-    // large value type to test TilesPerBlock > 1
     large_indices_reduce_by_key<test_utils::custom_test_type<size_t>, true>();
 }
 
@@ -650,7 +648,6 @@ TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeySmallValueType)
 
 TEST(RocprimDeviceReduceByKey, LargeSegmentCountReduceByKeyLargeValueType)
 {
-    // large value type to test TilesPerBlock > 1
     large_segment_count_reduce_by_key<test_utils::custom_test_type<size_t>>();
 }
 

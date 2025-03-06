@@ -86,6 +86,7 @@ struct match_prefix_underlying_type
         = select_type<select_type_case<sizeof(value_and_prefix) <= sizeof(uint16_t), uint16_t>,
                       select_type_case<sizeof(value_and_prefix) <= sizeof(uint32_t), uint32_t>,
                       select_type_case<sizeof(value_and_prefix) <= sizeof(uint64_t), uint64_t>,
+                      select_type_case<sizeof(value_and_prefix) <= sizeof(uint128_t), uint128_t>,
                       void>;
 };
 
@@ -111,7 +112,7 @@ enum class lookback_scan_determinism
 // a look-back prefix scan. Initially every prefix can be either
 // invalid (padding values) or empty. One thread in a block should
 // later set it to partial, and later to complete.
-template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 7)>
+template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 15)>
 struct lookback_scan_state;
 
 /// Reduce lanes `0-valid_items` and return the result in lane 0.
@@ -186,13 +187,13 @@ private:
     using prefix_underlying_type = typename match_prefix_underlying_type<T>::type;
 
     // Helper struct
-    struct alignas(sizeof(prefix_underlying_type)) prefix_type
+    struct prefix_type
     {
         T           value;
         prefix_flag flag;
     };
 
-    static_assert(sizeof(prefix_underlying_type) == sizeof(prefix_type), "");
+    static_assert(sizeof(prefix_underlying_type) >= sizeof(prefix_type), "");
 
 public:
     // Type used for flag/flag of block prefix
@@ -846,10 +847,10 @@ protected:
 // to select the corresponding kernel (with or without sleep). However, since the check is runtime,
 // both versions of the kernel must be compiled for all architectures.
 // is_lookback_kernel_runnable() can be used in device code to prevent compilation of the version
-// with sleep on all device arhitectures except gfx908.
+// with sleep on all device architectures except gfx908.
 
-ROCPRIM_HOST ROCPRIM_INLINE hipError_t is_sleep_scan_state_used(const hipStream_t stream,
-                                                                bool&             use_sleep)
+ROCPRIM_HOST ROCPRIM_INLINE
+hipError_t is_sleep_scan_state_used(const hipStream_t stream, bool& use_sleep)
 {
     hipDeviceProp_t prop;
     int             device_id;
