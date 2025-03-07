@@ -230,9 +230,6 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, Encode)
             gHelper.cleanupGraphHelper();
             HIP_CHECK(hipStreamDestroy(stream));
 
-            gHelper.cleanupGraphHelper();
-            HIP_CHECK(hipStreamDestroy(stream));
-
             // Validating results
 
             std::vector<count_type> runs_count_expected_2;
@@ -380,9 +377,6 @@ TYPED_TEST(RocprimDeviceRunLengthEncode, NonTrivialRuns)
                 offsets_output = d_offsets_output.load();
                 counts_output  = d_counts_output.load();
             }
-
-            gHelper.cleanupGraphHelper();
-            HIP_CHECK(hipStreamDestroy(stream));
 
             gHelper.cleanupGraphHelper();
             HIP_CHECK(hipStreamDestroy(stream));
