@@ -127,39 +127,6 @@
     #define ROCPRIM_TARGET_GCN3 1
 #endif
 
-#undef ROCPRIM_TARGET_GCN3
-#undef ROCPRIM_TARGET_GCN5
-#undef ROCPRIM_TARGET_RDNA1
-#undef ROCPRIM_TARGET_RDNA2
-#undef ROCPRIM_TARGET_RDNA3
-#undef ROCPRIM_TARGET_RDNA4
-#undef ROCPRIM_TARGET_CDNA1
-#undef ROCPRIM_TARGET_CDNA2
-#undef ROCPRIM_TARGET_CDNA3
-
-// See https://llvm.org/docs/AMDGPUUsage.html#instructions
-#if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__)
-    #define ROCPRIM_TARGET_CDNA3 1
-#elif defined(__gfx90a__)
-    #define ROCPRIM_TARGET_CDNA2 1
-#elif defined(__gfx908__)
-    #define ROCPRIM_TARGET_CDNA1 1
-#elif defined(__gfx900__) || defined(__gfx902__) || defined(__gfx904__) || defined(__gfx906__) \
-    || defined(__gfx90c__)
-    #define ROCPRIM_TARGET_GCN5 1
-#elif defined(__GFX12__)
-    #define ROCPRIM_TARGET_RDNA4 1
-#elif defined(__GFX11__)
-    #define ROCPRIM_TARGET_RDNA3 1
-#elif defined(__gfx1030__) || defined(__gfx1031__) || defined(__gfx1032__) || defined(__gfx1033__) \
-    || defined(__gfx1034__) || defined(__gfx1035__) || defined(__gfx1036__)
-    #define ROCPRIM_TARGET_RDNA2 1
-#elif defined(__gfx1010__) || defined(__gfx1011__) || defined(__gfx1012__) || defined(__gfx1013__)
-    #define ROCPRIM_TARGET_RDNA1 1
-#elif defined(__GFX8__)
-    #define ROCPRIM_TARGET_GCN3 1
-#endif
-
 // DPP is supported only after Volcanic Islands (GFX8+)
 // Only defined when support is present, in contrast to ROCPRIM_DETAIL_USE_DPP, which should be
 // always defined
