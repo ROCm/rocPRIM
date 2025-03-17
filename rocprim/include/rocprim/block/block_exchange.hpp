@@ -89,8 +89,8 @@ class block_exchange
 {
     static constexpr unsigned int BlockSize = BlockSizeX * BlockSizeY * BlockSizeZ;
     // Select warp size
-    static constexpr unsigned int warp_size =
-        detail::get_min_warp_size(BlockSize, ::rocprim::arch::wavefront::min_size());
+    static constexpr unsigned int warp_size
+        = detail::get_min_warp_size(BlockSize, ::rocprim::arch::wavefront::min_size());
     // Number of warps in block
     static constexpr unsigned int warps_no = ::rocprim::detail::ceiling_div(BlockSize, warp_size);
     static constexpr unsigned int banks_no = ::rocprim::detail::get_lds_banks_no();

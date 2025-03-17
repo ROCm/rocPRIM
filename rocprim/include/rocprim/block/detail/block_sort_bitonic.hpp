@@ -451,7 +451,7 @@ private:
 
     template<unsigned int Size, class BinaryFunction, class... KeyValue>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-        typename std::enable_if<(Size <= ::rocprim::arch::wavefront::min_size())>::type
+    typename std::enable_if<(Size <= ::rocprim::arch::wavefront::min_size())>::type
         sort_power_two(const unsigned int flat_tid,
                        storage_type&      storage,
                        BinaryFunction     compare_function,
@@ -594,7 +594,7 @@ private:
     /// Requires a power of two block size and a power of two items per thread.
     template<unsigned int BS, class BinaryFunction, class... KeyValue>
     ROCPRIM_DEVICE ROCPRIM_INLINE
-        typename std::enable_if<(BS > ::rocprim::arch::wavefront::min_size())>::type
+    typename std::enable_if<(BS > ::rocprim::arch::wavefront::min_size())>::type
         sort_power_two(const unsigned int flat_tid,
                        storage_type&      storage,
                        BinaryFunction     compare_function,
@@ -624,8 +624,9 @@ private:
                 ::rocprim::syncthreads();
             }
 
-            const unsigned int     id = detail::logical_lane_id<::rocprim::arch::wavefront::min_size()>();
-            constexpr unsigned int s  = ::rocprim::arch::wavefront::min_size() / 2;
+            const unsigned int id
+                = detail::logical_lane_id<::rocprim::arch::wavefront::min_size()>();
+            constexpr unsigned int s = ::rocprim::arch::wavefront::min_size() / 2;
 
             ROCPRIM_UNROLL
             for(unsigned int k = s; k > 0; k /= 2)

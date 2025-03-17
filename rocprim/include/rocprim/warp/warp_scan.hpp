@@ -104,10 +104,7 @@ struct select_warp_scan_impl
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int WarpSize = arch::wavefront::min_size()
->
+template<class T, unsigned int WarpSize = arch::wavefront::min_size()>
 class warp_scan
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     : private detail::select_warp_scan_impl<T, WarpSize>::type

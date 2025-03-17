@@ -100,11 +100,7 @@ BEGIN_ROCPRIM_NAMESPACE
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class Key,
-    unsigned int WarpSize = arch::wavefront::min_size(),
-    class Value = empty_type
->
+template<class Key, unsigned int WarpSize = arch::wavefront::min_size(), class Value = empty_type>
 class warp_sort : detail::warp_sort_shuffle<Key, WarpSize, Value>
 {
     using base_type = typename detail::warp_sort_shuffle<Key, WarpSize, Value>;

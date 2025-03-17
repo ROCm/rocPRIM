@@ -112,10 +112,11 @@ public:
     ROCPRIM_DEVICE ROCPRIM_INLINE
     void reduce(T input, T& output, BinaryFunction reduce_op)
     {
-        reduce_impl(input,
-                    output,
-                    reduce_op,
-                    std::integral_constant<bool, (WarpSize < ::rocprim::arch::wavefront::min_size())>{});
+        reduce_impl(
+            input,
+            output,
+            reduce_op,
+            std::integral_constant<bool, (WarpSize < ::rocprim::arch::wavefront::min_size())>{});
     }
 
     template<class BinaryFunction>

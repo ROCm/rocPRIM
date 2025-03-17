@@ -115,12 +115,10 @@ enum class warp_store_method
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int ItemsPerThread,
-    unsigned int WarpSize = ::rocprim::arch::wavefront::min_size(),
-    warp_store_method Method = warp_store_method::warp_store_direct
->
+template<class T,
+         unsigned int      ItemsPerThread,
+         unsigned int      WarpSize = ::rocprim::arch::wavefront::min_size(),
+         warp_store_method Method   = warp_store_method::warp_store_direct>
 class warp_store
 {
     static_assert(::rocprim::detail::is_power_of_two(WarpSize),

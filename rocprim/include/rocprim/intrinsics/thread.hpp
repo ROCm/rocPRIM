@@ -37,9 +37,10 @@ BEGIN_ROCPRIM_NAMESPACE
 /// \brief Returns a number of threads in a hardware warp.
 ///
 /// It is constant for a device.
-/// 
+///
 /// \warning This function will be removed in a future release.
-[[deprecated("Use the functions provided in 'rocprim::arch::wavefront' instead.")]]
+[[deprecated(
+    "Use the functions provided in 'rocprim::arch::wavefront' instead.")]]
 ROCPRIM_HOST_DEVICE
 inline constexpr unsigned int warp_size()
 {
@@ -52,7 +53,8 @@ inline constexpr unsigned int warp_size()
 /// It is constant for a device.
 ///
 /// \warning This function will be removed in a future release.
-[[deprecated("Use the functions provided in 'rocprim::arch::wavefront' instead.")]]
+[[deprecated("Use the functions provided in 'rocprim::arch::wavefront' "
+             "instead.")]]
 ROCPRIM_DEVICE ROCPRIM_INLINE
 constexpr unsigned int device_warp_size()
 {
@@ -132,7 +134,7 @@ unsigned int flat_tile_thread_id()
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id()
 {
-    return flat_block_thread_id()/arch::wavefront::size();
+    return flat_block_thread_id() / arch::wavefront::size();
 }
 
 /// \brief Returns warp id in a block (tile), given the flat (linear, 1D) thread identifier in a multidimensional tile (block).
@@ -140,7 +142,7 @@ unsigned int warp_id()
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id(unsigned int flat_id)
 {
-    return flat_id/arch::wavefront::size();
+    return flat_id / arch::wavefront::size();
 }
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -150,7 +152,7 @@ template<unsigned int BlockSizeX, unsigned int BlockSizeY, unsigned int BlockSiz
 ROCPRIM_DEVICE ROCPRIM_INLINE
 unsigned int warp_id()
 {
-    return flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>()/arch::wavefront::size();
+    return flat_block_thread_id<BlockSizeX, BlockSizeY, BlockSizeZ>() / arch::wavefront::size();
 }
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 

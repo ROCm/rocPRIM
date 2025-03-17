@@ -106,11 +106,7 @@ struct select_warp_reduce_impl
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int WarpSize = arch::wavefront::min_size(),
-    bool UseAllReduce = false
->
+template<class T, unsigned int WarpSize = arch::wavefront::min_size(), bool UseAllReduce = false>
 class warp_reduce
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
     : private detail::select_warp_reduce_impl<T, WarpSize, UseAllReduce>::type

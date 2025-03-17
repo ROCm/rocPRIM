@@ -99,11 +99,12 @@ auto test_hip_sort_key_value_kernel(KeyType* device_key_output, ValueType* devic
         KeyType   keys[ItemsPerThread];
         ValueType values[ItemsPerThread];
         ::rocprim::block_load_direct_warp_striped<LogicalWarpSize>(lid,
-                                                                device_key_output + block_offset,
-                                                                keys);
+                                                                   device_key_output + block_offset,
+                                                                   keys);
         ::rocprim::block_load_direct_warp_striped<LogicalWarpSize>(lid,
-                                                                device_value_output + block_offset,
-                                                                values);
+                                                                   device_value_output
+                                                                       + block_offset,
+                                                                   values);
 
         rocprim::warp_sort<KeyType, LogicalWarpSize, ValueType> wsort;
         wsort.sort(keys, values);

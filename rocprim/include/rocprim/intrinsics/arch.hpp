@@ -26,79 +26,81 @@
 BEGIN_ROCPRIM_NAMESPACE
 
 /// \brief Utilities to query architecture details.
-namespace arch {
+namespace arch
+{
 
 /// \brief Utilities to query wavefront details.
-namespace wavefront {
+namespace wavefront
+{
 
-    /// \brief Return the number of threads in the wavefront.
-    ///
-    /// This function is not `constexpr`.
+/// \brief Return the number of threads in the wavefront.
+///
+/// This function is not `constexpr`.
     ROCPRIM_DEVICE ROCPRIM_INLINE
-    unsigned int size()
-    {
-        // This function is **not** constexpr because it will
-        // be using '__builtin_amdgcn_wavefrontsize()'.
-        return ROCPRIM_WAVEFRONT_SIZE;
-    }
-
-    /// \brief Return the minimum number of threads in the wavefront.
-    ///
-    /// This function can be used to setup compile time allocation of
-    /// global or shared memory.
-    ///
-    /// \par Example
-    /// \parblock
-    /// The example below shows how shared memory can be allocated
-    /// to collect per warp results.
-    /// \code{.cpp}
-    /// constexpr auto total_items = 1024;
-    /// constexpr auto max_warps   = total_items / arch::min_size();
-    ///
-    /// // If we want to use shared memory to exchange data
-    /// // between warps, we can allocate it as:
-    /// __shared int per_warp_results[max_warps];
-    /// \endcode
-    /// \endparblock
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
-    constexpr unsigned int min_size()
-    {
-    #if __HIP_DEVICE_COMPILE__
-        return ROCPRIM_WAVEFRONT_SIZE;
-    #else
-        return ROCPRIM_WARP_SIZE_32;
-    #endif
-    }
-
-    /// \brief Return the minimum number of threads in the wavefront.
-    ///
-    /// This function can be used to setup compile time allocation of
-    /// global or shared memory.
-    ///
-    /// \par Example
-    /// \parblock
-    /// The example below shows how an array can be allocated
-    /// to collect a single warp's results.
-    /// \code{.cpp}
-    /// constexpr auto items_per_thread = 2;
-    ///
-    /// // If we want to collect all the elements in a single array
-    /// // on a single thread, we can allocate it as:
-    /// int single_warp[items_per_thread * arch::max_size()];
-    /// \endcode
-    /// \endparblock
-    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
-    constexpr unsigned int max_size()
-    {
-    #if __HIP_DEVICE_COMPILE__
-        return ROCPRIM_WAVEFRONT_SIZE;
-    #else
-        return ROCPRIM_WARP_SIZE_64;
-    #endif
-    }
-};
-
+unsigned int size()
+{
+    // This function is **not** constexpr because it will
+    // be using '__builtin_amdgcn_wavefrontsize()'.
+    return ROCPRIM_WAVEFRONT_SIZE;
 }
+
+/// \brief Return the minimum number of threads in the wavefront.
+///
+/// This function can be used to setup compile time allocation of
+/// global or shared memory.
+///
+/// \par Example
+/// \parblock
+/// The example below shows how shared memory can be allocated
+/// to collect per warp results.
+/// \code{.cpp}
+/// constexpr auto total_items = 1024;
+/// constexpr auto max_warps   = total_items / arch::min_size();
+///
+/// // If we want to use shared memory to exchange data
+/// // between warps, we can allocate it as:
+/// __shared int per_warp_results[max_warps];
+/// \endcode
+/// \endparblock
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
+constexpr unsigned int min_size()
+{
+#if __HIP_DEVICE_COMPILE__
+    return ROCPRIM_WAVEFRONT_SIZE;
+#else
+    return ROCPRIM_WARP_SIZE_32;
+#endif
+}
+
+/// \brief Return the minimum number of threads in the wavefront.
+///
+/// This function can be used to setup compile time allocation of
+/// global or shared memory.
+///
+/// \par Example
+/// \parblock
+/// The example below shows how an array can be allocated
+/// to collect a single warp's results.
+/// \code{.cpp}
+/// constexpr auto items_per_thread = 2;
+///
+/// // If we want to collect all the elements in a single array
+/// // on a single thread, we can allocate it as:
+/// int single_warp[items_per_thread * arch::max_size()];
+/// \endcode
+/// \endparblock
+    ROCPRIM_HOST_DEVICE ROCPRIM_INLINE
+constexpr unsigned int max_size()
+{
+#if __HIP_DEVICE_COMPILE__
+    return ROCPRIM_WAVEFRONT_SIZE;
+#else
+    return ROCPRIM_WARP_SIZE_64;
+#endif
+}
+}; // namespace wavefront
+
+} // namespace arch
 
 END_ROCPRIM_NAMESPACE
 

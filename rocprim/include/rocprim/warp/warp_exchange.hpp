@@ -78,11 +78,9 @@ BEGIN_ROCPRIM_NAMESPACE
 /// }
 /// \endcode
 /// \endparblock
-template<
-    class T,
-    unsigned int ItemsPerThread,
-    unsigned int WarpSize = ::rocprim::arch::wavefront::min_size()
->
+template<class T,
+         unsigned int ItemsPerThread,
+         unsigned int WarpSize = ::rocprim::arch::wavefront::min_size()>
 class warp_exchange
 {
     static_assert(::rocprim::detail::is_power_of_two(WarpSize),

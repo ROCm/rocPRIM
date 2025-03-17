@@ -157,7 +157,9 @@ T warp_shuffle(const T& input, const int src_lane, const int width = arch::wavef
 /// \param width logical warp width
 template<class T>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-T warp_shuffle_up(const T& input, const unsigned int delta, const int width = arch::wavefront::min_size())
+T warp_shuffle_up(const T&           input,
+                  const unsigned int delta,
+                  const int          width = arch::wavefront::min_size())
 {
     return detail::warp_shuffle_op(
         input,
@@ -182,7 +184,9 @@ T warp_shuffle_up(const T& input, const unsigned int delta, const int width = ar
 /// \param width logical warp width
 template<class T>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-T warp_shuffle_down(const T& input, const unsigned int delta, const int width = arch::wavefront::min_size())
+T warp_shuffle_down(const T&           input,
+                    const unsigned int delta,
+                    const int          width = arch::wavefront::min_size())
 {
     return detail::warp_shuffle_op(
         input,
@@ -206,7 +210,9 @@ T warp_shuffle_down(const T& input, const unsigned int delta, const int width = 
 /// \param width logical warp width
 template<class T>
 ROCPRIM_DEVICE ROCPRIM_INLINE
-T warp_shuffle_xor(const T& input, const int lane_mask, const int width = arch::wavefront::min_size())
+T warp_shuffle_xor(const T&  input,
+                   const int lane_mask,
+                   const int width = arch::wavefront::min_size())
 {
     return detail::warp_shuffle_op(
         input,
@@ -233,9 +239,8 @@ namespace detail
 /// \param mask mask used for calculating source lane id
 /// \param width logical warp width
 template<class V>
-ROCPRIM_DEVICE ROCPRIM_INLINE V warp_swizzle_shuffle(V&        v,
-                                                     const int mask,
-                                                     const int width = arch::wavefront::min_size())
+ROCPRIM_DEVICE ROCPRIM_INLINE
+V warp_swizzle_shuffle(V& v, const int mask, const int width = arch::wavefront::min_size())
 {
     switch(mask)
     {
@@ -266,9 +271,8 @@ ROCPRIM_DEVICE ROCPRIM_INLINE V warp_swizzle_shuffle(V&        v,
 /// \param dst_lane the destination lane to which the value from this thread is written.
 /// \param width logical warp width
 template<typename T>
-ROCPRIM_DEVICE ROCPRIM_INLINE T warp_permute(const T&  input,
-                                             const int dst_lane,
-                                             const int width = arch::wavefront::min_size())
+ROCPRIM_DEVICE ROCPRIM_INLINE
+T warp_permute(const T& input, const int dst_lane, const int width = arch::wavefront::min_size())
 {
     // The amdgcn intrinsic does not support virtual warp sizes, so in order to support those, manually
     // wrap around the dst_lane within groups of log2(width) bits.
