@@ -117,7 +117,7 @@ struct radix_digit_count_helper
     static constexpr unsigned int atomic_stripes = 4;
     static constexpr unsigned int counters       = radix_size * atomic_stripes;
 
-    ROCPRIM_DETAIL_DEVICE_STATIC_ASSERT(BlockSize % ::rocprim::device_warp_size() == 0,
+    ROCPRIM_DETAIL_DEVICE_STATIC_ASSERT(BlockSize % ::rocprim::arch::wavefront::min_size() == 0,
                                         "BlockSize must be divisible by warp size");
     static_assert(radix_size <= BlockSize, "Radix size must not exceed BlockSize");
 

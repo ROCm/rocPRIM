@@ -115,7 +115,7 @@ public:
         reduce_impl(input,
                     output,
                     reduce_op,
-                    std::integral_constant<bool, (WarpSize < ::rocprim::device_warp_size())>{});
+                    std::integral_constant<bool, (WarpSize < ::rocprim::arch::wavefront::min_size())>{});
     }
 
     template<class BinaryFunction>

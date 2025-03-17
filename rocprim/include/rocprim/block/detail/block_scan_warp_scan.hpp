@@ -47,7 +47,7 @@ class block_scan_warp_scan
     static constexpr unsigned int BlockSize = BlockSizeX * BlockSizeY * BlockSizeZ;
     // Select warp size
     static constexpr unsigned int warp_size_ =
-        detail::get_min_warp_size(BlockSize, ::rocprim::device_warp_size());
+        detail::get_min_warp_size(BlockSize, ::rocprim::arch::wavefront::min_size());
     // Number of warps in block
     static constexpr unsigned int warps_no_ = (BlockSize + warp_size_ - 1) / warp_size_;
 
@@ -578,7 +578,7 @@ private:
                              T& output,
                              storage_type& storage,
                              BinaryFunction scan_op)
-        -> typename std::enable_if<(BlockSize_ > ::rocprim::device_warp_size())>::type
+        -> typename std::enable_if<(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         storage_type_& storage_ = storage.get();
         // Perform warp scan
@@ -607,7 +607,7 @@ private:
                              T& output,
                              storage_type& storage,
                              BinaryFunction scan_op)
-        -> typename std::enable_if<!(BlockSize_ > ::rocprim::device_warp_size())>::type
+        -> typename std::enable_if<!(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         (void) storage;
         (void) flat_tid;
@@ -634,7 +634,7 @@ private:
                              T init,
                              storage_type& storage,
                              BinaryFunction scan_op)
-        -> typename std::enable_if<(BlockSize_ > ::rocprim::device_warp_size())>::type
+        -> typename std::enable_if<(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         storage_type_& storage_ = storage.get();
         // Perform warp scan on input values
@@ -674,7 +674,7 @@ private:
                              T init,
                              storage_type& storage,
                              BinaryFunction scan_op)
-        -> typename std::enable_if<!(BlockSize_ > ::rocprim::device_warp_size())>::type
+        -> typename std::enable_if<!(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         (void) flat_tid;
         (void) storage;
@@ -711,7 +711,7 @@ private:
                                   T                  init,
                                   storage_type&      storage,
                                   BinaryFunction     scan_op) ->
-        typename std::enable_if<(BlockSize_ > ::rocprim::device_warp_size())>::type
+        typename std::enable_if<(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         storage_type_& storage_ = storage.get();
         // Perform warp scan on input values with init seed
@@ -753,7 +753,7 @@ private:
                                   T                  init,
                                   storage_type&      storage,
                                   BinaryFunction     scan_op) ->
-        typename std::enable_if<!(BlockSize_ > ::rocprim::device_warp_size())>::type
+        typename std::enable_if<!(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         (void)flat_tid;
         (void)storage;
@@ -790,7 +790,7 @@ private:
                              T& output,
                              storage_type& storage,
                              BinaryFunction scan_op)
-        -> typename std::enable_if<(BlockSize_ > ::rocprim::device_warp_size())>::type
+        -> typename std::enable_if<(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         storage_type_& storage_ = storage.get();
         // Perform warp scan on input values
@@ -826,7 +826,7 @@ private:
                              T& output,
                              storage_type& storage,
                              BinaryFunction scan_op)
-        -> typename std::enable_if<!(BlockSize_ > ::rocprim::device_warp_size())>::type
+        -> typename std::enable_if<!(BlockSize_ > ::rocprim::arch::wavefront::min_size())>::type
     {
         (void) flat_tid;
         (void) storage;
