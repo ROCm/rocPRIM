@@ -773,6 +773,12 @@ public:
     ROCPRIM_DETAIL_DEVICE_STATIC_ASSERT(BlockSize % ::rocprim::arch::wavefront::min_size() == 0,
                                         "BlockSize must be a multiple of hardware warpsize");
 
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
+    block_load()
+    {
+        assert(BlockSize % ::rocprim::arch::wavefront::size() == 0);
+    }
+
     using storage_type = typename block_exchange_type::storage_type;
 
     template<class InputIterator>

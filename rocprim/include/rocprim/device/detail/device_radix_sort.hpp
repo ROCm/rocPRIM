@@ -126,6 +126,12 @@ struct radix_digit_count_helper
         unsigned int digit_counters[counters];
     };
 
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
+    radix_digit_count_helper()
+    {
+        assert(BlockSize % ::rocprim::arch::wavefront::size() == 0);
+    }
+
     ROCPRIM_DEVICE ROCPRIM_INLINE
     unsigned int get_counter(const unsigned stripe, const unsigned int digit)
     {

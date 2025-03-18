@@ -503,6 +503,12 @@ public:
 
     using storage_type = typename block_exchange_type::storage_type;
 
+    ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
+    block_store()
+    {
+        assert(BlockSize % ::rocprim::arch::wavefront::size() == 0);
+    }
+
     template<class OutputIterator>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
     void store(OutputIterator block_output,

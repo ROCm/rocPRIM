@@ -161,6 +161,12 @@ public:
     using storage_type = storage_type_; // only for Doxygen
 #endif
 
+        ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE
+    block_radix_sort()
+    {
+        assert(BlockSize % ::rocprim::arch::wavefront::size() == 0);
+    }
+
     /// \brief Performs ascending radix sort over keys partitioned across threads in a block.
     ///
     /// \tparam Decomposer The type of the decomposer argument. Defaults to the identity decomposer.
