@@ -72,7 +72,7 @@ constexpr unsigned int min_size()
 #endif
 }
 
-/// \brief Return the minimum number of threads in the wavefront.
+/// \brief Return the maximum number of threads in the wavefront.
 ///
 /// This function can be used to setup compile time allocation of
 /// global or shared memory.
