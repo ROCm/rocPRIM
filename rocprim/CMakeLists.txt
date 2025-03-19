@@ -47,8 +47,6 @@ target_include_directories(rocprim
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/>
 )
-target_compile_options(rocprim PRIVATE -fgpu-rdc)
-target_link_options(rocprim PRIVATE -fgpu-rdc)
 
 # This target links against HIP library
 add_library(rocprim_hip INTERFACE)

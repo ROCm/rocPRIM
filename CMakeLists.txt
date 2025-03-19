@@ -187,7 +187,8 @@ if(BUILD_TEST)
   enable_testing()
   add_subdirectory(test)
 endif()
-
+add_compile_options(-fgpu-rdc)
+add_link_options(-fgpu-rdc)
 # Benchmarks
 if(BUILD_BENCHMARK)
   if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
