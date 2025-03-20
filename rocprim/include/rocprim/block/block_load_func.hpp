@@ -377,7 +377,7 @@ void block_load_direct_warp_striped(unsigned int  flat_id,
                                     InputIterator block_input,
                                     T (&items)[ItemsPerThread])
 {
-    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::min_size(),
+    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::max_size(),
                   "WarpSize must be a power of two and equal or less"
                   "than the size of hardware warp.");
     assert(WarpSize <= arch::wavefront::size());
@@ -430,7 +430,7 @@ void block_load_direct_warp_striped(unsigned int  flat_id,
                                     T (&items)[ItemsPerThread],
                                     unsigned int valid)
 {
-    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::min_size(),
+    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::max_size(),
                   "WarpSize must be a power of two and equal or less"
                   "than the size of hardware warp.");
     assert(WarpSize <= arch::wavefront::size());
@@ -492,7 +492,7 @@ void block_load_direct_warp_striped(unsigned int  flat_id,
                                     unsigned int valid,
                                     Default      out_of_bounds)
 {
-    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::min_size(),
+    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::max_size(),
                   "WarpSize must be a power of two and equal or less"
                   "than the size of hardware warp.");
     assert(WarpSize <= arch::wavefront::size());

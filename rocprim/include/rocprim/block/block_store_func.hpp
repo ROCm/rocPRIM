@@ -310,7 +310,7 @@ void block_store_direct_warp_striped(unsigned int   flat_id,
                   "The type T must be such that an object of type OutputIterator "
                   "can be dereferenced and assigned a value of type T.");
 
-    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::min_size(),
+    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::max_size(),
                   "WarpSize must be a power of two and equal or less"
                   "than the size of hardware warp.");
     unsigned int thread_id = detail::logical_lane_id<WarpSize>();
@@ -365,7 +365,7 @@ void block_store_direct_warp_striped(unsigned int   flat_id,
                   "The type T must be such that an object of type OutputIterator "
                   "can be dereferenced and assigned a value of type T.");
 
-    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::min_size(),
+    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::max_size(),
                   "WarpSize must be a power of two and equal or less"
                   "than the size of hardware warp.");
     assert(WarpSize <= arch::wavefront::size());
