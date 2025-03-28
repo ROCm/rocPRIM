@@ -68,7 +68,9 @@ void assert_eq(const std::vector<T>& result,
                const size_t          max_length = SIZE_MAX)
 {
     if(max_length == SIZE_MAX || max_length > expected.size())
+    {
         ASSERT_EQ(result.size(), expected.size());
+    }
     for(size_t i = 0; i < std::min(result.size(), max_length); i++)
     {
         if(bit_equal(result[i], expected[i]))
@@ -77,7 +79,7 @@ void assert_eq(const std::vector<T>& result,
         // GTest's ASSERT_EQ prints the values if the test fails. On Windows, the version of GTest provided by vcpkg doesn't
         // provide overloads for printing 128 bit types, resulting in linker errors.
         // Check if we're testing with 128 bit types. If so, test using bools so GTest doesn't try to print them on failure.
-        if (test_utils::is_int128<T>::value || test_utils::is_uint128<T>::value)
+        if (test_utils::is_int128<T>::value || test_utils::is_uint128<T>::value || (typeid(T) == typeid(common::custom_type<double,double,1>)))
         {
             const bool values_equal = (result[i] == expected[i]);
             ASSERT_EQ(values_equal, true) << "where index = " << i;
@@ -109,15 +111,8 @@ void assert_eq(const std::vector<common::custom_type<T, T, true>>& result,
         // GTest's ASSERT_EQ prints the values if the test fails. On Windows, the version of GTest provided by vcpkg doesn't
         // provide overloads for printing 128 bit types, resulting in linker errors.
         // Check if we're testing with 128 bit types. If so, test using bools so GTest doesn't try to print them on failure.
-        if (sizeof(T) >= 8)
-        {
-            const bool values_equal = (result[i] == expected[i]);
-            ASSERT_EQ(values_equal, true) << "where index = " << i;
-        }
-        else
-        {
-            ASSERT_EQ(result[i], expected[i]) << "where index = " << i;
-        }
+		const bool values_equal = (result[i] == expected[i]);
+		ASSERT_EQ(values_equal, true) << "where index = " << i;
 #else
         ASSERT_EQ(result[i], expected[i]) << "where index = " << i;
 #endif		
