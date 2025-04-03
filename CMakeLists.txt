@@ -188,7 +188,7 @@ if(BUILD_TEST)
   add_subdirectory(test)
 endif()
 add_compile_options(-fgpu-rdc)
-add_link_options(-fgpu-rdc)
+add_link_options(-fgpu-rdc -Xoffload-linker --lto-partitions=1)
 # Benchmarks
 if(BUILD_BENCHMARK)
   if (ROCPRIM_PROJECT_IS_TOP_LEVEL)
