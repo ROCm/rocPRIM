@@ -62,7 +62,7 @@
     }
 
 #ifndef ROCPRIM_HAS_INT128_SUPPORT
-    //#define ROCPRIM_HAS_INT128_SUPPORT 1
+    #define ROCPRIM_HAS_INT128_SUPPORT 1
 #endif
 
 #define INSTANTIATE_TYPED_TEST_EXPANDED_1(line, test_suite_name, ...)         \
