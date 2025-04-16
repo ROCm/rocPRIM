@@ -306,7 +306,7 @@ inline hipError_t memcpy_and_sync(
 #if(HIP_VERSION_MAJOR == 3 && HIP_VERSION_MINOR >= 1) || HIP_VERSION_MAJOR > 3
     return hipMemcpyWithStream(dst, src, size_bytes, kind, stream);
 #else
-    const hipError_t result = hipMemcpyAsync(dst src, size_bytes, kind, stream);
+    const hipError_t result = hipMemcpyAsync(dst, src, size_bytes, kind, stream);
     if(hipSuccess != result)
     {
         return result;
