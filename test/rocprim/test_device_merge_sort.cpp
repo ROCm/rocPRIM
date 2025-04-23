@@ -80,7 +80,9 @@ using RocprimDeviceSortTestsParams = ::testing::Types<
     DeviceSortParams<test_utils::custom_test_type<float>, test_utils::custom_test_type<double>>,
     DeviceSortParams<int, test_utils::custom_float_type>,
     DeviceSortParams<test_utils::custom_test_array_type<int, 4>>,
-    DeviceSortParams<int, int, ::rocprim::less<int>, true>>;
+    DeviceSortParams<int, int, ::rocprim::less<int>, true>,
+    DeviceSortParams<int, common::custom_huge_type<2048, float>>,
+    DeviceSortParams<common::custom_huge_type<2048*8, long long>>>;
 
 static_assert(std::is_trivially_copyable<test_utils::custom_float_type>::value,
               "Type must be trivially copyable to cover merge sort specialized kernel");
@@ -118,28 +120,24 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
             in_place = !in_place;
 
             // Generate data
-            std::vector<key_type> input = test_utils::get_random_data<key_type>(size, -100, 100, seed_value); // float16 can't exceed 65504
-            std::vector<key_type> output(size);
+            std::vector<key_type> input = test_utils::get_random_data_wrapped<key_type>(
+                size,
+                -100,
+                100,
+                seed_value); // float16 can't exceed 65504
 
-            key_type * d_input;
-            key_type * d_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(key_type)));
-            if(in_place)
+            common::device_ptr<key_type> d_input;
+            common::device_ptr<key_type> d_output_alloc;
+
+            if(!d_input.resize_with_memory_check(size)
+               || !d_output_alloc.resize_with_memory_check(in_place ? 0 : size))
             {
-                d_output = d_input;
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
             }
-            else
-            {
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, output.size() * sizeof(key_type)));
-            }
-            HIP_CHECK(
-                hipMemcpy(
-                    d_input, input.data(),
-                    input.size() * sizeof(key_type),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+
+            d_input.store(input);
+            common::device_ptr<key_type>& d_output = in_place ? d_input : d_output_alloc;
 
             // compare function
             compare_function compare_op;
@@ -164,8 +162,13 @@ TYPED_TEST(RocprimDeviceSortTests, SortKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            HIP_CHECK(hipDeviceSynchronize());
+            common::device_ptr<void> d_temp_storage;
+
+            if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -257,48 +260,27 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
             std::vector<value_type> values_input(size);
             test_utils::iota(values_input.begin(), values_input.end(), 0);
 
-            std::vector<key_type> keys_output(size);
-            std::vector<value_type> values_output(size);
+            common::device_ptr<key_type>   d_keys_input;
+            common::device_ptr<key_type>   d_keys_output_alloc;
+            common::device_ptr<value_type> d_values_input;
+            common::device_ptr<value_type> d_values_output_alloc;
 
-            key_type * d_keys_input;
-            key_type * d_keys_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input, keys_input.size() * sizeof(key_type)));
-            if(in_place)
+            if(!d_keys_input.resize_with_memory_check(size)
+               || !d_keys_output_alloc.resize_with_memory_check(in_place ? 0 : size)
+               || !d_values_input.resize_with_memory_check(size)
+               || !d_values_output_alloc.resize_with_memory_check(in_place ? 0 : size))
             {
-                d_keys_output = d_keys_input;
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
             }
-            else
-            {
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_output, keys_output.size() * sizeof(key_type)));
-            }
-            HIP_CHECK(
-                hipMemcpy(
-                    d_keys_input, keys_input.data(),
-                    keys_input.size() * sizeof(key_type),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
 
-            value_type * d_values_input;
-            value_type * d_values_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_input, values_input.size() * sizeof(value_type)));
-            if(in_place)
-            {
-                d_values_output = d_values_input;
-            }
-            else
-            {
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_output, values_output.size() * sizeof(value_type)));
-            }
-            HIP_CHECK(
-                hipMemcpy(
-                    d_values_input, values_input.data(),
-                    values_input.size() * sizeof(value_type),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+            d_keys_input.store(keys_input);
+            d_values_input.store(values_input);
+
+            common::device_ptr<key_type>& d_keys_output
+                = in_place ? d_keys_input : d_keys_output_alloc;
+            common::device_ptr<value_type>& d_values_output
+                = in_place ? d_values_input : d_values_output_alloc;
 
             // compare function
             compare_function compare_op;
@@ -334,8 +316,13 @@ TYPED_TEST(RocprimDeviceSortTests, SortKeyValue)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            HIP_CHECK(hipDeviceSynchronize());
+            common::device_ptr<void> d_temp_storage;
+
+            if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)

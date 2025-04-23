@@ -170,26 +170,21 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
 
             test_utils::out_of_bounds_flag out_of_bounds;
 
-            key_type * d_keys_input1;
-            key_type * d_keys_input2;
-            key_type * d_keys_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input1, keys_input1.size() * sizeof(key_type)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input2, keys_input2.size() * sizeof(key_type)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_output, keys_output.size() * sizeof(key_type)));
-            HIP_CHECK(
-                hipMemcpy(
-                    d_keys_input1, keys_input1.data(),
-                    keys_input1.size() * sizeof(key_type),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(
-                hipMemcpy(
-                    d_keys_input2, keys_input2.data(),
-                    keys_input2.size() * sizeof(key_type),
-                    hipMemcpyHostToDevice
-                )
-            );
+            common::device_ptr<key_type> d_keys_input1;
+            common::device_ptr<key_type> d_keys_input2;
+            common::device_ptr<key_type> d_keys_output;
+
+            if(!d_keys_input1.resize_with_memory_check(keys_input1.size())
+               || !d_keys_input2.resize_with_memory_check(keys_input2.size())
+               || !d_keys_output.resize_with_memory_check(keys_output.size()))
+            {
+                std::cout << "Out of memory. Skipping test with sizes = {" << size1 << ", " << size2
+                          << "}" << std::endl;
+                break;
+            }
+
+            d_keys_input1.store(keys_input1);
+            d_keys_input2.store(keys_input2);
 
             test_utils::bounds_checking_iterator<key_type> d_keys_checking_output(
                 d_keys_output,
@@ -215,7 +210,14 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKey)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+            common::device_ptr<void> d_temp_storage;
+
+            if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+            {
+                std::cout << "Out of memory. Skipping test with sizes = {" << size1 << ", " << size2
+                          << "}" << std::endl;
+                break;
+            }
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -351,46 +353,29 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
 
             test_utils::out_of_bounds_flag out_of_bounds;
 
-            key_type * d_keys_input1;
-            key_type * d_keys_input2;
-            key_type * d_keys_output;
-            value_type * d_values_input1;
-            value_type * d_values_input2;
-            value_type * d_values_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input1, keys_input1.size() * sizeof(key_type)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input2, keys_input2.size() * sizeof(key_type)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_output, keys_output.size() * sizeof(key_type)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_input1, values_input1.size() * sizeof(value_type)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_input2, values_input2.size() * sizeof(value_type)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_output, values_output.size() * sizeof(value_type)));
-            HIP_CHECK(
-                hipMemcpy(
-                    d_keys_input1, keys_input1.data(),
-                    keys_input1.size() * sizeof(key_type),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(
-                hipMemcpy(
-                    d_keys_input2, keys_input2.data(),
-                    keys_input2.size() * sizeof(key_type),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(
-                hipMemcpy(
-                    d_values_input1, values_input1.data(),
-                    values_input1.size() * sizeof(value_type),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(
-                hipMemcpy(
-                    d_values_input2, values_input2.data(),
-                    values_input2.size() * sizeof(value_type),
-                    hipMemcpyHostToDevice
-                )
-            );
+            common::device_ptr<key_type>   d_keys_input1;
+            common::device_ptr<key_type>   d_keys_input2;
+            common::device_ptr<key_type>   d_keys_output;
+            common::device_ptr<value_type> d_values_input1;
+            common::device_ptr<value_type> d_values_input2;
+            common::device_ptr<value_type> d_values_output;
+
+            if(!d_keys_input1.resize_with_memory_check(keys_input1.size())
+               || !d_keys_input2.resize_with_memory_check(keys_input2.size())
+               || !d_keys_output.resize_with_memory_check(keys_output.size())
+               || !d_values_input1.resize_with_memory_check(values_input1.size())
+               || !d_values_input2.resize_with_memory_check(values_input1.size())
+               || !d_values_output.resize_with_memory_check(values_output.size()))
+            {
+                std::cout << "Out of memory. Skipping test with sizes = {" << size1 << ", " << size2
+                          << "}" << std::endl;
+                break;
+            }
+
+            d_keys_input1.store(keys_input1);
+            d_keys_input2.store(keys_input2);
+            d_values_input1.store(values_input1);
+            d_values_input2.store(values_input2);
 
             test_utils::bounds_checking_iterator<key_type> d_keys_checking_output(
                 d_keys_output,
@@ -424,7 +409,14 @@ TYPED_TEST(RocprimDeviceMergeTests, MergeKeyValue)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+            common::device_ptr<void> d_temp_storage;
+
+            if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+            {
+                std::cout << "Out of memory. Skipping test with sizes = {" << size1 << ", " << size2
+                          << "}" << std::endl;
+                break;
+            }
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
