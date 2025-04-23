@@ -109,29 +109,21 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
             std::vector<F> flags = test_utils::get_random_data<F>(size, 0, 1, seed_value);
 
-            T * d_input;
-            F * d_flags;
-            U * d_output;
-            unsigned int * d_selected_count_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(T)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_flags, flags.size() * sizeof(F)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, input.size() * sizeof(U)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_selected_count_output, sizeof(unsigned int)));
-            HIP_CHECK(
-                hipMemcpy(
-                    d_input, input.data(),
-                    input.size() * sizeof(T),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(
-                hipMemcpy(
-                    d_flags, flags.data(),
-                    flags.size() * sizeof(F),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+            common::device_ptr<T>            d_input;
+            common::device_ptr<F>            d_flags;
+            common::device_ptr<U>            d_output;
+            common::device_ptr<unsigned int> d_selected_count_output;
+
+            if(!d_input.resize_with_memory_check(size) || !d_flags.resize_with_memory_check(size)
+               || !d_output.resize_with_memory_check(size)
+               || !d_selected_count_output.resize_with_memory_check(1))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
+
+            d_input.store(input);
+            d_flags.store(flags);
 
             // Calculate expected results on host
             std::vector<U> expected;
@@ -164,9 +156,13 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            void * d_temp_storage = nullptr;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            HIP_CHECK(hipDeviceSynchronize());
+            common::device_ptr<void> d_temp_storage;
+
+            if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
 
             test_utils::GraphHelper gHelper;;
             if(TestFixture::use_graphs)
@@ -281,20 +277,18 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
             // Generate data
             std::vector<T> input = test_utils::get_random_data<T>(size, 0, 100, seed_value);
 
-            T * d_input;
-            U * d_output;
-            unsigned int * d_selected_count_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(T)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, input.size() * sizeof(U)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_selected_count_output, sizeof(unsigned int)));
-            HIP_CHECK(
-                hipMemcpy(
-                    d_input, input.data(),
-                    input.size() * sizeof(T),
-                    hipMemcpyHostToDevice
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+            common::device_ptr<T>            d_input;
+            common::device_ptr<U>            d_output;
+            common::device_ptr<unsigned int> d_selected_count_output;
+
+            if(!d_input.resize_with_memory_check(size) || !d_output.resize_with_memory_check(size)
+               || !d_selected_count_output.resize_with_memory_check(1))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
+
+            d_input.store(input);
 
             // Calculate expected results on host
             std::vector<U> expected;
@@ -327,9 +321,13 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            void * d_temp_storage = nullptr;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-            HIP_CHECK(hipDeviceSynchronize());
+            common::device_ptr<void> d_temp_storage;
+
+            if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
 
             test_utils::GraphHelper gHelper;;
             if(TestFixture::use_graphs)
@@ -434,19 +432,21 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectFlagged)
             std::vector<T> input = test_utils::get_random_data<T>(size, 1, 100, seed_value);
             std::vector<F> flags = test_utils::get_random_data<F>(size, 0, 1, seed_value);
 
-            T*            d_input;
-            F*            d_flags;
-            U*            d_output;
-            unsigned int* d_selected_count_output;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(T)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_flags, flags.size() * sizeof(F)));
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, input.size() * sizeof(U)));
-            HIP_CHECK(
-                test_common_utils::hipMallocHelper(&d_selected_count_output, sizeof(unsigned int)));
-            HIP_CHECK(
-                hipMemcpy(d_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
-            HIP_CHECK(
-                hipMemcpy(d_flags, flags.data(), flags.size() * sizeof(F), hipMemcpyHostToDevice));
+            common::device_ptr<T>            d_input;
+            common::device_ptr<F>            d_flags;
+            common::device_ptr<U>            d_output;
+            common::device_ptr<unsigned int> d_selected_count_output;
+
+            if(!d_input.resize_with_memory_check(size) || !d_flags.resize_with_memory_check(size)
+               || !d_output.resize_with_memory_check(size)
+               || !d_selected_count_output.resize_with_memory_check(1))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
+
+            d_input.store(input);
+            d_flags.store(flags);
 
             // Calculate expected results on host
             std::vector<U> expected;
@@ -480,8 +480,13 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectFlagged)
             ASSERT_GT(temp_storage_size_bytes, 0);
 
             // allocate temporary storage
-            void* d_temp_storage = nullptr;
-            HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
+            common::device_ptr<void> d_temp_storage;
+
+            if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+            {
+                std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                break;
+            }
 
             test_utils::GraphHelper gHelper;
             if(TestFixture::use_graphs)
@@ -597,20 +602,19 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
                 }
 
                 // Allocate and copy to device
-                T * d_input;
-                U * d_output;
-                unsigned int * d_selected_count_output;
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_input, input.size() * sizeof(T)));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_output, input.size() * sizeof(U)));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_selected_count_output, sizeof(unsigned int)));
-                HIP_CHECK(
-                    hipMemcpy(
-                        d_input, input.data(),
-                        input.size() * sizeof(T),
-                        hipMemcpyHostToDevice
-                    )
-                );
-                HIP_CHECK(hipDeviceSynchronize());
+                common::device_ptr<T>            d_input;
+                common::device_ptr<U>            d_output;
+                common::device_ptr<unsigned int> d_selected_count_output;
+
+                if(!d_input.resize_with_memory_check(size)
+                   || !d_output.resize_with_memory_check(size)
+                   || !d_selected_count_output.resize_with_memory_check(1))
+                {
+                    std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                    break;
+                }
+
+                d_input.store(input);
 
                 // Calculate expected results on host
                 std::vector<U> expected;
@@ -647,9 +651,13 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
                 ASSERT_GT(temp_storage_size_bytes, 0);
 
                 // allocate temporary storage
-                void * d_temp_storage = nullptr;
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-                HIP_CHECK(hipDeviceSynchronize());
+                common::device_ptr<void> d_temp_storage;
+
+                if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+                {
+                    std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                    break;
+                }
 
                 test_utils::GraphHelper gHelper;;
                 if(TestFixture::use_graphs)
@@ -1037,31 +1045,24 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
                     = test_utils::get_random_data<value_type>(size, -1000, 1000, seed_value);
 
                 // Allocate and copy to device
-                key_type*        d_keys_input;
-                value_type*      d_values_input;
-                output_key_type* d_keys_output;
-                output_value_type* d_values_output;
-                unsigned int * d_selected_count_output;
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_input, input_keys.size() * sizeof(input_keys[0])));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_input, input_values.size() * sizeof(input_values[0])));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_keys_output, input_keys.size() * sizeof(output_key_type)));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_output, input_values.size() * sizeof(output_value_type)));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_selected_count_output, sizeof(unsigned int)));
-                HIP_CHECK(
-                    hipMemcpy(
-                        d_keys_input, input_keys.data(),
-                        input_keys.size() * sizeof(input_keys[0]),
-                        hipMemcpyHostToDevice
-                    )
-                );
-                HIP_CHECK(
-                    hipMemcpy(
-                        d_values_input, input_values.data(),
-                        input_values.size() * sizeof(input_values[0]),
-                        hipMemcpyHostToDevice
-                    )
-                );
-                HIP_CHECK(hipDeviceSynchronize());
+                common::device_ptr<key_type>          d_keys_input;
+                common::device_ptr<value_type>        d_values_input;
+                common::device_ptr<output_key_type>   d_keys_output;
+                common::device_ptr<output_value_type> d_values_output;
+                common::device_ptr<unsigned int>      d_selected_count_output;
+
+                if(!d_keys_input.resize_with_memory_check(size)
+                   || !d_values_input.resize_with_memory_check(size)
+                   || !d_keys_output.resize_with_memory_check(size)
+                   || !d_values_output.resize_with_memory_check(size)
+                   || !d_selected_count_output.resize_with_memory_check(1))
+                {
+                    std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                    break;
+                }
+
+                d_keys_input.store(input_keys);
+                d_values_input.store(input_values);
 
                 // Calculate expected results on host
                 std::vector<output_key_type> expected_keys;
@@ -1107,9 +1108,13 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
                 ASSERT_GT(temp_storage_size_bytes, 0);
 
                 // allocate temporary storage
-                void * d_temp_storage = nullptr;
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-                HIP_CHECK(hipDeviceSynchronize());
+                common::device_ptr<void> d_temp_storage;
+
+                if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+                {
+                    std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                    break;
+                }
 
                 test_utils::GraphHelper gHelper;;
                 if(TestFixture::use_graphs)
@@ -1250,26 +1255,20 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
                     = test_utils::get_random_data<value_type>(size, -1000, 1000, seed_value);
 
                 // Allocate and copy to device
-                key_type*     d_keys_input;
-                value_type*   d_values_input;
-                unsigned int* d_selected_count_output;
-                HIP_CHECK(
-                    test_common_utils::hipMallocHelper(&d_keys_input,
-                                                       input_keys.size() * sizeof(input_keys[0])));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_values_input,
-                                                             input_values.size()
-                                                                 * sizeof(input_values[0])));
-                HIP_CHECK(test_common_utils::hipMallocHelper(&d_selected_count_output,
-                                                             sizeof(unsigned int)));
-                HIP_CHECK(hipMemcpy(d_keys_input,
-                                    input_keys.data(),
-                                    input_keys.size() * sizeof(input_keys[0]),
-                                    hipMemcpyHostToDevice));
-                HIP_CHECK(hipMemcpy(d_values_input,
-                                    input_values.data(),
-                                    input_values.size() * sizeof(input_values[0]),
-                                    hipMemcpyHostToDevice));
-                HIP_CHECK(hipDeviceSynchronize());
+                common::device_ptr<key_type>     d_keys_input;
+                common::device_ptr<value_type>   d_values_input;
+                common::device_ptr<unsigned int> d_selected_count_output;
+
+                if(!d_keys_input.resize_with_memory_check(size)
+                   || !d_values_input.resize_with_memory_check(size)
+                   || !d_selected_count_output.resize_with_memory_check(1))
+                {
+                    std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                    break;
+                }
+
+                d_keys_input.store(input_keys);
+                d_values_input.store(input_values);
 
                 // Calculate expected results on host
                 std::vector<output_key_type>   expected_keys;
@@ -1312,10 +1311,13 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
                 ASSERT_GT(temp_storage_size_bytes, 0);
 
                 // allocate temporary storage
-                void* d_temp_storage = nullptr;
-                HIP_CHECK(
-                    test_common_utils::hipMallocHelper(&d_temp_storage, temp_storage_size_bytes));
-                HIP_CHECK(hipDeviceSynchronize());
+                common::device_ptr<void> d_temp_storage;
+
+                if(!d_temp_storage.resize_with_memory_check(temp_storage_size_bytes))
+                {
+                    std::cout << "Out of memory. Skipping test for size = " << size << std::endl;
+                    break;
+                }
 
                 test_utils::GraphHelper gHelper;;
                 if(TestFixture::use_graphs)
