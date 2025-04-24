@@ -63,7 +63,7 @@ warp_shuffle_op(const T& input, ShuffleOp&& op)
     constexpr int words_no = (sizeof(T) + sizeof(int) - 1) / sizeof(int);
 
     T output;
-    ROCPRIM_UNROLL
+    ROCPRIM_NO_UNROLL
     for(int i = 0; i < words_no; i++)
     {
         const size_t s = std::min(sizeof(int), sizeof(T) - i * sizeof(int));
