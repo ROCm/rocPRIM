@@ -83,9 +83,7 @@ struct RocprimLookbackReproducibilityTests : public testing::Test
 };
 
 using Suite = testing::Types<
-    #if !defined(__GFX11__)                       
-        TestParams<int>,// Temporary disable int tests on Navi3X due to known error
-    #endif
+    TestParams<int>,// Temporary disable int tests on Navi3X due to known error
     TestParams<rocprim::bfloat16>,
     TestParams<rocprim::half>,
     TestParams<float>,
@@ -223,6 +221,14 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ScanByKey)
     using compare_op_type = rocprim::equal_to<K>;
     using Config          = rocprim::default_config;
 
+    hipDeviceProp_t attributes;
+    HIP_CHECK(hipGetDeviceProperties(&attributes, 0));
+
+    // Disable int test case for Navi3X because of known issue
+    if (std::is_same_v<V, int> && attributes.major == 11){
+        GTEST_SKIP();
+    }
+    
     const size_t min_segment_length = 1000;
     const size_t max_segment_length = 10000;
 
