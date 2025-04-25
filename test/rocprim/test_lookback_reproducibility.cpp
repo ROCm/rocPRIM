@@ -83,12 +83,15 @@ struct RocprimLookbackReproducibilityTests : public testing::Test
 };
 
 using Suite = testing::Types<
-                            // TestParams<int>, // Sanity check ### Temporary disable int tests due to known error
-                            TestParams<rocprim::bfloat16>,
-                            TestParams<rocprim::half>,
-                            TestParams<float>,
-                            TestParams<double>,
-                            TestParams<common::custom_type<double, double, true>>>;
+    #if !defined(__GFX11__)                       
+        TestParams<int>,// Temporary disable int tests on Navi3X due to known error
+    #endif
+    TestParams<rocprim::bfloat16>,
+    TestParams<rocprim::half>,
+    TestParams<float>,
+    TestParams<double>,
+    TestParams<common::custom_type<double, double, true>>
+>;
 
 TYPED_TEST_SUITE(RocprimLookbackReproducibilityTests, Suite);
 
