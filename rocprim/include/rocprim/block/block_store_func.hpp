@@ -27,6 +27,7 @@
 #include "../intrinsics.hpp"
 #include "../functional.hpp"
 #include "../types.hpp"
+#include "rocprim/intrinsics/arch.hpp"
 
 /// \addtogroup blockmodule
 /// @{
@@ -297,7 +298,7 @@ void block_store_direct_striped(unsigned int flat_id,
 /// \param block_output - the input iterator from the thread block to store to
 /// \param items - array that data is stored to thread block
 template<
-    unsigned int WarpSize = device_warp_size(),
+    unsigned int WarpSize = arch::wavefront::min_size(),
     class OutputIterator,
     class T,
     unsigned int ItemsPerThread
@@ -311,7 +312,7 @@ void block_store_direct_warp_striped(unsigned int flat_id,
                   "The type T must be such that an object of type OutputIterator "
                   "can be dereferenced and assigned a value of type T.");
 
-    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= device_warp_size(),
+    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::max_size(),
                  "WarpSize must be a power of two and equal or less"
                  "than the size of hardware warp.");
     unsigned int thread_id = detail::logical_lane_id<WarpSize>();
@@ -353,7 +354,7 @@ void block_store_direct_warp_striped(unsigned int flat_id,
 /// \param items - array that data is stored to thread block
 /// \param valid - maximum range of valid numbers to store
 template<
-    unsigned int WarpSize = device_warp_size(),
+    unsigned int WarpSize = arch::wavefront::min_size(),
     class OutputIterator,
     class T,
     unsigned int ItemsPerThread
@@ -368,9 +369,11 @@ void block_store_direct_warp_striped(unsigned int flat_id,
                   "The type T must be such that an object of type OutputIterator "
                   "can be dereferenced and assigned a value of type T.");
 
-    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= device_warp_size(),
+    static_assert(detail::is_power_of_two(WarpSize) && WarpSize <= arch::wavefront::max_size(),
                  "WarpSize must be a power of two and equal or less"
                  "than the size of hardware warp.");
+    assert(WarpSize <= arch::wavefront::size());     
+    
     unsigned int thread_id = detail::logical_lane_id<WarpSize>();
     unsigned int warp_id = flat_id / WarpSize;
     unsigned int warp_offset = warp_id * WarpSize * ItemsPerThread;

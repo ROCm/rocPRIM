@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -76,7 +76,7 @@ __global__
 __launch_bounds__(BlockSize)
 auto test_hip_warp_sort(KeyType * device_key_output)
     -> typename std::enable_if<
-        (ItemsPerThread != 1 && LogicalWarpSize <= ::rocprim::device_warp_size()) , void
+        (ItemsPerThread != 1 && LogicalWarpSize <= ::rocprim::arch::wavefront::min_size()) , void
     >::type
 {
     const unsigned int lid = threadIdx.x;
@@ -101,7 +101,7 @@ __global__
 __launch_bounds__(BlockSize)
 auto test_hip_warp_sort(KeyType* /*device_key_output*/)
     -> typename std::enable_if<
-        (ItemsPerThread != 1 && LogicalWarpSize > ::rocprim::device_warp_size()), void
+        (ItemsPerThread != 1 && LogicalWarpSize > ::rocprim::arch::wavefront::min_size()), void
     >::type
 {
     // This kernel will never be actually called, the tests are filtered at runtime if the warp size
@@ -119,7 +119,7 @@ __global__
 __launch_bounds__(BlockSize)
 auto test_hip_sort_key_value_kernel(KeyType* device_key_output, ValueType* device_value_output)
     -> typename std::enable_if<
-        (ItemsPerThread != 1 && LogicalWarpSize <= ::rocprim::device_warp_size()), void
+        (ItemsPerThread != 1 && LogicalWarpSize <= ::rocprim::arch::wavefront::min_size()), void
     >::type
 {
     const unsigned int lid = threadIdx.x;
@@ -149,7 +149,7 @@ __global__
 __launch_bounds__(BlockSize)
 auto test_hip_sort_key_value_kernel(KeyType* /*device_key_output*/, ValueType* /*device_value_output*/)
     -> typename std::enable_if<
-        (ItemsPerThread != 1 && LogicalWarpSize > ::rocprim::device_warp_size()), void
+        (ItemsPerThread != 1 && LogicalWarpSize > ::rocprim::arch::wavefront::min_size()), void
     >::type
 {
     // This kernel will never be actually called, the tests are filtered at runtime if the warp size

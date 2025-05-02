@@ -41,8 +41,8 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
     static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
     static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
-    unsigned int current_device_warp_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
+    unsigned int current_arch::wavefront::min_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
     static constexpr size_t block_size = std::max<size_t>(256U, logical_warp_size * 4);
 
     static constexpr unsigned int grid_size = 4;
@@ -51,12 +51,12 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, Sort)
     SCOPED_TRACE(testing::Message() << "with size = " << size);
 
     // Check if warp size is supported
-    if( logical_warp_size > current_device_warp_size ||
+    if( logical_warp_size > current_arch::wavefront::min_size ||
         !rocprim::detail::is_power_of_two(logical_warp_size) ||
-        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
+        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_device_warp_size);
+            logical_warp_size, block_size, current_arch::wavefront::min_size);
         GTEST_SKIP();
     }
 
@@ -140,8 +140,8 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
     static constexpr size_t ws32 = size_t(ROCPRIM_WARP_SIZE_32);
     static constexpr size_t ws64 = size_t(ROCPRIM_WARP_SIZE_64);
 
-    unsigned int current_device_warp_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
+    unsigned int current_arch::wavefront::min_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
     static constexpr size_t block_size = std::max<size_t>(256U, logical_warp_size * 4);
 
     static constexpr unsigned int grid_size = 4;
@@ -150,12 +150,12 @@ typed_test_def(RocprimWarpSortShuffleBasedTests, name_suffix, SortKeyInt)
     SCOPED_TRACE(testing::Message() << "with size = " << size);
 
     // Check if warp size is supported
-    if( logical_warp_size > current_device_warp_size ||
+    if( logical_warp_size > current_arch::wavefront::min_size ||
         !rocprim::detail::is_power_of_two(logical_warp_size) ||
-        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
+        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_device_warp_size);
+            logical_warp_size, block_size, current_arch::wavefront::min_size);
         GTEST_SKIP();
     }
 

@@ -28,6 +28,7 @@
 #include <rocprim/block/block_scan.hpp>
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/device/detail/device_config_helper.hpp> // partition_config_params
+#include <rocprim/intrinsics/arch.hpp>
 #include <rocprim/types.hpp>
 
 #include <algorithm>
@@ -541,7 +542,7 @@ inline bool is_warp_size_supported(const unsigned int required_warp_size, const 
 
 template<unsigned int LogicalWarpSize>
 __device__ constexpr bool device_test_enabled_for_warp_size_v
-    = ::rocprim::device_warp_size() >= LogicalWarpSize;
+    = ::rocprim::arch::wavefront::min_size() >= LogicalWarpSize;
 
 /// \brief Get segments of uniform random size in [1, max_segment_length] with random key.
 template<typename T>
