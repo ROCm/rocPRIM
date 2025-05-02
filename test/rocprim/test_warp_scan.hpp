@@ -55,19 +55,19 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
-    if( (logical_warp_size > current_arch::wavefront::min_size) ||
-        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
+    if( (logical_warp_size > current_device_warp_size) ||
+        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_arch::wavefront::min_size);
+            logical_warp_size, block_size, current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -108,7 +108,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
         );
 
         // Launching kernel
-        if (current_arch::wavefront::min_size == ws32)
+        if (current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_inclusive_scan_kernel<T, block_size_ws32, logical_warp_size>),
@@ -116,7 +116,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScan)
                 device_input, device_output
             );
         }
-        else if (current_arch::wavefront::min_size == ws64)
+        else if (current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_inclusive_scan_kernel<T, block_size_ws64, logical_warp_size>),
@@ -177,19 +177,19 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
-    if( (logical_warp_size > current_arch::wavefront::min_size) ||
-        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
+    if( (logical_warp_size > current_device_warp_size) ||
+        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_arch::wavefront::min_size);
+            logical_warp_size, block_size, current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -240,7 +240,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
         );
 
         // Launching kernel
-        if (current_arch::wavefront::min_size == ws32)
+        if (current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_inclusive_scan_reduce_kernel<T, block_size_ws32, logical_warp_size>),
@@ -248,7 +248,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanReduce)
                 device_input, device_output, device_output_reductions
             );
         }
-        else if(current_arch::wavefront::min_size == ws64)
+        else if(current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_inclusive_scan_reduce_kernel<T, block_size_ws64, logical_warp_size>),
@@ -321,19 +321,19 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
-    if( (logical_warp_size > current_arch::wavefront::min_size) ||
-        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
+    if( (logical_warp_size > current_device_warp_size) ||
+        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_arch::wavefront::min_size);
+            logical_warp_size, block_size, current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -376,7 +376,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
         );
 
         // Launching kernel
-        if (current_arch::wavefront::min_size == ws32)
+        if (current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_exclusive_scan_kernel<T, block_size_ws32, logical_warp_size>),
@@ -384,7 +384,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScan)
                 device_input, device_output, init
             );
         }
-        else if (current_arch::wavefront::min_size == ws64)
+        else if (current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_exclusive_scan_kernel<T, block_size_ws64, logical_warp_size>),
@@ -445,23 +445,23 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScanWoInit)
               ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
               : rocprim::max<size_t>((ws64 / logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t       size      = block_size * grid_size;
 
     // Check if warp size is supported
-    if((logical_warp_size > current_arch::wavefront::min_size)
-       || (current_arch::wavefront::min_size != ws32
-           && current_arch::wavefront::min_size != ws64)) // Only WarpSize 32 and 64 is supported
+    if((logical_warp_size > current_device_warp_size)
+       || (current_device_warp_size != ws32
+           && current_device_warp_size != ws64)) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: "
                "%d.    Skipping test\n",
                logical_warp_size,
                block_size,
-               current_arch::wavefront::min_size);
+               current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -507,7 +507,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScanWoInit)
             hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
-        if(current_arch::wavefront::min_size == ws32)
+        if(current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(
@@ -519,7 +519,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveScanWoInit)
                 device_input,
                 device_output);
         }
-        else if(current_arch::wavefront::min_size == ws64)
+        else if(current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(
@@ -588,19 +588,19 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
-    if( (logical_warp_size > current_arch::wavefront::min_size) ||
-        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
+    if( (logical_warp_size > current_device_warp_size) ||
+        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_arch::wavefront::min_size);
+            logical_warp_size, block_size, current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -660,7 +660,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
         );
 
         // Launching kernel
-        if (current_arch::wavefront::min_size == ws32)
+        if (current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_exclusive_scan_reduce_kernel<T, block_size_ws32, logical_warp_size>),
@@ -668,7 +668,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScan)
                 device_input, device_output, device_output_reductions, init
             );
         }
-        else if (current_arch::wavefront::min_size == ws64)
+        else if (current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_exclusive_scan_reduce_kernel<T, block_size_ws64, logical_warp_size>),
@@ -740,23 +740,23 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScanWoInit)
               ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
               : rocprim::max<size_t>((ws64 / logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t       size      = block_size * grid_size;
 
     // Check if warp size is supported
-    if((logical_warp_size > current_arch::wavefront::min_size)
-       || (current_arch::wavefront::min_size != ws32
-           && current_arch::wavefront::min_size != ws64)) // Only WarpSize 32 and 64 is supported
+    if((logical_warp_size > current_device_warp_size)
+       || (current_device_warp_size != ws32
+           && current_device_warp_size != ws64)) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: "
                "%d.    Skipping test\n",
                logical_warp_size,
                block_size,
-               current_arch::wavefront::min_size);
+               current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -816,7 +816,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScanWoInit)
             hipMemcpy(device_input, input.data(), input.size() * sizeof(T), hipMemcpyHostToDevice));
 
         // Launching kernel
-        if(current_arch::wavefront::min_size == ws32)
+        if(current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_exclusive_scan_reduce_wo_init_kernel<T,
@@ -830,7 +830,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ExclusiveReduceScanWoInit)
                 device_output,
                 device_output_reductions);
         }
-        else if(current_arch::wavefront::min_size == ws64)
+        else if(current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_exclusive_scan_reduce_wo_init_kernel<T,
@@ -908,19 +908,19 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
-    if( (logical_warp_size > current_arch::wavefront::min_size) ||
-        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
+    if( (logical_warp_size > current_device_warp_size) ||
+        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_arch::wavefront::min_size);
+            logical_warp_size, block_size, current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -983,7 +983,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
         );
 
         // Launching kernel
-        if (current_arch::wavefront::min_size == ws32)
+        if (current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_scan_kernel<T, block_size_ws32, logical_warp_size>),
@@ -991,7 +991,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, Scan)
                 device_input, device_inclusive_output, device_exclusive_output, init
             );
         }
-        else if (current_arch::wavefront::min_size == ws64)
+        else if (current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_scan_kernel<T, block_size_ws64, logical_warp_size>),
@@ -1066,19 +1066,19 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
-    if( (logical_warp_size > current_arch::wavefront::min_size) ||
-        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
+    if( (logical_warp_size > current_device_warp_size) ||
+        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_arch::wavefront::min_size);
+            logical_warp_size, block_size, current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -1151,7 +1151,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
         );
 
         // Launching kernel
-        if (current_arch::wavefront::min_size == ws32)
+        if (current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_scan_reduce_kernel<T, block_size_ws32, logical_warp_size>),
@@ -1160,7 +1160,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, ScanReduce)
                 device_inclusive_output, device_exclusive_output, device_output_reductions, init
             );
         }
-        else if (current_arch::wavefront::min_size == ws64)
+        else if (current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_scan_reduce_kernel<T, block_size_ws64, logical_warp_size>),
@@ -1246,19 +1246,19 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
             ? rocprim::max<size_t>(ws64, logical_warp_size * 4)
             : rocprim::max<size_t>((ws64/logical_warp_size), 1) * logical_warp_size;
 
-    unsigned int current_arch::wavefront::min_size;
-    HIP_CHECK(::rocprim::host_warp_size(device_id, current_arch::wavefront::min_size));
+    unsigned int current_device_warp_size;
+    HIP_CHECK(::rocprim::host_warp_size(device_id, current_device_warp_size));
 
-    const size_t block_size = current_arch::wavefront::min_size == ws32 ? block_size_ws32 : block_size_ws64;
+    const size_t block_size = current_device_warp_size == ws32 ? block_size_ws32 : block_size_ws64;
     const unsigned int grid_size = 4;
     const size_t size = block_size * grid_size;
 
     // Check if warp size is supported
-    if( (logical_warp_size > current_arch::wavefront::min_size) ||
-        (current_arch::wavefront::min_size != ws32 && current_arch::wavefront::min_size != ws64) ) // Only WarpSize 32 and 64 is supported
+    if( (logical_warp_size > current_device_warp_size) ||
+        (current_device_warp_size != ws32 && current_device_warp_size != ws64) ) // Only WarpSize 32 and 64 is supported
     {
         printf("Unsupported test warp size/computed block size: %zu/%zu. Current device warp size: %u.    Skipping test\n",
-            logical_warp_size, block_size, current_arch::wavefront::min_size);
+            logical_warp_size, block_size, current_device_warp_size);
         GTEST_SKIP();
     }
 
@@ -1309,7 +1309,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
         );
 
         // Launching kernel
-        if (current_arch::wavefront::min_size == ws32)
+        if (current_device_warp_size == ws32)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_inclusive_scan_kernel<T, block_size_ws32, logical_warp_size>),
@@ -1317,7 +1317,7 @@ typed_test_def(RocprimWarpScanTests, name_suffix, InclusiveScanCustomType)
                 device_input, device_output
             );
         }
-        else if (current_arch::wavefront::min_size == ws64)
+        else if (current_device_warp_size == ws64)
         {
             hipLaunchKernelGGL(
                 HIP_KERNEL_NAME(warp_inclusive_scan_kernel<T, block_size_ws64, logical_warp_size>),
