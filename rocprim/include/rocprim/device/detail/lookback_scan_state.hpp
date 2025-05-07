@@ -112,8 +112,13 @@ enum class lookback_scan_determinism
 // a look-back prefix scan. Initially every prefix can be either
 // invalid (padding values) or empty. One thread in a block should
 // later set it to partial, and later to complete.
+#ifndef ROCPRIM_TARGET_UKNOWN
 template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 15)>
 struct lookback_scan_state;
+#else
+template<class T, bool UseSleep = false, bool IsSmall = (sizeof(T) <= 7)>
+struct lookback_scan_state;
+#endif
 
 /// Reduce lanes `0-valid_items` and return the result in lane 0.
 template<typename F, typename T>
