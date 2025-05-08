@@ -80,7 +80,7 @@
 #undef ROCPRIM_TARGET_UNKNOWN
 
 // See https://llvm.org/docs/AMDGPUUsage.html#instructions
-#if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__) || defined(__gfx94_generic__)
+#if defined(__gfx940__) || defined(__gfx941__) || defined(__gfx942__) || defined(__gfx9_4_generic__)
     #define ROCPRIM_TARGET_CDNA3 1
 #elif defined(__gfx90a__)
     #define ROCPRIM_TARGET_CDNA2 1
@@ -95,10 +95,10 @@
     #define ROCPRIM_TARGET_RDNA3 1
 #elif defined(__gfx1030__) || defined(__gfx1031__) || defined(__gfx1032__) || defined(__gfx1033__) \
     || defined(__gfx1034__) || defined(__gfx1035__) || defined(__gfx1036__)                        \
-    || defined(__gfx103_generic__)
+    || defined(__gfx10_3_generic__)
     #define ROCPRIM_TARGET_RDNA2 1
 #elif defined(__gfx1010__) || defined(__gfx1011__) || defined(__gfx1012__) || defined(__gfx1013__) \
-    || defined(__gfx101_generic__)
+    || defined(__gfx10_1_generic__)
     #define ROCPRIM_TARGET_RDNA1 1
 #elif defined(__GFX8__)
     #define ROCPRIM_TARGET_GCN3 1
@@ -106,6 +106,13 @@
     // Double check the build target for typos otherwise please submit an issue or pull request!
     #warning "unknown build target"
     #define ROCPRIM_TARGET_UNKNOWN 1
+#endif
+
+// unknown targets do not support 128-bit atomics.
+#if defined(ROCPRIM_TARGET_UKNOWN)
+    #define ROCPRIM_MAX_ATOMIC_SIZE 8
+#else
+    #define ROCPRIM_MAX_ATOMIC_SIZE 16
 #endif
 
 // DPP is supported only after Volcanic Islands (GFX8+)
