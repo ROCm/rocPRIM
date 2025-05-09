@@ -5,7 +5,7 @@ Full documentation for rocPRIM is available at [https://rocm.docs.amd.com/projec
 ## rocPRIM 3.4.1 for ROCm 6.4.2
 
 ### Upcoming changes
-* The next major release may change the template parameters of warp and block algorithms.
+* Changes to the template parameters of warp and block algorithms will be made in an upcoming release.
 
 ### Deprecations
 * Due to an upcoming compiler change the following warp size-related symbols will be removed in the next major release and are thus marked as deprecated:
