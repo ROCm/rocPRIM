@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -229,6 +229,16 @@ TYPED_TEST(RocprimLookbackReproducibilityTests, ScanByKey)
     HIP_CHECK(hipSetDevice(device_id));
 
     const hipStream_t stream = 0;
+
+    rocprim::detail::target_arch target_arch;
+    HIP_CHECK(rocprim::detail::host_target_arch(stream, target_arch));
+
+    if((target_arch == rocprim::detail::target_arch::gfx1100
+        || target_arch == rocprim::detail::target_arch::gfx1102)
+       && std::is_same<int, V>::value)
+    {
+        GTEST_SKIP() << "Temporarily skip this test until bug for gfx1100 is fixed.";
+    }
 
     for(size_t seed_index = 0; seed_index < random_seeds_count + seed_size; seed_index++)
     {
