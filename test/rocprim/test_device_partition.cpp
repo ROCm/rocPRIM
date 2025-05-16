@@ -22,6 +22,9 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils.hpp"
+#include "../../common/utils_device_ptr.hpp"
+
 // required rocprim headers
 #include <rocprim/device/device_partition.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
@@ -158,10 +161,10 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             HIP_CHECK(rocprim::partition<config>(
                 nullptr,
                 temp_storage_size_bytes,
-                d_input,
-                d_flags,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                d_flags.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 stream,
                 debug_synchronous));
@@ -186,12 +189,12 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
 
             // Run
             HIP_CHECK(rocprim::partition<config>(
-                d_temp_storage,
+                d_temp_storage.get(),
                 temp_storage_size_bytes,
-                d_input,
-                d_flags,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                d_flags.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 stream,
                 debug_synchronous));
@@ -202,19 +205,11 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             }
 
             // Check if number of selected value is as expected_selected
-            unsigned int selected_count_output = 0;
-            HIP_CHECK(hipMemcpy(&selected_count_output,
-                                d_selected_count_output,
-                                sizeof(unsigned int),
-                                hipMemcpyDeviceToHost));
+            unsigned int selected_count_output = d_selected_count_output.load()[0];
             ASSERT_EQ(selected_count_output, expected_selected.size());
 
             // Check if output values are as expected_selected
-            std::vector<U> output(input.size());
-            HIP_CHECK(hipMemcpy(output.data(),
-                                d_output,
-                                output.size() * sizeof(U),
-                                hipMemcpyDeviceToHost));
+            auto output = d_output.load();
 
             std::vector<U> output_rejected;
             for(size_t i = 0; i < expected_rejected.size(); i++)
@@ -224,12 +219,6 @@ TYPED_TEST(RocprimDevicePartitionTests, Flagged)
             }
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected_selected, expected_selected.size()));
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output_rejected, expected_rejected, expected_rejected.size()));
-
-            HIP_CHECK(hipFree(d_input));
-            HIP_CHECK(hipFree(d_flags));
-            HIP_CHECK(hipFree(d_output));
-            HIP_CHECK(hipFree(d_selected_count_output));
-            HIP_CHECK(hipFree(d_temp_storage));
 
             if(TestFixture::use_graphs)
             {
@@ -427,9 +416,9 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             HIP_CHECK(rocprim::partition<config>(
                 nullptr,
                 temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 select_op,
                 stream,
@@ -455,11 +444,11 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
 
             // Run
             HIP_CHECK(rocprim::partition<config>(
-                d_temp_storage,
+                d_temp_storage.get(),
                 temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 select_op,
                 stream,
@@ -474,19 +463,11 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if number of selected value is as expected_selected
-            unsigned int selected_count_output = 0;
-            HIP_CHECK(hipMemcpy(&selected_count_output,
-                                d_selected_count_output,
-                                sizeof(unsigned int),
-                                hipMemcpyDeviceToHost));
+            unsigned int selected_count_output = d_selected_count_output.load()[0];
             ASSERT_EQ(selected_count_output, expected_selected.size());
             
             // Check if output values are as expected_selected
-            std::vector<U> output(input.size());
-            HIP_CHECK(hipMemcpy(output.data(),
-                                d_output,
-                                output.size() * sizeof(U),
-                                hipMemcpyDeviceToHost));
+            const auto output = d_output.load();
 
             std::vector<U> output_rejected;
             for(size_t i = 0; i < expected_rejected.size(); i++)
@@ -496,11 +477,6 @@ TYPED_TEST(RocprimDevicePartitionTests, Predicate)
             }
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected_selected, expected_selected.size()));
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output_rejected, expected_rejected, expected_rejected.size()));
-
-            HIP_CHECK(hipFree(d_input));
-            HIP_CHECK(hipFree(d_output));
-            HIP_CHECK(hipFree(d_selected_count_output));
-            HIP_CHECK(hipFree(d_temp_storage));
 
             if(TestFixture::use_graphs)
             {
@@ -587,10 +563,10 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             HIP_CHECK(rocprim::partition_two_way<config>(
                 nullptr,
                 temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_selected),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_rejected),
-                d_selected_count_output,
+                d_input.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_selected.get()),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_rejected.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 select_op,
                 stream,
@@ -616,12 +592,12 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
 
             // Run
             HIP_CHECK(rocprim::partition_two_way<config>(
-                d_temp_storage,
+                d_temp_storage.get(),
                 temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_selected),
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_rejected),
-                d_selected_count_output,
+                d_input.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_selected.get()),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_rejected.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 select_op,
                 stream,
@@ -636,35 +612,17 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateTwoWay)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if number of selected value is as expected
-            unsigned int selected_count_output = 0;
-            HIP_CHECK(hipMemcpy(&selected_count_output,
-                                d_selected_count_output,
-                                sizeof(unsigned int),
-                                hipMemcpyDeviceToHost));
+            unsigned int selected_count_output = d_selected_count_output.load()[0];
             ASSERT_EQ(selected_count_output, expected_selected.size());
 
             // Check if output values are as expected
-            std::vector<U> selected(input.size());
-            std::vector<U> rejected(input.size());
-            HIP_CHECK(hipMemcpy(selected.data(),
-                                d_selected,
-                                selected.size() * sizeof(U),
-                                hipMemcpyDeviceToHost));
-            HIP_CHECK(hipMemcpy(rejected.data(),
-                                d_rejected,
-                                rejected.size() * sizeof(U),
-                                hipMemcpyDeviceToHost));
+            const auto selected = d_selected.load();
+            const auto rejected = d_rejected.load();
 
             ASSERT_NO_FATAL_FAILURE(
                 test_utils::assert_eq(selected, expected_selected, expected_selected.size()));
             ASSERT_NO_FATAL_FAILURE(
                 test_utils::assert_eq(rejected, expected_rejected, expected_rejected.size()));
-
-            HIP_CHECK(hipFree(d_input));
-            HIP_CHECK(hipFree(d_selected));
-            HIP_CHECK(hipFree(d_rejected));
-            HIP_CHECK(hipFree(d_selected_count_output));
-            HIP_CHECK(hipFree(d_temp_storage));
 
             if(TestFixture::use_graphs)
             {
@@ -778,12 +736,12 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 HIP_CHECK(rocprim::partition_three_way<config>(
                     nullptr,
                     temp_storage_size_bytes,
-                    d_input,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_first_output),
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_second_output),
+                    d_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_first_output.get()),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_second_output.get()),
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(
-                        d_unselected_output),
-                    d_selected_counts,
+                        d_unselected_output.get()),
+                    d_selected_counts.get(),
                     input.size(),
                     first_op,
                     second_op,
@@ -810,14 +768,14 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
 
                 // Run
                 HIP_CHECK(rocprim::partition_three_way<config>(
-                    d_temp_storage,
+                    d_temp_storage.get(),
                     temp_storage_size_bytes,
-                    d_input,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_first_output),
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_second_output),
+                    d_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_first_output.get()),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_second_output.get()),
                     test_utils::wrap_in_identity_iterator<use_identity_iterator>(
-                        d_unselected_output),
-                    d_selected_counts,
+                        d_unselected_output.get()),
+                    d_selected_counts.get(),
                     input.size(),
                     first_op,
                     second_op,
@@ -833,13 +791,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 HIP_CHECK(hipDeviceSynchronize());
 
                 // Check if number of selected value is as expected_selected
-                HIP_CHECK(
-                    hipMemcpy(
-                        selected_counts.data(), d_selected_counts,
-                        sizeof(selected_counts),
-                        hipMemcpyDeviceToHost
-                    )
-                );
+                const auto selected_counts = d_selected_counts.load_to_array<2>();
                 ASSERT_EQ(selected_counts, expected_counts);
 
                 // Check if output values are as expected_selected
@@ -847,14 +799,14 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                     auto result = std::vector<U>(input.size());
                     HIP_CHECK(
                         hipMemcpy(
-                            result.data(), d_first_output,
+                            result.data(), d_first_output.get(),
                             expected_counts[0] * sizeof(result[0]),
                             hipMemcpyDeviceToHost
                         )
                     );
                     HIP_CHECK(
                         hipMemcpy(
-                            result.data() + expected_counts[0], d_second_output,
+                            result.data() + expected_counts[0], d_second_output.get(),
                             expected_counts[1] * sizeof(result[0]),
                             hipMemcpyDeviceToHost
                         )
@@ -862,7 +814,7 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                     HIP_CHECK(
                         hipMemcpy(
                             result.data() + expected_counts[0] + expected_counts[1],
-                            d_unselected_output,
+                            d_unselected_output.get(),
                             (input.size() - expected_counts[0] - expected_counts[1]) * sizeof(result[0]),
                             hipMemcpyDeviceToHost
                         )
@@ -871,13 +823,6 @@ TYPED_TEST(RocprimDevicePartitionTests, PredicateThreeWay)
                 }();
 
                 ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
-
-                HIP_CHECK(hipFree(d_input));
-                HIP_CHECK(hipFree(d_first_output));
-                HIP_CHECK(hipFree(d_second_output));
-                HIP_CHECK(hipFree(d_unselected_output));
-                HIP_CHECK(hipFree(d_selected_counts));
-                HIP_CHECK(hipFree(d_temp_storage));
 
                 if(TestFixture::use_graphs)
                 {

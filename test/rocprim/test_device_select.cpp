@@ -22,6 +22,9 @@
 
 #include "../common_test_header.hpp"
 
+#include "../../common/utils.hpp"
+#include "../../common/utils_device_ptr.hpp"
+
 // required rocprim headers
 #include <rocprim/device/device_select.hpp>
 #include <rocprim/iterator/constant_iterator.hpp>
@@ -142,10 +145,10 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
             HIP_CHECK(rocprim::select(
                 nullptr,
                 temp_storage_size_bytes,
-                d_input,
-                d_flags,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                d_flags.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 stream,
                 TestFixture::debug_synchronous));
@@ -171,19 +174,16 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
             }
 
             // Run
-            HIP_CHECK(
-                rocprim::select(
-                    d_temp_storage,
-                    temp_storage_size_bytes,
-                    d_input,
-                    d_flags,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    d_selected_count_output,
-                    input.size(),
-                    stream,
-                    TestFixture::debug_synchronous
-                )
-            );
+            HIP_CHECK(rocprim::select(
+                d_temp_storage.get(),
+                temp_storage_size_bytes,
+                d_input.get(),
+                d_flags.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
+                input.size(),
+                stream,
+                TestFixture::debug_synchronous));
 
             
             if(TestFixture::use_graphs)
@@ -194,34 +194,12 @@ TYPED_TEST(RocprimDeviceSelectTests, Flagged)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if number of selected value is as expected
-            unsigned int selected_count_output = 0;
-            HIP_CHECK(
-                hipMemcpy(
-                    &selected_count_output, d_selected_count_output,
-                    sizeof(unsigned int),
-                    hipMemcpyDeviceToHost
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+            const auto selected_count_output = d_selected_count_output.load()[0];
             ASSERT_EQ(selected_count_output, expected.size());
 
             // Check if output values are as expected
-            std::vector<U> output(input.size());
-            HIP_CHECK(
-                hipMemcpy(
-                    output.data(), d_output,
-                    output.size() * sizeof(U),
-                    hipMemcpyDeviceToHost
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+            const auto output = d_output.load();
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
-
-            HIP_CHECK(hipFree(d_input));
-            HIP_CHECK(hipFree(d_flags));
-            HIP_CHECK(hipFree(d_output));
-            HIP_CHECK(hipFree(d_selected_count_output));
-            HIP_CHECK(hipFree(d_temp_storage));
 
             if(TestFixture::use_graphs)
             {
@@ -307,9 +285,9 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
             HIP_CHECK(rocprim::select(
                 nullptr,
                 temp_storage_size_bytes,
-                d_input,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 select_op<T>(),
                 stream,
@@ -336,19 +314,16 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
             }
 
             // Run
-            HIP_CHECK(
-                rocprim::select(
-                    d_temp_storage,
-                    temp_storage_size_bytes,
-                    d_input,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    d_selected_count_output,
-                    input.size(),
-                    select_op<T>(),
-                    stream,
-                    debug_synchronous
-                )
-            );
+            HIP_CHECK(rocprim::select(
+                d_temp_storage.get(),
+                temp_storage_size_bytes,
+                d_input.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
+                input.size(),
+                select_op<T>(),
+                stream,
+                debug_synchronous));
 
             
             if(TestFixture::use_graphs)
@@ -359,33 +334,12 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectOp)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if number of selected value is as expected
-            unsigned int selected_count_output = 0;
-            HIP_CHECK(
-                hipMemcpy(
-                    &selected_count_output, d_selected_count_output,
-                    sizeof(unsigned int),
-                    hipMemcpyDeviceToHost
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+            const auto selected_count_output = d_selected_count_output.load()[0];
             ASSERT_EQ(selected_count_output, expected.size());
 
             // Check if output values are as expected
-            std::vector<U> output(input.size());
-            HIP_CHECK(
-                hipMemcpy(
-                    output.data(), d_output,
-                    output.size() * sizeof(U),
-                    hipMemcpyDeviceToHost
-                )
-            );
-            HIP_CHECK(hipDeviceSynchronize());
+            const auto output = d_output.load();
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
-
-            HIP_CHECK(hipFree(d_input));
-            HIP_CHECK(hipFree(d_output));
-            HIP_CHECK(hipFree(d_selected_count_output));
-            HIP_CHECK(hipFree(d_temp_storage));
 
             if(TestFixture::use_graphs)
             {
@@ -465,10 +419,10 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectFlagged)
             HIP_CHECK(rocprim::select(
                 nullptr,
                 temp_storage_size_bytes,
-                d_input,
-                d_flags,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                d_flags.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 select_op<F>(),
                 stream,
@@ -496,12 +450,12 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectFlagged)
 
             // Run
             HIP_CHECK(rocprim::select(
-                d_temp_storage,
+                d_temp_storage.get(),
                 temp_storage_size_bytes,
-                d_input,
-                d_flags,
-                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                d_selected_count_output,
+                d_input.get(),
+                d_flags.get(),
+                test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                d_selected_count_output.get(),
                 input.size(),
                 select_op<F>(),
                 stream,
@@ -515,26 +469,12 @@ TYPED_TEST(RocprimDeviceSelectTests, SelectFlagged)
             HIP_CHECK(hipDeviceSynchronize());
 
             // Check if number of selected value is as expected
-            unsigned int selected_count_output = 0;
-            HIP_CHECK(hipMemcpy(&selected_count_output,
-                                d_selected_count_output,
-                                sizeof(unsigned int),
-                                hipMemcpyDeviceToHost));
+            const auto selected_count_output = d_selected_count_output.load()[0];
             ASSERT_EQ(selected_count_output, expected.size());
 
             // Check if output values are as expected
-            std::vector<U> output(input.size());
-            HIP_CHECK(hipMemcpy(output.data(),
-                                d_output,
-                                output.size() * sizeof(U),
-                                hipMemcpyDeviceToHost));
+            const auto output = d_output.load();
             ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
-
-            HIP_CHECK(hipFree(d_input));
-            HIP_CHECK(hipFree(d_flags));
-            HIP_CHECK(hipFree(d_output));
-            HIP_CHECK(hipFree(d_selected_count_output));
-            HIP_CHECK(hipFree(d_temp_storage));
 
             if(TestFixture::use_graphs)
             {
@@ -637,9 +577,9 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
                 HIP_CHECK(rocprim::unique(
                     nullptr,
                     temp_storage_size_bytes,
-                    d_input,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                    d_selected_count_output,
+                    d_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                    d_selected_count_output.get(),
                     input.size(),
                     op_type(),
                     stream,
@@ -666,19 +606,16 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
                 }
 
                 // Run
-                HIP_CHECK(
-                    rocprim::unique(
-                        d_temp_storage,
-                        temp_storage_size_bytes,
-                        d_input,
-                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output),
-                        d_selected_count_output,
-                        input.size(),
-                        op_type(),
-                        stream,
-                        debug_synchronous
-                    )
-                );
+                HIP_CHECK(rocprim::unique(
+                    d_temp_storage.get(),
+                    temp_storage_size_bytes,
+                    d_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_output.get()),
+                    d_selected_count_output.get(),
+                    input.size(),
+                    op_type(),
+                    stream,
+                    debug_synchronous));
 
                 
                 if(TestFixture::use_graphs)
@@ -689,33 +626,12 @@ TYPED_TEST(RocprimDeviceSelectTests, Unique)
                 HIP_CHECK(hipDeviceSynchronize());
 
                 // Check if number of selected value is as expected
-                unsigned int selected_count_output = 0;
-                HIP_CHECK(
-                    hipMemcpy(
-                        &selected_count_output, d_selected_count_output,
-                        sizeof(unsigned int),
-                        hipMemcpyDeviceToHost
-                    )
-                );
-                HIP_CHECK(hipDeviceSynchronize());
+                const auto selected_count_output = d_selected_count_output.load()[0];
                 ASSERT_EQ(selected_count_output, expected.size());
 
                 // Check if output values are as expected
-                std::vector<U> output(input.size());
-                HIP_CHECK(
-                    hipMemcpy(
-                        output.data(), d_output,
-                        output.size() * sizeof(U),
-                        hipMemcpyDeviceToHost
-                    )
-                );
-                HIP_CHECK(hipDeviceSynchronize());
+                const auto output = d_output.load();
                 ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output, expected, expected.size()));
-
-                HIP_CHECK(hipFree(d_input));
-                HIP_CHECK(hipFree(d_output));
-                HIP_CHECK(hipFree(d_selected_count_output));
-                HIP_CHECK(hipFree(d_temp_storage));
 
                 if(TestFixture::use_graphs)
                 {
@@ -1086,21 +1002,20 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
                 // temp storage
                 size_t temp_storage_size_bytes;
                 // Get size of d_temp_storage
-                HIP_CHECK(
-                    rocprim::unique_by_key(
-                        nullptr,
-                        temp_storage_size_bytes,
-                        d_keys_input,
-                        d_values_input,
-                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_keys_output),
-                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_values_output),
-                        d_selected_count_output,
-                        input_keys.size(),
-                        op_type(),
-                        stream,
-                        debug_synchronous
-                    )
-                );
+                HIP_CHECK(rocprim::unique_by_key(
+                    nullptr,
+                    temp_storage_size_bytes,
+                    d_keys_input.get(),
+                    d_values_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_keys_output.get()),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_values_output.get()),
+                    d_selected_count_output.get(),
+                    input_keys.size(),
+                    op_type(),
+                    stream,
+                    debug_synchronous));
 
                 HIP_CHECK(hipDeviceSynchronize());
 
@@ -1123,22 +1038,20 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
                 }
 
                 // Run
-                HIP_CHECK(
-                    rocprim::unique_by_key(
-                        d_temp_storage,
-                        temp_storage_size_bytes,
-                        d_keys_input,
-                        d_values_input,
-                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_keys_output),
-                        test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_values_output),
-                        d_selected_count_output,
-                        input_keys.size(),
-                        op_type(),
-                        stream,
-                        debug_synchronous
-                    )
-                );
-
+                HIP_CHECK(rocprim::unique_by_key(
+                    d_temp_storage.get(),
+                    temp_storage_size_bytes,
+                    d_keys_input.get(),
+                    d_values_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_keys_output.get()),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_values_output.get()),
+                    d_selected_count_output.get(),
+                    input_keys.size(),
+                    op_type(),
+                    stream,
+                    debug_synchronous));
                 
                 if(TestFixture::use_graphs)
                 {
@@ -1148,44 +1061,16 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKey)
                 HIP_CHECK(hipDeviceSynchronize());
 
                 // Check if number of selected value is as expected
-                unsigned int selected_count_output = 0;
-                HIP_CHECK(
-                    hipMemcpy(
-                        &selected_count_output, d_selected_count_output,
-                        sizeof(unsigned int),
-                        hipMemcpyDeviceToHost
-                    )
-                );
-                HIP_CHECK(hipDeviceSynchronize());
+                const auto selected_count_output = d_selected_count_output.load()[0];
                 ASSERT_EQ(selected_count_output, expected_keys.size());
 
                 // Check if outputs are as expected
-                std::vector<output_key_type> output_keys(input_keys.size());
-                HIP_CHECK(
-                    hipMemcpy(
-                        output_keys.data(), d_keys_output,
-                        output_keys.size() * sizeof(output_keys[0]),
-                        hipMemcpyDeviceToHost
-                    )
-                );
-                std::vector<output_value_type> output_values(input_values.size());
-                HIP_CHECK(
-                    hipMemcpy(
-                        output_values.data(), d_values_output,
-                        output_values.size() * sizeof(output_values[0]),
-                        hipMemcpyDeviceToHost
-                    )
-                );
-                HIP_CHECK(hipDeviceSynchronize());
-                ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output_keys, expected_keys, expected_keys.size()));
-                ASSERT_NO_FATAL_FAILURE(test_utils::assert_eq(output_values, expected_values, expected_values.size()));
-
-                HIP_CHECK(hipFree(d_keys_input));
-                HIP_CHECK(hipFree(d_values_input));
-                HIP_CHECK(hipFree(d_keys_output));
-                HIP_CHECK(hipFree(d_values_output));
-                HIP_CHECK(hipFree(d_selected_count_output));
-                HIP_CHECK(hipFree(d_temp_storage));
+                const auto output_keys   = d_keys_output.load();
+                const auto output_values = d_values_output.load();
+                ASSERT_NO_FATAL_FAILURE(
+                    test_utils::assert_eq(output_keys, expected_keys, expected_keys.size()));
+                ASSERT_NO_FATAL_FAILURE(
+                    test_utils::assert_eq(output_values, expected_values, expected_values.size()));
 
                 if(TestFixture::use_graphs)
                 {
@@ -1295,11 +1180,13 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
                 HIP_CHECK(rocprim::unique_by_key(
                     nullptr,
                     temp_storage_size_bytes,
-                    d_keys_input,
-                    d_values_input,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_keys_input),
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_values_input),
-                    d_selected_count_output,
+                    d_keys_input.get(),
+                    d_values_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_keys_input.get()),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_values_input.get()),
+                    d_selected_count_output.get(),
                     input_keys.size(),
                     op_type(),
                     stream,
@@ -1327,13 +1214,15 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
 
                 // Run
                 HIP_CHECK(rocprim::unique_by_key(
-                    d_temp_storage,
+                    d_temp_storage.get(),
                     temp_storage_size_bytes,
-                    d_keys_input,
-                    d_values_input,
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_keys_input),
-                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(d_values_input),
-                    d_selected_count_output,
+                    d_keys_input.get(),
+                    d_values_input.get(),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_keys_input.get()),
+                    test_utils::wrap_in_identity_iterator<use_identity_iterator>(
+                        d_values_input.get()),
+                    d_selected_count_output.get(),
                     input_keys.size(),
                     op_type(),
                     stream,
@@ -1348,35 +1237,16 @@ TYPED_TEST(RocprimDeviceUniqueByKeyTests, UniqueByKeyAlias)
                 HIP_CHECK(hipDeviceSynchronize());
 
                 // Check if number of selected value is as expected
-                unsigned int selected_count_output = 0;
-                HIP_CHECK(hipMemcpy(&selected_count_output,
-                                    d_selected_count_output,
-                                    sizeof(unsigned int),
-                                    hipMemcpyDeviceToHost));
-                HIP_CHECK(hipDeviceSynchronize());
+                const auto selected_count_output = d_selected_count_output.load()[0];
                 ASSERT_EQ(selected_count_output, expected_keys.size());
 
                 // Check if outputs are as expected
-                std::vector<output_key_type> output_keys(input_keys.size());
-                HIP_CHECK(hipMemcpy(output_keys.data(),
-                                    d_keys_input,
-                                    output_keys.size() * sizeof(output_keys[0]),
-                                    hipMemcpyDeviceToHost));
-                std::vector<output_value_type> output_values(input_values.size());
-                HIP_CHECK(hipMemcpy(output_values.data(),
-                                    d_values_input,
-                                    output_values.size() * sizeof(output_values[0]),
-                                    hipMemcpyDeviceToHost));
-                HIP_CHECK(hipDeviceSynchronize());
+                const auto output_keys   = d_keys_input.load();
+                const auto output_values = d_values_input.load();
                 ASSERT_NO_FATAL_FAILURE(
                     test_utils::assert_eq(output_keys, expected_keys, expected_keys.size()));
                 ASSERT_NO_FATAL_FAILURE(
                     test_utils::assert_eq(output_values, expected_values, expected_values.size()));
-
-                HIP_CHECK(hipFree(d_keys_input));
-                HIP_CHECK(hipFree(d_values_input));
-                HIP_CHECK(hipFree(d_selected_count_output));
-                HIP_CHECK(hipFree(d_temp_storage));
 
                 if(TestFixture::use_graphs)
                 {
