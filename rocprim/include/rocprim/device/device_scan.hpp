@@ -403,8 +403,8 @@ inline auto scan_impl(void*               temporary_storage,
 /// requirements of a C++ OutputIterator concept. It can be a simple pointer type.
 /// \tparam BinaryFunction type of binary function used for scan. Default type
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
-/// \tparam AccType accumulator type used to propagate the scanned values. Default type
-/// is value type of the input iterator.
+/// \tparam AccType accumulator type used to propagate the scanned values. The default is the type that
+/// is returned by a function of type BinaryFunction when it's is passed an InputIterator value.
 ///
 /// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -495,7 +495,7 @@ template<class Config = default_config,
          class OutputIterator,
          class BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
-         class AccType = typename std::iterator_traits<InputIterator>::value_type>
+         class AccType = rocprim::invoke_result_binary_op_t<typename std::iterator_traits<InputIterator>::value_type, BinaryFunction>>
 inline hipError_t inclusive_scan(void*             temporary_storage,
                                  size_t&           storage_size,
                                  InputIterator     input,
@@ -505,23 +505,27 @@ inline hipError_t inclusive_scan(void*             temporary_storage,
                                  const hipStream_t stream            = 0,
                                  bool              debug_synchronous = false)
 {
+    // AccType may be const or a reference. Get the non-const, non-reference type.
+    // This is necessary because we may need to assign to instances of this type or create pointers to it.
+    using safe_acc_type = typename std::remove_const<typename std::remove_reference<AccType>::type>::type;
+
     // input_type() is a dummy initial value (not used)
     return detail::scan_impl<detail::lookback_scan_determinism::default_determinism,
                              false,
                              Config,
                              InputIterator,
                              OutputIterator,
-                             AccType,
+                             safe_acc_type,
                              BinaryFunction,
-                             AccType>(temporary_storage,
-                                      storage_size,
-                                      input,
-                                      output,
-                                      AccType{},
-                                      size,
-                                      scan_op,
-                                      stream,
-                                      debug_synchronous);
+                             safe_acc_type>(temporary_storage,
+                                            storage_size,
+                                            input,
+                                            output,
+                                            safe_acc_type{},
+                                            size,
+                                            scan_op,
+                                            stream,
+                                            debug_synchronous);
 }
 
 /// \brief Bitwise-reproducible parallel inclusive scan primitive for device level.
@@ -536,7 +540,7 @@ template<class Config = default_config,
          class OutputIterator,
          class BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
-         class AccType = typename std::iterator_traits<InputIterator>::value_type>
+         class AccType = rocprim::invoke_result_binary_op_t<typename std::iterator_traits<InputIterator>::value_type, BinaryFunction>>
 inline hipError_t deterministic_inclusive_scan(void*             temporary_storage,
                                                size_t&           storage_size,
                                                InputIterator     input,
@@ -546,22 +550,26 @@ inline hipError_t deterministic_inclusive_scan(void*             temporary_stora
                                                const hipStream_t stream  = 0,
                                                bool              debug_synchronous = false)
 {
+    // AccType may be const or a reference. Get the non-const, non-reference type.
+    // This is necessary because we may need to assign to instances of this type or create pointers to it.
+    using safe_acc_type = typename std::remove_const<typename std::remove_reference<AccType>::type>::type;
+
     return detail::scan_impl<detail::lookback_scan_determinism::deterministic,
                              false,
                              Config,
                              InputIterator,
                              OutputIterator,
-                             AccType,
+                             safe_acc_type,
                              BinaryFunction,
-                             AccType>(temporary_storage,
-                                      storage_size,
-                                      input,
-                                      output,
-                                      AccType{},
-                                      size,
-                                      scan_op,
-                                      stream,
-                                      debug_synchronous);
+                             safe_acc_type>(temporary_storage,
+                                            storage_size,
+                                            input,
+                                            output,
+                                            safe_acc_type{},
+                                            size,
+                                            scan_op,
+                                            stream,
+                                            debug_synchronous);
 }
 
 /// \brief Parallel exclusive scan primitive for device level.
@@ -590,8 +598,8 @@ inline hipError_t deterministic_inclusive_scan(void*             temporary_stora
 /// \tparam InitValueType type of the initial value.
 /// \tparam BinaryFunction type of binary function used for scan. Default type
 /// is \p rocprim::plus<T>, where \p T is a \p value_type of \p InputIterator.
-/// \tparam AccType accumulator type used to propagate the scanned values. Default type
-/// is 'InitValueType', unless it's 'rocprim::future_value'. Then it will be the wrapped input type.
+/// \tparam AccType accumulator type used to propagate the scanned values. The default is the type that
+/// is returned by a function of type BinaryFunction when it's is passed a value of type InitValueType.
 ///
 /// \param [in] temporary_storage pointer to a device-accessible temporary storage. When
 /// a null pointer is passed, the required allocation size (in bytes) is written to
@@ -661,7 +669,7 @@ template<class Config = default_config,
          class InitValueType,
          class BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
-         class AccType = detail::input_type_t<InitValueType>>
+         class AccType = rocprim::invoke_result_binary_op_t<rocprim::detail::input_type_t<InitValueType>, BinaryFunction>>
 inline hipError_t exclusive_scan(void*               temporary_storage,
                                  size_t&             storage_size,
                                  InputIterator       input,
@@ -672,6 +680,10 @@ inline hipError_t exclusive_scan(void*               temporary_storage,
                                  const hipStream_t   stream            = 0,
                                  bool                debug_synchronous = false)
 {
+    // AccType may be const or a reference. Get the non-const, non-reference type.
+    // This is necessary because we may need to assign to instances of this type or create pointers to it.
+    using safe_acc_type = typename std::remove_const<typename std::remove_reference<AccType>::type>::type;
+
     return detail::scan_impl<detail::lookback_scan_determinism::default_determinism,
                              true,
                              Config,
@@ -679,15 +691,15 @@ inline hipError_t exclusive_scan(void*               temporary_storage,
                              OutputIterator,
                              InitValueType,
                              BinaryFunction,
-                             AccType>(temporary_storage,
-                                      storage_size,
-                                      input,
-                                      output,
-                                      initial_value,
-                                      size,
-                                      scan_op,
-                                      stream,
-                                      debug_synchronous);
+                             safe_acc_type>(temporary_storage,
+                                            storage_size,
+                                            input,
+                                            output,
+                                            initial_value,
+                                            size,
+                                            scan_op,
+                                            stream,
+                                            debug_synchronous);
 }
 
 /// \brief Bitwise-reproducible parallel exclusive scan primitive for device level.
@@ -703,7 +715,7 @@ template<class Config = default_config,
          class InitValueType,
          class BinaryFunction
          = ::rocprim::plus<typename std::iterator_traits<InputIterator>::value_type>,
-         class AccType = detail::input_type_t<InitValueType>>
+         class AccType = rocprim::invoke_result_binary_op_t<rocprim::detail::input_type_t<InitValueType>, BinaryFunction>>
 inline hipError_t deterministic_exclusive_scan(void*               temporary_storage,
                                                size_t&             storage_size,
                                                InputIterator       input,
@@ -714,6 +726,10 @@ inline hipError_t deterministic_exclusive_scan(void*               temporary_sto
                                                const hipStream_t   stream  = 0,
                                                bool                debug_synchronous = false)
 {
+    // AccType may be const or a reference. Get the non-const, non-reference type.
+    // This is necessary because we may need to assign to instances of this type or create pointers to it.
+    using safe_acc_type = typename std::remove_const<typename std::remove_reference<AccType>::type>::type;
+
     return detail::scan_impl<detail::lookback_scan_determinism::deterministic,
                              true,
                              Config,
@@ -721,15 +737,15 @@ inline hipError_t deterministic_exclusive_scan(void*               temporary_sto
                              OutputIterator,
                              InitValueType,
                              BinaryFunction,
-                             AccType>(temporary_storage,
-                                      storage_size,
-                                      input,
-                                      output,
-                                      initial_value,
-                                      size,
-                                      scan_op,
-                                      stream,
-                                      debug_synchronous);
+                             safe_acc_type>(temporary_storage,
+                                            storage_size,
+                                            input,
+                                            output,
+                                            initial_value,
+                                            size,
+                                            scan_op,
+                                            stream,
+                                            debug_synchronous);
 }
 
 /// @}
