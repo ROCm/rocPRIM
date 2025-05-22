@@ -2,6 +2,19 @@
 
 Full documentation for rocPRIM is available at [https://rocm.docs.amd.com/projects/rocPRIM/en/latest/](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/).
 
+## rocPRIM 3.4.1 for ROCm 6.4.2
+
+### Upcoming changes
+* Changes to the template parameters of warp and block algorithms will be made in an upcoming release.
+
+### Deprecations
+* Due to an upcoming compiler change the following warp size-related symbols will be removed in the next major release and are thus marked as deprecated:
+  * `rocprim::device_warp_size()`
+    * For compile-time constants, this is replaced with `rocprim::arch::wavefront::min_size()` and `rocprim::arch::wavefront::max_size()`. Use this when allocating global or shared memory.
+    * For run-time constants, this is replaced with `rocprim::arch::wavefront::size().`
+  * `rocprim::warp_size()`
+  * `ROCPRIM_WAVEFRONT_SIZE
+  
 ## rocPRIM 3.4.0 for ROCm 6.4.0
 
 ### Added

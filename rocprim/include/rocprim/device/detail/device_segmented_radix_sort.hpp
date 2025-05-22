@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -737,7 +737,7 @@ void segmented_sort(KeysInputIterator keys_input,
     >;
     using long_radix_helper_type = segmented_radix_sort_helper<key_type,
                                                                value_type,
-                                                               ::rocprim::device_warp_size(),
+                                                               ::rocprim::arch::wavefront::min_size(),
                                                                block_size,
                                                                items_per_thread,
                                                                long_radix_bits,
@@ -864,7 +864,7 @@ void segmented_sort_large(KeysInputIterator keys_input,
     >;
     using long_radix_helper_type = segmented_radix_sort_helper<key_type,
                                                                value_type,
-                                                               ::rocprim::device_warp_size(),
+                                                               ::rocprim::arch::wavefront::min_size(),
                                                                block_size,
                                                                items_per_thread,
                                                                long_radix_bits,

@@ -79,14 +79,14 @@ BEGIN_ROCPRIM_NAMESPACE
 template<
     class T,
     unsigned int ItemsPerThread,
-    unsigned int WarpSize = ::rocprim::device_warp_size()
+    unsigned int WarpSize = ::rocprim::arch::wavefront::min_size()
 >
 class warp_exchange
 {
     static_assert(::rocprim::detail::is_power_of_two(WarpSize),
                   "Logical warp size must be a power of two.");
     ROCPRIM_DETAIL_DEVICE_STATIC_ASSERT(
-        WarpSize <= ::rocprim::device_warp_size(),
+        WarpSize <= ::rocprim::arch::wavefront::min_size(),
         "Logical warp size cannot be larger than physical warp size.");
 
     struct storage_type_
@@ -155,7 +155,7 @@ class warp_exchange
         blocked_striped_shuffle_efficient_impl(const T (&input)[ItemsPerThread],
                                                U (&output)[ItemsPerThread])
     {
-        static constexpr bool IS_ARCH_WARP = WarpSize == ::rocprim::device_warp_size();
+        static constexpr bool IS_ARCH_WARP = WarpSize == ::rocprim::arch::wavefront::min_size();
         const unsigned int    flat_lane_id = ::rocprim::detail::logical_lane_id<WarpSize>();
         const unsigned int    lane_id = IS_ARCH_WARP ? flat_lane_id : (flat_lane_id % WarpSize);
         T                     temp[ItemsPerThread];

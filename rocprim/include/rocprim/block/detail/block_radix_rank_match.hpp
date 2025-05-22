@@ -30,6 +30,7 @@
 
 #include "../block_scan.hpp"
 #include "../config.hpp"
+#include "rocprim/intrinsics/arch.hpp"
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -57,7 +58,7 @@ class block_radix_rank_match
     struct unpadded_config
     {
         static constexpr unsigned int warps
-            = ::rocprim::detail::ceiling_div(block_size, device_warp_size());
+            = ::rocprim::detail::ceiling_div(block_size, arch::wavefront::min_size());
     };
 
     struct padded_config
