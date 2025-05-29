@@ -18,6 +18,9 @@ develop performant GPU-accelerated code on AMD ROCm platforms.
 * Visual Studio 2019 with Clang support (HIP on Windows only)
 * Strawberry Perl (HIP on Windows only)
 
+
+
+
 ## Documentation
 
 > [!NOTE]
