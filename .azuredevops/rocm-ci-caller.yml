@@ -4,14 +4,22 @@ pr:
     include:
       - release-staging/rocm-rel-7.0
   
-variables:  
-  REPOSITORY_NAME: '$(Build.Repository.Name)'  
-  HEAD_SHA: '$(system.pullRequest.sourceCommitId)'
-  PR_NUM: '$(system.pullRequest.pullRequestNumber)' 
-  PR_URL: '$(system.pullRequest.sourceRepositoryUri)/pull/$(PR_NUM)'
-  BASE_REF: '$(system.pullRequest.TargetBranch)'
-  EVENT_TYPE: 'pull_request'
-  GH_PAT: '$(svc_acc_org_secret)'  
+variables:
+  - group: internal
+  - name: REPOSITORY_NAME
+    value: '$(Build.Repository.Name)'  
+  - name: HEAD_SHA
+    value: '$(system.pullRequest.sourceCommitId)'
+  - name: PR_NUM
+    value: '$(system.pullRequest.pullRequestNumber)' 
+  - name: PR_URL
+    value: '$(system.pullRequest.sourceRepositoryUri)/pull/$(PR_NUM)'
+  - name: BASE_REF
+    value: '$(system.pullRequest.TargetBranch)'
+  - name: EVENT_TYPE
+    value: 'pull_request'
+  - name: GH_PAT
+    value: '$(svc_acc_org_secret)'  
 jobs:  
 - job: Trigger_Pipeline 
   displayName: 'Trigger Pipeline'
