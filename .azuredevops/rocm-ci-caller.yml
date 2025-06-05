@@ -30,6 +30,7 @@ jobs:
           git clone $(gh_repo)
     displayName: Checkout Code
   - script: |
+          rm -rf $(repo_name)
           set -e  
           echo "Calling jenkins_api.py for PR #$(PR_NUM)"
           cd $(repo_name)
@@ -51,8 +52,7 @@ jobs:
               -ghpat '$(GH_PAT)' \
               -br   '$(BASE_REF)' \
               -et   '$(EVENT_TYPE)'" > /dev/null 2>&1
-          cd ..
-          rm -rf $(repo_name)
+
     displayName: Invoke jenkins_api.py in Docker  
     env:  
       svc_acc_org_secret: $(svc_acc_org_secret)
