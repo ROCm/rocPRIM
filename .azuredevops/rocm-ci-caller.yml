@@ -27,10 +27,10 @@ jobs:
   steps:
   - checkout: none
   - script: |
+          rm -rf $(repo_name)
           git clone $(gh_repo)
     displayName: Checkout Code
   - script: |
-          rm -rf $(repo_name)
           set -e  
           echo "Calling jenkins_api.py for PR #$(PR_NUM)"
           cd $(repo_name)
