@@ -37,6 +37,8 @@
 #include "../config_types.hpp"
 #include "device_config_helper.hpp"
 #include "lookback_scan_state.hpp"
+#include "ordered_block_id.hpp"
+#include "rocprim/intrinsics/thread.hpp"
 #include "rocprim/type_traits.hpp"
 #include "rocprim/types/tuple.hpp"
 
@@ -949,18 +951,19 @@ template<select_method SelectMethod,
          class OffsetLookbackScanState,
          class... UnaryPredicates>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
-    partition_kernel_impl(KeyIterator             keys_input,
-                          ValueIterator           values_input,
-                          FlagIterator            flags,
-                          OutputKeyIterator       keys_output,
-                          OutputValueIterator     values_output,
-                          size_t*                 selected_count,
-                          size_t*                 prev_selected_count,
-                          size_t                  prev_processed,
-                          const size_t            total_size,
-                          InequalityOp            inequality_op,
-                          OffsetLookbackScanState offset_scan_state,
-                          const unsigned int      number_of_blocks,
+    partition_kernel_impl(KeyIterator                keys_input,
+                          ValueIterator              values_input,
+                          FlagIterator               flags,
+                          OutputKeyIterator          keys_output,
+                          OutputValueIterator        values_output,
+                          size_t*                    selected_count,
+                          size_t*                    prev_selected_count,
+                          size_t                     prev_processed,
+                          const size_t               total_size,
+                          InequalityOp               inequality_op,
+                          OffsetLookbackScanState    offset_scan_state,
+                          const unsigned int         number_of_blocks,
+                          ordered_block_id<uint32_t> block_id,
                           UnaryPredicates... predicates)
         -> std::enable_if_t<is_lookback_kernel_runnable<OffsetLookbackScanState>()>
 {
@@ -1001,6 +1004,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     using raw_exchange_keys_storage_type = typename detail::raw_storage<exchange_keys_storage_type>;
     using raw_exchange_values_storage_type = typename detail::raw_storage<exchange_values_storage_type>;
     ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP
+    using ordered_block_id = ::rocprim::detail::ordered_block_id<uint32_t>;
 
     using is_selected_type = std::conditional_t<
         sizeof...(UnaryPredicates) == 1,
@@ -1016,13 +1020,16 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
         typename block_load_flag_type::storage_type         load_flags;
         typename block_discontinuity_key_type::storage_type discontinuity_values;
         typename block_scan_offset_type::storage_type       scan_offsets;
+        typename ordered_block_id::storage_type             block_id;
     } storage;
 
     size_t prev_selected_count_values[sizeof...(UnaryPredicates)]{};
     load_selected_count(prev_selected_count, prev_selected_count_values);
 
-    const auto         flat_block_thread_id = ::rocprim::detail::block_thread_id<0>();
-    const auto         flat_block_id        = ::rocprim::detail::block_id<0>();
+    const auto flat_block_thread_id = ::rocprim::detail::block_thread_id<0>();
+    const auto flat_block_id        = block_id.get(flat_block_thread_id, storage.block_id);
+    ::rocprim::syncthreads(); // sync threads to reuse shared memory
+
     const auto         block_offset         = flat_block_id * items_per_block;
     const unsigned int valid_in_global_last_block
         = total_size - prev_processed - items_per_block * (number_of_blocks - 1);
