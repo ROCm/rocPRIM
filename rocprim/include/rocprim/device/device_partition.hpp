@@ -59,18 +59,19 @@ template<select_method SelectMethod,
          class OffsetLookbackScanState,
          class... UnaryPredicates>
 ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void partition_kernel(
-    KeyIterator             keys_input,
-    ValueIterator           values_input,
-    FlagIterator            flags,
-    OutputKeyIterator       keys_output,
-    OutputValueIterator     values_output,
-    size_t*                 selected_count,
-    size_t*                 prev_selected_count,
-    size_t                  prev_processed,
-    const size_t            total_size,
-    InequalityOp            inequality_op,
-    OffsetLookbackScanState offset_scan_state,
-    const unsigned int      number_of_blocks,
+    KeyIterator                        keys_input,
+    ValueIterator                      values_input,
+    FlagIterator                       flags,
+    OutputKeyIterator                  keys_output,
+    OutputValueIterator                values_output,
+    size_t*                            selected_count,
+    size_t*                            prev_selected_count,
+    size_t                             prev_processed,
+    const size_t                       total_size,
+    InequalityOp                       inequality_op,
+    OffsetLookbackScanState            offset_scan_state,
+    const unsigned int                 number_of_blocks,
+    detail::ordered_block_id<uint32_t> block_id,
     UnaryPredicates... predicates)
 {
     partition_kernel_impl<SelectMethod, OnlySelected, Config>(keys_input,
@@ -85,6 +86,7 @@ ROCPRIM_KERNEL __launch_bounds__(Config::block_size) void partition_kernel(
                                                               inequality_op,
                                                               offset_scan_state,
                                                               number_of_blocks,
+                                                              block_id,
                                                               predicates...);
 }
 
@@ -189,6 +191,8 @@ hipError_t partition_impl(void * temporary_storage,
         return layout_result;
     }
 
+    unsigned int* block_id_pool;
+
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
@@ -199,11 +203,14 @@ hipError_t partition_impl(void * temporary_storage,
             // simultaneously.
             // They have the same base type, so there is no padding between the types.
             detail::temp_storage::ptr_aligned_array(&selected_count, selected_count_size),
-            detail::temp_storage::ptr_aligned_array(&prev_selected_count, selected_count_size)));
+            detail::temp_storage::ptr_aligned_array(&prev_selected_count, selected_count_size),
+            detail::temp_storage::ptr_aligned_array(&block_id_pool, 1)));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return partition_result;
     }
+
+    auto block_id = detail::ordered_block_id<unsigned int>::create(block_id_pool);
 
     // Start point for time measurements
     std::chrono::high_resolution_clock::time_point start;
@@ -300,6 +307,12 @@ hipError_t partition_impl(void * temporary_storage,
 
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_offset_scan_state_kernel", current_number_of_blocks, start)
 
+        result = hipMemsetAsync(block_id_pool, 0, sizeof(unsigned int), stream);
+        if(result != hipSuccess)
+        {
+            return result;
+        }
+
         if(debug_synchronous) start = std::chrono::high_resolution_clock::now();
 
         grid_size = current_number_of_blocks;
@@ -324,6 +337,7 @@ hipError_t partition_impl(void * temporary_storage,
                 inequality_op,
                 offset_scan_state_with_sleep,
                 current_number_of_blocks,
+                block_id,
                 predicates...);
         } else
         {
@@ -345,6 +359,7 @@ hipError_t partition_impl(void * temporary_storage,
                 inequality_op,
                 offset_scan_state,
                 current_number_of_blocks,
+                block_id,
                 predicates...);
         }
 
