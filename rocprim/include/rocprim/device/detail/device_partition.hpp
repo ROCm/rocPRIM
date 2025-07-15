@@ -963,7 +963,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                           InequalityOp               inequality_op,
                           OffsetLookbackScanState    offset_scan_state,
                           const unsigned int         number_of_blocks,
-                          ordered_block_id<uint32_t> block_id,
+                          block_id_wrapper<uint32_t> block_id,
                           UnaryPredicates... predicates)
         -> std::enable_if_t<is_lookback_kernel_runnable<OffsetLookbackScanState>()>
 {
@@ -1003,8 +1003,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_WITH_PUSH
     using raw_exchange_keys_storage_type = typename detail::raw_storage<exchange_keys_storage_type>;
     using raw_exchange_values_storage_type = typename detail::raw_storage<exchange_values_storage_type>;
-    ROCPRIM_DETAIL_SUPPRESS_DEPRECATION_POP
-    using ordered_block_id = ::rocprim::detail::ordered_block_id<uint32_t>;
+    using ordered_block_id = ::rocprim::detail::block_id_wrapper<uint32_t>;
 
     using is_selected_type = std::conditional_t<
         sizeof...(UnaryPredicates) == 1,
@@ -1027,8 +1026,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     load_selected_count(prev_selected_count, prev_selected_count_values);
 
     const auto flat_block_thread_id = ::rocprim::detail::block_thread_id<0>();
-    const auto flat_block_id        = block_id.get(flat_block_thread_id, storage.block_id);
-    ::rocprim::syncthreads(); // sync threads to reuse shared memory
+    const auto flat_block_id = block_id.get(flat_block_thread_id, storage.block_id);
 
     const auto         block_offset         = flat_block_id * items_per_block;
     const unsigned int valid_in_global_last_block

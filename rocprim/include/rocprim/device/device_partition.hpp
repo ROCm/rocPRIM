@@ -72,7 +72,7 @@ void partition_kernel(KeyIterator                        keys_input,
                       InequalityOp                       inequality_op,
                       OffsetLookbackScanState            offset_scan_state,
                       const unsigned int                 number_of_blocks,
-                      detail::ordered_block_id<uint32_t> block_id,
+                      detail::block_id_wrapper<uint32_t> block_id,
                       UnaryPredicates... predicates)
 {
     partition_kernel_impl<SelectMethod, OnlySelected, Config>(keys_input,
@@ -191,7 +191,9 @@ inline hipError_t partition_impl(void*                       temporary_storage,
         return result;
     }
 
-    unsigned int* block_id_pool = nullptr;
+    using block_id_wrapper_type = block_id_wrapper<uint32_t>;
+
+    block_id_wrapper_type::id_type* block_id_pool = nullptr;
 
     const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
@@ -204,13 +206,14 @@ inline hipError_t partition_impl(void*                       temporary_storage,
             // They have the same base type, so there is no padding between the types.
             detail::temp_storage::ptr_aligned_array(&selected_count, selected_count_size),
             detail::temp_storage::ptr_aligned_array(&prev_selected_count, selected_count_size),
-            detail::temp_storage::ptr_aligned_array(&block_id_pool, 1)));
+            temp_storage::make_partition(&block_id_pool,
+                                         block_id_wrapper_type::get_temp_storage_layout())));
     if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return result;
     }
 
-    auto block_id = detail::ordered_block_id<unsigned int>::create(block_id_pool);
+    auto block_id = block_id_wrapper_type::create(block_id_pool);
 
     // Start point for time measurements
     std::chrono::steady_clock::time_point start;
@@ -310,7 +313,7 @@ inline hipError_t partition_impl(void*                       temporary_storage,
                                                     current_number_of_blocks,
                                                     start);
 
-        result = hipMemsetAsync(block_id_pool, 0, sizeof(unsigned int), stream);
+        result = block_id.reset_from_host(stream);
 
         if(result != hipSuccess)
         {

@@ -145,6 +145,11 @@
     #define ROCPRIM_THREAD_STORE_USE_CACHE_MODIFIERS 1
 #endif
 
+#if defined(ROCPRIM_ENFORCE_BLOCK_ORDER)
+    #define ROCPRIM_ENFORCE_BLOCK_ORDER 1
+#else
+    #define ROCPRIM_ENFORCE_BLOCK_ORDER 0
+#endif
 
 // Defines targeted AMD architecture. Supported values:
 // * 803 (gfx803)
