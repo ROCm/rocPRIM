@@ -85,7 +85,7 @@ struct ordered_block_id
     id_type* id;
 };
 
-template<class T = unsigned int, bool UsingOrderedBlockId = ROCPRIM_ENFORCE_BLOCK_ORDER>
+template<class T = unsigned int, bool UsingOrderedBlockId = false>
 struct block_id_wrapper;
 
 template<class T>
