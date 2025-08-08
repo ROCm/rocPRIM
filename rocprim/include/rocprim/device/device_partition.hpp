@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -58,22 +58,23 @@ template<select_method SelectMethod,
          class OutputValueIterator,
          class InequalityOp,
          class OffsetLookbackScanState,
+         class BlockIdWrapper,
          class... UnaryPredicates>
-ROCPRIM_KERNEL
-    __launch_bounds__(device_params<Config>().kernel_config.block_size) void partition_kernel(
-        KeyIterator             keys_input,
-        ValueIterator           values_input,
-        FlagIterator            flags,
-        OutputKeyIterator       keys_output,
-        OutputValueIterator     values_output,
-        size_t*                 selected_count,
-        size_t*                 prev_selected_count,
-        size_t                  prev_processed,
-        const size_t            total_size,
-        InequalityOp            inequality_op,
-        OffsetLookbackScanState offset_scan_state,
-        const unsigned int      number_of_blocks,
-        UnaryPredicates... predicates)
+ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().kernel_config.block_size)
+void partition_kernel(KeyIterator             keys_input,
+                      ValueIterator           values_input,
+                      FlagIterator            flags,
+                      OutputKeyIterator       keys_output,
+                      OutputValueIterator     values_output,
+                      size_t*                 selected_count,
+                      size_t*                 prev_selected_count,
+                      size_t                  prev_processed,
+                      const size_t            total_size,
+                      InequalityOp            inequality_op,
+                      OffsetLookbackScanState offset_scan_state,
+                      const unsigned int      number_of_blocks,
+                      BlockIdWrapper          block_id,
+                      UnaryPredicates... predicates)
 {
     partition_kernel_impl<SelectMethod, OnlySelected, Config>(keys_input,
                                                               values_input,
@@ -87,6 +88,7 @@ ROCPRIM_KERNEL
                                                               inequality_op,
                                                               offset_scan_state,
                                                               number_of_blocks,
+                                                              block_id,
                                                               predicates...);
 }
 
@@ -101,8 +103,8 @@ ROCPRIM_KERNEL
         std::cout << " " << d.count() * 1000 << " ms" << '\n'; \
     }
 
-
 template<partition_subalgo SubAlgo,
+         bool              UsingOrderedBlockId,
          class Config,
          class OffsetT,
          class KeyIterator,
@@ -190,7 +192,11 @@ inline hipError_t partition_impl(void*                       temporary_storage,
         return result;
     }
 
-    result = detail::temp_storage::partition(
+    using block_id_wrapper_type = block_id_wrapper<uint32_t, UsingOrderedBlockId>;
+
+    typename block_id_wrapper_type::id_type* block_id_pool = nullptr;
+
+    const hipError_t partition_result = detail::temp_storage::partition(
         temporary_storage,
         storage_size,
         detail::temp_storage::make_linear_partition(
@@ -200,11 +206,15 @@ inline hipError_t partition_impl(void*                       temporary_storage,
             // simultaneously.
             // They have the same base type, so there is no padding between the types.
             detail::temp_storage::ptr_aligned_array(&selected_count, selected_count_size),
-            detail::temp_storage::ptr_aligned_array(&prev_selected_count, selected_count_size)));
-    if(result != hipSuccess || temporary_storage == nullptr)
+            detail::temp_storage::ptr_aligned_array(&prev_selected_count, selected_count_size),
+            temp_storage::make_partition(&block_id_pool,
+                                         block_id_wrapper_type::get_temp_storage_layout())));
+    if(partition_result != hipSuccess || temporary_storage == nullptr)
     {
         return result;
     }
+
+    auto block_id = block_id_wrapper_type::create(block_id_pool);
 
     // Start point for time measurements
     std::chrono::steady_clock::time_point start;
@@ -304,6 +314,13 @@ inline hipError_t partition_impl(void*                       temporary_storage,
                                                     current_number_of_blocks,
                                                     start);
 
+        result = block_id.reset_from_host(stream);
+
+        if(result != hipSuccess)
+        {
+            return result;
+        }
+
         if(debug_synchronous) start = std::chrono::steady_clock::now();
 
         with_scan_state(
@@ -323,6 +340,7 @@ inline hipError_t partition_impl(void*                       temporary_storage,
                         inequality_op,
                         scan_state,
                         current_number_of_blocks,
+                        block_id,
                         predicates...);
             });
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", size, start);
@@ -450,7 +468,8 @@ template<class Config = default_config,
          class SelectedOutputIterator,
          class RejectedOutputIterator,
          class SelectedCountOutputIterator,
-         class Predicate>
+         class Predicate,
+         bool UsingOrderedBlockId = false>
 inline hipError_t partition_two_way(void*                       temporary_storage,
                                     size_t&                     storage_size,
                                     InputIterator               input,
@@ -477,6 +496,7 @@ inline hipError_t partition_two_way(void*                       temporary_storag
     const output_value_iterator_tuple no_output_values{nullptr, nullptr}; // key only
 
     return detail::partition_impl<detail::partition_subalgo::partition_two_way_predicate,
+                                  UsingOrderedBlockId,
                                   Config,
                                   offset_type>(temporary_storage,
                                                storage_size,
@@ -590,7 +610,8 @@ template<class Config = default_config,
          typename FlagIterator,
          typename SelectedOutputIterator,
          typename RejectedOutputIterator,
-         typename SelectedCountOutputIterator>
+         typename SelectedCountOutputIterator,
+         bool UsingOrderedBlockId = false>
 inline hipError_t partition_two_way(void*                       temporary_storage,
                                     size_t&                     storage_size,
                                     InputIterator               input,
@@ -615,6 +636,7 @@ inline hipError_t partition_two_way(void*                       temporary_storag
     const output_value_iterator_tuple no_output_values{nullptr, nullptr}; // key only
 
     return detail::partition_impl<detail::partition_subalgo::partition_two_way_flag,
+                                  UsingOrderedBlockId,
                                   Config,
                                   offset_type>(temporary_storage,
                                                storage_size,
@@ -709,23 +731,21 @@ inline hipError_t partition_two_way(void*                       temporary_storag
 /// // output_count: 4
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class FlagIterator,
-    class OutputIterator,
-    class SelectedCountOutputIterator
->
-inline
-hipError_t partition(void * temporary_storage,
-                     size_t& storage_size,
-                     InputIterator input,
-                     FlagIterator flags,
-                     OutputIterator output,
-                     SelectedCountOutputIterator selected_count_output,
-                     const size_t size,
-                     const hipStream_t stream = 0,
-                     const bool debug_synchronous = false)
+template<class Config = default_config,
+         class InputIterator,
+         class FlagIterator,
+         class OutputIterator,
+         class SelectedCountOutputIterator,
+         bool UsingOrderedBlockId = false>
+inline hipError_t partition(void*                       temporary_storage,
+                            size_t&                     storage_size,
+                            InputIterator               input,
+                            FlagIterator                flags,
+                            OutputIterator              output,
+                            SelectedCountOutputIterator selected_count_output,
+                            const size_t                size,
+                            const hipStream_t           stream            = 0,
+                            const bool                  debug_synchronous = false)
 {
     using unary_predicate_type = ::rocprim::empty_type; // dummy
     using inequality_op_type   = ::rocprim::empty_type; // dummy
@@ -739,20 +759,22 @@ hipError_t partition(void * temporary_storage,
     using output_value_iterator_tuple = tuple<::rocprim::empty_type*, ::rocprim::empty_type*>;
     const output_value_iterator_tuple no_output_values{nullptr, nullptr}; // key only
 
-    return detail::partition_impl<detail::partition_subalgo::partition_flag, Config, offset_type>(
-        temporary_storage,
-        storage_size,
-        input,
-        no_input_values,
-        flags,
-        keys_output,
-        no_output_values,
-        selected_count_output,
-        size,
-        inequality_op_type(),
-        stream,
-        debug_synchronous,
-        unary_predicate_type());
+    return detail::partition_impl<detail::partition_subalgo::partition_flag,
+                                  UsingOrderedBlockId,
+                                  Config,
+                                  offset_type>(temporary_storage,
+                                               storage_size,
+                                               input,
+                                               no_input_values,
+                                               flags,
+                                               keys_output,
+                                               no_output_values,
+                                               selected_count_output,
+                                               size,
+                                               inequality_op_type(),
+                                               stream,
+                                               debug_synchronous,
+                                               unary_predicate_type());
 }
 
 /// \brief Parallel select primitive for device level using selection predicate.
@@ -840,23 +862,21 @@ hipError_t partition(void * temporary_storage,
 /// // output_count: 4
 /// \endcode
 /// \endparblock
-template<
-    class Config = default_config,
-    class InputIterator,
-    class OutputIterator,
-    class SelectedCountOutputIterator,
-    class UnaryPredicate
->
-inline
-hipError_t partition(void * temporary_storage,
-                     size_t& storage_size,
-                     InputIterator input,
-                     OutputIterator output,
-                     SelectedCountOutputIterator selected_count_output,
-                     const size_t size,
-                     UnaryPredicate predicate,
-                     const hipStream_t stream = 0,
-                     const bool debug_synchronous = false)
+template<class Config = default_config,
+         class InputIterator,
+         class OutputIterator,
+         class SelectedCountOutputIterator,
+         class UnaryPredicate,
+         bool UsingOrderedBlockId = false>
+inline hipError_t partition(void*                       temporary_storage,
+                            size_t&                     storage_size,
+                            InputIterator               input,
+                            OutputIterator              output,
+                            SelectedCountOutputIterator selected_count_output,
+                            const size_t                size,
+                            UnaryPredicate              predicate,
+                            const hipStream_t           stream            = 0,
+                            const bool                  debug_synchronous = false)
 {
     using flag_type          = ::rocprim::empty_type; //dummy
     using inequality_op_type = ::rocprim::empty_type; //dummy
@@ -873,6 +893,7 @@ hipError_t partition(void * temporary_storage,
     const output_value_iterator_tuple no_output_values{nullptr, nullptr}; // key only
 
     return detail::partition_impl<detail::partition_subalgo::partition_predicate,
+                                  UsingOrderedBlockId,
                                   Config,
                                   offset_type>(temporary_storage,
                                                storage_size,
@@ -1014,28 +1035,27 @@ hipError_t partition(void * temporary_storage,
 /// // output_count:       [4, 1]
 /// \endcode
 /// \endparblock
-template <
-    class Config = default_config,
-    typename InputIterator,
-    typename FirstOutputIterator,
-    typename SecondOutputIterator,
-    typename UnselectedOutputIterator,
-    typename SelectedCountOutputIterator,
-    typename FirstUnaryPredicate,
-    typename SecondUnaryPredicate>
-inline
-hipError_t partition_three_way(void * temporary_storage,
-                               size_t& storage_size,
-                               InputIterator input,
-                               FirstOutputIterator output_first_part,
-                               SecondOutputIterator output_second_part,
-                               UnselectedOutputIterator output_unselected,
-                               SelectedCountOutputIterator selected_count_output,
-                               const size_t size,
-                               FirstUnaryPredicate select_first_part_op,
-                               SecondUnaryPredicate select_second_part_op,
-                               const hipStream_t stream = 0,
-                               const bool debug_synchronous = false)
+template<class Config = default_config,
+         typename InputIterator,
+         typename FirstOutputIterator,
+         typename SecondOutputIterator,
+         typename UnselectedOutputIterator,
+         typename SelectedCountOutputIterator,
+         typename FirstUnaryPredicate,
+         typename SecondUnaryPredicate,
+         bool UsingOrderedBlockId = false>
+inline hipError_t partition_three_way(void*                       temporary_storage,
+                                      size_t&                     storage_size,
+                                      InputIterator               input,
+                                      FirstOutputIterator         output_first_part,
+                                      SecondOutputIterator        output_second_part,
+                                      UnselectedOutputIterator    output_unselected,
+                                      SelectedCountOutputIterator selected_count_output,
+                                      const size_t                size,
+                                      FirstUnaryPredicate         select_first_part_op,
+                                      SecondUnaryPredicate        select_second_part_op,
+                                      const hipStream_t           stream            = 0,
+                                      const bool                  debug_synchronous = false)
 {
     // Dummy flag type
     using flag_type = ::rocprim::empty_type;
@@ -1055,6 +1075,7 @@ hipError_t partition_three_way(void * temporary_storage,
     output_key_iterator_tuple output{ output_first_part, output_second_part, output_unselected };
 
     return detail::partition_impl<detail::partition_subalgo::partition_three_way,
+                                  UsingOrderedBlockId,
                                   Config,
                                   offset_type>(temporary_storage,
                                                storage_size,
