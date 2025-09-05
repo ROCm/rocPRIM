@@ -125,7 +125,7 @@ template<class Config = default_config,
          class FlagIterator,
          class OutputIterator,
          class SelectedCountOutputIterator,
-         bool UsingOrderedBlockId = false>
+         bool UsingOrderedBlockId = true>
 inline hipError_t select(void*                       temporary_storage,
                          size_t&                     storage_size,
                          InputIterator               input,
@@ -257,7 +257,7 @@ template<class Config = default_config,
          class OutputIterator,
          class SelectedCountOutputIterator,
          class UnaryPredicate,
-         bool UsingOrderedBlockId = false>
+         bool UsingOrderedBlockId = true>
 inline hipError_t select(void*                       temporary_storage,
                          size_t&                     storage_size,
                          InputIterator               input,
@@ -397,7 +397,7 @@ template<class Config = default_config,
          class OutputIterator,
          class SelectedCountOutputIterator,
          class UnaryPredicate,
-         bool UsingOrderedBlockId = false>
+         bool UsingOrderedBlockId = true>
 inline hipError_t select(void*                       temporary_storage,
                          size_t&                     storage_size,
                          InputIterator               input,
@@ -519,7 +519,7 @@ template<class Config = default_config,
          class UniqueCountOutputIterator,
          class EqualityOp
          = ::rocprim::equal_to<typename std::iterator_traits<InputIterator>::value_type>,
-         bool UsingOrderedBlockId = false>
+         bool UsingOrderedBlockId = true>
 inline hipError_t unique(void*                     temporary_storage,
                          size_t&                   storage_size,
                          InputIterator             input,
@@ -619,7 +619,7 @@ template<typename Config = default_config,
          typename UniqueCountOutputIterator,
          typename EqualityOp
          = ::rocprim::equal_to<typename std::iterator_traits<KeyIterator>::value_type>,
-         bool UsingOrderedBlockId = false>
+         bool UsingOrderedBlockId = true>
 inline hipError_t unique_by_key(void*                           temporary_storage,
                                 size_t&                         storage_size,
                                 const KeyIterator               keys_input,
