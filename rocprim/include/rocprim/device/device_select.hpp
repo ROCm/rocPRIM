@@ -151,7 +151,7 @@ hipError_t select(void * temporary_storage,
     using output_value_iterator_tuple = tuple<::rocprim::empty_type*, ::rocprim::empty_type*>;
     const output_value_iterator_tuple no_output_values{nullptr, nullptr}; // key only
 
-    return detail::partition_impl<detail::select_method::flag, true, Config, offset_type>(
+    return detail::partition_impl<detail::select_method::flag, true, true, Config, offset_type>(
         temporary_storage,
         storage_size,
         input,
@@ -280,7 +280,7 @@ hipError_t select(void * temporary_storage,
     using output_value_iterator_tuple = tuple<::rocprim::empty_type*, ::rocprim::empty_type*>;
     const output_value_iterator_tuple no_output_values{nullptr, nullptr}; // key only
 
-    return detail::partition_impl<detail::select_method::predicate, true, Config, offset_type>(
+    return detail::partition_impl<detail::select_method::predicate, true, true, Config, offset_type>(
         temporary_storage,
         storage_size,
         input,
@@ -405,7 +405,7 @@ hipError_t unique(void * temporary_storage,
     using output_value_iterator_tuple = tuple<::rocprim::empty_type*, ::rocprim::empty_type*>;
     const output_value_iterator_tuple no_output_values{nullptr, nullptr}; // key only
 
-    return detail::partition_impl<detail::select_method::unique, true, Config, offset_type>(
+    return detail::partition_impl<detail::select_method::unique, true, true, Config, offset_type>(
         temporary_storage,
         storage_size,
         input,
@@ -501,7 +501,7 @@ inline hipError_t unique_by_key(void*                           temporary_storag
     using output_value_iterator_tuple = tuple<OutputValueIterator, ::rocprim::empty_type*>;
     const output_value_iterator_tuple output_value_tuple{values_output, nullptr}; // key only
 
-    return detail::partition_impl<detail::select_method::unique, true, Config, offset_type>(
+    return detail::partition_impl<detail::select_method::unique, true, true, Config, offset_type>(
         temporary_storage,
         storage_size,
         keys_input,
