@@ -847,6 +847,7 @@ template<select_method SelectMethod,
          class OutputValueIterator,
          class InequalityOp,
          class OffsetLookbackScanState,
+         class BlockIdWrapper,
          class... UnaryPredicates>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     partition_kernel_impl(KeyIterator                keys_input,
@@ -861,7 +862,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                           InequalityOp               inequality_op,
                           OffsetLookbackScanState    offset_scan_state,
                           const unsigned int         number_of_blocks,
-                          ordered_block_id<uint32_t> block_id,
+                          BlockIdWrapper             block_id,
                           UnaryPredicates... predicates)
 {
     constexpr auto block_size = Config::block_size;
@@ -901,7 +902,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
     using raw_exchange_keys_storage_type = typename detail::raw_storage<exchange_keys_storage_type>;
     using exchange_values_storage_type = value_type[items_per_block];
     using raw_exchange_values_storage_type = typename detail::raw_storage<exchange_values_storage_type>;
-    using ordered_block_id = ::rocprim::detail::ordered_block_id<uint32_t>;
+    using ordered_block_id = BlockIdWrapper;
 
     using is_selected_type = std::conditional_t<
         sizeof...(UnaryPredicates) == 1,
