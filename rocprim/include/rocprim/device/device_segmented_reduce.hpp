@@ -21,9 +21,9 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_SEGMENTED_REDUCE_HPP_
 #define ROCPRIM_DEVICE_DEVICE_SEGMENTED_REDUCE_HPP_
 
+#include <chrono>
 #include <iostream>
 #include <iterator>
-#include <type_traits>
 
 #include "../config.hpp"
 #include "../common.hpp"

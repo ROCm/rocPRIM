@@ -95,7 +95,8 @@ template<lookback_scan_determinism Determinism,
          class OutputIterator,
          class BinaryFunction,
          class AccType,
-         class LookbackScanState>
+         class LookbackScanState,
+         class BlockIdWrapper>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto lookback_scan_kernel_impl(InputIterator,
                                                                    OutputIterator,
                                                                    const size_t,
@@ -103,10 +104,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto lookback_scan_kernel_impl(InputIterator
                                                                    BinaryFunction,
                                                                    LookbackScanState,
                                                                    const unsigned int,
-                                                                   AccType* = nullptr,
-                                                                   AccType* = nullptr,
-                                                                   bool     = false,
-                                                                   bool     = false)
+                                                                   AccType*,
+                                                                   AccType*,
+                                                                   bool,
+                                                                   bool,
+                                                                   BlockIdWrapper)
     -> std::enable_if_t<!is_lookback_kernel_runnable<LookbackScanState>()>
 {
     // No need to build the kernel with sleep on a device that does not require it
@@ -119,7 +121,8 @@ template<lookback_scan_determinism Determinism,
          class OutputIterator,
          class BinaryFunction,
          class AccType,
-         class LookbackScanState>
+         class LookbackScanState,
+         class BlockIdWrapper>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     lookback_scan_kernel_impl(InputIterator      input,
                               OutputIterator     output,
@@ -128,10 +131,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                               BinaryFunction     scan_op,
                               LookbackScanState  scan_state,
                               const unsigned int number_of_blocks,
-                              AccType*           previous_last_element = nullptr,
-                              AccType*           new_last_element      = nullptr,
-                              bool               override_first_value  = false,
-                              bool               save_last_value       = false)
+                              AccType*           previous_last_element,
+                              AccType*           new_last_element,
+                              bool               override_first_value,
+                              bool               save_last_value,
+                              BlockIdWrapper     ordered_bid)
         -> std::enable_if_t<is_lookback_kernel_runnable<LookbackScanState>()>
 {
     static_assert(std::is_same<AccType, typename LookbackScanState::value_type>::value,
@@ -153,15 +157,16 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
 
     ROCPRIM_SHARED_MEMORY union
     {
+        typename BlockIdWrapper::storage_type   ordered_bid;
         typename block_load_type::storage_type  load;
         typename block_store_type::storage_type store;
         typename block_scan_type::storage_type  scan;
     } storage;
 
     const auto         flat_block_thread_id = ::rocprim::detail::block_thread_id<0>();
-    const auto         flat_block_id        = ::rocprim::detail::block_id<0>();
-    const unsigned int block_offset         = flat_block_id * items_per_block;
-    const auto         valid_in_last_block  = size - items_per_block * (number_of_blocks - 1);
+    const size_t       flat_block_id = ordered_bid.get(flat_block_thread_id, storage.ordered_bid);
+    const unsigned int block_offset  = flat_block_id * items_per_block;
+    const auto         valid_in_last_block = size - items_per_block * (number_of_blocks - 1);
 
     // For input values
     AccType values[items_per_thread];

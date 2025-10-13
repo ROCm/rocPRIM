@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <iostream>
 #include <iterator>
-#include <type_traits>
+#include <chrono>
 
 #include "../config.hpp"
 #include "../common.hpp"
@@ -130,204 +130,163 @@ inline hipError_t partition_impl(void*                       temporary_storage,
                                  UnaryPredicates... predicates)
 {
     using offset_type = OffsetT;
-    using key_type = typename std::iterator_traits<KeyIterator>::value_type;
-    using value_type = typename std::iterator_traits<ValueIterator>::value_type;
+    using key_type    = typename std::iterator_traits<KeyIterator>::value_type;
+    using value_type  = typename std::iterator_traits<ValueIterator>::value_type;
 
-    using config = wrapped_partition_config<Config, SubAlgo, key_type, value_type>;
+    bool use_atomic_block_id;
+    ROCPRIM_RETURN_ON_ERROR(check_if_using_atomic_block_id(stream, use_atomic_block_id));
 
-    constexpr bool write_only_selected = SubAlgo == partition_subalgo::select_flag
-                                         || SubAlgo == partition_subalgo::select_predicate
-                                         || SubAlgo == partition_subalgo::select_predicated_flag
-                                         || SubAlgo == partition_subalgo::select_unique
-                                         || SubAlgo == partition_subalgo::select_unique_by_key;
+    bool use_sleepy_scan;
+    ROCPRIM_RETURN_ON_ERROR(is_sleep_scan_state_used(stream, use_sleepy_scan));
 
-    constexpr bool is_unique = SubAlgo == partition_subalgo::select_unique
-                               || SubAlgo == partition_subalgo::select_unique_by_key;
-    constexpr bool is_flag = SubAlgo == partition_subalgo::partition_two_way_flag
-                             || SubAlgo == partition_subalgo::partition_flag
-                             || SubAlgo == partition_subalgo::select_flag;
-    constexpr bool is_predicated_flag = SubAlgo == partition_subalgo::select_predicated_flag;
-    constexpr select_method method
-        = is_unique
-              ? select_method::unique
-              : (is_predicated_flag ? select_method::predicated_flag
-                                    : (is_flag ? select_method::flag : select_method::predicate));
-
-    detail::target_arch target_arch;
-    hipError_t          result = host_target_arch(stream, target_arch);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-    const partition_config_params params = dispatch_target_arch<config>(target_arch);
-
-    using offset_scan_state_type = detail::lookback_scan_state<offset_type>;
-    using offset_scan_state_with_sleep_type = detail::lookback_scan_state<offset_type, true>;
-
-    const unsigned int block_size       = params.kernel_config.block_size;
-    const unsigned int items_per_thread = params.kernel_config.items_per_thread;
-    const auto         items_per_block  = block_size * items_per_thread;
-
-    static constexpr bool is_three_way = sizeof...(UnaryPredicates) == 2;
-    static constexpr const size_t selected_count_size = is_three_way ? 2 : 1;
-
-    const size_t size_limit = params.kernel_config.size_limit;
-    const size_t aligned_size_limit
-        = ::rocprim::max<size_t>(size_limit - (size_limit % items_per_block), items_per_block);
-    const size_t limited_size     = std::min<size_t>(size, aligned_size_limit);
-    const bool   use_limited_size = limited_size == aligned_size_limit;
-
-    const unsigned int number_of_blocks
-        = static_cast<unsigned int>(::rocprim::detail::ceiling_div(limited_size, items_per_block));
-
-    // Calculate required temporary storage
-    void*                           offset_scan_state_storage;
-    size_t*                         selected_count;
-    size_t*                         prev_selected_count;
-
-    detail::temp_storage::layout layout{};
-    result = offset_scan_state_type::get_temp_storage_layout(number_of_blocks, stream, layout);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-
-    using block_id_wrapper_type = block_id_wrapper<uint32_t, UsingOrderedBlockId>;
-
-    typename block_id_wrapper_type::id_type* block_id_pool = nullptr;
-
-    const hipError_t partition_result = detail::temp_storage::partition(
-        temporary_storage,
-        storage_size,
-        detail::temp_storage::make_linear_partition(
-            // This is valid even with offset_scan_state_with_sleep_type
-            detail::temp_storage::make_partition(&offset_scan_state_storage, layout),
-            // Note: the following two are to be allocated continuously, so that they can be initialized
-            // simultaneously.
-            // They have the same base type, so there is no padding between the types.
-            detail::temp_storage::ptr_aligned_array(&selected_count, selected_count_size),
-            detail::temp_storage::ptr_aligned_array(&prev_selected_count, selected_count_size),
-            temp_storage::make_partition(&block_id_pool,
-                                         block_id_wrapper_type::get_temp_storage_layout())));
-    if(partition_result != hipSuccess || temporary_storage == nullptr)
-    {
-        return result;
-    }
-
-    auto block_id = block_id_wrapper_type::create(block_id_pool);
-
-    // Start point for time measurements
-    std::chrono::steady_clock::time_point start;
-
-    bool use_sleep;
-    result = is_sleep_scan_state_used(stream, use_sleep);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-
-    // Create and initialize lookback_scan_state obj
-    offset_scan_state_type offset_scan_state{};
-    result = offset_scan_state_type::create(offset_scan_state,
-                                            offset_scan_state_storage,
-                                            number_of_blocks,
-                                            stream);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-    offset_scan_state_with_sleep_type offset_scan_state_with_sleep{};
-    result = offset_scan_state_with_sleep_type::create(offset_scan_state_with_sleep,
-                                                       offset_scan_state_storage,
-                                                       number_of_blocks,
-                                                       stream);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-
-    // Call the provided function with either offset_scan_state or offset_scan_state_with_sleep based on
-    // the value of use_sleep
-    auto with_scan_state = [use_sleep, offset_scan_state, offset_scan_state_with_sleep](
-                               auto&& func) mutable -> decltype(auto)
-    {
-        if(use_sleep)
+    ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(use_sleepy_scan, use_atomic_block_id)(
+        [&](auto use_sleepy_scan, auto use_atomic_block_id)
         {
-            return func(offset_scan_state_with_sleep);
-        }
-        else
-        {
-            return func(offset_scan_state);
-        }
-    };
+            using scan_state_type
+                = detail::lookback_scan_state<offset_type, decltype(use_sleepy_scan)::value>;
+            using block_id_type
+                = detail::block_id_wrapper<uint32_t, decltype(use_atomic_block_id)::value>;
 
-    // Memset selected_count and prev_selected_count at once
-    result = hipMemsetAsync(selected_count,
-                            0,
-                            sizeof(*selected_count) * 2 * selected_count_size,
-                            stream);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
+            using config = wrapped_partition_config<Config, SubAlgo, key_type, value_type>;
 
-    const size_t number_of_launches = ::rocprim::detail::ceiling_div(size, aligned_size_limit);
+            constexpr bool write_only_selected
+                = SubAlgo == partition_subalgo::select_flag
+                  || SubAlgo == partition_subalgo::select_predicate
+                  || SubAlgo == partition_subalgo::select_predicated_flag
+                  || SubAlgo == partition_subalgo::select_unique
+                  || SubAlgo == partition_subalgo::select_unique_by_key;
 
-    if(debug_synchronous)
-    {
-        std::cout << "use_limited_size " << use_limited_size << '\n';
-        std::cout << "aligned_size_limit " << aligned_size_limit << '\n';
-        std::cout << "number_of_launches " << number_of_launches << '\n';
-        std::cout << "size " << size << '\n';
-        std::cout << "block_size " << block_size << '\n';
-        std::cout << "number of blocks " << number_of_blocks << '\n';
-        std::cout << "items_per_block " << items_per_block << '\n';
-    }
+            constexpr bool is_unique = SubAlgo == partition_subalgo::select_unique
+                                       || SubAlgo == partition_subalgo::select_unique_by_key;
+            constexpr bool is_flag = SubAlgo == partition_subalgo::partition_two_way_flag
+                                     || SubAlgo == partition_subalgo::partition_flag
+                                     || SubAlgo == partition_subalgo::select_flag;
+            constexpr bool is_predicated_flag
+                = SubAlgo == partition_subalgo::select_predicated_flag;
+            constexpr select_method method
+                = is_unique ? select_method::unique
+                            : (is_predicated_flag
+                                   ? select_method::predicated_flag
+                                   : (is_flag ? select_method::flag : select_method::predicate));
 
-    for(size_t i = 0, prev_processed = 0; i < number_of_launches;
-        i++, prev_processed += limited_size)
-    {
-        const unsigned int current_size
-            = static_cast<unsigned int>(std::min<size_t>(size - prev_processed, limited_size));
+            detail::target_arch target_arch;
+            ROCPRIM_RETURN_ON_ERROR(host_target_arch(stream, target_arch));
+            const partition_config_params params = dispatch_target_arch<config>(target_arch);
 
-        const unsigned int current_number_of_blocks = ::rocprim::detail::ceiling_div(current_size, items_per_block);
+            const unsigned int block_size       = params.kernel_config.block_size;
+            const unsigned int items_per_thread = params.kernel_config.items_per_thread;
+            const auto         items_per_block  = block_size * items_per_thread;
 
-        if(debug_synchronous)
-        {
-            std::cout << "current size " << current_size << '\n';
-            std::cout << "current number of blocks " << current_number_of_blocks << '\n';
+            static constexpr bool         is_three_way        = sizeof...(UnaryPredicates) == 2;
+            static constexpr const size_t selected_count_size = is_three_way ? 2 : 1;
 
-            start = std::chrono::steady_clock::now();
-        }
+            const size_t size_limit         = params.kernel_config.size_limit;
+            const size_t aligned_size_limit = ::rocprim::max<size_t>(
+                size_limit - (size_limit % static_cast<size_t>(items_per_block)),
+                items_per_block);
+            const size_t limited_size     = std::min<size_t>(size, aligned_size_limit);
+            const bool   use_limited_size = limited_size == aligned_size_limit;
 
-        with_scan_state(
-            [&](const auto scan_state)
+            const unsigned int number_of_blocks = static_cast<unsigned int>(
+                ::rocprim::detail::ceiling_div(limited_size, items_per_block));
+
+            // Calculate required temporary storage
+            void*   scan_state_storage;
+            size_t* selected_count;
+            size_t* prev_selected_count;
+
+            detail::temp_storage::layout layout{};
+            ROCPRIM_RETURN_ON_ERROR(
+                scan_state_type::get_temp_storage_layout(number_of_blocks, stream, layout));
+
+            typename block_id_type::id_type* block_id_pool = nullptr;
+
+            // temporary storage partition
+            ROCPRIM_RETURN_ON_ERROR(detail::temp_storage::partition(
+                temporary_storage,
+                storage_size,
+                detail::temp_storage::make_linear_partition(
+                    detail::temp_storage::make_partition(&scan_state_storage, layout),
+                    // Note: the following two are to be allocated continuously, so that they can be initialized
+                    // simultaneously.
+                    // They have the same base type, so there is no padding between the types.
+                    detail::temp_storage::ptr_aligned_array(&selected_count, selected_count_size),
+                    detail::temp_storage::ptr_aligned_array(&prev_selected_count,
+                                                            selected_count_size),
+                    detail::temp_storage::ptr_aligned_array(&block_id_pool,
+                                                            block_id_type::get_storage_size()))));
+
+            if(temporary_storage == nullptr)
             {
-                const unsigned int block_size = ROCPRIM_DEFAULT_MAX_BLOCK_SIZE;
-                const unsigned int grid_size
-                    = ::rocprim::detail::ceiling_div(current_number_of_blocks, block_size);
-                init_lookback_scan_state_kernel<decltype(scan_state)>
-                    <<<dim3(grid_size), dim3(block_size), 0, stream>>>(scan_state,
-                                                                       current_number_of_blocks);
-            });
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_offset_scan_state_kernel",
-                                                    current_number_of_blocks,
-                                                    start);
+                return hipSuccess;
+            }
 
-        result = block_id.reset_from_host(stream);
+            block_id_type block_id = block_id_type::create(block_id_pool);
 
-        if(result != hipSuccess)
-        {
-            return result;
-        }
+            // Start point for time measurements
+            std::chrono::steady_clock::time_point start;
 
-        if(debug_synchronous) start = std::chrono::steady_clock::now();
+            // Create and initialize lookback_scan_state obj
+            scan_state_type scan_state{};
+            ROCPRIM_RETURN_ON_ERROR(
+                scan_state_type::create(scan_state, scan_state_storage, number_of_blocks, stream));
 
-        with_scan_state(
-            [&](const auto scan_state)
+            // Memset selected_count and prev_selected_count at once
+            ROCPRIM_RETURN_ON_ERROR(
+                hipMemsetAsync(selected_count,
+                               0,
+                               sizeof(*selected_count) * 2 * selected_count_size,
+                               stream));
+
+            const size_t number_of_launches
+                = ::rocprim::detail::ceiling_div(size, aligned_size_limit);
+
+            if(debug_synchronous)
             {
+                std::cout << "use_limited_size " << use_limited_size << '\n';
+                std::cout << "aligned_size_limit " << aligned_size_limit << '\n';
+                std::cout << "number_of_launches " << number_of_launches << '\n';
+                std::cout << "size " << size << '\n';
+                std::cout << "block_size " << block_size << '\n';
+                std::cout << "number of blocks " << number_of_blocks << '\n';
+                std::cout << "items_per_block " << items_per_block << '\n';
+            }
+
+            for(size_t i = 0, prev_processed = 0; i < number_of_launches;
+                i++, prev_processed += limited_size)
+            {
+                const unsigned int current_size = static_cast<unsigned int>(
+                    std::min<size_t>(size - prev_processed, limited_size));
+
+                const unsigned int current_number_of_blocks
+                    = ::rocprim::detail::ceiling_div(current_size, items_per_block);
+
+                if(debug_synchronous)
+                {
+                    std::cout << "current size " << current_size << '\n';
+                    std::cout << "current number of blocks " << current_number_of_blocks << '\n';
+
+                    start = std::chrono::steady_clock::now();
+                }
+
+                // Define block and grid sizes for init kernel.
+                const size_t init_block_size = ROCPRIM_DEFAULT_MAX_BLOCK_SIZE;
+                const size_t init_grid_size
+                    = ::rocprim::detail::ceiling_div(current_number_of_blocks, init_block_size);
+                init_lookback_scan_state_kernel<<<init_grid_size, init_block_size, 0, stream>>>(
+                    scan_state,
+                    current_number_of_blocks,
+                    block_id);
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_offset_scan_state_kernel",
+                                                            current_number_of_blocks,
+                                                            start);
+                if(debug_synchronous)
+                {
+                    start = std::chrono::steady_clock::now();
+                }
+
                 partition_kernel<method, write_only_selected, config>
-                    <<<dim3(current_number_of_blocks), dim3(block_size), 0, stream>>>(
+                    <<<current_number_of_blocks, block_size, 0, stream>>>(
                         keys_input + prev_processed,
                         values_input + prev_processed,
                         flags + prev_processed,
@@ -342,22 +301,20 @@ inline hipError_t partition_impl(void*                       temporary_storage,
                         current_number_of_blocks,
                         block_id,
                         predicates...);
-            });
-        ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", size, start);
+                ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("partition_kernel", size, start);
 
-        std::swap(selected_count, prev_selected_count);
-    }
+                std::swap(selected_count, prev_selected_count);
+            }
 
-    result = ::rocprim::transform(prev_selected_count,
-                                  selected_count_output,
-                                  (is_three_way ? 2 : 1),
-                                  ::rocprim::identity<>{},
-                                  stream,
-                                  debug_synchronous);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
+            ROCPRIM_RETURN_ON_ERROR(::rocprim::transform(prev_selected_count,
+                                                         selected_count_output,
+                                                         (is_three_way ? 2 : 1),
+                                                         ::rocprim::identity<>{},
+                                                         stream,
+                                                         debug_synchronous));
+
+            return hipSuccess;
+        }));
 
     return hipSuccess;
 }

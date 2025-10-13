@@ -25,6 +25,7 @@
 #include <iterator>
 #include <type_traits>
 #include <utility>
+#include <chrono>
 
 #include "../config.hpp"
 #include "../common.hpp"
@@ -38,6 +39,7 @@
 #include "../type_traits.hpp"
 #include "detail/config/device_radix_sort_onesweep.hpp"
 #include "detail/device_radix_sort.hpp"
+#include "detail/ordered_block_id.hpp"
 #include "device_transform.hpp"
 #include "specialization/device_radix_block_sort.hpp"
 #include "specialization/device_radix_merge_sort.hpp"
@@ -207,7 +209,8 @@ template<class Config,
          class ValuesInputIterator,
          class ValuesOutputIterator,
          class Offset,
-         class Decomposer>
+         class Decomposer,
+         class BlockIdWrapper>
 ROCPRIM_KERNEL
     __launch_bounds__(device_params<Config>().sort.block_size) void onesweep_iteration_kernel(
         KeysInputIterator        keys_input,
@@ -221,7 +224,8 @@ ROCPRIM_KERNEL
         Decomposer               decomposer,
         const unsigned int       bit,
         const unsigned int       current_radix_bits,
-        const unsigned int       full_blocks)
+        const unsigned int       full_blocks,
+        BlockIdWrapper           block_id)
 {
     static constexpr radix_sort_onesweep_config_params params = device_params<Config>();
     onesweep_iteration<params.sort.block_size,
@@ -239,7 +243,8 @@ ROCPRIM_KERNEL
                                                     decomposer,
                                                     bit,
                                                     current_radix_bits,
-                                                    full_blocks);
+                                                    full_blocks,
+                                                    block_id);
 }
 
 template<class Config,
@@ -249,7 +254,8 @@ template<class Config,
          class ValuesInputIterator,
          class ValuesOutputIterator,
          class Offset,
-         class Decomposer>
+         class Decomposer,
+         class BlockIdWrapper>
 hipError_t radix_sort_onesweep_iteration(
     KeysInputIterator                                               keys_input,
     typename std::iterator_traits<KeysInputIterator>::value_type*   keys_tmp,
@@ -266,6 +272,7 @@ hipError_t radix_sort_onesweep_iteration(
     Decomposer                                                      decomposer,
     const unsigned int                                              bit,
     const unsigned int                                              end_bit,
+    BlockIdWrapper                                                  block_id,
     const hipStream_t                                               stream,
     const bool                                                      debug_synchronous)
 {
@@ -314,6 +321,8 @@ hipError_t radix_sort_onesweep_iteration(
         if(error != hipSuccess)
             return error;
 
+        ROCPRIM_RETURN_ON_ERROR(block_id.reset_from_host(stream));
+
         std::chrono::steady_clock::time_point start;
         if(debug_synchronous)
         {
@@ -350,7 +359,8 @@ hipError_t radix_sort_onesweep_iteration(
                                decomposer,
                                bit,
                                current_radix_bits,
-                               full_blocks);
+                               full_blocks,
+                               block_id);
         }
         else if(from_input)
         {
@@ -370,7 +380,8 @@ hipError_t radix_sort_onesweep_iteration(
                                decomposer,
                                bit,
                                current_radix_bits,
-                               full_blocks);
+                               full_blocks,
+                               block_id);
         }
         else if(to_output)
         {
@@ -390,7 +401,8 @@ hipError_t radix_sort_onesweep_iteration(
                                decomposer,
                                bit,
                                current_radix_bits,
-                               full_blocks);
+                               full_blocks,
+                               block_id);
         }
         else
         {
@@ -410,7 +422,8 @@ hipError_t radix_sort_onesweep_iteration(
                                decomposer,
                                bit,
                                current_radix_bits,
-                               full_blocks);
+                               full_blocks,
+                               block_id);
         }
 
         ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("onesweep_iteration", size, start);
@@ -449,161 +462,182 @@ hipError_t radix_sort_onesweep_impl(
     using value_type  = typename std::iterator_traits<ValuesInputIterator>::value_type;
     using offset_type = offset_type_t<Size>;
 
-    using config = wrapped_radix_sort_onesweep_config<Config, key_type, value_type>;
+    bool use_atomic_block_id;
+    ROCPRIM_RETURN_ON_ERROR(check_if_using_atomic_block_id(stream, use_atomic_block_id));
 
-    detail::target_arch target_arch;
-    hipError_t          result = host_target_arch(stream, target_arch);
-    if(result != hipSuccess)
-    {
-        return result;
-    }
-    const radix_sort_onesweep_config_params params = dispatch_target_arch<config>(target_arch);
-
-    const unsigned int sort_items_per_block = params.sort.block_size * params.sort.items_per_thread;
-    const unsigned int radix_size_per_place = 1u << params.radix_bits_per_place;
-    const unsigned int max_items_per_full_batch = 1u << 30;
-    const unsigned int items_per_full_batch
-        = max_items_per_full_batch - max_items_per_full_batch % sort_items_per_block;
-
-    const unsigned int places = ceiling_div(end_bit - begin_bit, params.radix_bits_per_place);
-    const unsigned int bins   = radix_size_per_place * places;
-    const unsigned int items_per_batch
-        = static_cast<unsigned int>(::rocprim::min<size_t>(size, items_per_full_batch));
-    const unsigned int num_lookback_states
-        = radix_size_per_place * ceiling_div(items_per_batch, sort_items_per_block);
-
-    constexpr bool with_values        = !std::is_same<value_type, ::rocprim::empty_type>::value;
-    const bool     with_double_buffer = keys_tmp != nullptr;
-
-    offset_type*             global_digit_offsets;
-    offset_type*             global_digit_offsets_tmp;
-    onesweep_lookback_state* lookback_states;
-    key_type*                keys_tmp_storage;
-    value_type*              values_tmp_storage;
-
-    const hipError_t partition_result = detail::temp_storage::partition(
-        temporary_storage,
-        storage_size,
-        detail::temp_storage::make_linear_partition(
-            detail::temp_storage::ptr_aligned_array(&global_digit_offsets, bins),
-            detail::temp_storage::ptr_aligned_array(&global_digit_offsets_tmp,
-                                                    radix_size_per_place),
-            detail::temp_storage::ptr_aligned_array(&lookback_states, num_lookback_states),
-            detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
-                                                    !with_double_buffer ? size : 0),
-            detail::temp_storage::ptr_aligned_array(&values_tmp_storage,
-                                                    !with_double_buffer && with_values ? size
-                                                                                       : 0)));
-
-    if(partition_result != hipSuccess || temporary_storage == nullptr)
-    {
-        return partition_result;
-    }
-
-    if(size == 0)
-        return hipSuccess;
-
-    if(debug_synchronous)
-    {
-        std::cout << "radix_size " << radix_size_per_place << '\n';
-        std::cout << "digit_places " << places << '\n';
-        std::cout << "histograms_size " << bins << '\n';
-        std::cout << "num_lookback_states " << num_lookback_states << '\n';
-        hipError_t error = hipStreamSynchronize(stream);
-        if(error != hipSuccess)
-            return error;
-    }
-
-    // Compute the global digit offset, for each digit and for each digit place.
-    {
-        hipError_t error
-            = radix_sort_onesweep_global_offsets<Config, Descending>(keys_input,
-                                                                     values_input,
-                                                                     global_digit_offsets,
-                                                                     static_cast<offset_type>(size),
-                                                                     places,
-                                                                     decomposer,
-                                                                     begin_bit,
-                                                                     end_bit,
-                                                                     stream,
-                                                                     debug_synchronous);
-        if(error != hipSuccess)
-            return error;
-    }
-
-    if(!with_double_buffer)
-    {
-        keys_tmp   = keys_tmp_storage;
-        values_tmp = values_tmp_storage;
-    }
-
-    // Copy input keys and values if necessary (in-place sorting: input and output iterators are equal).
-    bool to_output  = with_double_buffer || (places - 1) % 2 == 0;
-    bool from_input = true;
-    if(!with_double_buffer && to_output)
-    {
-        const bool keys_alias
-            = ::rocprim::detail::can_iterators_alias(keys_input, keys_output, size);
-        const bool values_alias
-            = with_values
-              && ::rocprim::detail::can_iterators_alias(values_input, values_output, size);
-        if(keys_alias || values_alias)
+    ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(false, use_atomic_block_id)(
+        [&](auto /* use_sleepy_scan */, auto use_atomic_block_id)
         {
-            hipError_t error = ::rocprim::transform(keys_input,
-                                                    keys_tmp,
-                                                    size,
-                                                    ::rocprim::identity<key_type>(),
-                                                    stream,
-                                                    debug_synchronous);
-            if(error != hipSuccess)
-                return error;
+            using block_id_type
+                = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
 
-            if(with_values)
+            using config = wrapped_radix_sort_onesweep_config<Config, key_type, value_type>;
+
+            detail::target_arch target_arch;
+            hipError_t          result = host_target_arch(stream, target_arch);
+            if(result != hipSuccess)
             {
-                hipError_t error = ::rocprim::transform(values_input,
-                                                        values_tmp,
-                                                        size,
-                                                        ::rocprim::identity<value_type>(),
-                                                        stream,
-                                                        debug_synchronous);
+                return result;
+            }
+            const radix_sort_onesweep_config_params params
+                = dispatch_target_arch<config>(target_arch);
+
+            const unsigned int sort_items_per_block
+                = params.sort.block_size * params.sort.items_per_thread;
+            const unsigned int radix_size_per_place     = 1u << params.radix_bits_per_place;
+            const unsigned int max_items_per_full_batch = 1u << 30;
+            const unsigned int items_per_full_batch
+                = max_items_per_full_batch - max_items_per_full_batch % sort_items_per_block;
+
+            const unsigned int places
+                = ceiling_div(end_bit - begin_bit, params.radix_bits_per_place);
+            const unsigned int bins = radix_size_per_place * places;
+            const unsigned int items_per_batch
+                = static_cast<unsigned int>(::rocprim::min<size_t>(size, items_per_full_batch));
+            const unsigned int num_lookback_states
+                = radix_size_per_place * ceiling_div(items_per_batch, sort_items_per_block);
+
+            constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
+            const bool     with_double_buffer = keys_tmp != nullptr;
+
+            offset_type*             global_digit_offsets;
+            offset_type*             global_digit_offsets_tmp;
+            onesweep_lookback_state* lookback_states;
+            key_type*                keys_tmp_storage;
+            value_type*              values_tmp_storage;
+            typename block_id_type::id_type* block_id_storage;
+
+            const hipError_t partition_result = detail::temp_storage::partition(
+                temporary_storage,
+                storage_size,
+                detail::temp_storage::make_linear_partition(
+                    detail::temp_storage::ptr_aligned_array(&global_digit_offsets, bins),
+                    detail::temp_storage::ptr_aligned_array(&global_digit_offsets_tmp,
+                                                            radix_size_per_place),
+                    detail::temp_storage::ptr_aligned_array(&lookback_states, num_lookback_states),
+                    detail::temp_storage::ptr_aligned_array(&keys_tmp_storage,
+                                                            !with_double_buffer ? size : 0),
+                    detail::temp_storage::ptr_aligned_array(
+                        &values_tmp_storage,
+                        !with_double_buffer && with_values ? size : 0),
+                        detail::temp_storage::make_partition(
+                            &block_id_storage,
+                            block_id_type::get_temp_storage_layout())));
+
+            if(partition_result != hipSuccess || temporary_storage == nullptr)
+            {
+                return partition_result;
+            }
+
+            if(size == 0)
+                return hipSuccess;
+
+            auto block_id = block_id_type::create(block_id_storage);
+
+            if(debug_synchronous)
+            {
+                std::cout << "radix_size " << radix_size_per_place << '\n';
+                std::cout << "digit_places " << places << '\n';
+                std::cout << "histograms_size " << bins << '\n';
+                std::cout << "num_lookback_states " << num_lookback_states << '\n';
+                hipError_t error = hipStreamSynchronize(stream);
                 if(error != hipSuccess)
                     return error;
             }
 
-            from_input = false;
-        }
-    }
+            // Compute the global digit offset, for each digit and for each digit place.
+            {
+                hipError_t error = radix_sort_onesweep_global_offsets<Config, Descending>(
+                    keys_input,
+                    values_input,
+                    global_digit_offsets,
+                    static_cast<offset_type>(size),
+                    places,
+                    decomposer,
+                    begin_bit,
+                    end_bit,
+                    stream,
+                    debug_synchronous);
+                if(error != hipSuccess)
+                    return error;
+            }
 
-    // Sort each digit place iteratively.
-    for(unsigned bit = begin_bit, place = 0; bit < end_bit;
-        bit += params.radix_bits_per_place, ++place)
-    {
-        hipError_t error = radix_sort_onesweep_iteration<Config, Descending>(
-            keys_input,
-            keys_tmp,
-            keys_output,
-            values_input,
-            values_tmp,
-            values_output,
-            static_cast<offset_type>(size),
-            global_digit_offsets + place * radix_size_per_place,
-            global_digit_offsets_tmp,
-            lookback_states,
-            from_input,
-            to_output,
-            decomposer,
-            bit,
-            end_bit,
-            stream,
-            debug_synchronous);
-        if(error != hipSuccess)
-            return error;
+            if(!with_double_buffer)
+            {
+                keys_tmp   = keys_tmp_storage;
+                values_tmp = values_tmp_storage;
+            }
 
-        is_result_in_output = to_output;
-        from_input          = false;
-        to_output           = !to_output;
-    }
+            // Copy input keys and values if necessary (in-place sorting: input and output iterators are equal).
+            bool to_output  = with_double_buffer || (places - 1) % 2 == 0;
+            bool from_input = true;
+            if(!with_double_buffer && to_output)
+            {
+                const bool keys_alias
+                    = ::rocprim::detail::can_iterators_alias(keys_input, keys_output, size);
+                const bool values_alias
+                    = with_values
+                      && ::rocprim::detail::can_iterators_alias(values_input, values_output, size);
+                if(keys_alias || values_alias)
+                {
+                    hipError_t error = ::rocprim::transform(keys_input,
+                                                            keys_tmp,
+                                                            size,
+                                                            ::rocprim::identity<key_type>(),
+                                                            stream,
+                                                            debug_synchronous);
+                    if(error != hipSuccess)
+                        return error;
 
+                    if(with_values)
+                    {
+                        hipError_t error = ::rocprim::transform(values_input,
+                                                                values_tmp,
+                                                                size,
+                                                                ::rocprim::identity<value_type>(),
+                                                                stream,
+                                                                debug_synchronous);
+                        if(error != hipSuccess)
+                            return error;
+                    }
+
+                    from_input = false;
+                }
+            }
+
+            // Sort each digit place iteratively.
+            for(unsigned bit = begin_bit, place = 0; bit < end_bit;
+                bit += params.radix_bits_per_place, ++place)
+            {
+                hipError_t error = radix_sort_onesweep_iteration<Config, Descending>(
+                    keys_input,
+                    keys_tmp,
+                    keys_output,
+                    values_input,
+                    values_tmp,
+                    values_output,
+                    static_cast<offset_type>(size),
+                    global_digit_offsets + place * radix_size_per_place,
+                    global_digit_offsets_tmp,
+                    lookback_states,
+                    from_input,
+                    to_output,
+                    decomposer,
+                    bit,
+                    end_bit,
+                    block_id,
+                    stream,
+                    debug_synchronous);
+                if(error != hipSuccess)
+                    return error;
+
+                is_result_in_output = to_output;
+                from_input          = false;
+                to_output           = !to_output;
+            }
+
+            return hipSuccess;
+        }));
     return hipSuccess;
 }
 

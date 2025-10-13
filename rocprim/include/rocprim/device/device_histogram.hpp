@@ -25,6 +25,7 @@
 #include <iostream>
 #include <iterator>
 #include <type_traits>
+#include <chrono>
 
 #include "../config.hpp"
 #include "../common.hpp"

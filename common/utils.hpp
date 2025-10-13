@@ -25,6 +25,7 @@
 
 #include <rocprim/intrinsics/thread.hpp>
 
+#ifndef HIP_CHECK
 #ifdef USE_GTEST
     // GoogleTest-compatible HIP_CHECK macro. FAIL is called to log the Google Test trace.
     // The lambda is invoked immediately as assertions that generate a fatal failure can
@@ -50,6 +51,7 @@
                 exit(error);                                                                    \
             }                                                                                   \
         }
+#endif
 #endif
 
 namespace common

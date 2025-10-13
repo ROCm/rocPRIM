@@ -252,7 +252,8 @@ namespace detail
              typename ResultType,
              typename CompareFunction,
              typename BinaryFunction,
-             typename LookbackScanState>
+             typename LookbackScanState,
+             typename WrappedBlockId>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
         device_scan_by_key_kernel_impl(KeyInputIterator,
                                        InputIterator,
@@ -264,7 +265,8 @@ namespace detail
                                        const size_t,
                                        const size_t,
                                        const size_t,
-                                       const rocprim::tuple<ResultType, bool>* const)
+                                       const rocprim::tuple<ResultType, bool>* const,
+                                       WrappedBlockId)
             -> std::enable_if_t<!is_lookback_kernel_runnable<LookbackScanState>()>
     {
         // No need to build the kernel with sleep on a device that does not require it
@@ -279,7 +281,8 @@ namespace detail
              typename ResultType,
              typename CompareFunction,
              typename BinaryFunction,
-             typename LookbackScanState>
+             typename LookbackScanState,
+             typename WrappedBlockId>
     ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto device_scan_by_key_kernel_impl(
         KeyInputIterator                              keys,
         InputIterator                                 values,
@@ -291,7 +294,8 @@ namespace detail
         const size_t                                  size,
         const size_t                                  starting_block,
         const size_t                                  number_of_blocks,
-        const rocprim::tuple<ResultType, bool>* const previous_last_value)
+        const rocprim::tuple<ResultType, bool>* const previous_last_value,
+        WrappedBlockId                                ordered_bid)
         -> std::enable_if_t<is_lookback_kernel_runnable<LookbackScanState>()>
     {
         using result_type = ResultType;
@@ -325,13 +329,16 @@ namespace detail
 
         ROCPRIM_SHARED_MEMORY union
         {
+            typename WrappedBlockId::storage_type  ordered_bid;
             typename load_flagged::storage_type    load;
             typename block_scan_type::storage_type scan;
             typename store_unwrap::storage_type    store;
         } storage;
 
         const auto flat_thread_id = ::rocprim::detail::block_thread_id<0>();
-        const auto flat_block_id  = ::rocprim::detail::block_id<0>();
+        const auto flat_block_id
+            = ordered_bid.get(flat_thread_id,
+                              storage.ordered_bid);
 
         // Load input
         wrapped_type wrapped_values[items_per_thread];

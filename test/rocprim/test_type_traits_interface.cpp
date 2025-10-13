@@ -24,8 +24,9 @@
 
 #include <rocprim/type_traits.hpp>
 
+#include <hip/hip_runtime.h>
+
 #include <ostream>
-#include <type_traits>
 
 #include <cmath>
 

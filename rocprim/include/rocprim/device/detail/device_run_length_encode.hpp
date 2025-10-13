@@ -764,7 +764,8 @@ template<typename Config,
          typename OffsetsOutputIterator,
          typename CountsOutputIterator,
          typename RunsCountOutputIterator,
-         typename LookbackScanState>
+         typename LookbackScanState,
+         typename WrappedBlockId>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     non_trivial_kernel_impl(InputIterator,
                             const OffsetsOutputIterator,
@@ -772,7 +773,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                             const RunsCountOutputIterator,
                             const LookbackScanState,
                             const size_t,
-                            const size_t)
+                            const size_t,
+                            WrappedBlockId)
         -> std::enable_if_t<!is_lookback_kernel_runnable<LookbackScanState>()>
 {
     // No need to build the kernel with sleep on a device that does not require it
@@ -784,7 +786,8 @@ template<typename Config,
          typename OffsetsOutputIterator,
          typename CountsOutputIterator,
          typename RunsCountOutputIterator,
-         typename LookbackScanState>
+         typename LookbackScanState,
+         typename WrappedBlockId>
 ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     non_trivial_kernel_impl(InputIterator                  input,
                             const OffsetsOutputIterator    offsets_output,
@@ -792,7 +795,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                             const RunsCountOutputIterator  runs_count_output,
                             const LookbackScanState        scan_state,
                             const size_t              grid_size,
-                            const size_t              size)
+                            const size_t              size,
+                            WrappedBlockId            ordered_bid)
         -> std::enable_if_t<is_lookback_kernel_runnable<LookbackScanState>()>
 {
     static constexpr non_trivial_runs_config_params params     = device_params<Config>();
@@ -815,9 +819,12 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                                          load_input_method,
                                          scan_algorithm>;
 
-    ROCPRIM_SHARED_MEMORY typename block_processor::storage_type_ storage;
+    ROCPRIM_SHARED_MEMORY union {
+        typename block_processor::storage_type_ storage;
+        typename WrappedBlockId::storage_type   ordered_bid_storage;
+    };
 
-    const size_t block_id = flat_block_id<block_size, 1, 1>();
+    const size_t block_id = ordered_bid.get(rocprim::flat_tile_thread_id(), ordered_bid_storage);
 
     const size_t        block_offset = block_id * items_per_block;
     const InputIterator block_input  = input + block_offset;

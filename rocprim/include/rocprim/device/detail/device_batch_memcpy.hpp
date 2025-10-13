@@ -330,7 +330,8 @@ template<class Config,
          bool IsMemCpy,
          class InputBufferItType,
          class OutputBufferItType,
-         class BufferSizeItType>
+         class BufferSizeItType,
+         class WrappedBlockId>
 struct batch_memcpy_impl
 {
     using input_buffer_type  = typename std::iterator_traits<InputBufferItType>::value_type;
@@ -366,6 +367,8 @@ struct batch_memcpy_impl
 
     // Offset over tiles.
     using tile_offset_type = uint32_t;
+
+    using ordered_bid_type = WrappedBlockId;
 
     // The byte offset within a thread-level buffer. Must fit at least `wlev_size_threshold`.
     static_assert(wlev_size_threshold < std::numeric_limits<uint16_t>::max(),
@@ -452,6 +455,8 @@ private:
 
             union shared_t
             {
+                typename ordered_bid_type::storage_type ordered_bid;
+
                 union analysis_t
                 {
                     typename buffer_load_type::storage_type     load_storage;
@@ -900,9 +905,11 @@ private:
     };
 
 public:
-    __global__ static void init_tile_state_kernel(blev_buffer_scan_state_type buffer_scan_state,
-                                                  blev_block_scan_state_type  block_scan_state,
-                                                  tile_offset_type            num_tiles)
+    __global__
+    static void init_tile_state_kernel(blev_buffer_scan_state_type buffer_scan_state,
+                                       blev_block_scan_state_type  block_scan_state,
+                                       tile_offset_type            num_tiles,
+                                       ordered_bid_type              ordered_bid)
     {
         const uint32_t block_id        = rocprim::detail::block_id<0>();
         const uint32_t block_size      = rocprim::detail::block_size<0>();
@@ -912,23 +919,32 @@ public:
         buffer_scan_state.initialize_prefix(flat_thread_id, num_tiles);
 
         block_scan_state.initialize_prefix(flat_thread_id, num_tiles);
+
+        if(flat_thread_id == 0)
+        {
+            ordered_bid.reset();
+        }
     }
 
-    __global__ static void
-        non_blev_memcpy_kernel(copyable_buffers            buffers,
-                               buffer_offset_type          num_buffers,
-                               copyable_blev_buffers       blev_buffers,
-                               blev_buffer_scan_state_type blev_buffer_scan_state,
-                               blev_block_scan_state_type  blev_block_scan_state)
+    __global__
+    static void non_blev_memcpy_kernel(copyable_buffers            buffers,
+                                       buffer_offset_type          num_buffers,
+                                       copyable_blev_buffers       blev_buffers,
+                                       blev_buffer_scan_state_type blev_buffer_scan_state,
+                                       blev_block_scan_state_type  blev_block_scan_state,
+                                       ordered_bid_type            ordered_bid)
     {
         ROCPRIM_SHARED_MEMORY typename non_blev_memcpy::storage_type temp_storage;
+        auto tile_id = ordered_bid.get(rocprim::flat_tile_thread_id(),
+                                       temp_storage.get().shared.ordered_bid);
+
         non_blev_memcpy{}.copy(temp_storage.get(),
                                buffers,
                                num_buffers,
                                blev_buffers,
                                blev_buffer_scan_state,
                                blev_block_scan_state,
-                               rocprim::flat_block_id());
+                               tile_id);
     }
 
     __global__ static void blev_memcpy_kernel(copyable_blev_buffers       blev_buffers,
@@ -1033,14 +1049,6 @@ ROCPRIM_INLINE static hipError_t batch_memcpy_func(void*              temporary_
     using BufferOffsetType = unsigned int;
     using BlockOffsetType  = unsigned int;
 
-    hipError_t error = hipSuccess;
-
-    using batch_memcpy_impl_type = detail::batch_memcpy_impl<Config,
-                                                             IsMemCpy,
-                                                             InputBufferItType,
-                                                             OutputBufferItType,
-                                                             BufferSizeItType>;
-
     static constexpr uint32_t non_blev_block_size         = Config::non_blev_block_size;
     static constexpr uint32_t non_blev_buffers_per_thread = Config::non_blev_buffers_per_thread;
     static constexpr uint32_t blev_block_size             = Config::blev_block_size;
@@ -1048,194 +1056,225 @@ ROCPRIM_INLINE static hipError_t batch_memcpy_func(void*              temporary_
     constexpr uint32_t buffers_per_block = non_blev_block_size * non_blev_buffers_per_thread;
     const uint32_t     num_blocks = rocprim::detail::ceiling_div(num_copies, buffers_per_block);
 
-    using scan_state_buffer_type = rocprim::detail::lookback_scan_state<BufferOffsetType>;
-    using scan_state_block_type  = rocprim::detail::lookback_scan_state<BlockOffsetType>;
+    bool use_atomic_block_id;
+    ROCPRIM_RETURN_ON_ERROR(check_if_using_atomic_block_id(stream, use_atomic_block_id));
 
-    // Pack buffers
-    typename batch_memcpy_impl_type::copyable_buffers const buffers{
-        sources,
-        destinations,
-        sizes,
-    };
+    ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(false, use_atomic_block_id)(
+        [&](auto /* use_sleepy_scan */, auto use_atomic_block_id)
+        {
+            using block_id_type
+                = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
 
-    detail::temp_storage::layout scan_state_buffer_layout{};
-    error = scan_state_buffer_type::get_temp_storage_layout(num_blocks,
-                                                            stream,
-                                                            scan_state_buffer_layout);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            using batch_memcpy_impl_type = detail::batch_memcpy_impl<Config,
+                                                                     IsMemCpy,
+                                                                     InputBufferItType,
+                                                                     OutputBufferItType,
+                                                                     BufferSizeItType,
+                                                                     block_id_type>;
 
-    detail::temp_storage::layout blev_block_scan_state_layout{};
-    error = scan_state_block_type::get_temp_storage_layout(num_blocks,
-                                                           stream,
-                                                           blev_block_scan_state_layout);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            using scan_state_buffer_type = rocprim::detail::lookback_scan_state<BufferOffsetType>;
+            using scan_state_block_type  = rocprim::detail::lookback_scan_state<BlockOffsetType>;
+            using block_id_type
+                = detail::block_id_wrapper<uint32_t, decltype(use_atomic_block_id)::value>;
 
-    uint8_t* blev_buffer_scan_data;
-    uint8_t* blev_block_scan_state_data;
+            hipError_t error = hipSuccess;
 
-    // The non-blev kernel will prepare blev copy. Communication between the two
-    // kernels is done via `blev_buffers`.
-    typename batch_memcpy_impl_type::copyable_blev_buffers blev_buffers{};
+            // Pack buffers
+            typename batch_memcpy_impl_type::copyable_buffers const buffers{
+                sources,
+                destinations,
+                sizes,
+            };
 
-    // Partition `d_temp_storage`.
-    // If `d_temp_storage` is null, calculate the allocation size instead.
-    error = detail::temp_storage::partition(
-        temporary_storage,
-        storage_size,
-        detail::temp_storage::make_linear_partition(
-            detail::temp_storage::ptr_aligned_array(&blev_buffers.srcs, num_copies),
-            detail::temp_storage::ptr_aligned_array(&blev_buffers.dsts, num_copies),
-            detail::temp_storage::ptr_aligned_array(&blev_buffers.sizes, num_copies),
-            detail::temp_storage::ptr_aligned_array(&blev_buffers.offsets, num_copies),
-            detail::temp_storage::make_partition(&blev_buffer_scan_data, scan_state_buffer_layout),
-            detail::temp_storage::make_partition(&blev_block_scan_state_data,
-                                                 blev_block_scan_state_layout)));
+            detail::temp_storage::layout scan_state_buffer_layout{};
+            error = scan_state_buffer_type::get_temp_storage_layout(num_blocks,
+                                                                    stream,
+                                                                    scan_state_buffer_layout);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    // If allocation failed, return error.
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            detail::temp_storage::layout blev_block_scan_state_layout{};
+            error = scan_state_block_type::get_temp_storage_layout(num_blocks,
+                                                                   stream,
+                                                                   blev_block_scan_state_layout);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    // Return the storage size.
-    if(temporary_storage == nullptr)
-    {
-        return hipSuccess;
-    }
+            uint8_t* blev_buffer_scan_data;
+            uint8_t* blev_block_scan_state_data;
 
-    // Compute launch parameters.
+            // The non-blev kernel will prepare blev copy. Communication between the two
+            // kernels is done via `blev_buffers`.
+            typename batch_memcpy_impl_type::copyable_blev_buffers blev_buffers{};
+            
+            typename block_id_type::id_type* block_id_pool = nullptr;
 
-    int device_id = hipGetStreamDeviceId(stream);
+            // Partition `d_temp_storage`.
+            // If `d_temp_storage` is null, calculate the allocation size instead.
+            error = detail::temp_storage::partition(
+                temporary_storage,
+                storage_size,
+                detail::temp_storage::make_linear_partition(
+                    detail::temp_storage::ptr_aligned_array(&blev_buffers.srcs, num_copies),
+                    detail::temp_storage::ptr_aligned_array(&blev_buffers.dsts, num_copies),
+                    detail::temp_storage::ptr_aligned_array(&blev_buffers.sizes, num_copies),
+                    detail::temp_storage::ptr_aligned_array(&blev_buffers.offsets, num_copies),
+                    detail::temp_storage::make_partition(&blev_buffer_scan_data,
+                                                         scan_state_buffer_layout),
+                    detail::temp_storage::make_partition(&blev_block_scan_state_data,
+                                                         blev_block_scan_state_layout),
+                    detail::temp_storage::ptr_aligned_array(&block_id_pool,
+                                                            block_id_type::get_storage_size())));
+            // If allocation failed, return error.
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    // Get the number of multiprocessors
-    int multiprocessor_count{};
-    error = hipDeviceGetAttribute(&multiprocessor_count,
-                                  hipDeviceAttributeMultiprocessorCount,
-                                  device_id);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            // Return the storage size.
+            if(temporary_storage == nullptr)
+            {
+                return hipSuccess;
+            }
 
-    // `hipOccupancyMaxActiveBlocksPerMultiprocessor` uses the default device.
-    // We need to perserve the current default device id while we change it temporarily
-    // to get the max occupancy on this stream.
-    int previous_device;
-    error = hipGetDevice(&previous_device);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            // Compute launch parameters.
 
-    error = hipSetDevice(device_id);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            int device_id = hipGetStreamDeviceId(stream);
 
-    int blev_occupancy{};
-    error = hipOccupancyMaxActiveBlocksPerMultiprocessor(&blev_occupancy,
-                                                         batch_memcpy_impl_type::blev_memcpy_kernel,
-                                                         blev_block_size,
-                                                         0 /* dynSharedMemPerBlk */);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            // Get the number of multiprocessors
+            int multiprocessor_count{};
+            error = hipDeviceGetAttribute(&multiprocessor_count,
+                                          hipDeviceAttributeMultiprocessorCount,
+                                          device_id);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    // Restore the default device id to initial state
-    error = hipSetDevice(previous_device);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            // `hipOccupancyMaxActiveBlocksPerMultiprocessor` uses the default device.
+            // We need to perserve the current default device id while we change it temporarily
+            // to get the max occupancy on this stream.
+            int previous_device;
+            error = hipGetDevice(&previous_device);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    constexpr BlockOffsetType init_kernel_threads = 128;
-    const BlockOffsetType     init_kernel_grid_size
-        = rocprim::detail::ceiling_div(num_blocks, init_kernel_threads);
+            error = hipSetDevice(device_id);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    auto batch_memcpy_blev_grid_size
-        = multiprocessor_count * blev_occupancy * 1 /* subscription factor */;
+            int blev_occupancy{};
+            error = hipOccupancyMaxActiveBlocksPerMultiprocessor(
+                &blev_occupancy,
+                batch_memcpy_impl_type::blev_memcpy_kernel,
+                blev_block_size,
+                0 /* dynSharedMemPerBlk */);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    BlockOffsetType batch_memcpy_grid_size = num_blocks;
+            // Restore the default device id to initial state
+            error = hipSetDevice(previous_device);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    // Prepare init_scan_states_kernel.
-    scan_state_buffer_type scan_state_buffer{};
-    error = scan_state_buffer_type::create(scan_state_buffer,
-                                           blev_buffer_scan_data,
-                                           num_blocks,
-                                           stream);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            constexpr BlockOffsetType init_kernel_threads = 128;
+            const BlockOffsetType     init_kernel_grid_size
+                = rocprim::detail::ceiling_div(num_blocks, init_kernel_threads);
 
-    scan_state_block_type scan_state_block{};
-    error = scan_state_block_type::create(scan_state_block,
-                                          blev_block_scan_state_data,
-                                          num_blocks,
-                                          stream);
-    if(error != hipSuccess)
-    {
-        return error;
-    }
+            auto batch_memcpy_blev_grid_size
+                = multiprocessor_count * blev_occupancy * 1 /* subscription factor */;
 
-    // Launch init_scan_states_kernel.
-    batch_memcpy_impl_type::
-        init_tile_state_kernel<<<init_kernel_grid_size, init_kernel_threads, 0, stream>>>(
-            scan_state_buffer,
-            scan_state_block,
-            num_blocks);
-    error = hipGetLastError();
-    if(error != hipSuccess)
-    {
-        return error;
-    }
-    if(debug_synchronous)
-    {
-        ROCPRIM_RETURN_ON_ERROR(hipStreamSynchronize(stream));
-    }
+            BlockOffsetType batch_memcpy_grid_size = num_blocks;
 
-    // Launch batch_memcpy_non_blev_kernel.
-    batch_memcpy_impl_type::
-        non_blev_memcpy_kernel<<<batch_memcpy_grid_size, non_blev_block_size, 0, stream>>>(
-            buffers,
-            num_copies,
-            blev_buffers,
-            scan_state_buffer,
-            scan_state_block);
-    error = hipGetLastError();
-    if(error != hipSuccess)
-    {
-        return error;
-    }
-    if(debug_synchronous)
-    {
-        ROCPRIM_RETURN_ON_ERROR(hipStreamSynchronize(stream));
-    }
+            // Prepare init_scan_states_kernel.
+            scan_state_buffer_type scan_state_buffer{};
+            error = scan_state_buffer_type::create(scan_state_buffer,
+                                                   blev_buffer_scan_data,
+                                                   num_blocks,
+                                                   stream);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
-    // Launch batch_memcpy_blev_kernel.
-    batch_memcpy_impl_type::
-        blev_memcpy_kernel<<<batch_memcpy_blev_grid_size, blev_block_size, 0, stream>>>(
-            blev_buffers,
-            scan_state_buffer,
-            batch_memcpy_grid_size - 1);
-    error = hipGetLastError();
-    if(error != hipSuccess)
-    {
-        return error;
-    }
-    if(debug_synchronous)
-    {
-        ROCPRIM_RETURN_ON_ERROR(hipStreamSynchronize(stream));
-    }
+            scan_state_block_type scan_state_block{};
+            error = scan_state_block_type::create(scan_state_block,
+                                                  blev_block_scan_state_data,
+                                                  num_blocks,
+                                                  stream);
+            if(error != hipSuccess)
+            {
+                return error;
+            }
 
+            block_id_type block_id = block_id_type::create(block_id_pool);
+
+            // Launch init_scan_states_kernel.
+            batch_memcpy_impl_type::
+                init_tile_state_kernel<<<init_kernel_grid_size, init_kernel_threads, 0, stream>>>(
+                    scan_state_buffer,
+                    scan_state_block,
+                    num_blocks,
+                    block_id);
+            error = hipGetLastError();
+            if(error != hipSuccess)
+            {
+                return error;
+            }
+            if(debug_synchronous)
+            {
+                ROCPRIM_RETURN_ON_ERROR(hipStreamSynchronize(stream));
+            }
+
+            // Launch batch_memcpy_non_blev_kernel.
+            batch_memcpy_impl_type::
+                non_blev_memcpy_kernel<<<batch_memcpy_grid_size, non_blev_block_size, 0, stream>>>(
+                    buffers,
+                    num_copies,
+                    blev_buffers,
+                    scan_state_buffer,
+                    scan_state_block,
+                    block_id);
+            error = hipGetLastError();
+            if(error != hipSuccess)
+            {
+                return error;
+            }
+            if(debug_synchronous)
+            {
+                ROCPRIM_RETURN_ON_ERROR(hipStreamSynchronize(stream));
+            }
+
+            // Launch batch_memcpy_blev_kernel.
+            batch_memcpy_impl_type::
+                blev_memcpy_kernel<<<batch_memcpy_blev_grid_size, blev_block_size, 0, stream>>>(
+                    blev_buffers,
+                    scan_state_buffer,
+                    batch_memcpy_grid_size - 1);
+            error = hipGetLastError();
+            if(error != hipSuccess)
+            {
+                return error;
+            }
+            if(debug_synchronous)
+            {
+                ROCPRIM_RETURN_ON_ERROR(hipStreamSynchronize(stream));
+            }
+
+            return hipSuccess;
+        }));
     return hipSuccess;
 }
 
