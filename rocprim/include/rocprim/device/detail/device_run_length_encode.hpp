@@ -820,11 +820,11 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                                          scan_algorithm>;
 
     ROCPRIM_SHARED_MEMORY union {
-        typename block_processor::storage_type_ storage;
+        typename block_processor::storage_type_ block_processor_storage;
         typename WrappedBlockId::storage_type   ordered_bid_storage;
-    };
+    } storage;
 
-    const size_t block_id = ordered_bid.get(rocprim::flat_tile_thread_id(), ordered_bid_storage);
+    const size_t block_id = ordered_bid.get(threadIdx.x, storage.ordered_bid_storage);
 
     const size_t        block_offset = block_id * items_per_block;
     const InputIterator block_input  = input + block_offset;
@@ -841,7 +841,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                                         block_id,
                                         grid_size,
                                         size,
-                                        storage);
+                                        storage.block_processor_storage);
     }
     else if(valid_in_last_block > 0)
     {
@@ -852,7 +852,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                                                                     block_id,
                                                                     grid_size,
                                                                     size,
-                                                                    storage);
+                                                                    storage.block_processor_storage);
         // First thread of last block sets the total number of non-trivial runs found and updates
         // the counts with the last run's length if necessary.
         if(threadIdx.x == 0)

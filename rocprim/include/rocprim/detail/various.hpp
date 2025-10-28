@@ -449,7 +449,7 @@ struct lookback_variant_util
     {}
 
     template<typename Func>
-    auto operator()(Func f)
+    auto operator()(Func f /* [](auto use_sleep, auto use_atomic){ ... } */)
     {
         using T = std::integral_constant<bool, true>;
         using F = std::integral_constant<bool, false>;

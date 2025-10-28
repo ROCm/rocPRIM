@@ -145,29 +145,28 @@ hipError_t run_length_encode_non_trivial_runs_impl(void*                   tempo
     detail::target_arch target_arch;
     ROCPRIM_RETURN_ON_ERROR(host_target_arch(stream, target_arch));
 
+    const non_trivial_runs_config_params params     = dispatch_target_arch<config>(target_arch);
+    const unsigned int                   block_size = params.kernel_config.block_size;
+    const unsigned int items_per_block = block_size * params.kernel_config.items_per_thread;
+    const std::size_t  grid_size       = detail::ceiling_div(size, items_per_block);
+
     bool use_atomic_block_id;
     ROCPRIM_RETURN_ON_ERROR(check_if_using_atomic_block_id(stream, use_atomic_block_id));
 
     bool use_sleepy_scan;
     ROCPRIM_RETURN_ON_ERROR(is_sleep_scan_state_used(stream, use_sleepy_scan));
 
-    ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(false, use_atomic_block_id)(
+    ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(use_sleepy_scan, use_atomic_block_id)(
         [&](auto use_sleepy_scan, auto use_atomic_block_id)
         {
             using scan_state_type
                 = ::rocprim::detail::lookback_scan_state<offset_count_pair_type, use_sleepy_scan>;
 
-            const non_trivial_runs_config_params params = dispatch_target_arch<config>(target_arch);
-            const unsigned int                   block_size = params.kernel_config.block_size;
-            const unsigned int items_per_block = block_size * params.kernel_config.items_per_thread;
-            const std::size_t  grid_size       = detail::ceiling_div(size, items_per_block);
-
             // Calculate required temporary storage
             void* scan_state_storage;
 
             detail::temp_storage::layout layout{};
-            ROCPRIM_RETURN_ON_ERROR(
-                scan_state_type::get_temp_storage_layout(grid_size, stream, layout));
+            ROCPRIM_RETURN_ON_ERROR(scan_state_type::get_temp_storage_layout(grid_size, stream, layout));
 
             using ordered_bid_type = block_id_wrapper<unsigned int, use_atomic_block_id>;
             typename ordered_bid_type::id_type* ordered_bid_storage;
@@ -186,9 +185,6 @@ hipError_t run_length_encode_non_trivial_runs_impl(void*                   tempo
             {
                 return result;
             }
-
-            bool use_sleep;
-            ROCPRIM_RETURN_ON_ERROR(detail::is_sleep_scan_state_used(stream, use_sleep));
 
             scan_state_type scan_state{};
             ROCPRIM_RETURN_ON_ERROR(
@@ -219,7 +215,7 @@ hipError_t run_length_encode_non_trivial_runs_impl(void*                   tempo
 
             {
                 const unsigned int init_block_size = ROCPRIM_DEFAULT_MAX_BLOCK_SIZE;
-                const std::size_t  init_grid_size = detail::ceiling_div(grid_size, init_block_size);
+                const std::size_t  init_grid_size  = detail::ceiling_div(grid_size, init_block_size);
                 hipLaunchKernelGGL(init_lookback_scan_state_kernel,
                                    dim3(init_grid_size),
                                    dim3(init_block_size),
@@ -232,7 +228,6 @@ hipError_t run_length_encode_non_trivial_runs_impl(void*                   tempo
             ROCPRIM_DETAIL_HIP_SYNC_AND_RETURN_ON_ERROR("init_lookback_scan_state_kernel",
                                                         grid_size,
                                                         start);
-
             {
                 hipLaunchKernelGGL(
                     HIP_KERNEL_NAME(
