@@ -909,7 +909,7 @@ public:
     static void init_tile_state_kernel(blev_buffer_scan_state_type buffer_scan_state,
                                        blev_block_scan_state_type  block_scan_state,
                                        tile_offset_type            num_tiles,
-                                       ordered_bid_type              ordered_bid)
+                                       ordered_bid_type            ordered_bid)
     {
         const uint32_t block_id        = rocprim::detail::block_id<0>();
         const uint32_t block_size      = rocprim::detail::block_size<0>();
@@ -1062,8 +1062,7 @@ ROCPRIM_INLINE static hipError_t batch_memcpy_func(void*              temporary_
     ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(false, use_atomic_block_id)(
         [&](auto /* use_sleepy_scan */, auto use_atomic_block_id)
         {
-            using block_id_type
-                = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
+            using block_id_type = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
 
             using batch_memcpy_impl_type = detail::batch_memcpy_impl<Config,
                                                                      IsMemCpy,
@@ -1110,7 +1109,7 @@ ROCPRIM_INLINE static hipError_t batch_memcpy_func(void*              temporary_
             // The non-blev kernel will prepare blev copy. Communication between the two
             // kernels is done via `blev_buffers`.
             typename batch_memcpy_impl_type::copyable_blev_buffers blev_buffers{};
-            
+
             typename block_id_type::id_type* block_id_pool = nullptr;
 
             // Partition `d_temp_storage`.

@@ -819,7 +819,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
                                          load_input_method,
                                          scan_algorithm>;
 
-    ROCPRIM_SHARED_MEMORY union {
+    ROCPRIM_SHARED_MEMORY union
+    {
         typename block_processor::storage_type_ block_processor_storage;
         typename WrappedBlockId::storage_type   ordered_bid_storage;
     } storage;
@@ -845,14 +846,15 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE auto
     }
     else if(valid_in_last_block > 0)
     {
-        OffsetCountPairType total = block_processor{}.process_block(block_input,
-                                                                    offsets_output,
-                                                                    counts_output,
-                                                                    scan_state,
-                                                                    block_id,
-                                                                    grid_size,
-                                                                    size,
-                                                                    storage.block_processor_storage);
+        OffsetCountPairType total
+            = block_processor{}.process_block(block_input,
+                                              offsets_output,
+                                              counts_output,
+                                              scan_state,
+                                              block_id,
+                                              grid_size,
+                                              size,
+                                              storage.block_processor_storage);
         // First thread of last block sets the total number of non-trivial runs found and updates
         // the counts with the last run's length if necessary.
         if(threadIdx.x == 0)

@@ -21,10 +21,10 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_SCAN_HPP_
 #define ROCPRIM_DEVICE_DEVICE_SCAN_HPP_
 
+#include <chrono>
 #include <iostream>
 #include <iterator>
 #include <type_traits>
-#include <chrono>
 
 #include "../config.hpp"
 #include "../common.hpp"
@@ -128,8 +128,7 @@ template<lookback_scan_determinism Determinism,
          class AccType,
          class LookBackScanState,
          class BlockIdWrapper>
-ROCPRIM_KERNEL
-    __launch_bounds__(device_params<Config>().kernel_config.block_size)
+ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().kernel_config.block_size)
 void lookback_scan_kernel(InputIterator       input,
                           OutputIterator      output,
                           const size_t        size,

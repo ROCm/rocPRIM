@@ -453,15 +453,15 @@ struct lookback_variant_util
     {
         using T = std::integral_constant<bool, true>;
         using F = std::integral_constant<bool, false>;
-        if (use_sleep)
+        if(use_sleep)
         {
-            if (use_atomic)
+            if(use_atomic)
             {
                 return f(T{}, T{});
             }
             return f(T{}, F{});
         }
-        if (use_atomic)
+        if(use_atomic)
         {
             return f(F{}, T{});
         }

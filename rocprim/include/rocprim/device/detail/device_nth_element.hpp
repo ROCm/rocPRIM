@@ -436,7 +436,7 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
         typename WrappedBlockId::storage_type     ordered_bid;
     } storage;
 
-    auto block_id = ordered_bid.get(threadIdx.x, storage.ordered_bid);
+    auto    block_id = ordered_bid.get(threadIdx.x, storage.ordered_bid);
     uint8_t buckets[num_items_per_thread];
 
     const size_t   nth_element     = nth_element_data->bucket_idx;
@@ -593,8 +593,7 @@ template<class config,
          class KeysIterator,
          class BinaryFunction,
          class WrappedBlockId>
-ROCPRIM_KERNEL
-    __launch_bounds__(device_params<config>().kernel_config.block_size)
+ROCPRIM_KERNEL __launch_bounds__(device_params<config>().kernel_config.block_size)
 void kernel_copy_buckets(KeysIterator                                             keys,
                          typename std::iterator_traits<KeysIterator>::value_type* tree,
                          const size_t                                             size,

@@ -602,7 +602,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void sort_single(KeysInputIterator    keys_i
     using sort_single_helper
         = radix_sort_single_helper<BlockSize, ItemsPerThread, Descending, key_type, value_type>;
 
-    ROCPRIM_SHARED_MEMORY typename sort_single_helper::storage_type storage;
+    ROCPRIM_SHARED_MEMORY
+    typename sort_single_helper::storage_type storage;
 
     sort_single_helper().template sort_single<>(keys_input,
                                                 keys_output,
@@ -1385,7 +1386,8 @@ ROCPRIM_DEVICE ROCPRIM_FORCE_INLINE void
                                                                      Decomposer,
                                                                      BlockIdWrapper>;
 
-    ROCPRIM_SHARED_MEMORY typename onesweep_iteration_helper_type::storage_type storage;
+    ROCPRIM_SHARED_MEMORY
+    typename onesweep_iteration_helper_type::storage_type storage;
 
     constexpr unsigned int items_per_block = BlockSize * ItemsPerThread;
     const unsigned int     thread_id       = ::rocprim::detail::block_thread_id<0>();

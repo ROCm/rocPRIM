@@ -21,11 +21,11 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_RADIX_SORT_HPP_
 #define ROCPRIM_DEVICE_DEVICE_RADIX_SORT_HPP_
 
+#include <chrono>
 #include <iostream>
 #include <iterator>
 #include <type_traits>
 #include <utility>
-#include <chrono>
 
 #include "../config.hpp"
 #include "../common.hpp"
@@ -211,21 +211,20 @@ template<class Config,
          class Offset,
          class Decomposer,
          class BlockIdWrapper>
-ROCPRIM_KERNEL
-    __launch_bounds__(device_params<Config>().sort.block_size) void onesweep_iteration_kernel(
-        KeysInputIterator        keys_input,
-        KeysOutputIterator       keys_output,
-        ValuesInputIterator      values_input,
-        ValuesOutputIterator     values_output,
-        const unsigned int       size,
-        Offset*                  global_digit_offsets_in,
-        Offset*                  global_digit_offsets_out,
-        onesweep_lookback_state* lookback_states,
-        Decomposer               decomposer,
-        const unsigned int       bit,
-        const unsigned int       current_radix_bits,
-        const unsigned int       full_blocks,
-        BlockIdWrapper           block_id)
+ROCPRIM_KERNEL __launch_bounds__(device_params<Config>().sort.block_size)
+void onesweep_iteration_kernel(KeysInputIterator        keys_input,
+                               KeysOutputIterator       keys_output,
+                               ValuesInputIterator      values_input,
+                               ValuesOutputIterator     values_output,
+                               const unsigned int       size,
+                               Offset*                  global_digit_offsets_in,
+                               Offset*                  global_digit_offsets_out,
+                               onesweep_lookback_state* lookback_states,
+                               Decomposer               decomposer,
+                               const unsigned int       bit,
+                               const unsigned int       current_radix_bits,
+                               const unsigned int       full_blocks,
+                               BlockIdWrapper           block_id)
 {
     static constexpr radix_sort_onesweep_config_params params = device_params<Config>();
     onesweep_iteration<params.sort.block_size,
@@ -468,8 +467,7 @@ hipError_t radix_sort_onesweep_impl(
     ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(false, use_atomic_block_id)(
         [&](auto /* use_sleepy_scan */, auto use_atomic_block_id)
         {
-            using block_id_type
-                = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
+            using block_id_type = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
 
             using config = wrapped_radix_sort_onesweep_config<Config, key_type, value_type>;
 
@@ -500,11 +498,11 @@ hipError_t radix_sort_onesweep_impl(
             constexpr bool with_values = !std::is_same<value_type, ::rocprim::empty_type>::value;
             const bool     with_double_buffer = keys_tmp != nullptr;
 
-            offset_type*             global_digit_offsets;
-            offset_type*             global_digit_offsets_tmp;
-            onesweep_lookback_state* lookback_states;
-            key_type*                keys_tmp_storage;
-            value_type*              values_tmp_storage;
+            offset_type*                     global_digit_offsets;
+            offset_type*                     global_digit_offsets_tmp;
+            onesweep_lookback_state*         lookback_states;
+            key_type*                        keys_tmp_storage;
+            value_type*                      values_tmp_storage;
             typename block_id_type::id_type* block_id_storage;
 
             const hipError_t partition_result = detail::temp_storage::partition(
@@ -520,9 +518,9 @@ hipError_t radix_sort_onesweep_impl(
                     detail::temp_storage::ptr_aligned_array(
                         &values_tmp_storage,
                         !with_double_buffer && with_values ? size : 0),
-                        detail::temp_storage::make_partition(
-                            &block_id_storage,
-                            block_id_type::get_temp_storage_layout())));
+                    detail::temp_storage::make_partition(
+                        &block_id_storage,
+                        block_id_type::get_temp_storage_layout())));
 
             if(partition_result != hipSuccess || temporary_storage == nullptr)
             {

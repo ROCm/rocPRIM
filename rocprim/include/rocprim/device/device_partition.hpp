@@ -22,9 +22,9 @@
 #define ROCPRIM_DEVICE_DEVICE_PARTITION_HPP_
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <iterator>
-#include <chrono>
 
 #include "../config.hpp"
 #include "../common.hpp"

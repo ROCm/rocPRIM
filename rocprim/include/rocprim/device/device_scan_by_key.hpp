@@ -37,10 +37,10 @@
 
 #include <hip/hip_runtime.h>
 
+#include <chrono>
 #include <iostream>
 #include <iterator>
 #include <type_traits>
-#include <chrono>
 
 BEGIN_ROCPRIM_NAMESPACE
 
@@ -60,18 +60,18 @@ template<lookback_scan_determinism Determinism,
          typename AccType,
          typename BlockIdWrapper>
 void __global__ __launch_bounds__(device_params<Config>().kernel_config.block_size)
-    device_scan_by_key_kernel(const KeyInputIterator                       keys,
-                              const InputIterator                          values,
-                              const OutputIterator                         output,
-                              const InitialValueType                       initial_value,
-                              const CompareFunction                        compare,
-                              const BinaryFunction                         scan_op,
-                              const LookbackScanState                      scan_state,
-                              const size_t                                 size,
-                              const size_t                                 starting_block,
-                              const size_t                                 number_of_blocks,
-                              const ::rocprim::tuple<AccType, bool>* const previous_last_value,
-                              BlockIdWrapper                               block_id)
+device_scan_by_key_kernel(const KeyInputIterator                       keys,
+                          const InputIterator                          values,
+                          const OutputIterator                         output,
+                          const InitialValueType                       initial_value,
+                          const CompareFunction                        compare,
+                          const BinaryFunction                         scan_op,
+                          const LookbackScanState                      scan_state,
+                          const size_t                                 size,
+                          const size_t                                 starting_block,
+                          const size_t                                 number_of_blocks,
+                          const ::rocprim::tuple<AccType, bool>* const previous_last_value,
+                          BlockIdWrapper                               block_id)
 {
     device_scan_by_key_kernel_impl<Determinism, Exclusive, Config>(
         keys,
@@ -134,8 +134,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
         [&](auto use_sleepy_scan, auto use_atomic_block_id)
         {
             using scan_state_type = detail::lookback_scan_state<wrapped_type, use_sleepy_scan>;
-            using block_id_type
-                = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
+            using block_id_type   = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
 
             const unsigned int block_size       = params.kernel_config.block_size;
             const unsigned int items_per_thread = params.kernel_config.items_per_thread;
@@ -164,7 +163,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
             }
 
             typename block_id_type::id_type* block_id_storage;
-            const hipError_t partition_result = detail::temp_storage::partition(
+            const hipError_t                 partition_result = detail::temp_storage::partition(
                 temporary_storage,
                 storage_size,
                 detail::temp_storage::make_linear_partition(
@@ -183,7 +182,7 @@ inline hipError_t scan_by_key_impl(void* const           temporary_storage,
             {
                 return hipSuccess;
             }
-            
+
             auto block_id = block_id_type::create(block_id_storage);
 
             bool use_sleep;

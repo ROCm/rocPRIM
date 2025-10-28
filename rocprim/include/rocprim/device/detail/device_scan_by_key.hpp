@@ -336,9 +336,7 @@ namespace detail
         } storage;
 
         const auto flat_thread_id = ::rocprim::detail::block_thread_id<0>();
-        const auto flat_block_id
-            = ordered_bid.get(flat_thread_id,
-                              storage.ordered_bid);
+        const auto flat_block_id  = ordered_bid.get(flat_thread_id, storage.ordered_bid);
 
         // Load input
         wrapped_type wrapped_values[items_per_thread];

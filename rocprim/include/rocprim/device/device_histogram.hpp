@@ -21,11 +21,11 @@
 #ifndef ROCPRIM_DEVICE_DEVICE_HISTOGRAM_HPP_
 #define ROCPRIM_DEVICE_DEVICE_HISTOGRAM_HPP_
 
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <iterator>
 #include <type_traits>
-#include <chrono>
 
 #include "../config.hpp"
 #include "../common.hpp"

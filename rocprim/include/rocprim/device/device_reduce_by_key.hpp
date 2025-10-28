@@ -90,7 +90,10 @@ ROCPRIM_KERNEL ROCPRIM_LAUNCH_BOUNDS(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void
                                       update_func);
     }
 
-    init_lookback_scan_state(lookback_scan_state, number_of_blocks, wrapped_block_id, flat_thread_id);
+    init_lookback_scan_state(lookback_scan_state,
+                             number_of_blocks,
+                             wrapped_block_id,
+                             flat_thread_id);
 }
 
 template<lookback_scan_determinism Determinism,
@@ -168,7 +171,6 @@ hipError_t reduce_by_key_impl_wrapped_config(void*                     temporary
     }
     const reduce_by_key_config_params params = dispatch_target_arch<config>(target_arch);
 
-
     bool use_atomic_block_id;
     ROCPRIM_RETURN_ON_ERROR(check_if_using_atomic_block_id(stream, use_atomic_block_id));
 
@@ -180,8 +182,7 @@ hipError_t reduce_by_key_impl_wrapped_config(void*                     temporary
         {
             using scan_state_type
                 = reduce_by_key::lookback_scan_state_t<accumulator_type, use_sleepy_scan>;
-            using block_id_type
-                = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
+            using block_id_type = detail::block_id_wrapper<uint32_t, use_atomic_block_id>;
 
             const unsigned int block_size      = params.kernel_config.block_size;
             const unsigned int items_per_block = block_size * params.kernel_config.items_per_thread;
@@ -230,7 +231,7 @@ hipError_t reduce_by_key_impl_wrapped_config(void*                     temporary
                 return result;
             }
 
-            auto block_id = block_id_type::create(block_id_storage);
+            auto            block_id = block_id_type::create(block_id_storage);
             scan_state_type scan_state{};
             result
                 = scan_state_type::create(scan_state, scan_state_storage, number_of_blocks, stream);
