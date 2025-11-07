@@ -54,12 +54,12 @@ void access_indexed_lookback_value(LookBackScanState  lookback_scan_state,
     }
 }
 
-template<typename LookBackScanState>
-ROCPRIM_DEVICE ROCPRIM_INLINE void
-    init_lookback_scan_state(LookBackScanState              lookback_scan_state,
-                             const unsigned int             number_of_blocks,
-                             ordered_block_id<unsigned int> ordered_bid,
-                             unsigned int                   flat_thread_id)
+template<typename LookBackScanState, typename WrappedBlockId>
+ROCPRIM_DEVICE ROCPRIM_INLINE
+void init_lookback_scan_state(LookBackScanState  lookback_scan_state,
+                              const unsigned int number_of_blocks,
+                              WrappedBlockId     ordered_bid,
+                              unsigned int       flat_thread_id)
 {
     // Reset ordered_block_id.
     if(flat_thread_id == 0)
@@ -81,14 +81,14 @@ ROCPRIM_DEVICE ROCPRIM_INLINE void init_lookback_scan_state(LookBackScanState  l
     lookback_scan_state.initialize_prefix(flat_thread_id, number_of_blocks);
 }
 
-template<typename LookBackScanState>
-ROCPRIM_KERNEL
-    __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE) void init_lookback_scan_state_kernel(
-        LookBackScanState                             lookback_scan_state,
-        const unsigned int                            number_of_blocks,
-        ordered_block_id<unsigned int>                ordered_bid,
-        unsigned int                                  save_index = 0,
-        typename LookBackScanState::value_type* const save_dest  = nullptr)
+template<typename LookBackScanState, typename WrappedBlockId>
+ROCPRIM_KERNEL __launch_bounds__(ROCPRIM_DEFAULT_MAX_BLOCK_SIZE)
+void init_lookback_scan_state_kernel(LookBackScanState  lookback_scan_state,
+                                     const unsigned int number_of_blocks,
+                                     WrappedBlockId     ordered_bid,
+                                     unsigned int       save_index = 0,
+                                     typename LookBackScanState::value_type* const save_dest
+                                     = nullptr)
 {
     const unsigned int block_id        = ::rocprim::detail::block_id<0>();
     const unsigned int block_size      = ::rocprim::detail::block_size<0>();
