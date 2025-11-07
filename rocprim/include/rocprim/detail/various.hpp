@@ -439,6 +439,36 @@ struct select_max_by_value<T, U, Vs...>
 template<typename... Ts>
 using select_max_by_value_t = typename select_max_by_value<Ts...>::type;
 
+struct lookback_variant_util
+{
+    bool use_sleep;
+    bool use_atomic;
+
+    lookback_variant_util(bool use_sleep, bool use_atomic)
+        : use_sleep(use_sleep), use_atomic(use_atomic)
+    {}
+
+    template<typename Func>
+    auto operator()(Func f /* [](auto use_sleep, auto use_atomic){ ... } */)
+    {
+        using T = std::integral_constant<bool, true>;
+        using F = std::integral_constant<bool, false>;
+        if(use_sleep)
+        {
+            if(use_atomic)
+            {
+                return f(T{}, T{});
+            }
+            return f(T{}, F{});
+        }
+        if(use_atomic)
+        {
+            return f(F{}, T{});
+        }
+        return f(F{}, F{});
+    }
+};
+
 } // end namespace detail
 END_ROCPRIM_NAMESPACE
 

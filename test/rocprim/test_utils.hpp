@@ -21,6 +21,7 @@
 #ifndef TEST_TEST_UTILS_HPP_
 #define TEST_TEST_UTILS_HPP_
 
+#include <rocprim/config.hpp>
 #include <rocprim/device/config_types.hpp>
 #include <rocprim/functional.hpp>
 #include <rocprim/intrinsics.hpp>
@@ -54,6 +55,7 @@ namespace test_utils
 template<class T>
 static constexpr float precision = 0;
 
+ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wexplicit-specialization-storage-class")
 template<>
 static constexpr float precision<double> = 2.0f / (1ll << 52);
 
@@ -65,6 +67,7 @@ static constexpr float precision<rocprim::half> = 2.0f / (1ll << 10);
 
 template<>
 static constexpr float precision<rocprim::bfloat16> = 2.0f / (1ll << 7);
+ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 
 template<class T>
 static constexpr float precision<const T> = precision<T>;

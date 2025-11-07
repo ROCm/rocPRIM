@@ -303,12 +303,14 @@ private:
         return is_tuple_impl<Index + 1>();
     }
 
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wexplicit-specialization-storage-class")
     template<>
     ROCPRIM_HOST_DEVICE
     static constexpr bool is_tuple_impl<sizeof...(Args)>()
     {
         return true;
     }
+    ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 
 public:
     static constexpr bool value = is_tuple_impl<0>();
@@ -332,11 +334,13 @@ private:
         return std::is_reference<element_t>::value && is_tuple_of_references_impl<Index + 1>();
     }
 
+    ROCPRIM_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wexplicit-specialization-storage-class")
     template<>
     ROCPRIM_HOST_DEVICE static constexpr bool is_tuple_of_references_impl<sizeof...(Args)>()
     {
         return true;
     }
+    ROCPRIM_CLANG_SUPPRESS_WARNING_POP
 
 public:
     static constexpr bool value = is_tuple_of_references_impl<0>();

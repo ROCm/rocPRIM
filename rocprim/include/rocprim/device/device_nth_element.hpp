@@ -22,6 +22,7 @@
 #define ROCPRIM_DEVICE_DEVICE_NTH_ELEMENT_HPP_
 
 #include "detail/device_nth_element.hpp"
+#include "detail/ordered_block_id.hpp"
 
 #include "../detail/temp_storage.hpp"
 
@@ -84,79 +85,99 @@ hipError_t
 
     key_type* keys_buffer = nullptr;
 
-    {
-        using namespace temp_storage;
+    bool use_atomic_block_id;
+    ROCPRIM_RETURN_ON_ERROR(check_if_using_atomic_block_id(stream, use_atomic_block_id));
 
-        hipError_t partition_result;
-        if(keys_double_buffer == nullptr)
+    ROCPRIM_RETURN_ON_ERROR(lookback_variant_util(false, use_atomic_block_id)(
+        [&](auto /* use_sleepy_scan */, auto use_atomic_block_id)
         {
-            partition_result
-                = partition(temporary_storage,
-                            storage_size,
-                            make_linear_partition(
-                                ptr_aligned_array(&tree, num_splitters),
-                                ptr_aligned_array(&equality_buckets, num_buckets),
-                                ptr_aligned_array(&buckets, num_buckets),
-                                ptr_aligned_array(&keys_buffer, size),
-                                ptr_aligned_array(&nth_element_data, 1),
-                                ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
-        }
-        else
-        {
-            partition_result
-                = partition(temporary_storage,
-                            storage_size,
-                            make_linear_partition(
-                                ptr_aligned_array(&tree, num_splitters),
-                                ptr_aligned_array(&equality_buckets, num_buckets),
-                                ptr_aligned_array(&buckets, num_buckets),
-                                ptr_aligned_array(&nth_element_data, 1),
-                                ptr_aligned_array(&lookback_states, num_partitions * num_blocks)));
-            keys_buffer = keys_double_buffer;
-        }
+            using ordered_bid_type = block_id_wrapper<unsigned int, use_atomic_block_id>;
+            typename ordered_bid_type::id_type* ordered_bid_storage;
 
-        if(partition_result != hipSuccess || temporary_storage == nullptr)
-        {
-            return partition_result;
-        }
-    }
+            {
+                using namespace temp_storage;
 
-    if((size == 0) || (size == 1 && nth == 0))
-    {
-        return hipSuccess;
-    }
+                hipError_t partition_result;
+                if(keys_double_buffer == nullptr)
+                {
+                    partition_result = partition(
+                        temporary_storage,
+                        storage_size,
+                        make_linear_partition(
+                            ptr_aligned_array(&tree, num_splitters),
+                            ptr_aligned_array(&equality_buckets, num_buckets),
+                            ptr_aligned_array(&buckets, num_buckets),
+                            ptr_aligned_array(&keys_buffer, size),
+                            ptr_aligned_array(&nth_element_data, 1),
+                            ptr_aligned_array(&lookback_states, num_partitions * num_blocks),
+                            detail::temp_storage::make_partition(
+                                &ordered_bid_storage,
+                                ordered_bid_type::get_temp_storage_layout())));
+                }
+                else
+                {
+                    partition_result = partition(
+                        temporary_storage,
+                        storage_size,
+                        make_linear_partition(
+                            ptr_aligned_array(&tree, num_splitters),
+                            ptr_aligned_array(&equality_buckets, num_buckets),
+                            ptr_aligned_array(&buckets, num_buckets),
+                            ptr_aligned_array(&nth_element_data, 1),
+                            ptr_aligned_array(&lookback_states, num_partitions * num_blocks),
+                            detail::temp_storage::make_partition(
+                                &ordered_bid_storage,
+                                ordered_bid_type::get_temp_storage_layout())));
+                    keys_buffer = keys_double_buffer;
+                }
 
-    if(nth >= size)
-    {
-        return hipErrorInvalidValue;
-    }
+                if(partition_result != hipSuccess || temporary_storage == nullptr)
+                {
+                    return partition_result;
+                }
+            }
 
-    if(debug_synchronous)
-    {
-        std::cout << "-----" << '\n';
-        std::cout << "size: " << size << '\n';
-        std::cout << "num_buckets: " << num_buckets << '\n';
-        std::cout << "num_threads_per_block: " << num_threads_per_block << '\n';
-        std::cout << "num_blocks: " << num_blocks << '\n';
-        std::cout << "storage_size: " << storage_size << '\n';
-    }
+            if((size == 0) || (size == 1 && nth == 0))
+            {
+                return hipSuccess;
+            }
 
-    return nth_element_keys_impl<config, num_partitions>(keys,
-                                                         keys_buffer,
-                                                         tree,
-                                                         nth,
-                                                         size,
-                                                         buckets,
-                                                         equality_buckets,
-                                                         lookback_states,
-                                                         num_buckets,
-                                                         stop_recursion_size,
-                                                         num_threads_per_block,
-                                                         num_items_per_threads,
-                                                         nth_element_data,
-                                                         compare_function,
-                                                         stream,
-                                                         debug_synchronous);
+            if(nth >= size)
+            {
+                return hipErrorInvalidValue;
+            }
+
+            if(debug_synchronous)
+            {
+                std::cout << "-----" << '\n';
+                std::cout << "size: " << size << '\n';
+                std::cout << "num_buckets: " << num_buckets << '\n';
+                std::cout << "num_threads_per_block: " << num_threads_per_block << '\n';
+                std::cout << "num_blocks: " << num_blocks << '\n';
+                std::cout << "storage_size: " << storage_size << '\n';
+            }
+
+            auto ordered_bid = ordered_bid_type::create(ordered_bid_storage);
+
+            return nth_element_keys_impl<config, num_partitions>(keys,
+                                                                 keys_buffer,
+                                                                 tree,
+                                                                 nth,
+                                                                 size,
+                                                                 buckets,
+                                                                 equality_buckets,
+                                                                 lookback_states,
+                                                                 num_buckets,
+                                                                 stop_recursion_size,
+                                                                 num_threads_per_block,
+                                                                 num_items_per_threads,
+                                                                 nth_element_data,
+                                                                 compare_function,
+                                                                 stream,
+                                                                 debug_synchronous,
+                                                                 ordered_bid);
+        }));
+    return hipSuccess;
 }
 
 } // namespace detail
