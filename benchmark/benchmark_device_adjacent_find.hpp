@@ -113,6 +113,9 @@ struct device_adjacent_find_benchmark : public primbench::benchmark_interface
                                                 common::generate_limits<input_type>::min(),
                                                 common::generate_limits<input_type>::max(),
                                                 seed);
+            // Advance one engine per retry; a constant seed would always draw the
+            // same value and could loop forever when it matches the previous element.
+            engine_type retry_gen(seed);
             std::vector<std::size_t> iota(items);
             std::iota(iota.begin(), iota.end(), 0);
             std::transform(iota.begin() + 1,
@@ -125,7 +128,7 @@ struct device_adjacent_find_benchmark : public primbench::benchmark_interface
                                    input[idx] = get_random_value<input_type>(
                                        common::generate_limits<input_type>::min(),
                                        common::generate_limits<input_type>::max(),
-                                       seed);
+                                       static_cast<std::size_t>(retry_gen()));
                                }
                                return input[idx];
                            });
